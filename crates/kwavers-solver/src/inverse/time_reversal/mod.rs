@@ -23,6 +23,7 @@ pub use reconstruction::TimeReversalReconstructor;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::test_info;
 
     use std::f64::consts::PI;
 
@@ -60,7 +61,7 @@ mod tests {
             assert_eq!((signal.len()), n_samples);
         }
 
-        println!(
+        test_info!(
             "Average time per FFT operation with planner reuse: {:?}",
             total_time / 10
         );

@@ -1,5 +1,6 @@
 use crate::pstd::PSTDConfig as PstdConfig;
 use crate::pstd::PSTDSolver;
+use crate::test_support::test_info;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -51,7 +52,7 @@ fn test_pstd_phase_velocity_accuracy() {
     //
     // # Reference
     // Treeby, B.E. & Cox, B.T. (2010) J. Biomed. Opt. 15(2):021314.
-    println!("\n=== PSTD Phase Velocity Accuracy Test ===");
+    test_info!("\n=== PSTD Phase Velocity Accuracy Test ===");
 
     // n=64, nt=800: PPW=20, CFL=0.2 (same physics accuracy as n=128/nt=1000).
     // cells traveled = 0.2·800 = 160; n_wraps = 2; residual s_peak = 32.
@@ -128,9 +129,9 @@ fn test_pstd_phase_velocity_accuracy() {
     let c_measured = cells_traveled as f64 * dx / t_total;
 
     let velocity_error = (c_measured - c0).abs() / c0;
-    println!("Theoretical c₀       : {:.4} m/s", c0);
-    println!("Measured   c_num      : {:.4} m/s", c_measured);
-    println!("Relative error        : {:.6}%", velocity_error * 100.0);
+    test_info!("Theoretical c₀       : {:.4} m/s", c0);
+    test_info!("Measured   c_num      : {:.4} m/s", c_measured);
+    test_info!("Relative error        : {:.6}%", velocity_error * 100.0);
 
     // At 20 PPW / CFL 0.2 the theoretical PSTD dispersion error is ~8×10⁻⁶.
     // The cross-correlation peak quantisation introduces at most ±½ cell ≈ 0.25%.

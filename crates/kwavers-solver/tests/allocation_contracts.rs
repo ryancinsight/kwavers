@@ -307,6 +307,98 @@ fn reserved_viscoacoustic_sensor_traces_do_not_allocate_during_stepping() {
     }
 }
 
+/// Warm construction must measure exactly the KW-VISCOACOUSTIC-DIMENSIONAL-STATE
+/// acceptance oracle: 10/12/15 allocations for the standard 1-D/2-D/3-D
+/// constructor and the retained-byte reductions of the inactive-axis storage
+/// layout, with warm stepping allocation-free.
+///
+/// The byte figures are absolute (the probe counts requested bytes minus
+/// released bytes over the construction window, and a warm window sees no
+/// intermediate releases). They decode exactly: the shape-independent part is
+/// 7 state/scratch arrays + cbuf + 3 modulus fields = 393,216 B at 4,096
+/// cells, plus per-shape wavenumber vectors (1-D: 32,784 B, 2-D: 1,032 B,
+/// 3-D: 384 B) and one cached-FFT event (warm ⇒ none). The old layout
+/// measured 426,000/394,248/393,600 B; the candidate removes the inactive
+/// arrays and wavenumber vectors — 98,320 B (vy+vz+gz+ky+kz) in 1-D and
+/// 65,544 B (vz+gz+kz) in 2-D — leaving exactly 327,680/328,704 B, while the
+/// full 3-D control retains its 15 events and 393,600 B.
+#[test]
+fn warm_construction_matches_inactive_axis_storage_oracle() {
+    /// (shape, expected warm allocations, expected retained bytes).
+    const CASES: [([usize; 3], u64, u64); 3] = [
+        ([4096, 1, 1], 10, 327_680),
+        ([64, 64, 1], 12, 328_704),
+        ([16, 16, 16], 15, 393_600),
+    ];
+    const DT: f64 = 1.0e-8;
+
+    for &(shape, allocations, retained) in &CASES {
+        let [nx, ny, nz] = shape;
+        let build = || {
+            ViscoacousticMemorySolver::new(
+                nx,
+                ny,
+                nz,
+                1.0e-4,
+                1.0e-4,
+                1.0e-4,
+                DT,
+                1_000.0,
+                2.25e9,
+                &[],
+            )
+            .expect("valid oracle solver parameters")
+        };
+
+        // Warm every shape-keyed cache (FFT plan, wavenumber-independent
+        // allocation paths) so the window isolates the constructor itself.
+        drop(build());
+
+        let window = Window::open();
+        let mut solver = build();
+        let change = window.change();
+        drop(window);
+
+        assert_eq!(
+            change.allocations, allocations,
+            "warm construction allocation count at {shape:?}"
+        );
+        assert_eq!(change.reallocations, 0, "warm construction at {shape:?}");
+        assert_eq!(
+            change.bytes_retained(),
+            retained,
+            "warm construction retained bytes at {shape:?}"
+        );
+
+        let initial = Array3::<f64>::zeros(shape);
+        solver.set_pressure(&initial).expect("matching shape");
+
+        // Warm the step path itself: the per-size FFT work buffers allocate
+        // lazily on first transform, so the measurement window must open on
+        // an already-exercised step ("warm stepping" in the oracle).
+        for _ in 0..4 {
+            solver.step();
+        }
+
+        let window = Window::open();
+        for _ in 0..64 {
+            solver.step();
+        }
+        let stepping = window.change();
+        drop(window);
+
+        assert_eq!(
+            stepping.allocations, 0,
+            "warm stepping must stay allocation-free at {shape:?}"
+        );
+        assert_eq!(
+            stepping.reallocations, 0,
+            "warm stepping must stay reallocation-free at {shape:?}"
+        );
+        std::hint::black_box(solver.pressure());
+    }
+}
+
 #[test]
 fn viscoacoustic_sensor_reservation_rejects_unrepresentable_history() {
     let (mut solver, sensors, _) = viscoacoustic_sensor_solver();

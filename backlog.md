@@ -5,23 +5,25 @@
 - **Delivered:** `mod.rs` (803 → 236 lines) is the pyclass, its constructor and the module tree; the `#[pymethods]` groups live where their concern does — `configuration.rs` (config objects, thermal/poroelastic), `pml.rs` (PML geometry and k-space numerics), `physics.rs` (nonlinearity, absorption, Helmholtz) — under the crate's existing `multiple-pymethods` feature; `run/execute.rs` holds `Simulation.run` and `run/prepare.rs` the pure conversions it was inlining (CFL time step with its named Courant number, solver/FFT-backend maps, elastic velocity source, IVP axis). The `kwavers_error_to_py_local` alias "kept for old solver files" is deleted and its six callers use the one name.
 - **Evidence:** Python surface unchanged (methods moved between `#[pymethods]` blocks of the same class); `cargo test-gpu-consumers` 127/127 (one declared skip); clippy `-D warnings` on kwavers-python (all targets, gpu feature). PR #690.
 
-## KW-SOLVER-TEST-LINT-DEBT-2026-09-02 — `kwavers-solver` test modules and examples fail the lint floor under `--all-targets` [patch] — todo
+## KW-SOLVER-TEST-LINT-DEBT-2026-09-02 — `kwavers-solver` test modules and examples fail the lint floor under `--all-targets` [patch] — done 2026-09-04
 
-- **Finding (2026-09-02, while landing PR #692):** `cargo clippy -p kwavers-solver
-  --all-targets -- -D warnings` is red on `main`: `println!` in
-  `forward/fdtd/avx512_stencil/tests.rs` and `forward/fdtd/dispatch/tests.rs`
-  (`clippy::print_stdout`), a `panic!`-only `if` in the AVX-512 tests
-  (`clippy::manual_assert`), and `println!` reports in
-  `examples/{mofi_exact_adjoint_demo,transcranial_ust_reconstruction,
-  transcranial_brain_fwi}.rs`. CI lints a narrower target set, so the debt
-  does not gate.
-- **Outcome:** test diagnostics go through `tracing` (standards: Diagnostics &
-  Tracing) and the `manual_assert` collapses to `assert!`; examples that
-  report on stdout by design carry one crate-level
-  `#![expect(clippy::print_stdout, reason = ...)]`. Then CI lints
-  `--all-targets` so the floor holds.
-- **Acceptance oracle:** `cargo clippy -p kwavers-solver --all-targets -- -D
-  warnings` exits 0 locally and in CI.
+- **Delivered:** source `ebf93d15b` (branch `test/solver-lint-floor`). The debt
+  had grown past the four finding sites to 108 warnings in 24 files under the
+  September tree. Test diagnostics (92 `println!` sites across kzk, fdtd,
+  kuznetsov, hybrid, inverse, and validation test modules) now flow through
+  `tracing` via a shared `#[cfg(test)]` `test_support` module whose
+  `test_info!` macro mirrors `println!`'s shape, so each conversion is a
+  rename; the `manual_assert` collapsed to `assert!`; raw-pointer casts,
+  discarded `Result`s, ignored unit patterns, and `from_iter` calls converted
+  mechanically; and the three stdout-by-design examples carry one
+  crate-level `#![expect(clippy::print_stdout, reason = ...)]` each.
+- **Evidence:** `cargo clippy -p kwavers-solver --all-targets -- -D warnings`
+  exits 0 (was: 108 warnings). CI's strict clippy step lints
+  `--all-targets` for the crate, so the floor gates. kwavers-solver suite
+  945/945; fmt and Rustdoc clean. The two test-only debug files
+  (`kzk/beam_debug.rs`, `kzk/plane_wave_test.rs`) are `pub mod` today, so
+  their conversions use the same test-gated macro — reachable only under
+  `cfg(test)`.
 - **Risk / change class:** [patch]; test-only and CI-only edits.
 
 ## ✅ KW-STALE-BRANCH-RESCUE-PHASE1-2026-09-02 — Salvage or drop `rescue/phase1-slice-wip` [patch] — done 2026-09-02
@@ -402,37 +404,26 @@
   that weakens Criterion instruments or substitutes hosted wall time for local
   paired evidence.
 
-## KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 — Omit inactive-axis state [patch] [perf] — todo
+## KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 — Omit inactive-axis state [patch] [perf] — complete
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 | Retain velocity and derivative storage only for active spatial axes while preserving the canonical 1-D/2-D/3-D solver and exact state values. | [patch] [perf] | todo | unowned | viscoacoustic private state/scratch layout, step/reset/damping/energy paths, allocation and all-axis-mask value regressions, existing Criterion instrument |
-
-- **Entry evidence:** a warmed release global-allocation probe at exact source
-  `22c011fa2` measured every 4,096-cell constructor at 15 allocations and
-  426,000/394,248/393,600 retained bytes for 1-D `[4096,1,1]`, 2-D
-  `[64,64,1]`, and 3-D `[16,16,16]`. The current private state always owns
-  `vx/vy/vz` plus `gx/gy/gz`, although singleton-axis derivatives are exact
-  positive zero. It also retains one allocated wavenumber vector for every
-  singleton axis. Removing three inactive arrays and two inactive wavenumber
-  vectors in 1-D saves 98,320 bytes (23.1% of the measured retained footprint);
-  removing two arrays and one vector in 2-D saves 65,544 bytes (16.6%). Full
-  3-D retains its current storage.
-- **Design constraint:** support every public singleton-axis permutation,
-  including no active axes and the `xz`/`yz` planes. Bind each active velocity
-  field to its active-axis wavenumbers. Keep two anonymous scratch grids for
-  divergence and relaxation, plus a third only when all three axes are active.
-  Combine divergence in the established `dx + (dy + dz)` order with missing
-  derivatives represented by positive zero; branch only at the axis-operation
-  boundary. No public type or method changes.
-- **Acceptance:** all eight active-axis masks compare complete pressure,
-  memory, energy, damping, reset, and repeated-step behavior against a
-  six-array reference; the 3-D control remains bitwise equal. Warm construction
-  measures exactly 10/12/15 allocations for standard 1-D/2-D/3-D and the
-  retained-byte reductions above, while warm stepping remains allocation-free.
-  Existing paired Criterion inputs and timed regions remain unchanged; reject
-  the candidate on any active-axis regression or if added branching offsets
-  the measured lower-dimensional gain.
+- **Delivered:** source `c6cef1386` (branch `pr/viscoacoustic-dimensional-state`): the
+  solver derives its active-axis mask from the grid and retains velocity,
+  derivative-staging, and wavenumber state only for axes that carry spatial
+  variation, substituting the exact positive-zero identity at the operation
+  boundary. Divergence combines in the established `dx + (dy + dz)` order via
+  canonical slot staging; no public type or method changed.
+- **Evidence:** all eight active-axis masks — including the `xz`/`yz` planes
+  and the no-active-axis point grid — step bitwise-identically to an injected
+  full-storage reference at the same grid across warmup, damping, reset, and
+  repeated stepping; singleton derivatives never touch the complex FFT
+  scratch. Warm construction measures exactly 10/12/15 allocations and
+  327,680/328,704/393,600 retained bytes at the 4,096-cell probe shapes
+  (entry baseline: 15 events, 426,000/394,248/393,600 bytes — the oracle's
+  98,320 B / 23.1% 1-D and 65,544 B / 16.6% 2-D reductions; 3-D control
+  unchanged) and warm stepping stays allocation- and reallocation-free. The
+  existing paired Criterion instrument is untouched and compiles on the
+  unchanged public API; kwavers-solver release lib suite 946/946;
+  Clippy/Rustdoc clean for the touched packages.
 
 ## KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 — Retain scalar homogeneous coefficients [patch] [perf] — todo
 
@@ -13346,3 +13337,54 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
 - Acceptance: hosted run `32237250724` at exact head `56bded6fa` passed all
   Ubuntu, Windows, and macOS wheel jobs; its Ubuntu job installed the wheel
   and passed all three value-semantic k-Wave cases.
+
+## KW-GPU-POD-E0277 — Restore main: DerivativeParams missing eunomia Pod [patch] [fix] — done 2026-09-04
+
+- Finding: main's hosted CI (`Architecture Validation`, run 33910337390) fails
+  on every open PR with `error[E0277]: the trait bound DerivativeParams:
+  eunomia::layout::marker::Pod is not satisfied` in `kwavers-gpu`, introduced by
+  the recent hephaestus dispatch-contract churn (#709/#712 window). The break is
+  main-inherited — it reproduces identically on peer PR #707, which touches none
+  of this code.
+- Root cause: `MultiStorageKernel::dispatch` (hephaestus-core) bounds its params
+  on `eunomia::layout::marker::Pod`. The graph carries two eunomia instances
+  (pinned `fdbf1227` via Mnemosyne/moirai/apollo; branch head `02397fa` matching
+  hephaestus and the kwavers workspace spec). `DerivativeParams` derived only
+  `bytemuck::Pod`, which is a distinct trait; eunomia deliberately ships no
+  blanket impl from bytemuck — each param struct must opt in with its own
+  derive, exactly as hephaestus does for `Fdtd3dParams`/`FdtdMedium`.
+- Change: derive `eunomia::{Pod, Zeroable}` alongside the existing bytemuck
+  derives (both needed: bytemuck for beamforming `cast_slice` plumbing, eunomia
+  for the dispatch contract), and add eunomia as an optional kwavers-gpu
+  dependency tied to the `gpu` feature — the same feature that pulls
+  `hephaestus-core`, so default builds gain nothing.
+- Acceptance: `cargo check -p kwavers-gpu --all-features` exits 0;
+  `cargo test --no-run --workspace --all-features` exits 0 (the exact failing CI
+  step); `cargo clippy -p kwavers-gpu --all-features -- -D warnings` exits 0;
+  `cargo nextest run -p kwavers-gpu --all-features` 188/188 pass.
+
+## KW-PHYSICS-RITK-MATCH-BLOCK-DRIFT — Track ritk match_block's MovingSamples input [patch] [fix] — done 2026-09-05
+
+- Finding: the SemVer-informational gate fails on main with
+  `error[E0308]: mismatched types` in `kwavers-physics`: ritk's `match_block`
+  (ritk-block-matching at branch head) now validates its input as
+  `MovingSamples<'_, T>` instead of `&Vec<f64>`. The break is invisible to
+  committed-lock builds (the lock pins the ritk fleet at `65807675`) and only
+  surfaces under the gate's floating-dep resolution, so it silently blocks the
+  next kwavers release.
+- Root cause: kwavers consumes ritk through a committed lock while the semver
+  gate builds against branch heads; ritk changed the `match_block` signature
+  without bumping its package version (still `0.1.0`), so no manifest
+  requirement change forced the adaptation. This is a semver violation on
+  ritk's side and is recorded there for follow-up.
+- Fix: adapt the single call site (`thermal_strain` tracking) through
+  `MovingSamples::complete(&tracked)`, which preserves the existing
+  tracked-buffer semantics, paired with a Cargo.lock bump of the whole ritk
+  fleet to `95cf242b`. The pairing is load-bearing: committed-lock builds need
+  the new call shape to exist, floating builds need the call to match.
+- Prior art: `leoneuro-rs` already adapted to the new API; kwavers was the last
+  consumer on the old shape.
+- Verification: workspace check clean under default features; physics suite
+  1562/1562; clippy and fmt clean on the touched crate. Stacked on the gpu
+  E0277 fix (PR #715) so the all-features CI build sees both main-side breaks
+  repaired.

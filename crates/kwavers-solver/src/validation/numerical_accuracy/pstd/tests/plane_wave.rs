@@ -1,5 +1,6 @@
 use crate::pstd::PSTDConfig as PstdConfig;
 use crate::pstd::PSTDSolver;
+use crate::test_support::test_info;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -76,7 +77,7 @@ fn test_pstd_plane_wave_accuracy() {
     let steps = (wavelength / (SOUND_SPEED_WATER_SIM * dt)) as usize;
     let _initial = solver.fields.p.clone();
 
-    println!("Propagating for {} steps, dt = {:.2e}", steps, dt);
+    test_info!("Propagating for {} steps, dt = {:.2e}", steps, dt);
 
     for step in 0..steps {
         solver.step_forward().unwrap();
@@ -88,7 +89,7 @@ fn test_pstd_plane_wave_accuracy() {
                 .iter()
                 .map(|&p| p.abs())
                 .fold(0.0_f64, f64::max);
-            println!("Step {}: max pressure = {:.2e}", step, max_p);
+            test_info!("Step {}: max pressure = {:.2e}", step, max_p);
         }
     }
 

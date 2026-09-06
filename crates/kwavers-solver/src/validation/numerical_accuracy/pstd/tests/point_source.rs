@@ -1,5 +1,6 @@
 use crate::pstd::PSTDConfig as PstdConfig;
 use crate::pstd::PSTDSolver;
+use crate::test_support::test_info;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -12,7 +13,7 @@ use std::f64::consts::PI;
 fn test_point_source_phase_accuracy() {
     // Phase error test for point source (spherical wave)
     // Point source generates spherical waves with 1/r amplitude decay
-    println!("\n=== Point Source Phase Accuracy Test ===");
+    test_info!("\n=== Point Source Phase Accuracy Test ===");
 
     let n = 64;
     let frequency = MHZ_TO_HZ;
@@ -60,7 +61,7 @@ fn test_point_source_phase_accuracy() {
                 .iter()
                 .map(|&p| p.abs())
                 .fold(0.0f64, f64::max);
-            println!("Step {}: max pressure = {:.2e}", step, max_p);
+            test_info!("Step {}: max pressure = {:.2e}", step, max_p);
         }
     }
 
@@ -83,7 +84,7 @@ fn test_point_source_phase_accuracy() {
     // Phase error tolerance for point source (spherical wave is more complex)
     // Allow slightly larger tolerance due to spherical wave complexity
     let _phase_tolerance = PI / 2.0;
-    println!(
+    test_info!(
         "Point source: collected {} phase samples",
         (phase_samples.len())
     );
@@ -95,7 +96,7 @@ fn test_point_source_phase_accuracy() {
     // Verify wave propagated (non-zero pressure at measurement points)
     let avg_pressure: f64 =
         phase_samples.iter().map(|(_, p)| p.abs()).sum::<f64>() / (phase_samples.len()) as f64;
-    println!(
+    test_info!(
         "Average pressure at measurement radius: {:.2e}",
         avg_pressure
     );
