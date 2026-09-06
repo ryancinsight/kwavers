@@ -4,6 +4,7 @@
 mod tests {
     use super::super::super::*;
     use crate::forward::nonlinear::kzk::constants::*;
+    use crate::test_support::test_info;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use leto::Array2;
     use std::f64::consts::PI;
@@ -53,7 +54,7 @@ mod tests {
         let rayleigh_distance = PI * beam_waist * beam_waist / wavelength;
         let steps = (rayleigh_distance / config.dz) as usize;
 
-        println!(
+        test_info!(
             "Propagating {} steps to Rayleigh distance {:.2}mm",
             steps,
             rayleigh_distance * 1000.0
@@ -75,7 +76,7 @@ mod tests {
                     }
                 }
 
-                println!(
+                test_info!(
                     "Step {}: radius ≈ {:.2}mm",
                     step,
                     radius_est as f64 * config.dx * 1000.0
@@ -89,18 +90,23 @@ mod tests {
         let max_intensity = intensity[[center_i, center_j]];
         let threshold = max_intensity / (std::f64::consts::E * std::f64::consts::E);
 
-        println!(
+        test_info!(
             "Center: ({}, {}), Max intensity: {:.2e}, Threshold: {:.2e}",
-            center_i, center_j, max_intensity, threshold
+            center_i,
+            center_j,
+            max_intensity,
+            threshold
         );
 
         let mut radius_pixels = 0.0;
         for i in center_i..config.nx {
             let curr_intensity = intensity[[i, center_j]];
             if i == center_i || i == center_i + 1 || i == center_i + 10 {
-                println!(
+                test_info!(
                     "i={}, intensity={:.2e}, threshold={:.2e}",
-                    i, curr_intensity, threshold
+                    i,
+                    curr_intensity,
+                    threshold
                 );
             }
             if curr_intensity < threshold {
@@ -108,14 +114,14 @@ mod tests {
                     let prev_intensity = intensity[[i - 1, center_j]];
                     let fraction = (threshold - curr_intensity) / (prev_intensity - curr_intensity);
                     radius_pixels = (i - center_i) as f64 - fraction;
-                    println!("Found edge at i={}, radius_pixels={:.2}", i, radius_pixels);
+                    test_info!("Found edge at i={}, radius_pixels={:.2}", i, radius_pixels);
                 }
                 break;
             }
         }
 
         if radius_pixels == 0.0 {
-            println!("Warning: beam edge not found within grid!");
+            test_info!("Warning: beam edge not found within grid!");
             radius_pixels = (config.nx - center_i - 1) as f64;
         }
 

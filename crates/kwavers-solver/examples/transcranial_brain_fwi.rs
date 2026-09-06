@@ -15,6 +15,11 @@
 //!
 //! Run: `cargo run -p kwavers-solver --example transcranial_brain_fwi`
 
+#![expect(
+    clippy::print_stdout,
+    reason = "example reports its figure-ready metrics on stdout by design"
+)]
+
 use kwavers_grid::Grid;
 use kwavers_math::inverse_problems::tv_denoise_chambolle;
 use kwavers_solver::inverse::fwi::time_domain::{FwiEngine, FwiGeometry, FwiProcessor};

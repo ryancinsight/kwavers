@@ -5,23 +5,25 @@
 - **Delivered:** `mod.rs` (803 → 236 lines) is the pyclass, its constructor and the module tree; the `#[pymethods]` groups live where their concern does — `configuration.rs` (config objects, thermal/poroelastic), `pml.rs` (PML geometry and k-space numerics), `physics.rs` (nonlinearity, absorption, Helmholtz) — under the crate's existing `multiple-pymethods` feature; `run/execute.rs` holds `Simulation.run` and `run/prepare.rs` the pure conversions it was inlining (CFL time step with its named Courant number, solver/FFT-backend maps, elastic velocity source, IVP axis). The `kwavers_error_to_py_local` alias "kept for old solver files" is deleted and its six callers use the one name.
 - **Evidence:** Python surface unchanged (methods moved between `#[pymethods]` blocks of the same class); `cargo test-gpu-consumers` 127/127 (one declared skip); clippy `-D warnings` on kwavers-python (all targets, gpu feature). PR #690.
 
-## KW-SOLVER-TEST-LINT-DEBT-2026-09-02 — `kwavers-solver` test modules and examples fail the lint floor under `--all-targets` [patch] — todo
+## KW-SOLVER-TEST-LINT-DEBT-2026-09-02 — `kwavers-solver` test modules and examples fail the lint floor under `--all-targets` [patch] — done 2026-09-04
 
-- **Finding (2026-09-02, while landing PR #692):** `cargo clippy -p kwavers-solver
-  --all-targets -- -D warnings` is red on `main`: `println!` in
-  `forward/fdtd/avx512_stencil/tests.rs` and `forward/fdtd/dispatch/tests.rs`
-  (`clippy::print_stdout`), a `panic!`-only `if` in the AVX-512 tests
-  (`clippy::manual_assert`), and `println!` reports in
-  `examples/{mofi_exact_adjoint_demo,transcranial_ust_reconstruction,
-  transcranial_brain_fwi}.rs`. CI lints a narrower target set, so the debt
-  does not gate.
-- **Outcome:** test diagnostics go through `tracing` (standards: Diagnostics &
-  Tracing) and the `manual_assert` collapses to `assert!`; examples that
-  report on stdout by design carry one crate-level
-  `#![expect(clippy::print_stdout, reason = ...)]`. Then CI lints
-  `--all-targets` so the floor holds.
-- **Acceptance oracle:** `cargo clippy -p kwavers-solver --all-targets -- -D
-  warnings` exits 0 locally and in CI.
+- **Delivered:** source `ebf93d15b` (branch `test/solver-lint-floor`). The debt
+  had grown past the four finding sites to 108 warnings in 24 files under the
+  September tree. Test diagnostics (92 `println!` sites across kzk, fdtd,
+  kuznetsov, hybrid, inverse, and validation test modules) now flow through
+  `tracing` via a shared `#[cfg(test)]` `test_support` module whose
+  `test_info!` macro mirrors `println!`'s shape, so each conversion is a
+  rename; the `manual_assert` collapsed to `assert!`; raw-pointer casts,
+  discarded `Result`s, ignored unit patterns, and `from_iter` calls converted
+  mechanically; and the three stdout-by-design examples carry one
+  crate-level `#![expect(clippy::print_stdout, reason = ...)]` each.
+- **Evidence:** `cargo clippy -p kwavers-solver --all-targets -- -D warnings`
+  exits 0 (was: 108 warnings). CI's strict clippy step lints
+  `--all-targets` for the crate, so the floor gates. kwavers-solver suite
+  945/945; fmt and Rustdoc clean. The two test-only debug files
+  (`kzk/beam_debug.rs`, `kzk/plane_wave_test.rs`) are `pub mod` today, so
+  their conversions use the same test-gated macro — reachable only under
+  `cfg(test)`.
 - **Risk / change class:** [patch]; test-only and CI-only edits.
 
 ## ✅ KW-STALE-BRANCH-RESCUE-PHASE1-2026-09-02 — Salvage or drop `rescue/phase1-slice-wip` [patch] — done 2026-09-02

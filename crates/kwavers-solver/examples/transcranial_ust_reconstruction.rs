@@ -10,6 +10,11 @@
 //!
 //! Run: `cargo run -p kwavers-solver --example transcranial_ust_reconstruction`
 
+#![expect(
+    clippy::print_stdout,
+    reason = "example reports its figure-ready metrics on stdout by design"
+)]
+
 use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{
     mofi_align_homotopy, mofi_default_homotopy, mofi_transform, FwiEngine, FwiGeometry,

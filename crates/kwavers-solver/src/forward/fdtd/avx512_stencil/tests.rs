@@ -1,4 +1,5 @@
 use super::{FdtdAvx512Config, FdtdAvx512StencilProcessor};
+use crate::test_support::test_info;
 use leto::Array3;
 
 #[test]
@@ -12,7 +13,7 @@ fn test_avx512_processor_creation() {
             assert_eq!(processor.nz, 32);
         }
         Err(e) => {
-            println!("AVX-512 not available: {}", e);
+            test_info!("AVX-512 not available: {}", e);
         }
     }
 }
@@ -154,11 +155,10 @@ fn processor_or_skip(nx: usize, ny: usize, nz: usize) -> Option<FdtdAvx512Stenci
             // The module is not architecture-gated, so a non-x86 host reaches
             // here too and must skip rather than fail.
             #[cfg(target_arch = "x86_64")]
-            if is_x86_feature_detected!("avx512f") {
-                panic!(
-                    "AVX-512F is available on this host but the processor failed                      to build: {error}"
-                );
-            }
+            assert!(
+                !is_x86_feature_detected!("avx512f"),
+                "AVX-512F is available on this host but the processor failed to build: {error}"
+            );
             let _ = error;
             None
         }

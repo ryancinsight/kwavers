@@ -42,6 +42,6 @@ fn test_field_block_view_borrows_stacked_storage() {
 
     assert_eq!(view.shape(), [nx, ny, nz]);
     assert_eq!(view[[0, 1, 1]], stacked[[nx, 1, 1]]);
-    let expected_ptr: *const f64 = &stacked[[nx, 0, 0]];
+    let expected_ptr: *const f64 = std::ptr::from_ref::<f64>(&stacked[[nx, 0, 0]]);
     assert_eq!(view.as_slice().unwrap().as_ptr(), expected_ptr);
 }
