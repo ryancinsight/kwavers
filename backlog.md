@@ -63,7 +63,7 @@
   identically.
 - **Last-update:** 2026-09-04.
 
-## KW-EUNOMIA-DIAMOND — Two Eunomia versions break the kwavers-gpu dispatch bound [major] — blocked <a id="kw-eunomia-diamond"></a>
+## KW-EUNOMIA-DIAMOND — Two Eunomia versions break the kwavers-gpu dispatch bound [major] — done 2026-09-06 <a id="kw-eunomia-diamond"></a>
 
 - **Symptom:** `cargo check -p kwavers --features full` fails with
   `the trait bound DerivativeParams: eunomia::layout::marker::Pod is not
@@ -90,6 +90,20 @@
   stale-lock case. `b3e7549d` regenerated the lock and fixed that, which is
   what exposed the diamond behind it. One red replaced another; nothing new
   was introduced.
+- **Closed 2026-09-06 at its root, in Moirai.** The pinner was Moirai, whose
+  manifest carried `Mnemosyne.git rev = "7f173751"` behind a comment stating its
+  own removal trigger — remove the `rev` once the memory-provider
+  source-identity correction merges — which Mnemosyne PR #128 (`e8e825f`) had
+  satisfied. `7f173751` pins `eunomia rev = fdbf1227`; `e8e825f` does not, so
+  removing the expired quarantine (Moirai PR #260) took the second Eunomia
+  version out of every downstream graph. ritk's Mnemosyne pin (`f532b0e`) was
+  already clean, so Moirai was the last path.
+- **Verified here, not assumed upstream:** this branch's regenerated lock holds
+  **one** Eunomia entry, down from two, and `cargo check -p kwavers
+  --no-default-features --features full` compiles `kwavers-gpu` — the exact
+  failure that held main red. The previously-failing targets pass with it:
+  `solver_test` 3/3, doctests, `RUSTDOCFLAGS="-D warnings" cargo doc`, and the
+  CI suite at **5746/5746**.
 - **Root cause traced further, 2026-09-04 (the first reading was too shallow).**
   Advancing kwavers' own Mnemosyne pin to `e8e825f` does **not** close the
   diamond — measured, not assumed: the pin was bumped in a lane, the lock
