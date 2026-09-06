@@ -4,6 +4,22 @@
 
 ### Changed
 
+- **[patch] Viscoacoustic solvers retain state only for active spatial axes.
+  `ViscoacousticMemorySolver` always owned all six `Array3<f64>` velocity and
+  derivative grids plus a wavenumber vector per axis, although a singleton
+  axis's spectral derivative is identically zero. The solver now derives its
+  active-axis mask from the grid and allocates velocity state, staging, and
+  wavenumbers only for axes that carry spatial variation, substituting the
+  exact positive-zero identity at the operation boundary. Warm construction at
+  the 4,096-cell probe shapes drops from 15 allocations and 426,000/394,248/
+  393,600 retained bytes to 10/12/15 events and 327,680/328,704/393,600 bytes
+  for 1-D/2-D/3-D (a 23.1%/16.6% footprint cut in 1-D/2-D; the 3-D control is
+  unchanged) and warm stepping stays allocation-free. All eight active-axis
+  masks — including the `xz`/`yz` planes and the no-active-axis point grid —
+  step bitwise-identically to an injected full-storage reference at the same
+  grid, verified across damping, reset, and repeated stepping.
+  (migration: none — no public type or method changed.)**
+
 - **[major] GPU adapter absence is typed and the clinical PSTD dataset selects
   its backend at run time.** `kwavers-gpu` maps hephaestus's
   `AdapterUnavailable` to `SystemError::GpuNotAvailable` at its one
