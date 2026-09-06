@@ -5,6 +5,7 @@ mod tests {
     use crate::forward::nonlinear::kzk::{
         constants::*, parabolic_diffraction::KzkParabolicDiffractionOperator, KZKConfig,
     };
+    use crate::test_support::test_info;
     use kwavers_core::constants::SOUND_SPEED_WATER;
     use leto::Array2;
 
@@ -35,9 +36,9 @@ mod tests {
 
         // Check that amplitude is preserved
         let center = field[[32, 32]];
-        println!("Plane wave after λ propagation:");
-        println!("Center amplitude: {:.6}", center);
-        println!("Should be: 1.0");
+        test_info!("Plane wave after λ propagation:");
+        test_info!("Center amplitude: {:.6}", center);
+        test_info!("Should be: 1.0");
 
         // Plane wave should maintain unit amplitude
         assert!((center - 1.0).abs() < 0.01, "Plane wave amplitude changed!");
@@ -70,7 +71,7 @@ mod tests {
         field[[cx, cy]] = 1.0;
 
         let initial_energy: f64 = field.iter().map(|&x| x * x).sum();
-        println!("Initial energy: {:.6}", initial_energy);
+        test_info!("Initial energy: {:.6}", initial_energy);
 
         // Apply diffraction
         let dz = DEFAULT_WAVELENGTH / 10.0;
@@ -78,8 +79,8 @@ mod tests {
         op.apply(&mut field_view, dz);
 
         let final_energy: f64 = field.iter().map(|&x| x * x).sum();
-        println!("Final energy: {:.6}", final_energy);
-        println!("Energy ratio: {:.6}", final_energy / initial_energy);
+        test_info!("Final energy: {:.6}", final_energy);
+        test_info!("Energy ratio: {:.6}", final_energy / initial_energy);
 
         // Energy conservation in parabolic approximation is not perfect
         // Allow up to 60% energy change due to numerical diffusion

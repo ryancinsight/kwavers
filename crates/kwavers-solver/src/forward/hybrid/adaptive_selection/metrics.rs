@@ -303,6 +303,7 @@ impl ComputationalMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::test_info;
     use leto::Array3;
     use std::f64::consts::PI;
 
@@ -340,8 +341,8 @@ mod tests {
         let metrics_low = SpectralMetrics::compute(field_low.view(), &grid);
         let metrics_high = SpectralMetrics::compute(field_high.view(), &grid);
 
-        println!("Low Freq Metrics: {:?}", metrics_low);
-        println!("High Freq Metrics: {:?}", metrics_high);
+        test_info!("Low Freq Metrics: {:?}", metrics_low);
+        test_info!("High Freq Metrics: {:?}", metrics_high);
 
         // High frequency content should be higher for the high frequency field
         assert!(

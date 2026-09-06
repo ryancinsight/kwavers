@@ -45,7 +45,7 @@ fn test_assembly_one_element() {
         ..Default::default()
     };
     let mut solver = FemHelmholtzSolver::new(config, mesh);
-    let (medium, _) = homogeneous_medium();
+    let (medium, ()) = homogeneous_medium();
     solver.assemble_system(&medium).expect("Assembly failed");
 
     let mat = &solver.system_matrix;
@@ -120,7 +120,7 @@ fn test_solve_system_one_element_dirichlet() {
         (n2, Complex64::new(0.0, 0.0)),
     ]);
 
-    let (medium, _) = homogeneous_medium();
+    let (medium, ()) = homogeneous_medium();
     solver.assemble_system(&medium).expect("Assembly failed");
     solver.solve_system().expect("Solve failed");
 
@@ -143,7 +143,7 @@ fn test_from_grid_structured_mesh_assembly() {
         ..Default::default()
     };
     let mut solver = FemHelmholtzSolver::from_grid(config, &grid).unwrap();
-    let (medium, _) = homogeneous_medium();
+    let (medium, ()) = homogeneous_medium();
 
     solver.assemble_system(&medium).unwrap();
 
@@ -180,7 +180,7 @@ fn test_exact_nodal_load_updates_rhs_after_assembly() {
         ..Default::default()
     };
     let mut solver = FemHelmholtzSolver::new(config, mesh);
-    let (medium, _) = homogeneous_medium();
+    let (medium, ()) = homogeneous_medium();
     solver.assemble_system(&medium).unwrap();
 
     solver
@@ -212,7 +212,7 @@ fn test_boundary_type_dirichlet_helper_applies_to_tagged_nodes() {
     let count = solver
         .add_dirichlet_on_boundary_type(MeshBoundaryType::Dirichlet, Complex64::new(3.0, 0.0))
         .unwrap();
-    let (medium, _) = homogeneous_medium();
+    let (medium, ()) = homogeneous_medium();
     solver.assemble_system(&medium).unwrap();
 
     assert_eq!(count, 2);

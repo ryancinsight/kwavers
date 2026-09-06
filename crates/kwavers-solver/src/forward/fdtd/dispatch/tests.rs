@@ -1,10 +1,11 @@
 use super::*;
+use crate::test_support::test_info;
 use leto::Array3;
 
 #[test]
 fn test_strategy_selection() {
     let best = StencilStrategy::select_best();
-    println!("Best strategy: {}", best.as_str());
+    test_info!("Best strategy: {}", best.as_str());
     assert!(best.is_available());
 }
 
@@ -56,7 +57,7 @@ fn test_pressure_update_scalar() {
 fn test_metrics() {
     let dispatcher = FdtdStencilDispatcher::new(32, 32, 32, -1.0, -1.0).unwrap();
     let metrics = dispatcher.metrics();
-    println!(
+    test_info!(
         "Strategy: {}, SIMD Level: {:?}, Vector Width: {}",
         metrics.selected_strategy.as_str(),
         metrics.simd_level,
