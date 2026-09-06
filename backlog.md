@@ -13346,3 +13346,54 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
 - Acceptance: hosted run `32237250724` at exact head `56bded6fa` passed all
   Ubuntu, Windows, and macOS wheel jobs; its Ubuntu job installed the wheel
   and passed all three value-semantic k-Wave cases.
+
+## KW-GPU-POD-E0277 — Restore main: DerivativeParams missing eunomia Pod [patch] [fix] — done 2026-09-04
+
+- Finding: main's hosted CI (`Architecture Validation`, run 33910337390) fails
+  on every open PR with `error[E0277]: the trait bound DerivativeParams:
+  eunomia::layout::marker::Pod is not satisfied` in `kwavers-gpu`, introduced by
+  the recent hephaestus dispatch-contract churn (#709/#712 window). The break is
+  main-inherited — it reproduces identically on peer PR #707, which touches none
+  of this code.
+- Root cause: `MultiStorageKernel::dispatch` (hephaestus-core) bounds its params
+  on `eunomia::layout::marker::Pod`. The graph carries two eunomia instances
+  (pinned `fdbf1227` via Mnemosyne/moirai/apollo; branch head `02397fa` matching
+  hephaestus and the kwavers workspace spec). `DerivativeParams` derived only
+  `bytemuck::Pod`, which is a distinct trait; eunomia deliberately ships no
+  blanket impl from bytemuck — each param struct must opt in with its own
+  derive, exactly as hephaestus does for `Fdtd3dParams`/`FdtdMedium`.
+- Change: derive `eunomia::{Pod, Zeroable}` alongside the existing bytemuck
+  derives (both needed: bytemuck for beamforming `cast_slice` plumbing, eunomia
+  for the dispatch contract), and add eunomia as an optional kwavers-gpu
+  dependency tied to the `gpu` feature — the same feature that pulls
+  `hephaestus-core`, so default builds gain nothing.
+- Acceptance: `cargo check -p kwavers-gpu --all-features` exits 0;
+  `cargo test --no-run --workspace --all-features` exits 0 (the exact failing CI
+  step); `cargo clippy -p kwavers-gpu --all-features -- -D warnings` exits 0;
+  `cargo nextest run -p kwavers-gpu --all-features` 188/188 pass.
+
+## KW-PHYSICS-RITK-MATCH-BLOCK-DRIFT — Track ritk match_block's MovingSamples input [patch] [fix] — done 2026-09-05
+
+- Finding: the SemVer-informational gate fails on main with
+  `error[E0308]: mismatched types` in `kwavers-physics`: ritk's `match_block`
+  (ritk-block-matching at branch head) now validates its input as
+  `MovingSamples<'_, T>` instead of `&Vec<f64>`. The break is invisible to
+  committed-lock builds (the lock pins the ritk fleet at `65807675`) and only
+  surfaces under the gate's floating-dep resolution, so it silently blocks the
+  next kwavers release.
+- Root cause: kwavers consumes ritk through a committed lock while the semver
+  gate builds against branch heads; ritk changed the `match_block` signature
+  without bumping its package version (still `0.1.0`), so no manifest
+  requirement change forced the adaptation. This is a semver violation on
+  ritk's side and is recorded there for follow-up.
+- Fix: adapt the single call site (`thermal_strain` tracking) through
+  `MovingSamples::complete(&tracked)`, which preserves the existing
+  tracked-buffer semantics, paired with a Cargo.lock bump of the whole ritk
+  fleet to `95cf242b`. The pairing is load-bearing: committed-lock builds need
+  the new call shape to exist, floating builds need the call to match.
+- Prior art: `leoneuro-rs` already adapted to the new API; kwavers was the last
+  consumer on the old shape.
+- Verification: workspace check clean under default features; physics suite
+  1562/1562; clippy and fmt clean on the touched crate. Stacked on the gpu
+  E0277 fix (PR #715) so the all-features CI build sees both main-side breaks
+  repaired.

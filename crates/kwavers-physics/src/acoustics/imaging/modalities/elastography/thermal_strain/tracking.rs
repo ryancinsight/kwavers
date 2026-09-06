@@ -27,7 +27,7 @@
 //!   correlation." *IEEE TUFFC*, 46(1), 82–96.
 
 use leto::{Array3, ArrayView1, SliceArg};
-use ritk_block_matching::{match_block, BlockMatchingConfig, SubpixelRefinement};
+use ritk_block_matching::{match_block, BlockMatchingConfig, MovingSamples, SubpixelRefinement};
 
 /// Parameters controlling the cross-correlation displacement estimator.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -83,7 +83,7 @@ pub fn track_line_samples(
         // cannot speak about.
         *displacement = match_block(
             &reference,
-            &tracked,
+            MovingSamples::complete(&tracked),
             dims,
             [0, 0, z],
             config,
