@@ -22,6 +22,28 @@
   reproduces the three merge-critical targets with the existing sample
   counts and confidence contract; its report is attached to the PR in place
   of hosted timing.
+- **[major] Viscoacoustic constructors reject non-finite domains, and the
+  absorbing layer is fallible. `ViscoacousticMemorySolver::new`,
+  `new_heterogeneous`, and `from_power_law_fields` validated positivity with
+  bare `v <= 0.0` comparisons, so `NaN` and `+∞` passed every guard and
+  reached retained coefficient, wavenumber, and state construction. Every
+  scalar and field element is now validated as finite and strictly positive
+  before any allocation (the lossless-voxel `ΔM` zero is kept); signed zero
+  stays rejected. `enable_absorbing_layer` returns `KwaversResult<()>`: a
+  non-finite `gamma_max` is rejected before the retained decay field is
+  replaced (a rejected reconfiguration preserves the existing damping state
+  and subsequent pressure values), and the per-axis extent test compares the
+  thickness against `n.div_ceil(2)` instead of computing `2 * thickness`, so
+  an extreme `usize` thickness neither wraps the guard nor reaches the
+  `n - thickness` underflow.  The first-party callers (one example, three
+  test sites) were updated in the same change; the SemVer gate's empirical
+  verdict is "no semver update required" (a `()` → `Result` return change is
+  source-compatible — existing call sites gain `unused_must_use`, not a
+  compile error).
+  (migration: `enable_absorbing_layer` calls may add `?` to observe
+  rejections; no accepted finite input changes behavior, and numerical
+  results are bit-identical.)**
+
 - **[patch] Viscoacoustic solvers retain state only for active spatial axes.
   `ViscoacousticMemorySolver` always owned all six `Array3<f64>` velocity and
   derivative grids plus a wavenumber vector per axis, although a singleton

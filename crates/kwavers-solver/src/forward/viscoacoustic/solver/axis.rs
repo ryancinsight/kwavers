@@ -45,8 +45,8 @@ pub(super) fn reference_solver(
         dy,
         dz,
         dt,
-        inv_rho,
-        m_inf,
+        super::Coeff::Field(inv_rho),
+        super::Coeff::Field(m_inf),
         arm_fields,
         super::ActiveAxes {
             x: true,
@@ -484,8 +484,12 @@ mod tests {
             candidate.set_pressure(&seed).expect("candidate seed");
             reference.set_pressure(&seed).expect("reference seed");
             let thickness = nx.max(ny).max(nz) / 4;
-            candidate.enable_absorbing_layer(thickness, 2.0e6);
-            reference.enable_absorbing_layer(thickness, 2.0e6);
+            candidate
+                .enable_absorbing_layer(thickness, 2.0e6)
+                .expect("absorbing layer parameters are valid");
+            reference
+                .enable_absorbing_layer(thickness, 2.0e6)
+                .expect("absorbing layer parameters are valid");
 
             // Fixed interior sample points, clamped to the grid.
             let points: Vec<[usize; 3]> = SAMPLE_POINTS

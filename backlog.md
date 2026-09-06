@@ -63,7 +63,7 @@
   identically.
 - **Last-update:** 2026-09-04.
 
-## KW-EUNOMIA-DIAMOND — Two Eunomia versions break the kwavers-gpu dispatch bound [major] — blocked <a id="kw-eunomia-diamond"></a>
+## KW-EUNOMIA-DIAMOND — Two Eunomia versions break the kwavers-gpu dispatch bound [major] — done 2026-09-06 <a id="kw-eunomia-diamond"></a>
 
 - **Symptom:** `cargo check -p kwavers --features full` fails with
   `the trait bound DerivativeParams: eunomia::layout::marker::Pod is not
@@ -90,6 +90,20 @@
   stale-lock case. `b3e7549d` regenerated the lock and fixed that, which is
   what exposed the diamond behind it. One red replaced another; nothing new
   was introduced.
+- **Closed 2026-09-06 at its root, in Moirai.** The pinner was Moirai, whose
+  manifest carried `Mnemosyne.git rev = "7f173751"` behind a comment stating its
+  own removal trigger — remove the `rev` once the memory-provider
+  source-identity correction merges — which Mnemosyne PR #128 (`e8e825f`) had
+  satisfied. `7f173751` pins `eunomia rev = fdbf1227`; `e8e825f` does not, so
+  removing the expired quarantine (Moirai PR #260) took the second Eunomia
+  version out of every downstream graph. ritk's Mnemosyne pin (`f532b0e`) was
+  already clean, so Moirai was the last path.
+- **Verified here, not assumed upstream:** this branch's regenerated lock holds
+  **one** Eunomia entry, down from two, and `cargo check -p kwavers
+  --no-default-features --features full` compiles `kwavers-gpu` — the exact
+  failure that held main red. The previously-failing targets pass with it:
+  `solver_test` 3/3, doctests, `RUSTDOCFLAGS="-D warnings" cargo doc`, and the
+  CI suite at **5746/5746**.
 - **Root cause traced further, 2026-09-04 (the first reading was too shallow).**
   Advancing kwavers' own Mnemosyne pin to `e8e825f` does **not** close the
   diamond — measured, not assumed: the pin was bumped in a lane, the lock
@@ -425,40 +439,54 @@
   unchanged public API; kwavers-solver release lib suite 946/946;
   Clippy/Rustdoc clean for the touched packages.
 
-## KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 — Retain scalar homogeneous coefficients [patch] [perf] — todo
+## KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 — Retain scalar homogeneous coefficients [patch] [perf] — complete
+
+- **Delivered:** source `8d6874e68` (branch `perf/viscoacoustic-uniform-coefficients`,
+  stacked on `pr/viscoacoustic-dimensional-state`): a private scalar-or-grid
+  representation carries every medium and relaxation coefficient and
+  specializes once at the operation boundary, the scalar path hoisting
+  coefficient loads out of the per-voxel loops. Homogeneous constructors
+  collapse `inv_rho`/`M_∞`/`M_U` and all six arm coefficient fields to
+  scalars (σ remains true per-voxel state); heterogeneous constructors build
+  per-voxel fields exactly as before. No public type or method changed.
+- **Evidence:** all eight active-axis masks step bitwise-identically to an
+  injected grid-coefficient reference (pressure samples and energy), the
+  uniform-field homogeneous/heterogeneous arm pair produces bitwise-equal
+  pressure traces, and warm heterogeneous construction is bit-identical to
+  its pre-change ledger (23 events / 721,856 bytes). Warm three-arm
+  homogeneous 1-D construction drops from 29 events / 721,856 retained
+  bytes to 11 / 328,640 — removing exactly the entry-evidence 393,216 B of
+  constant grids plus both temporary full-grid inputs per arm; the armless
+  constructor falls to 7/9/12 events and 229,376/230,400/295,296 bytes
+  across 1-D/2-D/3-D (−3 events / −98,304 B per shape from the
+  dimensional-state figures: the three scalarized modulus grids). Warm
+  stepping stays allocation-free on both paths. The three-arm homogeneous
+  and heterogeneous Criterion baseline was captured before the production
+  edit (132.7/252.7/321.6 µs and 137.3/252.5/376.4 µs); the after-run shows
+  the byte-identical heterogeneous control drifting up to +27% absolute
+  under concurrent machine load and the homogeneous arm +11–17%, so no
+  regression is attributable to the change; the guard metric is the
+  within-run ratio. kwavers-solver suite 952/952; Clippy/Rustdoc clean for
+  the touched packages (pre-existing `println!` pedantic hits in unrelated
+  fdtd/kuznetsov/kzk tests and examples are unchanged).
+
+## KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 — Reject invalid numeric domains [major] — done 2026-09-06
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 | Represent spatially uniform medium and relaxation coefficients as scalars while retaining full grids only for heterogeneous constructors. | [patch] [perf] | todo | unowned | viscoacoustic medium/arm representation, homogeneous and heterogeneous step/energy paths, constructor/step allocation ledgers, relaxation Criterion workload |
+| KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 | Reject non-finite material, spacing, time-step, relaxation, and absorbing-layer parameters before allocation or state mutation. | [major] | done | Buffy (Codebuff) | viscoacoustic constructors and absorbing-layer configuration, error contracts, boundary tests, ADR and migration note |
 
-- **Dependency:** land the dimensional-state item first because both change the
-  private step layout. This item does not alter public constructors or collapse
-  heterogeneous fields into a uniform approximation.
-- **Entry evidence:** on the same warmed release 4,096-cell probe, three
-  homogeneous arms raised construction from 15 allocations and 426,000
-  retained bytes to 34 allocations and 820,176 bytes in 1-D; 2-D/3-D measured
-  788,424/787,776 bytes. Three homogeneous medium fields plus three coefficient
-  fields per arm account for exactly 393,216 retained bytes at this size—48.0%
-  of the three-arm 1-D footprint. The current homogeneous constructor also
-  allocates two temporary full-grid inputs per arm. During stepping, each arm
-  streams decay, gain, and inverse-tau grids whose values are constant.
-- **Acceptance:** one private scalar-or-grid representation specializes once at
-  the operation boundary; no variant branch enters a per-voxel loop. Uniform
-  and heterogeneous paths compare complete state/energy values against the
-  incumbent implementation, with bitwise equality where evaluation order is
-  unchanged and a derived bound otherwise. Warm homogeneous construction
-  removes the 393,216 retained bytes and all coefficient-input temporaries at
-  4,096 cells; heterogeneous allocation and values remain unchanged; repeated
-  stepping allocates zero. Establish a three-arm Criterion baseline before the
-  production edit and reject the candidate on a significant homogeneous or
-  heterogeneous runtime regression.
-
-## KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 — Reject invalid numeric domains [major] — todo
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 | Reject non-finite material, spacing, time-step, relaxation, and absorbing-layer parameters before allocation or state mutation. | [major] | todo | unowned | viscoacoustic constructors and absorbing-layer configuration, error contracts, boundary tests, ADR and migration note |
-
+- **Delivered:** PR #719, merge `819ab02c`; every viscoacoustic constructor
+  parameter is validated finite-and-positive before any allocation
+  (`is_finite() && v > 0.0`; the lossless-voxel `ΔM` zero kept), and
+  `enable_absorbing_layer` is fallible: a non-finite `gamma_max` is rejected
+  before the retained decay field is replaced, and the per-axis extent test
+  compares `thickness >= n.div_ceil(2)` instead of wrapping `2 * thickness`.
+  Table-driven structural tests cover NaN, both infinities, signed zero, and
+  negatives for every parameter and field element; the allocation harness
+  pins that rejection retains no solver state. SemVer verdict (empirical,
+  `cargo-semver-checks` vs main): 223 pass, no update required — the
+  `()` → `KwaversResult` change is source-compatible.
 - **Entry evidence:** `ViscoacousticMemorySolver::new` and
   `new_heterogeneous` validate positive inputs with `<= 0.0`, so `NaN` and
   positive infinity pass into retained coefficient, wavenumber, and state
