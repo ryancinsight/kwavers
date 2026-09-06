@@ -1,4 +1,5 @@
 use super::OperatorSplittingSolver;
+use crate::test_support::test_info;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
 use leto::Array3;
@@ -69,9 +70,13 @@ fn test_harmonic_generation() -> Result<(), kwavers_core::error::KwaversError> {
         if step % 20 == 0 || step == 99 {
             let current_max = pressure.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
             let current_energy: f64 = pressure.iter().map(|p| p * p).sum();
-            println!(
+            test_info!(
                 "Step {}: max={:.2e}, energy={:.2e} (initial: max={:.2e}, energy={:.2e})",
-                step, current_max, current_energy, initial_max, initial_energy
+                step,
+                current_max,
+                current_energy,
+                initial_max,
+                initial_energy
             );
         }
     }
