@@ -95,3 +95,4 @@
 | [126](126-whole-record-harmonic-analysis.md) | Define harmonic detection as whole-record analysis | Accepted |
 | [127](127-swe-displacement-history.md) | Retain displacement-only SWE history | Accepted |
 | [128](128-first-derivative-stencils-belong-to-leto.md) | First-derivative stencils belong to Leto | Accepted |
+| [129](129-viscoacoustic-finite-domain.md) | The viscoacoustic domain is finite-and-positive, and the absorbing layer is fallible | Accepted |

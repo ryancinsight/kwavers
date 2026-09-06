@@ -246,13 +246,24 @@ impl std::fmt::Debug for ViscoacousticMemorySolver {
     }
 }
 
+/// A constructor parameter is admissible only when it is finite and strictly
+/// positive. `v > 0.0` alone is the wrong predicate for physical quantities:
+/// every non-finite value compares false against `0.0`, so `NaN` and `+∞`
+/// pass a bare positivity guard and reach retained coefficient, wavenumber,
+/// and state construction. The finiteness half of this predicate is what the
+/// finite-domain contract (ADR 129) adds; the positivity half is unchanged.
+fn is_positive_finite(v: f64) -> bool {
+    v.is_finite() && v > 0.0
+}
+
 impl ViscoacousticMemorySolver {
     /// Build from raw parameters: grid `(nx,ny,nz)` with spacings `(dx,dy,dz)`,
     /// time step `dt`, density `ρ`, equilibrium modulus `M_∞`, and relaxation
     /// arms `(ΔMₗ, τₗ)`. An empty arm list yields the lossless wave equation.
     /// # Errors
-    /// - Any zero dimension, non-positive `dx`/`dy`/`dz`/`dt`/`ρ`/`M_∞`, or a
-    ///   non-positive arm parameter.
+    /// - Any zero dimension, non-finite or non-positive
+    ///   `dx`/`dy`/`dz`/`dt`/`ρ`/`M_∞`, or a non-finite or non-positive arm
+    ///   parameter (`NaN` and infinity are rejected before any allocation).
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         nx: usize,
@@ -269,20 +280,24 @@ impl ViscoacousticMemorySolver {
         if nx == 0
             || ny == 0
             || nz == 0
-            || dx <= 0.0
-            || dy <= 0.0
-            || dz <= 0.0
-            || dt <= 0.0
-            || rho <= 0.0
-            || m_inf <= 0.0
+            || !is_positive_finite(dx)
+            || !is_positive_finite(dy)
+            || !is_positive_finite(dz)
+            || !is_positive_finite(dt)
+            || !is_positive_finite(rho)
+            || !is_positive_finite(m_inf)
         {
             return Err(KwaversError::InvalidInput(
-                "viscoacoustic solver requires positive grid, spacings, dt, ρ, M_∞".to_owned(),
+                "viscoacoustic solver requires positive finite grid, spacings, dt, ρ, M_∞"
+                    .to_owned(),
             ));
         }
-        if arms.iter().any(|&(dm, tau)| dm <= 0.0 || tau <= 0.0) {
+        if arms
+            .iter()
+            .any(|&(dm, tau)| !is_positive_finite(dm) || !is_positive_finite(tau))
+        {
             return Err(KwaversError::InvalidInput(
-                "relaxation arms require ΔM>0 and τ>0".to_owned(),
+                "relaxation arms require positive finite ΔM and τ".to_owned(),
             ));
         }
 
@@ -322,9 +337,10 @@ impl ViscoacousticMemorySolver {
     /// regions alongside absorbing ones.
     ///
     /// # Errors
-    /// - Any field shape ≠ `(nx,ny,nz)`, a non-positive `ρ`/`M_∞`/`τ`, a
-    ///   negative `ΔM`, or
-    ///   non-positive grid/spacing/`dt`.
+    /// - Any field shape ≠ `(nx,ny,nz)`, a non-finite or non-positive
+    ///   `ρ`/`M_∞`/`τ` element, a negative or non-finite `ΔM` element, or a
+    ///   non-finite or non-positive grid/spacing/`dt` (rejection happens
+    ///   before any allocation).
     #[allow(clippy::too_many_arguments)]
     pub fn new_heterogeneous(
         nx: usize,
@@ -340,28 +356,35 @@ impl ViscoacousticMemorySolver {
     ) -> KwaversResult<Self> {
         let shape = [nx, ny, nz];
         let ok_shape = |a: &Array3<f64>| a.shape() == shape;
-        if nx == 0 || ny == 0 || nz == 0 || dx <= 0.0 || dy <= 0.0 || dz <= 0.0 || dt <= 0.0 {
+        if nx == 0
+            || ny == 0
+            || nz == 0
+            || !is_positive_finite(dx)
+            || !is_positive_finite(dy)
+            || !is_positive_finite(dz)
+            || !is_positive_finite(dt)
+        {
             return Err(KwaversError::InvalidInput(
-                "viscoacoustic solver requires positive grid, spacings, dt".to_owned(),
+                "viscoacoustic solver requires positive finite grid, spacings, dt".to_owned(),
             ));
         }
         if !ok_shape(rho)
             || !ok_shape(m_inf)
-            || rho.iter().any(|&r| r <= 0.0)
-            || m_inf.iter().any(|&m| m <= 0.0)
+            || rho.iter().any(|&r| !is_positive_finite(r))
+            || m_inf.iter().any(|&m| !is_positive_finite(m))
         {
             return Err(KwaversError::InvalidInput(
-                "ρ and M_∞ fields must be grid-shaped and positive".to_owned(),
+                "ρ and M_∞ fields must be grid-shaped and positive finite".to_owned(),
             ));
         }
         if arms.iter().any(|(dm, tau)| {
             !ok_shape(dm)
                 || !ok_shape(tau)
-                || dm.iter().any(|&v| v < 0.0)
-                || tau.iter().any(|&v| v <= 0.0)
+                || dm.iter().any(|&v| !(v.is_finite() && v >= 0.0))
+                || tau.iter().any(|&v| !is_positive_finite(v))
         }) {
             return Err(KwaversError::InvalidInput(
-                "relaxation arm fields must be grid-shaped with ΔM≥0 and τ>0".to_owned(),
+                "relaxation arm fields must be grid-shaped with finite ΔM≥0 and τ>0".to_owned(),
             ));
         }
 
@@ -541,15 +564,51 @@ impl ViscoacousticMemorySolver {
     /// rate ramps in as a quadratic profile `γ(d) = γ_max ((L-d)/L)²` over the
     /// layer depth `d ∈ [0, L)` (zero in the interior), summed across axes so
     /// corners damp in every direction. A smooth ramp keeps layer reflection low.
-    /// Calling again rebuilds the profile; `thickness = 0` disables it.
-    pub fn enable_absorbing_layer(&mut self, thickness: usize, gamma_max: f64) {
+    /// Calling again rebuilds the profile; `thickness = 0` disables it, and an
+    /// axis too short to host a layer contributes exactly zero damping as
+    /// before. When no axis can host a layer of the requested thickness the
+    /// retained damping state is cleared — the established no-layer result.
+    /// The per-axis extent test is overflow-free: it compares the thickness
+    /// against `n / 2` instead of doubling it, so an extreme `usize` input
+    /// neither wraps the guard nor reaches `n - thickness` underflow.
+    ///
+    /// # Errors
+    /// - Non-finite `gamma_max`: rejected before the decay field is replaced,
+    ///   so a rejected reconfiguration leaves the existing damping state and
+    ///   subsequent pressure evolution untouched.
+    pub fn enable_absorbing_layer(
+        &mut self,
+        thickness: usize,
+        gamma_max: f64,
+    ) -> KwaversResult<()> {
+        if !gamma_max.is_finite() {
+            return Err(KwaversError::InvalidInput(
+                "absorbing-layer gamma_max must be finite".to_owned(),
+            ));
+        }
         if thickness == 0 || gamma_max <= 0.0 {
             self.damping_decay = None;
-            return;
+            return Ok(());
+        }
+        // No axis can host a layer of this thickness: the summed γ profile is
+        // identically zero, so retain the established no-layer result instead
+        // of an all-ones decay grid. (An axis hosts the layer iff
+        // `thickness < n.div_ceil(2)`, which is the original `n > 2 * thickness`
+        // test computed without the `usize` overflow.)
+        if thickness >= self.nx.div_ceil(2)
+            && thickness >= self.ny.div_ceil(2)
+            && thickness >= self.nz.div_ceil(2)
+        {
+            self.damping_decay = None;
+            return Ok(());
         }
         // Per-axis ramp: γ contribution at index `i` along an axis of extent `n`.
         let ramp = |i: usize, n: usize| -> f64 {
-            if n <= 2 * thickness {
+            // Overflow-free extent test: `thickness` may be any `usize`, so it
+            // must never be doubled (`2 * thickness` wraps, and the wrapped
+            // guard lets `n - thickness` underflow). `thickness >= n.div_ceil(2)`
+            // holds for exactly the axes the wrapped expression rejected.
+            if thickness >= n.div_ceil(2) {
                 return 0.0; // axis too short to host the layer (e.g. singleton)
             }
             let l = thickness as f64;
@@ -570,6 +629,15 @@ impl ViscoacousticMemorySolver {
             (-gamma * dt).exp()
         });
         self.damping_decay = Some(decay);
+        Ok(())
+    }
+
+    /// Test-only view of the retained damping field for the finite-domain
+    /// state-preservation assertions: a rejected reconfiguration must leave
+    /// this value untouched.
+    #[cfg(test)]
+    pub(crate) fn damping_decay_state(&self) -> Option<&Array3<f64>> {
+        self.damping_decay.as_ref()
     }
 
     /// 1-D convenience constructor (`ny = nz = 1`).
@@ -652,7 +720,11 @@ impl ViscoacousticMemorySolver {
         f_ref: f64,
     ) -> KwaversResult<Self> {
         let shape = [nx, ny, nz];
-        let positive = |a: &Array3<f64>| a.shape() == shape && a.iter().all(|&v| v > 0.0);
+        // Finite-and-positive: a bare `v > 0.0` admits `NaN`/`+∞` (both
+        // compare false against zero), and a non-finite phase velocity or
+        // density would poison the relaxation fit and the retained moduli.
+        let positive =
+            |a: &Array3<f64>| a.shape() == shape && a.iter().all(|&v| is_positive_finite(v));
         if !positive(rho) || !positive(c) || alpha_np_m.shape() != shape {
             return Err(KwaversError::InvalidInput(
                 "ρ, c, α fields must be grid-shaped (ρ, c positive)".to_owned(),

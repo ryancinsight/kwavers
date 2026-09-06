@@ -547,3 +547,25 @@ fn viscoacoustic_sensor_reservation_rejects_unrepresentable_history() {
             .all(|(&actual, expected)| actual.to_bits() == expected.to_bits()));
     }
 }
+
+/// A rejected (non-finite) constructor input must be detected before any
+/// solver state is allocated (ADR 129's "before allocation" clause). The
+/// rejection itself may own the diagnostic message (one small `String`), but
+/// nothing grid-sized — velocity, pressure, staging, or wavenumber storage —
+/// may be retained: the 1-D warm construction alone retains 327,680 bytes.
+#[test]
+fn viscoacoustic_rejected_construction_allocates_no_solver_state() {
+    let window = Window::open();
+    let r = ViscoacousticMemorySolver::new_1d(8, 1.0e-4, f64::NAN, 1_000.0, 2.25e9, &[]);
+    let change = window.change();
+    assert!(
+        matches!(r, Err(KwaversError::InvalidInput(_))),
+        "NaN dt must be rejected as InvalidInput"
+    );
+    assert_eq!(change.reallocations, 0);
+    assert!(
+        change.bytes_retained() < 1_024,
+        "rejection must not retain solver state, got {} bytes",
+        change.bytes_retained()
+    );
+}

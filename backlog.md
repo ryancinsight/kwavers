@@ -421,11 +421,11 @@
   the touched packages (pre-existing `println!` pedantic hits in unrelated
   fdtd/kuznetsov/kzk tests and examples are unchanged).
 
-## KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 — Reject invalid numeric domains [major] — todo
+## KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 — Reject invalid numeric domains [major] — in-progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 | Reject non-finite material, spacing, time-step, relaxation, and absorbing-layer parameters before allocation or state mutation. | [major] | todo | unowned | viscoacoustic constructors and absorbing-layer configuration, error contracts, boundary tests, ADR and migration note |
+| KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 | Reject non-finite material, spacing, time-step, relaxation, and absorbing-layer parameters before allocation or state mutation. | [major] | in-progress | Buffy (Codebuff) | viscoacoustic constructors and absorbing-layer configuration, error contracts, boundary tests, ADR and migration note |
 
 - **Entry evidence:** `ViscoacousticMemorySolver::new` and
   `new_heterogeneous` validate positive inputs with `<= 0.0`, so `NaN` and
