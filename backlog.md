@@ -1,5 +1,48 @@
 # Backlog / Strategy
 
+## KW-GPU-FDTD-SHADER-COPY-2026-09-06 — Delete the unwired `kwavers-gpu` FDTD stencil copy [patch] — in-progress <a id="kw-gpu-fdtd-shader-copy-2026-09-06"></a>
+
+- **Integrator:** Claude on `chore/kwavers-gpu-fdtd-shader-copy`; **lease:**
+  `crates/kwavers-gpu/src/gpu/compute/`, `crates/kwavers-gpu/src/gpu/shaders/`
+  — 2026-09-06.
+- **Outcome:** `gpu::compute::fdtd_gpu` (`WgpuFdtdPressureDispatcher`,
+  `PressureParams`, `shaders/fdtd_pressure.wgsl`) and its CPU reference
+  `fdtd_cpu` (`FdtdCpuReferenceDispatcher`) are a second 6-point Laplacian
+  wave-update kernel with no dispatch site: `WgpuFdtdPressureDispatcher` is not
+  re-exported past its module, and `FdtdCpuReferenceDispatcher` exists only as
+  its value-semantic reference. Delete both with the shader and their tests.
+- **Acceptance:** no reference to the deleted items remains
+  (`git grep` to zero); `cargo clippy -p kwavers-gpu --all-targets -D warnings`
+  and `cargo nextest run -p kwavers-gpu` clean.
+- **Delivered:** `aa738cefe` deletes 775 lines and adds one. `git grep` for
+  each deleted name returns nothing but this entry.
+- **Blocked on, then unblocked by, a dependency defect this change did not
+  cause.** kwavers could not resolve its lock at all: Moirai's workspace went
+  0.6.0 on its default branch at 2026-09-06 21:34 while ten members still
+  required `^0.5.0` from that same branch, so `cargo metadata --locked` and
+  `scripts/lockfile.py --check` both failed and the pre-push gate refused every
+  push. Root cause and the ordered sweep are recorded at atlas
+  `backlog.md#atlas-moirai-06-forward-sweep`; this branch carries kwavers' own
+  half (`moirai-parallel` 0.5 → 0.6) plus the regenerated lock.
+- **Filed in passing:** `gpu::compute_manager::fdtd_cpu` is a *third*
+  hand-rolled first-difference sweep in `kwavers-gpu`, this one reachable. It
+  is a consolidation target for the leto/hephaestus seam, not part of this
+  deletion — see `KW-GPU-COMPUTE-MANAGER-STENCIL-2026-09-07`.
+
+## KW-GPU-COMPUTE-MANAGER-STENCIL-2026-09-07 — `compute_manager` hand-rolls a first-difference sweep [patch] — todo <a id="kw-gpu-compute-manager-stencil-2026-09-07"></a>
+
+- **Outcome:** `crates/kwavers-gpu/src/gpu/compute_manager.rs` computes the
+  velocity divergence with an inline forward-difference triple loop over
+  `LetoArray3<f64>`. Leto owns that operator
+  (`leto_ops::StaggeredLeapfrog3D::divergence_into`, ADR 128) and the solver
+  already routes through it, so this is the same duplication ADR 128 closed one
+  crate over. Unlike the deleted `fdtd_gpu`/`fdtd_cpu` pair, this one is
+  reachable, so it is a rewrite onto the seam rather than a deletion.
+- **Acceptance:** the sweep calls the leto operator; the existing
+  `compute_manager` tests pass unchanged; no third stencil remains in
+  `kwavers-gpu`.
+
+
 ## ✅ KW-PY-SIMULATION-MOD-SLICES-2026-09-02 — Slice `simulation_py/mod.rs` to the file target [patch] — done 2026-09-02
 
 - **Delivered:** `mod.rs` (803 → 236 lines) is the pyclass, its constructor and the module tree; the `#[pymethods]` groups live where their concern does — `configuration.rs` (config objects, thermal/poroelastic), `pml.rs` (PML geometry and k-space numerics), `physics.rs` (nonlinearity, absorption, Helmholtz) — under the crate's existing `multiple-pymethods` feature; `run/execute.rs` holds `Simulation.run` and `run/prepare.rs` the pure conversions it was inlining (CFL time step with its named Courant number, solver/FFT-backend maps, elastic velocity source, IVP axis). The `kwavers_error_to_py_local` alias "kept for old solver files" is deleted and its six callers use the one name.

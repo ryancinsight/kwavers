@@ -1,12 +1,7 @@
 //! WGPU compute command helpers.
 
-mod fdtd_cpu;
-mod fdtd_gpu;
 #[cfg(test)]
 mod tests;
-
-pub use fdtd_cpu::FdtdCpuReferenceDispatcher;
-pub use fdtd_gpu::{PressureParams, WgpuFdtdPressureDispatcher};
 
 /// WGPU command helper for bind-group layout and compute-pass recording.
 #[derive(Debug)]

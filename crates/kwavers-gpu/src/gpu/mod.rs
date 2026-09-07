@@ -32,7 +32,7 @@ pub use backend::GpuBackend;
 // `gpu/buffers.rs` exposes only GpuBufferManager (the named-pool layer).
 pub use buffer::{BufferUsage, GpuBufferData};
 pub use buffers::GpuBufferManager;
-pub use compute::{FdtdCpuReferenceDispatcher, WgpuComputeCommands};
+pub use compute::WgpuComputeCommands;
 pub use compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
 pub use device::{GpuDevice, GpuDeviceInfo, GpuDeviceProvider};
 pub use memory::{GpuMemoryPoolType, UnifiedMemoryManager};
