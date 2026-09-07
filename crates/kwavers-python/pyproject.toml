@@ -103,7 +103,11 @@ target-version = "py38"
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "DTZ", "T10", "DJ", "EM", "EXE", "ISC", "ICN", "G", "INP", "PIE", "T20", "PYI", "PT", "Q", "RSE", "RET", "SLF", "SIM", "TID", "TCH", "INT", "ARG", "PTH", "PD", "PGH", "PL", "TRY", "NPY", "RUF"]
 
 [tool.mypy]
-python_version = "3.8"
+# The analysis target, not the runtime floor. Current mypy refuses to model
+# anything below 3.10 and aborts on the config before checking a single file,
+# which silently turned the typed-consumer gate into a no-op; `requires-python`
+# above still carries the abi3 floor the wheel actually supports.
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
