@@ -61,6 +61,8 @@ egui = ["dep:egui"]
 pinn = ["kwavers-solver/pinn"]
 
 [dev-dependencies]
+# Rejection assertions shared across the workspace's test modules.
+kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 pollster = { version = "0.4" }
 
 [lints]

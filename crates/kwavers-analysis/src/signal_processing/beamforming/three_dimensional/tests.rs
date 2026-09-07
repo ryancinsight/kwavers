@@ -5,6 +5,7 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::test_support::assert_rejects;
 
 use super::*;
 
@@ -122,8 +123,10 @@ fn test_processor_creation_cpu_only() {
     let config = BeamformingConfig3D::default();
     let result = BeamformingProcessor3D::new_wgpu(config);
 
-    // Should fail with FeatureNotAvailable error
-    assert!(result.is_err());
+    assert_rejects(
+        result,
+        "GPU acceleration requires constructing BeamformingProcessor3D with a provider",
+    );
 }
 
 /// Contract validation: provider-injected static DAS must agree with the
