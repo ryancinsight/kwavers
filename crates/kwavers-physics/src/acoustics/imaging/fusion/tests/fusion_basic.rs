@@ -1,6 +1,7 @@
 //! Basic fusion configuration, registration, and weighted-average tests.
 
 use super::super::*;
+use kwavers_core::test_support::assert_rejects;
 use leto::Array3;
 
 #[test]
@@ -145,7 +146,7 @@ fn test_fusion_insufficient_modalities() {
 
     // Attempt fusion with no modalities
     let result = fusion.fuse();
-    assert!(result.is_err());
+    assert_rejects(result, "At least two modalities");
 
     // Attempt fusion with only one modality
     let mut fusion = MultiModalFusion::new(config);
@@ -153,5 +154,5 @@ fn test_fusion_insufficient_modalities() {
         .register_ultrasound(&Array3::zeros([4, 4, 2]))
         .unwrap();
     let result = fusion.fuse();
-    assert!(result.is_err());
+    assert_rejects(result, "At least two modalities");
 }

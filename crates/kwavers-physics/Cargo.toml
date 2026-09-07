@@ -49,6 +49,8 @@ clinical-imaging = [
 
 [dev-dependencies]
 kwavers-alloc-probe = { path = "../kwavers-alloc-probe" }
+# Rejection assertions shared across the workspace's test modules.
+kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 
 [lints]
 workspace = true

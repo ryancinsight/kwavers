@@ -1,6 +1,7 @@
 use crate::acoustics::skull::HeterogeneousSkull;
 use kwavers_core::constants::fundamental::DENSITY_WATER;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::test_support::assert_rejects;
 use kwavers_grid::Grid;
 use leto::Array3;
 
@@ -134,7 +135,7 @@ fn test_element_corrections_reject_mismatched_lengths() {
     let skull = make_test_skull(4, 4, 4, 1, 2, 2800.0);
     let ac = AberrationCorrection::new(&grid, &skull);
     let err = ac.compute_element_corrections(500e3, &[0.0, 1e-3], &[0.0]);
-    assert!(err.is_err());
+    assert_rejects(err, "element_x_m has length 2, element_y_m has length 1");
 }
 
 /// Phase changes monotonically through a faster-than-water bone slab, then stays flat.

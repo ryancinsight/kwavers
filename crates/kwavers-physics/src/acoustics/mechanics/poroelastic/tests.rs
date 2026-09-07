@@ -2,6 +2,7 @@ use super::material::PoroelasticMaterial;
 use super::simulation::PoroelasticSimulation;
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use kwavers_core::test_support::assert_invalid_input;
 use kwavers_grid::Grid;
 
 #[test]
@@ -24,7 +25,7 @@ fn test_material_validation() {
         VISCOSITY_WATER,
         1.5,
     );
-    assert!(result.is_err()); // Porosity > 1
+    assert_invalid_input(result, "Porosity must be between 0 and 1");
 
     let result = PoroelasticMaterial::new(
         0.3,
@@ -37,7 +38,7 @@ fn test_material_validation() {
         VISCOSITY_WATER,
         1.5,
     );
-    assert!(result.is_err()); // Negative density
+    assert_invalid_input(result, "Densities must be positive");
 }
 
 #[test]

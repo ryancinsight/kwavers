@@ -22,7 +22,7 @@ use crate::error::{KwaversError, KwaversResult};
 /// Panics when `result` is `Ok`, when the error is a different variant, or
 /// when its message does not contain `fragment`.
 #[track_caller]
-pub fn assert_invalid_input<T: std::fmt::Debug>(result: KwaversResult<T>, fragment: &str) {
+pub fn assert_invalid_input<T>(result: KwaversResult<T>, fragment: &str) {
     match result {
         Err(KwaversError::InvalidInput(message)) => assert!(
             message.contains(fragment),
@@ -30,7 +30,7 @@ pub fn assert_invalid_input<T: std::fmt::Debug>(result: KwaversResult<T>, fragme
              containing {fragment:?}, got {message:?}"
         ),
         Err(other) => panic!("expected InvalidInput({fragment:?}), got {other:?}"),
-        Ok(value) => panic!("expected InvalidInput({fragment:?}), got Ok({value:?})"),
+        Ok(_) => panic!("expected InvalidInput({fragment:?}), got Ok"),
     }
 }
 
@@ -47,10 +47,7 @@ pub fn assert_invalid_input<T: std::fmt::Debug>(result: KwaversResult<T>, fragme
 /// Panics when `result` is `Ok`, or when the rendered error does not contain
 /// `fragment`.
 #[track_caller]
-pub fn assert_rejects<T: std::fmt::Debug, E: std::fmt::Display>(
-    result: Result<T, E>,
-    fragment: &str,
-) {
+pub fn assert_rejects<T, E: std::fmt::Display>(result: Result<T, E>, fragment: &str) {
     match result {
         Err(error) => {
             let rendered = error.to_string();
@@ -60,6 +57,6 @@ pub fn assert_rejects<T: std::fmt::Debug, E: std::fmt::Display>(
                  {fragment:?}, got {rendered:?}"
             );
         }
-        Ok(value) => panic!("expected a rejection naming {fragment:?}, got Ok({value:?})"),
+        Ok(_) => panic!("expected a rejection naming {fragment:?}, got Ok"),
     }
 }

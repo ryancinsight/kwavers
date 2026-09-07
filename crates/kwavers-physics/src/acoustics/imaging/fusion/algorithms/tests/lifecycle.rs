@@ -1,4 +1,5 @@
 use super::*;
+use kwavers_core::test_support::assert_rejects;
 
 #[test]
 fn test_multimodal_fusion_creation() {
@@ -25,10 +26,5 @@ fn test_fuse_insufficient_modalities() {
     let fusion = MultiModalFusion::new(config);
     let result = fusion.fuse();
 
-    assert!(result.is_err());
-    if let Err(KwaversError::Validation(e)) = result {
-        assert!(e.to_string().contains("At least two modalities"));
-    } else {
-        panic!("Expected Validation ConstraintViolation error.");
-    }
+    assert_rejects(result, "At least two modalities");
 }
