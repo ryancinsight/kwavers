@@ -1,8 +1,8 @@
 use super::super::config::PinnConfig;
 use super::core::PinnWave1D;
-use crate::test_support::assert_invalid_input;
 use coeus_autograd::Var;
 use coeus_core::MoiraiBackend;
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array1;
 
 type TestBackend = MoiraiBackend;

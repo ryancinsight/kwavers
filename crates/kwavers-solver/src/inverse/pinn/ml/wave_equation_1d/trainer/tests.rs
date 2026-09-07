@@ -1,8 +1,8 @@
 use super::super::config::PinnConfig;
 use super::trainer_impl::PinnTrainer;
-use crate::test_support::assert_invalid_input;
 use coeus_core::MoiraiBackend;
 use kwavers_core::constants::fundamental::SOUND_SPEED_AIR;
+use kwavers_core::test_support::assert_invalid_input;
 use leto::{Array1, Array2};
 
 type TestBackend = MoiraiBackend;

@@ -1,6 +1,6 @@
 use super::*;
 use crate::inverse::pinn::elastic_2d::Config;
-use crate::test_support::assert_invalid_input;
+use kwavers_core::test_support::assert_invalid_input;
 
 type TestBackend = coeus_core::MoiraiBackend;
 

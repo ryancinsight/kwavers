@@ -3,8 +3,8 @@
 //! medium, in 1-D, 2-D, and 3-D.
 
 use super::ViscoacousticMemorySolver;
-use crate::test_support::assert_invalid_input;
 use kwavers_core::error::KwaversError;
+use kwavers_core::test_support::assert_invalid_input;
 use kwavers_math::fft::Complex64;
 use leto::Array3;
 use std::f64::consts::TAU;

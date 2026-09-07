@@ -1,5 +1,6 @@
 use super::{FdtdAvx512Config, FdtdAvx512StencilProcessor};
-use crate::test_support::{assert_invalid_input, test_info};
+use crate::test_support::test_info;
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array3;
 
 #[test]
