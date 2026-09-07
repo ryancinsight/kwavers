@@ -1,10 +1,8 @@
 # Backlog / Strategy
 
-## KW-GPU-FDTD-SHADER-COPY-2026-09-06 — Delete the unwired `kwavers-gpu` FDTD stencil copy [patch] — in-progress <a id="kw-gpu-fdtd-shader-copy-2026-09-06"></a>
+## KW-GPU-FDTD-SHADER-COPY-2026-09-06 — Delete the unwired `kwavers-gpu` FDTD stencil copy [patch] — done 2026-09-07 <a id="kw-gpu-fdtd-shader-copy-2026-09-06"></a>
 
-- **Integrator:** Claude on `chore/kwavers-gpu-fdtd-shader-copy`; **lease:**
-  `crates/kwavers-gpu/src/gpu/compute/`, `crates/kwavers-gpu/src/gpu/shaders/`
-  — 2026-09-06.
+- **Landed:** PR #728 (`21d0b191a`). 775 lines deleted, 1 added.
 - **Outcome:** `gpu::compute::fdtd_gpu` (`WgpuFdtdPressureDispatcher`,
   `PressureParams`, `shaders/fdtd_pressure.wgsl`) and its CPU reference
   `fdtd_cpu` (`FdtdCpuReferenceDispatcher`) are a second 6-point Laplacian
