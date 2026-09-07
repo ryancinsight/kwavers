@@ -1,5 +1,5 @@
-use crate::test_support::assert_rejects;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use kwavers_core::test_support::assert_rejects;
 use leto::Array3;
 
 use super::super::interface::{FsiInterface, FsiInterfaceSpec};

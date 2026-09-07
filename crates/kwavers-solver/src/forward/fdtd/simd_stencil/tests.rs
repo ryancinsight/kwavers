@@ -1,5 +1,5 @@
 use super::{FdtdSimdStencilConfig, FdtdSimdStencilProcessor};
-use crate::test_support::assert_invalid_input;
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array3;
 
 #[test]

@@ -1,6 +1,6 @@
 use super::operator::SpectralDerivativeOperator;
-use crate::test_support::assert_invalid_input;
 use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array3;
 
 /// **Theorem (spectral derivative exactness for DFT-representable modes):**

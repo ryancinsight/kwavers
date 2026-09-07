@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::assert_invalid_input;
+use kwavers_core::test_support::assert_invalid_input;
 
 fn assert_close(actual: f64, expected: f64) {
     let bound = 8.0 * f64::EPSILON * expected.abs().max(1.0);

@@ -1,5 +1,5 @@
 use super::super::{FwiProcessor, RHO_SEISMIC_REF};
-use crate::test_support::assert_rejects;
+use kwavers_core::test_support::assert_rejects;
 use kwavers_grid::Grid;
 use leto::Array3;
 
