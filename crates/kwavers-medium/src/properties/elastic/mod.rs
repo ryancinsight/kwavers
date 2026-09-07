@@ -28,12 +28,16 @@
 //! K = λ + 2μ/3  (bulk modulus)
 //! ```
 //!
+//! Every conversion and derived identity is owned by
+//! `proteus::elastic::IsotropicModuli`. This module stores `(ρ, λ, μ)` for the
+//! medium API and delegates; it does not reimplement the algebra.
+//!
 //! ## Invariants
 //!
 //! - `density > 0`
-//! - `lambda ≥ 0`
-//! - `mu > 0`
-//! - `-1 < ν < 0.5` (Poisson's ratio bounds)
+//! - `mu > 0` and `K = lambda + 2mu/3 > 0` (provider positive-definite domain;
+//!   auxetic solids with `lambda < 0` are admitted)
+//! - `-1 < ν < 0.5` (Poisson's ratio open interval)
 //! - `E > 0` (Young's modulus)
 
 mod computed;
