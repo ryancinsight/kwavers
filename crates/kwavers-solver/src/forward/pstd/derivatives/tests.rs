@@ -1,4 +1,5 @@
 use super::operator::SpectralDerivativeOperator;
+use crate::test_support::assert_invalid_input;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
 
@@ -164,5 +165,5 @@ fn test_invalid_field_size() {
     let field_view = field.view();
 
     let result = op.derivative_x(&field_view);
-    assert!(result.is_err());
+    assert_invalid_input(result, "mismatch grid");
 }

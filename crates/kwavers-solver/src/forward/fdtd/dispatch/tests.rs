@@ -1,5 +1,5 @@
 use super::*;
-use crate::test_support::test_info;
+use crate::test_support::{assert_invalid_input, test_info};
 use leto::Array3;
 
 #[test]
@@ -17,7 +17,9 @@ fn test_dispatcher_creation() {
 #[test]
 fn test_dispatcher_invalid_dimensions() {
     let result = FdtdStencilDispatcher::new(2, 32, 32, -1.0, -1.0);
-    assert!(result.is_err());
+    // `with_strategy` can also reject with FeatureNotAvailable when the
+    // selected strategy is absent, so the variant is part of the claim.
+    assert_invalid_input(result, "Grid dimensions must be >= 3");
 }
 
 #[test]
