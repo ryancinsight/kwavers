@@ -19,7 +19,6 @@ pub mod buffer;
 pub mod buffers;
 pub mod compute;
 pub mod compute_kernels;
-pub mod compute_manager;
 pub mod device;
 pub mod memory;
 pub mod multi_gpu;
