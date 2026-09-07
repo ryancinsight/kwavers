@@ -1,5 +1,21 @@
 # Backlog / Strategy
 
+## KW-GPU-COMPUTE-COMMANDS-2026-09-07 — Delete the orphaned WGPU command helper [patch] — done 2026-09-07 <a id="kw-gpu-compute-commands-2026-09-07"></a>
+
+- **Outcome:** `gpu::compute` held only `WgpuComputeCommands` after its two
+  FDTD dispatchers were deleted. Nothing constructs it: the sole reference in
+  the workspace was its own `size_of::<T>() > 0` test, which cannot fail on a
+  struct with two non-zero-sized fields — an existence-only assertion guarding
+  an unreachable type. Module, type, and test deleted; the `pub mod` and
+  re-export go with them.
+- **Why it survived two deletions:** it was the shared helper of the pair, so
+  removing the pair left it without a caller. Superseded artifacts belong in
+  the change that supersedes them; this is that residue collected one commit
+  late.
+- **Evidence:** `git grep` for the type returns nothing; clippy
+  `-p kwavers-gpu --features gpu --all-targets -D warnings` clean; nextest
+  164/164 (was 165 — the deleted test is the module's own).
+
 ## KW-GPU-FDTD-SHADER-COPY-2026-09-06 — Delete the unwired `kwavers-gpu` FDTD stencil copy [patch] — done 2026-09-07 <a id="kw-gpu-fdtd-shader-copy-2026-09-06"></a>
 
 - **Landed:** PR #728 (`21d0b191a`). 775 lines deleted, 1 added.

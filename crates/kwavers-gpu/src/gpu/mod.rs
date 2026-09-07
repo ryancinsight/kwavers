@@ -17,7 +17,6 @@
 pub mod backend;
 pub mod buffer;
 pub mod buffers;
-pub mod compute;
 pub mod compute_kernels;
 pub mod device;
 pub mod memory;
@@ -31,7 +30,6 @@ pub use backend::GpuBackend;
 // `gpu/buffers.rs` exposes only GpuBufferManager (the named-pool layer).
 pub use buffer::{BufferUsage, GpuBufferData};
 pub use buffers::GpuBufferManager;
-pub use compute::WgpuComputeCommands;
 pub use compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
 pub use device::{GpuDevice, GpuDeviceInfo, GpuDeviceProvider};
 pub use memory::{GpuMemoryPoolType, UnifiedMemoryManager};
