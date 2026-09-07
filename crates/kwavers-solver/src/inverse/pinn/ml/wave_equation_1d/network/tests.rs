@@ -1,5 +1,6 @@
 use super::super::config::PinnConfig;
 use super::core::PinnWave1D;
+use crate::test_support::assert_invalid_input;
 use coeus_autograd::Var;
 use coeus_core::MoiraiBackend;
 use leto::Array1;
@@ -24,7 +25,7 @@ fn test_pinn_invalid_config_empty_layers() {
         ..Default::default()
     };
     let result = PinnWave1D::<TestBackend>::new(config);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Must have at least one hidden layer");
 }
 
 #[test]
@@ -110,5 +111,5 @@ fn test_pinn_predict_mismatched_lengths() {
     let t = array1(vec![0.0, 0.1, 0.2]);
 
     let result = pinn.predict(&x, &t);
-    assert!(result.is_err());
+    assert_invalid_input(result, "x and t must have same length");
 }

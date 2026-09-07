@@ -1,5 +1,32 @@
 # Backlog / Strategy
 
+## KW-SOLVER-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-solver` [patch] — done 2026-09-07 <a id="kw-solver-value-assertions-2026-09-07"></a>
+
+- **Outcome:** all 19 `assert!(result.is_err())` sites in `kwavers-solver`
+  assert the typed variant and the message fragment naming the violated
+  constraint. Two `#[cfg(test)]` helpers carry the form:
+  `assert_invalid_input` (variant + cause, for the `InvalidInput` contract) and
+  `assert_rejects` (cause only, for contracts rejecting through `Validation`
+  or `InternalError`).
+- **A live defect, not only a form violation.** `test_avx512_invalid_dimensions`
+  called a constructor that rejects both on `nx < 4` *and* on a host without
+  AVX-512, returning different variants. On any non-AVX-512 machine the test
+  passed without ever reaching the dimension check — the assertion could not
+  fail on the defect it was written for. `test_avx512_invalid_tile_size` had
+  the same shape.
+- **Shown to bite:** changing the production dimension guard to return
+  `FeatureNotAvailable` instead of `InvalidInput` fails
+  `test_avx512_invalid_dimensions`; under the old assertion it passed. The
+  mutation was reverted and the file re-verified byte-identical.
+- **Evidence:** the class count for this crate goes 19 → 0 by the atlas
+  conformance detector; `cargo nextest run -p kwavers-solver --lib` 950/950
+  (2 skipped); clippy `-p kwavers-solver --all-targets -D warnings` and fmt
+  clean.
+- **Remaining stack-wide:** 104 sites in the other kwavers crates
+  (kwavers-physics 17, kwavers-analysis 14, kwavers 9, kwavers-therapy 8,
+  kwavers-medium/-math/-imaging 6 each, the rest smaller) — one item per crate,
+  same pattern.
+
 ## KW-GPU-COMPUTE-COMMANDS-2026-09-07 — Delete the orphaned WGPU command helper [patch] — done 2026-09-07 <a id="kw-gpu-compute-commands-2026-09-07"></a>
 
 - **Outcome:** `gpu::compute` held only `WgpuComputeCommands` after its two

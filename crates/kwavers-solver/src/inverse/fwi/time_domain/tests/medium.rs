@@ -1,4 +1,5 @@
 use super::super::{FwiProcessor, RHO_SEISMIC_REF};
+use crate::test_support::assert_rejects;
 use kwavers_grid::Grid;
 use leto::Array3;
 
@@ -96,7 +97,7 @@ fn test_fwi_resolved_density_heterogeneous_and_default() {
         .with_density(wrong_shape)
         .expect("validation only rejects non-finite / non-positive entries");
     let err = mismatched_processor.resolved_density(&grid);
-    assert!(err.is_err(), "shape mismatch must fail at resolution");
+    assert_rejects(err, "does not match grid");
 
     // Non-physical values must be rejected at the builder.
     let mut bad_rho = Array3::from_elem(dims, 1500.0_f64);
