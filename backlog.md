@@ -27,18 +27,25 @@
   is a consolidation target for the leto/hephaestus seam, not part of this
   deletion — see `KW-GPU-COMPUTE-MANAGER-STENCIL-2026-09-07`.
 
-## KW-GPU-COMPUTE-MANAGER-STENCIL-2026-09-07 — `compute_manager` hand-rolls a first-difference sweep [patch] — todo <a id="kw-gpu-compute-manager-stencil-2026-09-07"></a>
+## KW-GPU-COMPUTE-MANAGER-STENCIL-2026-09-07 — Delete `compute_manager`, the third stencil copy [patch] — done 2026-09-07 <a id="kw-gpu-compute-manager-stencil-2026-09-07"></a>
 
-- **Outcome:** `crates/kwavers-gpu/src/gpu/compute_manager.rs` computes the
-  velocity divergence with an inline forward-difference triple loop over
-  `LetoArray3<f64>`. Leto owns that operator
-  (`leto_ops::StaggeredLeapfrog3D::divergence_into`, ADR 128) and the solver
-  already routes through it, so this is the same duplication ADR 128 closed one
-  crate over. Unlike the deleted `fdtd_gpu`/`fdtd_cpu` pair, this one is
-  reachable, so it is a rewrite onto the seam rather than a deletion.
-- **Acceptance:** the sweep calls the leto operator; the existing
-  `compute_manager` tests pass unchanged; no third stencil remains in
-  `kwavers-gpu`.
+- **Re-scoped from rewrite to deletion on evidence.** The item was filed as
+  "route the sweep through leto" on the assumption `compute_manager` was
+  reachable. It is not: `git grep ComputeManager` outside the file itself
+  returns one line, its own `pub mod` declaration. The velocity-divergence
+  sweep, the absorption loop, and the raw `wgpu::Device`/`Queue`/buffer
+  accessors have no call site in the workspace.
+- **What it was:** a "GPU compute manager" whose field updates are CPU triple
+  loops — its own doc says so ("current field-update helpers below are CPU
+  routines") — and whose module doc claims to keep "raw WGPU handles confined
+  to the WGPU specialization" while exposing `device()`, `queue()`,
+  `create_buffer` and `write_buffer` verbatim. A scaffold whose GPU side never
+  arrived, contradicting its own contract. Deleted rather than wired: an
+  unused capability is deleted outright, and the seam it gestured at is the
+  one leto and hephaestus already own (ADR 128).
+- **Evidence:** `cargo clippy -p kwavers-gpu --features gpu --all-targets
+  -D warnings` clean; nextest 165/165 (was 168 — the three deleted tests are
+  the module's own); `cargo check -p kwavers-gpu --features gpu --lib` clean.
 
 
 ## ✅ KW-PY-SIMULATION-MOD-SLICES-2026-09-02 — Slice `simulation_py/mod.rs` to the file target [patch] — done 2026-09-02
