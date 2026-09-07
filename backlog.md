@@ -1,5 +1,24 @@
 # Backlog / Strategy
 
+## KW-GPU-FDTD-SHADER-COPY-2026-09-06 — Delete the unwired `kwavers-gpu` FDTD stencil copy [patch] — in-progress <a id="kw-gpu-fdtd-shader-copy-2026-09-06"></a>
+
+- **Integrator:** Claude on `chore/kwavers-gpu-fdtd-shader-copy`; **lease:**
+  `crates/kwavers-gpu/src/gpu/compute/`, `crates/kwavers-gpu/src/gpu/shaders/`
+  — 2026-09-06.
+- **Outcome:** `gpu::compute::fdtd_gpu` (`WgpuFdtdPressureDispatcher`,
+  `PressureParams`, `shaders/fdtd_pressure.wgsl`) and its CPU reference
+  `fdtd_cpu` (`FdtdCpuReferenceDispatcher`) are a second 6-point Laplacian
+  wave-update kernel with no dispatch site: `WgpuFdtdPressureDispatcher` is not
+  re-exported past its module, and `FdtdCpuReferenceDispatcher` exists only as
+  its value-semantic reference. Delete both with the shader and their tests.
+- **Acceptance:** no reference to the deleted items remains
+  (`git grep` to zero); `cargo clippy -p kwavers-gpu --all-targets -D warnings`
+  and `cargo nextest run -p kwavers-gpu` clean.
+- **Dependencies:** none. Merge waits on `main` returning green — the current
+  red is a stale `ritk` pin (`89e619fe`) against the `coeus_leto::RandomScalar`
+  removal, cured upstream in ritk `1b9d4d86` and being advanced by a peer.
+
+
 ## ✅ KW-PY-SIMULATION-MOD-SLICES-2026-09-02 — Slice `simulation_py/mod.rs` to the file target [patch] — done 2026-09-02
 
 - **Delivered:** `mod.rs` (803 → 236 lines) is the pyclass, its constructor and the module tree; the `#[pymethods]` groups live where their concern does — `configuration.rs` (config objects, thermal/poroelastic), `pml.rs` (PML geometry and k-space numerics), `physics.rs` (nonlinearity, absorption, Helmholtz) — under the crate's existing `multiple-pymethods` feature; `run/execute.rs` holds `Simulation.run` and `run/prepare.rs` the pure conversions it was inlining (CFL time step with its named Courant number, solver/FFT-backend maps, elastic velocity source, IVP axis). The `kwavers_error_to_py_local` alias "kept for old solver files" is deleted and its six callers use the one name.
