@@ -44,6 +44,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "aequitas-python"
+version = "0.1.0"
+source = "git+https://github.com/ryancinsight/aequitas#a442d16a444c9c56934f0dffd19e06c527e1420b"
+dependencies = [
+ "aequitas",
+ "pyo3",
+ "typenum",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3205,6 +3215,7 @@ name = "kwavers-python"
 version = "0.1.0"
 dependencies = [
  "aequitas",
+ "aequitas-python",
  "anyhow",
  "asclepius",
  "coeus-core",
