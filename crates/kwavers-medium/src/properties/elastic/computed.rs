@@ -30,6 +30,13 @@ impl ElasticPropertyData {
     }
 
     /// Young's modulus `E = μ(3λ + 2μ)/(λ + μ)` (Pa).
+    ///
+    /// # Panics
+    ///
+    /// If the public `lambda`/`mu` fields have been mutated outside the
+    /// positive-definite domain (`mu > 0`, `lambda + 2mu/3 > 0`) since
+    /// construction validated them. Panicking is the point: the alternative is
+    /// returning a number the provider never sanctioned.
     #[inline]
     #[must_use]
     pub fn youngs_modulus(&self) -> f64 {
@@ -37,6 +44,13 @@ impl ElasticPropertyData {
     }
 
     /// Poisson's ratio `ν = λ/(2(λ + μ))` (dimensionless).
+    ///
+    /// # Panics
+    ///
+    /// If the public `lambda`/`mu` fields have been mutated outside the
+    /// positive-definite domain (`mu > 0`, `lambda + 2mu/3 > 0`) since
+    /// construction validated them. Panicking is the point: the alternative is
+    /// returning a number the provider never sanctioned.
     #[inline]
     #[must_use]
     pub fn poisson_ratio(&self) -> f64 {
@@ -44,6 +58,13 @@ impl ElasticPropertyData {
     }
 
     /// Bulk modulus `K = λ + 2μ/3` (Pa).
+    ///
+    /// # Panics
+    ///
+    /// If the public `lambda`/`mu` fields have been mutated outside the
+    /// positive-definite domain (`mu > 0`, `lambda + 2mu/3 > 0`) since
+    /// construction validated them. Panicking is the point: the alternative is
+    /// returning a number the provider never sanctioned.
     #[inline]
     #[must_use]
     pub fn bulk_modulus(&self) -> f64 {
@@ -51,6 +72,13 @@ impl ElasticPropertyData {
     }
 
     /// Shear modulus `μ` (Pa).
+    ///
+    /// # Panics
+    ///
+    /// If the public `lambda`/`mu` fields have been mutated outside the
+    /// positive-definite domain (`mu > 0`, `lambda + 2mu/3 > 0`) since
+    /// construction validated them. Panicking is the point: the alternative is
+    /// returning a number the provider never sanctioned.
     #[inline]
     #[must_use]
     pub fn shear_modulus(&self) -> f64 {
@@ -59,8 +87,11 @@ impl ElasticPropertyData {
 
     /// P-wave (compressional) speed `c_p = √((λ + 2μ)/ρ)` (m/s).
     ///
-    /// Density was validated positive at construction; a panic here has the
-    /// same meaning as [`Self::isotropic_moduli`].
+    /// # Panics
+    ///
+    /// If the public `lambda`/`mu`/`density` fields have been mutated outside
+    /// their validated domains since construction — the moduli outside the
+    /// positive-definite domain, or the density to a non-positive value.
     #[inline]
     #[must_use]
     pub fn p_wave_speed(&self) -> f64 {
@@ -75,6 +106,12 @@ impl ElasticPropertyData {
     }
 
     /// S-wave (shear) speed `c_s = √(μ/ρ)` (m/s).
+    ///
+    /// # Panics
+    ///
+    /// If the public `lambda`/`mu`/`density` fields have been mutated outside
+    /// their validated domains since construction — the moduli outside the
+    /// positive-definite domain, or the density to a non-positive value.
     #[inline]
     #[must_use]
     pub fn s_wave_speed(&self) -> f64 {
