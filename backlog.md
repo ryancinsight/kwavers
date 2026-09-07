@@ -14,9 +14,33 @@
 - **Acceptance:** no reference to the deleted items remains
   (`git grep` to zero); `cargo clippy -p kwavers-gpu --all-targets -D warnings`
   and `cargo nextest run -p kwavers-gpu` clean.
-- **Dependencies:** none. Merge waits on `main` returning green — the current
-  red is a stale `ritk` pin (`89e619fe`) against the `coeus_leto::RandomScalar`
-  removal, cured upstream in ritk `1b9d4d86` and being advanced by a peer.
+- **Delivered:** `aa738cefe` deletes 775 lines and adds one. `git grep` for
+  each deleted name returns nothing but this entry.
+- **Blocked on, then unblocked by, a dependency defect this change did not
+  cause.** kwavers could not resolve its lock at all: Moirai's workspace went
+  0.6.0 on its default branch at 2026-09-06 21:34 while ten members still
+  required `^0.5.0` from that same branch, so `cargo metadata --locked` and
+  `scripts/lockfile.py --check` both failed and the pre-push gate refused every
+  push. Root cause and the ordered sweep are recorded at atlas
+  `backlog.md#atlas-moirai-06-forward-sweep`; this branch carries kwavers' own
+  half (`moirai-parallel` 0.5 → 0.6) plus the regenerated lock.
+- **Filed in passing:** `gpu::compute_manager::fdtd_cpu` is a *third*
+  hand-rolled first-difference sweep in `kwavers-gpu`, this one reachable. It
+  is a consolidation target for the leto/hephaestus seam, not part of this
+  deletion — see `KW-GPU-COMPUTE-MANAGER-STENCIL-2026-09-07`.
+
+## KW-GPU-COMPUTE-MANAGER-STENCIL-2026-09-07 — `compute_manager` hand-rolls a first-difference sweep [patch] — todo <a id="kw-gpu-compute-manager-stencil-2026-09-07"></a>
+
+- **Outcome:** `crates/kwavers-gpu/src/gpu/compute_manager.rs` computes the
+  velocity divergence with an inline forward-difference triple loop over
+  `LetoArray3<f64>`. Leto owns that operator
+  (`leto_ops::StaggeredLeapfrog3D::divergence_into`, ADR 128) and the solver
+  already routes through it, so this is the same duplication ADR 128 closed one
+  crate over. Unlike the deleted `fdtd_gpu`/`fdtd_cpu` pair, this one is
+  reachable, so it is a rewrite onto the seam rather than a deletion.
+- **Acceptance:** the sweep calls the leto operator; the existing
+  `compute_manager` tests pass unchanged; no third stencil remains in
+  `kwavers-gpu`.
 
 
 ## ✅ KW-PY-SIMULATION-MOD-SLICES-2026-09-02 — Slice `simulation_py/mod.rs` to the file target [patch] — done 2026-09-02
