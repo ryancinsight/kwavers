@@ -1,6 +1,7 @@
 //! Registration, coordinate, quality, and affine-transform tests.
 
 use super::super::*;
+use kwavers_core::test_support::assert_rejects;
 use leto::Array3;
 
 #[test]
@@ -28,7 +29,7 @@ fn test_registration_compatibility_validation() {
 
     // Incompatible dimensions (ratio > 10)
     let result = registration::validate_registration_compatibility([10, 10, 10], [200, 200, 200]);
-    assert!(result.is_err());
+    assert_rejects(result, "Incompatible dimensions for registration");
 }
 
 #[test]

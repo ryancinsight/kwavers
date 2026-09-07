@@ -7,6 +7,7 @@
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use kwavers_core::test_support::assert_rejects;
 
 #[test]
 fn test_heat_capacity_calculation() {
@@ -128,5 +129,5 @@ fn test_physical_bounds() {
 
     let result = model.update_temperature(&mut state, 1.0);
 
-    assert!(result.is_err(), "Extreme temperature should be rejected");
+    assert_rejects(result, "outside valid range (0 K < T < 50000 K)");
 }

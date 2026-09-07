@@ -1,5 +1,29 @@
 # Backlog / Strategy
 
+## KW-PHYSICS-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-physics` [patch] — done 2026-09-07 <a id="kw-physics-value-assertions-2026-09-07"></a>
+
+- **Outcome:** all 17 sites assert the cause. Sixteen are rejections, now
+  checked through `kwavers_core::test_support::{assert_invalid_input,
+  assert_rejects}`; the seventeenth was
+  `traj.dissolution_time.is_some()`, replaced by binding the time and
+  asserting it falls inside the integration horizon — an `is_some` on an
+  integrator result says only that the loop terminated.
+- **One test already carried the right claim in the wrong shape:**
+  `test_fuse_insufficient_modalities` followed its `is_err()` with an
+  `if let Err(...)` that checked the message. The helper states it in one
+  line and drops the unreachable `else { panic! }`.
+- **Shown to bite:** swapping the buckling guard's reported parameter to
+  `rupture_ratio` fails `test_validation_invalid_buckling_ratio`; the old
+  assertion passed. Reverted, file re-verified against `HEAD`.
+- **Evidence:** the conformance class for this crate goes 17 → 0;
+  `cargo nextest run -p kwavers-physics --lib` 1562/1562; fmt clean. The
+  crate's 26 pre-existing clippy warnings (println! in test modules,
+  single-character patterns in `phase_shifting`) are unchanged and land in no
+  file this item touched — CI does not hold this crate to `-D warnings`.
+- **Remaining stack-wide:** 87 sites (kwavers-analysis 14, kwavers 9,
+  kwavers-therapy 8, kwavers-medium/-math/-imaging 6 each, kwavers-driver 3,
+  kwavers-transducer/-gpu/-diagnostics 2 each).
+
 ## KW-SOLVER-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-solver` [patch] — done 2026-09-07 <a id="kw-solver-value-assertions-2026-09-07"></a>
 
 - **Outcome:** all 19 `assert!(result.is_err())` sites in `kwavers-solver`

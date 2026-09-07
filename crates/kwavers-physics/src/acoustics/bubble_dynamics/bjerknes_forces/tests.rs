@@ -1,5 +1,6 @@
 use super::*;
 use kwavers_core::constants::numerical::MPA_TO_PA;
+use kwavers_core::test_support::assert_invalid_input;
 
 #[test]
 fn test_bjerknes_calculator_creation() {
@@ -145,7 +146,7 @@ fn test_invalid_radius() {
     let calc = BjerknesCalculator::new(config);
 
     let result = calc.primary_bjerknes_force(0.0, 100e3, MPA_TO_PA);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Bubble radius must be positive");
 }
 
 #[test]
@@ -154,5 +155,6 @@ fn test_zero_distance_error() {
     let calc = BjerknesCalculator::new(config);
 
     let result = calc.secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 0.0);
-    assert!(result.is_err());
+    // The radii are positive here, so only the distance guard can fire.
+    assert_invalid_input(result, "Distance must be positive");
 }
