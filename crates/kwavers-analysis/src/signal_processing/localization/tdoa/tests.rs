@@ -1,6 +1,7 @@
 use super::processor::TDOAProcessor;
 use super::types::TDOAConfig;
 use crate::signal_processing::localization::LocalizationProcessor;
+use kwavers_core::test_support::assert_invalid_input;
 
 #[test]
 fn test_tdoa_processor_creation() {
@@ -12,7 +13,7 @@ fn test_tdoa_processor_creation() {
 fn test_tdoa_insufficient_sensors() {
     let processor = TDOAProcessor::new(&TDOAConfig::default()).unwrap();
     let result = processor.localize(&[0.0], &[[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]]);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Need at least 3 sensors for 3D localization");
 }
 
 #[test]

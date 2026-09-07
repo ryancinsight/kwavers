@@ -1,5 +1,25 @@
 # Backlog / Strategy
 
+## KW-ANALYSIS-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-analysis` [patch] — done 2026-09-07 <a id="kw-analysis-value-assertions-2026-09-07"></a>
+
+- **Outcome:** all 14 sites name the rejection. Several distinguished nothing
+  before: `MUSICProcessor::new` rejects a zero source count, an oversized
+  source count, and a sensor count below two through the same variant, so the
+  two MUSIC tests were interchangeable; the same held for `ModelOrderConfig`'s
+  sensor and sample bounds and for the neural `SensorGeometry` triple, where
+  one test covered three distinct guards.
+- **`test_neural_layer_dimension_mismatch` collapses** from an `is_err()` plus
+  an `if let Err(..)`/`else { panic! }` block to one helper call carrying the
+  same claim.
+- **Shown to bite:** swapping the zero-source guard's message for the
+  two-sensor one fails `test_music_invalid_num_sources_zero`; the old
+  assertion passed. Reverted, file re-verified against `HEAD`.
+- **Evidence:** the conformance class for this crate goes 14 → 0;
+  `cargo nextest run -p kwavers-analysis --lib` 744/744; fmt clean.
+- **Remaining stack-wide:** 73 sites (kwavers 9, kwavers-therapy 8,
+  kwavers-medium/-math/-imaging 6 each, kwavers-driver 3,
+  kwavers-transducer/-gpu/-diagnostics 2 each, and the rest).
+
 ## KW-PHYSICS-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-physics` [patch] — done 2026-09-07 <a id="kw-physics-value-assertions-2026-09-07"></a>
 
 - **Outcome:** all 17 sites assert the cause. Sixteen are rejections, now

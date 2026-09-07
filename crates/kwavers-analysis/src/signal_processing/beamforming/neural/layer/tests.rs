@@ -1,4 +1,5 @@
 use super::*;
+use kwavers_core::test_support::assert_rejects;
 
 #[test]
 fn test_neural_layer_creation() {
@@ -60,20 +61,11 @@ fn test_neural_layer_activation_range() {
 
 #[test]
 fn test_neural_layer_dimension_mismatch() {
-    use kwavers_core::error::KwaversError;
-
     let layer = NeuralLayer::new(8, 4).unwrap();
     let wrong_input = leto::Array3::ones((2, 3, 16)); // Wrong feature size (16 instead of 8)
 
     let result = layer.forward(&wrong_input);
-    assert!(result.is_err());
-
-    if let Err(KwaversError::DimensionMismatch(msg)) = result {
-        assert!(msg.contains("expects input size 8"));
-        assert!(msg.contains("got 16"));
-    } else {
-        panic!("Expected DimensionMismatch error");
-    }
+    assert_rejects(result, "expects input size 8");
 }
 
 #[test]
