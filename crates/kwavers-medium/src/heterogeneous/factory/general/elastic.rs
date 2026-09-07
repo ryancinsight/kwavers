@@ -108,12 +108,11 @@ impl HeterogeneousFactory {
                             aequitas::systems::si::quantities::Velocity::from_base(cs),
                             aequitas::systems::si::quantities::MassDensity::from_base(rho),
                         )
-                        .map_err(|e| {
-                            format!(
-                                "voxel ({i},{j},{k}) rejected by provider: {e}"
-                            )
-                        })?;
-                        (*moduli.lame_lambda().as_base(), *moduli.shear_modulus().as_base())
+                        .map_err(|e| format!("voxel ({i},{j},{k}) rejected by provider: {e}"))?;
+                        (
+                            *moduli.lame_lambda().as_base(),
+                            *moduli.shear_modulus().as_base(),
+                        )
                     };
                     lame_mu[[i, j, k]] = mu_v;
                     lame_lambda[[i, j, k]] = lambda_v;

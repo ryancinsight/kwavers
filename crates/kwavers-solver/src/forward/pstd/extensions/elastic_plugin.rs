@@ -173,8 +173,8 @@ impl Plugin for MechanicalStressPlugin {
 mod tests {
     use super::*;
     use crate::plugin::test_support::{make_context, null_plugin_fields, NullBoundary};
-    use kwavers_field::mapping::UnifiedFieldType;
     use aequitas::systems::si::quantities::{MassDensity, Velocity};
+    use kwavers_field::mapping::UnifiedFieldType;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
     use leto::Array4;

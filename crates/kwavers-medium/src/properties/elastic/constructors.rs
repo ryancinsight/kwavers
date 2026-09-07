@@ -105,7 +105,10 @@ impl ElasticPropertyData {
             return Err(format!("P-wave speed must be positive, got {}", p_speed));
         }
         if s_speed < 0.0 {
-            return Err(format!("S-wave speed must be non-negative, got {}", s_speed));
+            return Err(format!(
+                "S-wave speed must be non-negative, got {}",
+                s_speed
+            ));
         }
         if s_speed >= p_speed {
             return Err(format!(

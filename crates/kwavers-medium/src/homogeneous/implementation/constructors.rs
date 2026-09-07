@@ -217,7 +217,10 @@ impl HomogeneousMedium {
                 aequitas::systems::si::quantities::MassDensity::from_base(density),
             )
             .ok()?;
-            (*moduli.lame_lambda().as_base(), *moduli.shear_modulus().as_base())
+            (
+                *moduli.lame_lambda().as_base(),
+                *moduli.shear_modulus().as_base(),
+            )
         };
 
         // Build a baseline acoustic-only homogeneous medium at c_p, then
