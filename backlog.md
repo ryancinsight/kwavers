@@ -2,30 +2,33 @@
 
 <a id="kw-orphaned-benches-2026-09-08"></a>
 
-## KW-ORPHANED-BENCHES-2026-09-08 — Sixteen files in `benches/` are not benchmarks [patch] [ci] — todo
+## KW-ORPHANED-BENCHES-2026-09-08 — The bench registry gate does not model modules [patch] [ci] — done 2026-09-08
 
-- **Symptom:** the `complete benchmark smoke` job fails its `validate_registry`
-  step, which diffs the `benches/*.rs` stems against the Cargo bench target
-  registry. 25 files, 9 declared.
-- **Not a registry omission.** The 16 undeclared files carry no
-  `criterion_main!`, no `fn main`, and no `#[bench]`, so they cannot be a
-  target under either harness setting: `harness = false` wants a `main` they do
-  not have, and the default harness has nothing to collect. Declaring them was
-  tried and all 16 fail to compile with `E0601: main function not found`.
-- **`autobenches = false`** (`crates/kwavers/Cargo.toml:17`), so nothing has
-  ever compiled them. 2845 lines that no gate has read.
-- **Why it surfaced now:** the registry validation landed with
-  KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31, and the job triggers on
-  `pull_request` only -- pushes to `main` never run it, which is how the drift
-  survived. The gate is correct; the condition is older than the gate.
-- **Not caused by the PR that found it.** kwavers#726 touches neither
-  `crates/kwavers/benches/` nor `crates/kwavers/Cargo.toml`.
-- **Decision needed before work:** whether the 16 hold salvageable measurement
-  intent (repair into real Criterion benches) or are superseded drafts
-  (delete). That is an owner's call on 2845 lines, not a mechanical cleanup;
-  the files are listed in the job log and recoverable from git either way.
-- **Acceptance:** `validate_registry` passes on both revisions, and every file
-  under `benches/` is a declared, compiling target.
+- **Symptom:** `complete benchmark smoke` fails `validate_registry`, which
+  diffs `benches/*.rs` stems at `-maxdepth 1` against the Cargo bench target
+  registry. 26 files, 10 targets.
+- **The 16 are not orphans.** `benchmark_suite.rs` is a declared target that
+  `mod`-includes them: `mod amr_criteria_benchmark;` and sixteen more. They
+  compile as part of it, which is why none carries `criterion_main!` or
+  `fn main` -- modules do not need one. `6bcc8087d perf(bench): Consolidate
+  smoke harnesses` (2026-08-31) built that layout deliberately.
+- **First diagnosis was wrong and is recorded because it was acted on.** The
+  absence of an entry point was read as "not a benchmark", and grep hits for
+  each name inside `benchmark_suite.rs` were read as the content having moved
+  there; they were the `mod` declarations. The 16 were deleted on that basis
+  and `cargo check -p kwavers --benches` failed immediately with
+  `couldn't read benches/amr_criteria_benchmark.rs`, pointing at
+  `benchmark_suite.rs:7`. Reverted; no file was lost.
+- **Cause:** the gate landed with `KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31`
+  after the consolidation, and asserts a one-to-one file/target
+  correspondence the layout never had. A check that reports live code as
+  drift invites exactly the deletion that was attempted.
+- **Fix:** the gate now asserts what matters -- no bench file is dead. Every
+  file must be a declared target *or* a `mod` of a bench file, and every
+  target must have a backing file. `fdtd_propagation_benchmark` is both, so
+  the two sets union rather than partition. Verified against the tree: 26
+  files, 10 targets, 17 modules, union 26, no uncovered file and no target
+  without a file.
 
 <a id="kw-sir-trace-accumulation-2026-09-08"></a>
 
@@ -1158,7 +1161,7 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SWE-SCALING-IS-A-BENCHMARK | Measure SWE propagation scaling through Criterion without wall-clock assertions in native tests. | [patch] | IMPLEMENTED | unowned | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/nl_swe_performance.rs` |
+| KW-SWE-SCALING-IS-A-BENCHMARK | Measure SWE propagation scaling through Criterion without wall-clock assertions in native tests. | [patch] | IMPLEMENTED | unowned | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/nl_swe_performance.rs` (a module of the `benchmark_suite` target since `6bcc8087d`) |
 
 - The elapsed-time test was removed in `d0cf2f0cb`; `7a6859802` added the
   geometric 16/32/64 Criterion sweep with unchanged solver computation.
