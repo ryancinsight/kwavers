@@ -40,7 +40,7 @@ jobs:
   # Atlas ATLAS-SEMVER-GATE-FLEETWIDE-2026-08-28.
   semver:
     name: SemVer gate
-    uses: ryancinsight/atlas/.github/workflows/semver-gate.yml@da9d549bc50dbb9c4e1d18dca8f37d17059098cb
+    uses: ryancinsight/atlas/.github/workflows/semver-gate.yml@744acdf83a51aeeff23a45ef3c26f460ba5f9587
     with:
       package: kwavers-alloc-probe,kwavers-analysis,kwavers-boundary,kwavers-core,kwavers-diagnostics,kwavers-driver,kwavers-field,kwavers-gpu,kwavers-grid,kwavers-imaging,kwavers-math,kwavers-medium,kwavers-mesh,kwavers-phantom,kwavers-physics,kwavers-receiver,kwavers-signal,kwavers-simulation,kwavers-solver,kwavers-source,kwavers-therapy,kwavers-transducer,kwavers
     permissions:
