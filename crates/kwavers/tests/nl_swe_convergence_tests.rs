@@ -116,14 +116,11 @@ impl ConvergenceTester {
             }
 
             // Run simulation
-            let result = solver.propagate_waves(&initial_disp);
-            assert!(
-                result.is_ok(),
-                "Wave propagation should succeed for dx = {}",
-                dx
-            );
-
-            let history = result.unwrap();
+            let history = solver
+                .propagate_waves(&initial_disp)
+                .unwrap_or_else(|error| {
+                    panic!("wave propagation must succeed at dx = {dx}: {error}")
+                });
             let final_field = &history[history.len() - 1];
 
             // Calculate L2 error norm
@@ -879,11 +876,12 @@ mod convergence_tests {
             let model = HyperelasticModel::neo_hookean_soft_tissue();
             let solver = NonlinearElasticWaveSolver::new(&grid, &medium, model, config.clone());
 
-            assert!(
-                solver.is_ok(),
-                "Solver should create successfully with config: nonlinearity = {}",
-                config.nonlinearity_parameter
-            );
+            solver.unwrap_or_else(|error| {
+                panic!(
+                    "solver must build at nonlinearity {}: {error}",
+                    config.nonlinearity_parameter
+                )
+            });
         }
     }
 

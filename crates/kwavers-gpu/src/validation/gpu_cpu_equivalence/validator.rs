@@ -314,7 +314,13 @@ mod tests {
         let validator = EquivalenceValidator::default();
         let result = validator.validate_arrays(&cpu, &gpu, 1.0, 1.0);
 
-        assert!(result.is_err(), "Should error on dimension mismatch");
+        let rejection = result
+            .expect_err("shapes [10, 10, 10] and [10, 10, 11] must not validate")
+            .to_string();
+        assert!(
+            rejection.contains("[10, 10, 10]") && rejection.contains("[10, 10, 11]"),
+            "the mismatch must name both shapes, got {rejection:?}"
+        );
     }
 
     /// Test validation with zero pressure arrays

@@ -97,7 +97,9 @@ fn max14815_offers_tr_switch_and_5level() {
         .unwrap();
     assert!(max15.tr_switch, "MAX14815 has integrated T/R switch");
     assert_eq!(max15.n_levels, 5);
-    assert!(max15.beamforming_mem.is_some());
+    // The catalog entry is 8 * 4096 bytes; `is_some` would also hold for a
+    // zero or defaulted figure, which the comparison score then ranks on.
+    assert_eq!(max15.beamforming_mem, Some(8 * 4096));
 }
 
 #[test]

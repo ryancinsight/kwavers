@@ -1,5 +1,54 @@
 # Backlog / Strategy
 
+## KW-VALUE-ASSERTIONS-SWEEP-2026-09-08 — Close the existence-only assertion class [patch] — done 2026-09-08 <a id="kw-value-assertions-sweep-2026-09-08"></a>
+
+- **Outcome:** the remaining 73 sites across twelve crates now assert the
+  cause. The conformance detector reports `existence_only_assertions` 73 → 0
+  for the repository; with the three crates closed on 2026-09-07 the class is
+  empty.
+- **Three tests could not fail on the defect they were named for.**
+  - `test_dicom_single_file_error` and `test_unified_loader_unsupported_format`
+    both passed paths that do not exist. Both loaders check existence first, so
+    each test exercised the missing-path branch — the same branch its sibling
+    test covered — and the single-file and unsupported-format branches were
+    never reached. Both now write a real file to a per-test temp directory.
+  - `test_kwave_compatibility_mode` asserted `result.is_some()` on a value the
+    loop had just wrapped in `Some`, discarding ten `KwaversResult`s.
+- **Weaker, but real:** `test_convergence_zero_error_handling` accepted any
+  rate (the two surviving points give exactly 1.0); the two proptest cases
+  asserted only that a solver constructed, and the CFL one now asserts the
+  solver's own stability bound accepts a step at the bound and rejects one past
+  it; `test_avx512_*`-style variant confusion recurred in
+  `kwavers-medium`'s temperature guards and `kwavers-imaging`'s loaders, where
+  neighbouring tests were interchangeable.
+- **Not converted, restructured instead:** `nonlinear3d/forward/source/plan.rs`
+  carried `assert!(source_body_mask.is_some(), ...)` as a *production*
+  precondition. It is now `expect` with the same invariant. The underlying
+  smell — an `Option` argument that one `SourceDomain` variant makes mandatory
+  — is filed as `KW-SOURCE-DOMAIN-OPTIONAL-MASK-2026-09-08`.
+- **Shown to bite:** giving the DICOM single-file branch the missing-path
+  message fails `test_dicom_single_file_error`, and swapping the acoustic
+  sound-speed guard's message for the density one fails
+  `test_validation_physical_constraints`; both passed under the old
+  assertions. Reverted and both files verified against `HEAD`.
+- **Evidence:** nextest per crate — solver 950/950, physics 1562/1562,
+  analysis+diagnostics+transducer+physics 2918/2918, therapy+imaging 411/411,
+  medium 215/215, math 129/129, driver 494/494, gpu 164/164, and `kwavers`
+  integration 542/542 (3 skipped). fmt clean; clippy `-D warnings` on
+  kwavers-core (all features), kwavers-solver, and kwavers-gpu (gpu feature)
+  clean.
+
+## KW-SOURCE-DOMAIN-OPTIONAL-MASK-2026-09-08 — `SourceDomain::ExteriorCoupling` needs a mask the type does not require [patch] — todo <a id="kw-source-domain-optional-mask-2026-09-08"></a>
+
+- **Outcome:** `nonlinear3d::forward::source::plan` takes
+  `source_body_mask: Option<&[bool]>` and panics when the domain is
+  `ExteriorCoupling` and the mask is absent — mutually dependent arguments
+  standing as independent ones. Carry the mask in the variant
+  (`ExteriorCoupling { body_mask }`) so the invalid combination is
+  unrepresentable and the runtime check disappears.
+- **Acceptance:** the panic site is gone; every caller passes the mask through
+  the variant; the existing plan tests pass unchanged.
+
 <a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>
 
 ## KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08 — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — todo
@@ -113,10 +162,10 @@
 
 - Delivered: PR [#741](https://github.com/ryancinsight/kwavers/pull/741), commit `3a4638dad` (ADR 113 revised; CHANGELOG Unreleased).
 - Outcome: `FarFieldRectangleSir` (Field II far-field patches by sparse delta integration, exact at the grid nodes for the one-way response, `RectangularPistonSir` as oracle: relative L1 2.94e-2 → 4.14e-4 over 1×4 to 8×32 patches, order two); the phantom seam carries the element frame (`ApertureElement` width axis, `round_trip(x, y, z, dt)`); bench `aperture_rf_synthesis_rectangle` 376 µs / 954 µs at 16 / 64 scatterers.
-- Premise corrected on the way: a trace-level fourth-order integral of split deltas drifts, so the round trip is the auto-convolution on the support; a judge pass caught an index clamp that mangled kernels for field points within a patch width of the face, fixed with signed anchoring and two regressions.
+- Premise corrected on the way: a trace-level fourth-order integral of split deltas drifts, so the round trip is the auto-convolution on the support; a judge pass caught an index clamp that mangled kernels for field points within a patch width of the face, fixed with signed anchoring and two regressions. Post-merge judge pass confirmed the fix bit-identical elsewhere; its two residuals (an `l = 0` overflow now a NaN sample, a mislabelled regression test) closed forward in PR [#745](https://github.com/ryancinsight/kwavers/pull/745), `dd71c1b01`.
 <a id="kw-fft3d-baseline-2026-09-08"></a>
 
-## KW-FFT3D-BASELINE-2026-09-08 — The spectral pair a PSTD step is built on had no timing [patch] [perf] — done 2026-09-08
+## KW-FFT3D-BASELINE-2026-09-08 — The spectral pair a PSTD step is built on had no timing [patch] [perf] — done 2026-09-08; attribution corrected same day
 
 - **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fft3d-baseline`;
   lane `D:/atlas/worktrees/kwavers-compute-manager` (re-pointed from an idle
@@ -159,20 +208,36 @@
   the throughput regime, where apollo measured its arms faster still. Both
   biases push the same way, so a third is an **upper bound** on the codelet
   share and the movement share is at least two thirds.
+- **Attribution corrected 2026-09-08, the same day, by direct measurement.**
+  The apollo item below extended its lane probe to N = 64 and measured the
+  shipped length-64 codelet at **61.6 ns per lane transform on a performance
+  core and 132 ns on an efficiency core** — against the 43.6 ns this entry
+  extrapolated. So the codelets are **12,288 x 61.6 ns = 0.76 ms of the 1.70 ms
+  forward, 45%, on performance cores**, and on efficiency cores 1.62 ms, close
+  to the whole transform. A 64³ pass is spread by `moirai` across both core
+  types, so the true share sits between those and depends on the mix. The
+  statement this replaces — "about a third; movement at least two thirds" —
+  was wrong in the direction it warned it might be, and by more than the
+  warning allowed for: the `N log N` step from 32 to 64 undercounts, and the
+  efficiency core is 2.1x slower than the performance core at this size where
+  it was 1.3–1.5x at smaller ones. **The axis-pass transposes are no longer
+  unambiguously the larger lever; the codelet is at least comparable, and on
+  efficiency cores dominant.**
 - **Consequence for the provider item.**
   [apollo `#apollo-n64-lane-pass`](../apollo/backlog.md#apollo-n64-lane-pass)
-  was filed the same day to optimise the N = 64 codelet as the stack's
-  most-executed kernel. It still is — but this measurement caps what it can
-  win at roughly a third of the transform, and names the larger lever as the
-  axis-pass transposes. The apollo item should be read with this bound on it.
+  confirmed the shipped N = 64 arm is faster than its scalar fallback in both
+  regimes on both cores (1.80x / 1.20x), so there is no arm change to make; the
+  cost is the arm's own body. What the corrected split points at instead is the
+  efficiency-core tail of a distributed pass, which needs a pass-level profile
+  neither repository has yet.
 - **Acceptance (met).** A committed, budgeted benchmark exists for the 3-D
   complex FFT at the planned extents; the codelet-versus-movement split is
   attributed with its evidence and its limits.
-- **Next increment, not taken here.** Attribute the split by measurement rather
-  than extrapolation: time an axis pass with the transposes elided against the
-  full pass, or count cycles per phase. Only then is it worth asking whether
-  the transposes can be fused into the lane loop or the pass reordered to move
-  less.
+- **Next increment, not taken here.** The codelet half of the split is now
+  measured; the movement half is still inferred as the remainder. Time an axis
+  pass with the transposes elided against the full pass, and record which core
+  type each lane ran on, so the pass-level cost is attributed by measurement on
+  both axes before anything is fused or reordered.
 - **Risk / change class:** [patch] [perf]; **dependencies:** none.
 
 ## KW-ANALYSIS-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-analysis` [patch] — done 2026-09-07 <a id="kw-analysis-value-assertions-2026-09-07"></a>

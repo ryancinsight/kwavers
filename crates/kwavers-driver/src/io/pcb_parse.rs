@@ -483,8 +483,11 @@ mod tests {
     fn parse_minimal_pcb_pad_count() {
         let board = parse_kicad_pcb(MINIMAL_PCB).expect("minimal PCB must parse");
         assert_eq!(board.pads.len(), 2, "two pads on the resistor");
+        // The fixture declares one net, GND, and wires both pads to it. A bare
+        // `is_some` would hold for any net the parser happened to attach.
+        let gnd = board.nets[0].id;
         for pad in &board.pads {
-            assert!(pad.net.is_some(), "pad must be assigned to GND");
+            assert_eq!(pad.net, Some(gnd), "pad must be assigned to GND");
         }
     }
 

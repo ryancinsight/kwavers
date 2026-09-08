@@ -32,6 +32,8 @@ tracing = { workspace = true }
 [features]
 
 [dev-dependencies]
+# Rejection assertions shared across the workspace's test modules.
+kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 eunomia = { workspace = true }
 
 [lints]

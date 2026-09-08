@@ -2,6 +2,7 @@ use super::super::geometry::Point3;
 use super::bowl::bowl_elements;
 use super::helpers::{distance_3d, keep_largest_connected_component_3d};
 use super::placement::plan_abdominal_array_placement;
+use kwavers_core::test_support::assert_rejects;
 use leto::Array3;
 
 /// Returns a toy CT volume: a sphere of radius R_body centred at the
@@ -122,7 +123,7 @@ fn degenerate_bowl_axis_is_rejected() {
         z_m: 0.0,
     };
     let result = bowl_elements(32, point, point, 0.1);
-    assert!(result.is_err(), "degenerate focus axis must be rejected");
+    assert_rejects(result, "must be separated from focus by at least 1 mm");
 }
 
 #[test]
@@ -147,7 +148,7 @@ fn empty_organ_mask_is_rejected() {
     let label = Array3::zeros((n, n, n));
     let result =
         plan_abdominal_array_placement(&ct, &label, [2.0; 3], 64, 2, -400.0, "t".to_owned());
-    assert!(result.is_err(), "empty organ mask should return an error");
+    assert_rejects(result, "organ segmentation mask is empty");
 }
 
 #[test]
@@ -157,7 +158,7 @@ fn empty_body_mask_is_rejected() {
     let label = Array3::from_elem((n, n, n), 1i16);
     let result =
         plan_abdominal_array_placement(&ct, &label, [2.0; 3], 64, 2, -400.0, "t".to_owned());
-    assert!(result.is_err(), "empty body mask should return an error");
+    assert_rejects(result, "CT body mask is empty");
 }
 
 /// Verify the connected-component filter keeps only the largest component.

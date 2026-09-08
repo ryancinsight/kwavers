@@ -13,11 +13,13 @@ fn test_gpu_budget_enforcement() {
     assert_eq!(tracker.current_bytes(), 500_000);
 
     // Allocate 0.6 MB -> should fail due to OOM budget
-    let buf2 = tracker.allocate(600_000, "buf2");
-    assert!(buf2.is_err());
-    let err_str = buf2.unwrap_err().to_string();
+    let error = tracker
+        .allocate(600_000, "buf2")
+        .expect_err("600 kB on top of 500 kB exceeds the 1 MB budget");
+    let rendered = error.to_string();
     assert!(
-        err_str.contains("budget") || err_str.contains("OutOfMemory") || err_str.contains("OOM")
+        rendered.contains("budget") || rendered.contains("OutOfMemory") || rendered.contains("OOM"),
+        "the rejection must name the exhausted budget, got {rendered:?}"
     );
 
     // The current bytes strictly does not increase on failure

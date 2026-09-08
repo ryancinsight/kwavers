@@ -2,6 +2,7 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, KELVIN_OFFSET_C, ROOM_TEMPERATURE_K,
 };
+use kwavers_core::test_support::assert_rejects;
 
 use super::{
     MaterialPropertiesAtT, TemperatureDependentAcoustic, TemperatureDependentMaterial,
@@ -88,10 +89,16 @@ fn thermal_response_rejects_non_finite_inputs() {
         0.0,
         0.0,
     );
-    assert!(invalid_coefficient.is_err());
+    assert_rejects(
+        invalid_coefficient,
+        "Linear temperature coefficient NaN must be finite",
+    );
 
     let water = TemperatureDependentThermal::water();
-    assert!(water.properties(f64::NAN).is_err());
+    assert_rejects(
+        water.properties(f64::NAN),
+        "thermodynamic temperature NaN K must be finite and positive",
+    );
 }
 
 #[test]
@@ -150,7 +157,7 @@ fn test_validation_physical_constraints() {
 
     let result =
         TemperatureDependentAcoustic::new(water.base_properties, 100.0, 0.002, 2.1e-4, 0.02);
-    assert!(result.is_err());
+    assert_rejects(result, "Reference temperature 100 K is outside valid range");
 
     let result = TemperatureDependentAcoustic::new(
         water.base_properties,
@@ -159,7 +166,7 @@ fn test_validation_physical_constraints() {
         2.1e-4,
         0.02,
     );
-    assert!(result.is_err());
+    assert_rejects(result, "Sound speed coefficient 0.02");
 }
 
 // Suppress unused import warning — MaterialPropertiesAtT is accessed by field in test_combined_material_properties

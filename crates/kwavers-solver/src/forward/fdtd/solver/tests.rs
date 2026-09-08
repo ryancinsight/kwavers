@@ -465,10 +465,13 @@ fn check_absorption_power_law(scheme: TemporalScheme) {
             ..Default::default()
         };
         let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
-        assert!(
-            solver.absorption.is_some(),
-            "absorbing configuration produced no absorption state"
-        );
+        let absorption = solver
+            .absorption
+            .as_ref()
+            .expect("absorbing configuration produced no absorption state");
+        // The state must carry the four relaxation arms the config asked for;
+        // an empty or defaulted state would satisfy a bare `is_some`.
+        assert_eq!(absorption.arm_count(), 4);
 
         // Mode 8 of 64 cells: 8 points per wavelength, ~1.9 MHz, inside the band.
         let k0 = TAU * 8.0 / (N as f64 * DX);

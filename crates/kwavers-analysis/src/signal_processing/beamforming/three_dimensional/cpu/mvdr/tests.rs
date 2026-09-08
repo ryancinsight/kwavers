@@ -2,6 +2,7 @@ use super::*;
 use crate::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array4;
 
 fn make_config(
@@ -139,10 +140,7 @@ fn mvdr_subarray_exceeds_array_returns_error() {
     let rf = Array4::<f32>::zeros((1, 2, 4, 1));
     // ly = 3 > nel_y = 2 → must be rejected.
     let result = mvdr_cpu(&rf, &config, 0.01, [1, 3, 1]);
-    assert!(
-        result.is_err(),
-        "MVDR must reject subarray dimension exceeding array"
-    );
+    assert_invalid_input(result, "subarray size [1,3,1] exceeds array [1,2,1]");
 }
 
 /// ## Theorem: Diagonal loading guarantees Cholesky success and P > 0

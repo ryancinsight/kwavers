@@ -1,5 +1,6 @@
 use super::loading_mode::DrugLoadingMode;
 use super::payload::DrugPayload;
+use kwavers_core::test_support::assert_rejects;
 use kwavers_physics::therapy::microbubble::shell::ShellState;
 
 #[test]
@@ -167,7 +168,7 @@ fn test_is_depleted() {
 fn test_validation_negative_concentration() {
     let volume = 1e-15;
     let result = DrugPayload::new(-10.0, volume, DrugLoadingMode::ShellEmbedded, 0.1);
-    assert!(result.is_err());
+    assert_rejects(result, "concentration");
 }
 
 #[test]

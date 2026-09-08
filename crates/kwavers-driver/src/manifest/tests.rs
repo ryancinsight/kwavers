@@ -406,7 +406,9 @@ fn single_stim_v2_falls_back_when_no_tile_keys() {
     let text = legacy.to_text();
     let parsed = DriverManifest::from_text(&text).expect("legacy v2 must parse");
     assert_manifest_approx_eq(&parsed, &legacy, "legacy v2 round trip");
-    assert!(parsed.stimulation.is_some());
+    // The legacy form carries the preset through the round trip, so the
+    // parsed program must equal the one written, not merely exist.
+    assert_eq!(parsed.stimulation, legacy.stimulation);
     assert!(parsed.tile_profiles.is_empty());
 }
 

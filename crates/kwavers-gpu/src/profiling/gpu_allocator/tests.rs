@@ -42,15 +42,24 @@ fn budget_enforcement() {
     let _g2 = tracker.allocate(300, "b").unwrap();
 
     // 600 + 300 = 900 == budget, strict `>` check → should succeed
-    let result = tracker.allocate(300, "c");
-    assert!(
-        result.is_ok(),
-        "Allocation at exactly budget should succeed"
-    );
+    let guard = tracker
+        .allocate(300, "c")
+        .expect("allocation at exactly the budget should succeed");
+    assert_eq!(tracker.current_bytes(), 900, "the third block is counted");
+    drop(guard);
 
     // 900 + 1 = 901 > 900 → must fail
-    let result = tracker.allocate(1, "d");
-    assert!(result.is_err(), "Allocation beyond budget should fail");
+    let _g3 = tracker
+        .allocate(300, "c")
+        .expect("the released block is available again");
+    let rejection = tracker
+        .allocate(1, "d")
+        .expect_err("one byte past the budget must fail")
+        .to_string();
+    assert!(
+        rejection.contains("GPU OOM"),
+        "the rejection must name the exhausted budget, got {rejection:?}"
+    );
 }
 
 #[test]
