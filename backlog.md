@@ -3503,21 +3503,25 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 <a id="kw-ci-104"></a>
 
-## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — todo
+## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — done 2026-09-08
 
-- **Verified 2026-09-08, partially delivered.**
-  `.github/actions/install-system-dependencies/action.yml` exists, normalizes
-  the mirror (`azure.archive.ubuntu.com` -> `archive.ubuntu.com`), and five
-  workflows call it.
-- **Remaining:** three sites still hand-roll `apt-get` outside the action --
-  `architecture-validation.yml:422` and `:427` (inside the
-  `nvidia/cuda:13.2.0-devel-ubuntu22.04` container, which carries its own
-  sources and its own retry/timeout flags) and `python-wheel-smoke.yml:114`
-  (a hosted runner `apt-get install` that does not normalize the mirror, so it
-  keeps the exposure this item exists to remove).
-- **Acceptance:** every hosted-runner package install routes through the
-  action; a container job either routes through it or records why its base
-  image is exempt.
+- The shared action normalizes the mirror, disables third-party sources, and
+  refreshes and installs under one retry/timeout policy; every hosted-runner
+  package install now routes through it.
+- **Correction to the 2026-09-08 note:** `python-wheel-smoke.yml` was not
+  exposed to the Azure mirror -- its job already called the action to prepare
+  the index. What it hand-rolled was the *install*: `sudo timeout 180s apt-get
+  install` with no `Acquire::Retries` and no `--kill-after`, against the
+  action's 8m bound, three `Acquire` options, and kill-after.
+- **Fix:** package discovery (which of two hdf5 runtime names the release
+  carries) is its own step emitting a `packages` output, and the install is the
+  action. A `refresh` input, default true, lets that second call skip the
+  normalize/disable/update steps the same job already ran, so consolidating
+  costs no extra `apt-get update`.
+- **Exempt, recorded:** the two remaining `apt-get` calls are in the
+  `nvidia/cuda:13.2.0-devel-ubuntu22.04` container job. The action's mirror
+  rewrite and third-party-source disabling target the runner image's sources,
+  not that base image's, and the container has no `sudo`.
 
 ## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — done 2026-08-20
 
