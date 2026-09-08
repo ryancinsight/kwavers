@@ -49,6 +49,28 @@
 - **Acceptance:** the panic site is gone; every caller passes the mask through
   the variant; the existing plan tests pass unchanged.
 
+<a id="kw-prepush-checks-the-wrong-tree-2026-09-08"></a>
+
+## KW-PREPUSH-CHECKS-THE-WRONG-TREE-2026-09-08 — The lockfile hook verifies the working tree, not the push [patch] [ci] — todo
+
+- **Escaped defect it let through:** `a1d2d8ba5` added `tempfile` to
+  `kwavers-imaging`'s dev-dependencies without the lockfile edge. `main` then
+  failed every `--locked` invocation (`cargo metadata --locked` exits 101) from
+  #747 merging until #749 cured it -- the `Lockfile integrity` job first, and
+  every affected-scope job behind it.
+- **Root cause:** `.githooks/pre-push` reads the pushed range only to decide
+  *whether* to run, then measures the working tree. A tree whose `Cargo.lock`
+  a test run already regenerated resolves under `--locked` while the commits
+  being pushed carry the stale one, so the hook passes and CI fails. Its own
+  comment names the working-tree/range divergence but applies it to the skip
+  decision only.
+- **Fix:** check the revision being pushed. Materialize `local_sha`
+  (`git archive <sha> | tar -x` into a scratch directory) and run the existing
+  `scripts/lockfile.py` check there, so the hook verifies what CI will see.
+- **Acceptance:** a commit that changes a manifest without its lock edge is
+  refused at push even when the working-tree lock resolves; a push whose range
+  touches no manifest or lock still skips; the hook's added cost is measured.
+
 <a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>
 
 ## KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08 — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — todo
