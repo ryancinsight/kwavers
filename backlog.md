@@ -51,27 +51,20 @@
 
 <a id="kw-prepush-checks-the-wrong-tree-2026-09-08"></a>
 
-## KW-PREPUSH-CHECKS-THE-WRONG-TREE-2026-09-08 — The lockfile hook verifies the working tree, not the push [patch] [ci] — todo
+## KW-PREPUSH-CHECKS-THE-WRONG-TREE-2026-09-08 — The lockfile hook verifies the working tree, not the push [patch] [ci] — done 2026-09-08
 
-- **Escaped defect it let through:** `a1d2d8ba5` added `tempfile` to
-  `kwavers-imaging`'s dev-dependencies without the lockfile edge. `main` then
-  failed every `--locked` invocation (`cargo metadata --locked` exits 101) from
-  #747 merging until #749 cured it -- the `Lockfile integrity` job first, and
-  every affected-scope job behind it.
-- **Root cause:** `.githooks/pre-push` reads the pushed range only to decide
-  *whether* to run, then measures the working tree. A tree whose `Cargo.lock`
-  a test run already regenerated resolves under `--locked` while the commits
-  being pushed carry the stale one, so the hook passes and CI fails. Its own
-  comment names the working-tree/range divergence but applies it to the skip
-  decision only.
-- **Fix:** check the revision being pushed. Materialize `local_sha`
-  (`git archive <sha> | tar -x` into a scratch directory) and run the existing
-  `scripts/lockfile.py` check there, so the hook verifies what CI will see.
-- **Acceptance:** a commit that changes a manifest without its lock edge is
-  refused at push even when the working-tree lock resolves; a push whose range
-  touches no manifest or lock still skips; the hook's added cost is measured.
-
-<a id="kw-gpu-tests-skip-without-proving-absence-2026-09-08"></a>
+- **Fixed by a different design than filed.** Materializing the pushed
+  revision was measured first: `git archive HEAD | tar -x` costs 24 s and
+  888 MB here, and a manifests-only archive (354 ms) does not work -- cargo
+  needs the target files for discovery and exits 101 on the first member.
+- **Delivered instead:** the hook records the pushed tip when the range
+  touches dependency files, then refuses when the working tree differs from it
+  in `Cargo.lock` or any `Cargo.toml`. It does not verify another tree; it
+  detects when this tree cannot speak for the push, which is the false
+  assurance that let `a1d2d8ba5` through.
+- **Verified against the three cases:** diverged tree exits 1 with the pushed
+  revision named, matching tree exits 0 after the real `--check` runs, and a
+  range touching no manifest or lock still skips.
 
 ## KW-GPU-TESTS-SKIP-WITHOUT-PROVING-ABSENCE-2026-09-08 — A broken GPU skips instead of failing [patch] — todo
 
