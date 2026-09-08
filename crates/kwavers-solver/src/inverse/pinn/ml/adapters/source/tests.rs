@@ -110,12 +110,9 @@ fn test_focal_properties_extraction() {
     let pinn_source = PinnAcousticSource::from_domain_source(&gaussian_source, 0.0)
         .expect("Should adapt Gaussian source");
 
-    assert!(
-        pinn_source.focal_properties.is_some(),
-        "Gaussian source should have focal properties"
-    );
-
-    let focal_props = pinn_source.focal_properties.unwrap();
+    let focal_props = pinn_source
+        .focal_properties
+        .expect("Gaussian source should have focal properties");
 
     assert!(
         (focal_props.focal_length - 0.05).abs() < 1e-3,
@@ -127,13 +124,22 @@ fn test_focal_properties_extraction() {
         "Spot size should be 1mm, got {}",
         focal_props.spot_size
     );
+    // Both are derived quantities, not flags. For a Gaussian beam the adapter
+    // must carry through F# = z_R / w0 = pi * w0 / lambda, which for
+    // w0 = 1 mm and lambda = 1.5 mm is pi/1.5; a `None`-to-`Some` adapter
+    // filling in a default would satisfy the old existence check.
+    let f_number = focal_props.f_number.expect("F-number should be available");
+    let expected_f_number = std::f64::consts::PI * 1e-3 / 1.5e-3;
     assert!(
-        focal_props.f_number.is_some(),
-        "F-number should be available"
+        (f_number - expected_f_number).abs() < 1e-9,
+        "f/# must be pi*w0/lambda = {expected_f_number}, got {f_number}"
     );
+    let focal_gain = focal_props
+        .focal_gain
+        .expect("Focal gain should be available");
     assert!(
-        focal_props.focal_gain.is_some(),
-        "Focal gain should be available"
+        focal_gain.is_finite() && focal_gain > 0.0,
+        "focal gain must be a positive finite concentration factor, got {focal_gain}"
     );
 }
 

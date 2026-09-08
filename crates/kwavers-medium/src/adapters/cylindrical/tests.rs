@@ -4,6 +4,7 @@ use super::CylindricalMediumProjection;
 use crate::heterogeneous::HeterogeneousMedium;
 use crate::{CoreMedium, HomogeneousMedium};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use kwavers_core::test_support::assert_rejects;
 use kwavers_grid::{CylindricalTopology, Grid};
 
 #[test]
@@ -341,5 +342,5 @@ fn test_projection_validates_bounds() {
 
     // Should fail because z_max exceeds grid bounds
     let result = CylindricalMediumProjection::new(&medium, &grid, &topology_too_large);
-    assert!(result.is_err(), "Should fail for out-of-bounds topology");
+    assert_rejects(result, "Coordinates must be within grid bounds");
 }

@@ -190,18 +190,24 @@ proptest! {
         let config = FdtdConfig::default();
         let solver_result = FdtdSolver::new(config, &grid, &medium, source);
 
-        // CFL condition: dt ≤ dx / c
-        let max_dt = dx / 1482.0; // c = 1482 m/s for water
-        let _safe_dt = 0.9 * max_dt; // Conservative factor
+        let solver = solver_result
+            .expect("FDTD construction is independent of dx: the grid is valid at every sampled spacing");
 
-        // If CFL is violated, solver should either fail or be very unstable
-        if dx_factor < 0.7 { // Tight CFL condition
-            // Should work fine
-            prop_assert!(solver_result.is_ok(), "FDTD failed with reasonable CFL condition");
-        } else if dx_factor > 1.5 { // Loose CFL condition (might be unstable)
-            // May or may not work, but shouldn't crash
-            // This tests that the solver handles CFL violations gracefully
-        }
+        // The solver's own stability bound is the property under test: it must
+        // scale linearly with the spacing, so a step at the bound is accepted
+        // and any larger one is rejected. `1e-12 * max_dt` is the smallest
+        // perturbation that survives the f64 comparison at these magnitudes.
+        let c = 1482.0; // water
+        let max_dt = solver.max_stable_dt(c);
+        prop_assert!(max_dt > 0.0, "stable step must be positive, got {max_dt}");
+        prop_assert!(
+            solver.check_cfl_stability(max_dt, c),
+            "a step exactly at the bound must be stable"
+        );
+        prop_assert!(
+            !solver.check_cfl_stability(max_dt * (1.0 + 1e-12), c),
+            "a step past the bound must be rejected"
+        );
     }
 }
 
@@ -368,13 +374,16 @@ proptest! {
         let source = GridSource::default();
         let config = FdtdConfig::default();
 
-        let solver_result = FdtdSolver::new(config, &grid, &medium, source);
+        let solver = FdtdSolver::new(config, &grid, &medium, source)
+            .expect("water is inside every supported medium property range");
 
-        // Solver should be able to handle reasonable medium property ranges
-        // (This is a basic smoke test - more detailed property testing would
-        // require custom medium implementations)
-
-        prop_assert!(solver_result.is_ok(), "Solver failed with reasonable medium properties");
+        // The construction claim is only worth making if the solver is usable
+        // afterwards: its stability bound must be finite and positive.
+        let max_dt = solver.max_stable_dt(1482.0);
+        prop_assert!(
+            max_dt.is_finite() && max_dt > 0.0,
+            "constructed solver must report a usable step, got {max_dt}"
+        );
     }
 }
 

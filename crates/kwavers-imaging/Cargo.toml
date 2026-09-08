@@ -21,7 +21,11 @@ ritk-spatial = { workspace = true }
 ritk-registration = { workspace = true }
 
 [dev-dependencies]
+# Rejection assertions shared across the workspace's test modules.
+kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 eunomia = { workspace = true }
+# Per-test temporary files: the single-file rejection needs a path that exists.
+tempfile = { workspace = true }
 
 [lints]
 workspace = true

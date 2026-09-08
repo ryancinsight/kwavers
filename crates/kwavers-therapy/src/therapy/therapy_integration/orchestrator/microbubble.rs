@@ -236,6 +236,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
+    use kwavers_core::test_support::assert_rejects;
     use kwavers_grid::Grid;
     use kwavers_medium::homogeneous::HomogeneousMedium;
 
@@ -333,7 +334,7 @@ mod tests {
 
         // Zero timestep should work (no evolution)
         let result = update_microbubble_dynamics(&mut ceus, &acoustic_field, Time::from_base(0.0));
-        assert!(result.is_err()); // Service validates dt > 0
+        assert_rejects(result, "timestep must be positive");
     }
 
     #[test]

@@ -31,10 +31,7 @@ pub(in crate::therapy::theranostic_guidance::nonlinear3d::forward) fn build_sour
     source_body_mask: Option<&[bool]>,
 ) -> SourcePlan {
     if aperture.source_domain == SourceDomain::ExteriorCoupling {
-        assert!(
-            source_body_mask.is_some(),
-            "exterior coupling sources require the CT-derived body mask"
-        );
+        source_body_mask.expect("exterior coupling sources require the CT-derived body mask");
     }
     if let Some(mask) = source_body_mask {
         assert_eq!(

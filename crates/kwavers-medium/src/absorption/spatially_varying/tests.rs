@@ -2,6 +2,7 @@ use super::*;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::test_support::assert_rejects;
 use leto::Array3;
 
 #[test]
@@ -87,7 +88,7 @@ fn test_validation() -> KwaversResult<()> {
     bad_alpha[[1, 1, 1]] = -0.1;
     let bad =
         SpatiallyVaryingAbsorption::new(bad_alpha, Array3::from_elem([3, 3, 3], 1.0), MHZ_TO_HZ);
-    assert!(bad.is_err());
+    assert_rejects(bad, "alpha_0_field contains negative or non-finite values");
 
     Ok(())
 }
