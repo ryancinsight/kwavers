@@ -2,30 +2,41 @@
 
 <a id="kw-orphaned-benches-2026-09-08"></a>
 
-## KW-ORPHANED-BENCHES-2026-09-08 — Sixteen files in `benches/` are not benchmarks [patch] [ci] — todo
+## KW-ORPHANED-BENCHES-2026-09-08 — The bench registry gate does not model modules [patch] [ci] — done 2026-09-08
 
-- **Symptom:** the `complete benchmark smoke` job fails its `validate_registry`
-  step, which diffs the `benches/*.rs` stems against the Cargo bench target
-  registry. 25 files, 9 declared.
-- **Not a registry omission.** The 16 undeclared files carry no
-  `criterion_main!`, no `fn main`, and no `#[bench]`, so they cannot be a
-  target under either harness setting: `harness = false` wants a `main` they do
-  not have, and the default harness has nothing to collect. Declaring them was
-  tried and all 16 fail to compile with `E0601: main function not found`.
-- **`autobenches = false`** (`crates/kwavers/Cargo.toml:17`), so nothing has
-  ever compiled them. 2845 lines that no gate has read.
-- **Why it surfaced now:** the registry validation landed with
-  KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31, and the job triggers on
-  `pull_request` only -- pushes to `main` never run it, which is how the drift
-  survived. The gate is correct; the condition is older than the gate.
-- **Not caused by the PR that found it.** kwavers#726 touches neither
-  `crates/kwavers/benches/` nor `crates/kwavers/Cargo.toml`.
-- **Decision needed before work:** whether the 16 hold salvageable measurement
-  intent (repair into real Criterion benches) or are superseded drafts
-  (delete). That is an owner's call on 2845 lines, not a mechanical cleanup;
-  the files are listed in the job log and recoverable from git either way.
-- **Acceptance:** `validate_registry` passes on both revisions, and every file
-  under `benches/` is a declared, compiling target.
+- **Symptom:** `complete benchmark smoke` fails `validate_registry`, which
+  diffs `benches/*.rs` stems at `-maxdepth 1` against the Cargo bench target
+  registry. 26 files, 10 targets.
+- **The 16 are not orphans.** `benchmark_suite.rs` is a declared target that
+  `mod`-includes them: `mod amr_criteria_benchmark;` and sixteen more. They
+  compile as part of it, which is why none carries `criterion_main!` or
+  `fn main` -- modules do not need one. `6bcc8087d perf(bench): Consolidate
+  smoke harnesses` (2026-08-31) built that layout deliberately.
+- **First diagnosis was wrong and is recorded because it was acted on.** The
+  absence of an entry point was read as "not a benchmark", and grep hits for
+  each name inside `benchmark_suite.rs` were read as the content having moved
+  there; they were the `mod` declarations. The 16 were deleted on that basis
+  and `cargo check -p kwavers --benches` failed immediately with
+  `couldn't read benches/amr_criteria_benchmark.rs`, pointing at
+  `benchmark_suite.rs:7`. Reverted; no file was lost.
+- **Cause:** the gate landed with `KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31`
+  after the consolidation, and asserts a one-to-one file/target
+  correspondence the layout never had. A check that reports live code as
+  drift invites exactly the deletion that was attempted.
+- **Fix:** the gate now asserts what matters -- no bench file is dead. Every
+  file must be a declared target *or* a `mod` of a bench file, and every
+  target must have a backing file. `fdtd_propagation_benchmark` is both, so
+  the two sets union rather than partition. Verified against the tree: 26
+  files, 10 targets, 17 modules, union 26, no uncovered file and no target
+  without a file.
+- **The gate's misreading had already been made once.** `985478bb2` (peer,
+  2026-09-02) read `fdtd_propagation_benchmark`'s missing declaration as the
+  bench being unregistered and re-added both a `[[bench]]` entry and a
+  `criterion_main!`, though `6bcc8087d` had made the file a module of
+  `benchmark_suite` a day earlier. It has built into two binaries since, and
+  `cargo bench --benches` ran and reported its measurements twice. It was the
+  only suite module carrying an entry point. Both are removed; 9 targets now,
+  union still 26.
 
 <a id="kw-sir-trace-accumulation-2026-09-08"></a>
 
@@ -44,7 +55,7 @@
 - Premise corrected on the way: a trace-level fourth-order integral of split deltas drifts, so the round trip is the auto-convolution on the support; a judge pass caught an index clamp that mangled kernels for field points within a patch width of the face, fixed with signed anchoring and two regressions.
 <a id="kw-fft3d-baseline-2026-09-08"></a>
 
-## KW-FFT3D-BASELINE-2026-09-08 — The spectral pair a PSTD step is built on had no timing [patch] [perf] — delivered 2026-09-08
+## KW-FFT3D-BASELINE-2026-09-08 — The spectral pair a PSTD step is built on had no timing [patch] [perf] — done 2026-09-08
 
 - **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fft3d-baseline`;
   lane `D:/atlas/worktrees/kwavers-compute-manager` (re-pointed from an idle
@@ -238,7 +249,7 @@
   the module's own); `cargo check -p kwavers-gpu --features gpu --lib` clean.
 
 
-## ✅ KW-PY-SIMULATION-MOD-SLICES-2026-09-02 — Slice `simulation_py/mod.rs` to the file target [patch] — done 2026-09-02
+## KW-PY-SIMULATION-MOD-SLICES-2026-09-02 — Slice `simulation_py/mod.rs` to the file target [patch] — done 2026-09-02
 
 - **Delivered:** `mod.rs` (803 → 236 lines) is the pyclass, its constructor and the module tree; the `#[pymethods]` groups live where their concern does — `configuration.rs` (config objects, thermal/poroelastic), `pml.rs` (PML geometry and k-space numerics), `physics.rs` (nonlinearity, absorption, Helmholtz) — under the crate's existing `multiple-pymethods` feature; `run/execute.rs` holds `Simulation.run` and `run/prepare.rs` the pure conversions it was inlining (CFL time step with its named Courant number, solver/FFT-backend maps, elastic velocity source, IVP axis). The `kwavers_error_to_py_local` alias "kept for old solver files" is deleted and its six callers use the one name.
 - **Evidence:** Python surface unchanged (methods moved between `#[pymethods]` blocks of the same class); `cargo test-gpu-consumers` 127/127 (one declared skip); clippy `-D warnings` on kwavers-python (all targets, gpu feature). PR #690.
@@ -264,15 +275,15 @@
   `cfg(test)`.
 - **Risk / change class:** [patch]; test-only and CI-only edits.
 
-## ✅ KW-STALE-BRANCH-RESCUE-PHASE1-2026-09-02 — Salvage or drop `rescue/phase1-slice-wip` [patch] — done 2026-09-02
+## KW-STALE-BRANCH-RESCUE-PHASE1-2026-09-02 — Salvage or drop `rescue/phase1-slice-wip` [patch] — done 2026-09-02
 
 - **Verdict: dropped.** The snapshot commit is generated output (three copies of `_generated_surface.json`, two CycloneDX SBOMs, a `.wheel-smoke` tree, a `.pyi`); the two refactor commits (`523863a9c`, `49d80a465`) do not apply to today's `main` — cherry-pick conflicts in `kwavers-gpu/src/gpu/pipeline/mod.rs` and `kzk/validation/diffraction.rs` — and their python-side intent (slicing `simulation_py/mod.rs`) is partly landed (`run/{mod,sources}.rs` exist) and otherwise re-filed as `KW-PY-SIMULATION-MOD-SLICES-2026-09-02`. Branch deleted.
 
-## ✅ KW-STALE-BRANCH-GMRES-DEFECTS-2026-09-02 — Salvage or drop `fix/kwavers-gmres-defects` [patch] — done 2026-09-02
+## KW-STALE-BRANCH-GMRES-DEFECTS-2026-09-02 — Salvage or drop `fix/kwavers-gmres-defects` [patch] — done 2026-09-02
 
 - **Verdict: superseded.** The branch predates the history the tree now carries: its "unique" commits include the merges of #318/#320 (typed acoustic coupling), which are on `main` under other commit objects, and its GMRES work is superseded by the Athena Krylov adoption (`44af659be`, #440; `kwavers-solver/src/krylov/`). Branch deleted.
 
-## ✅ KW-STALE-BRANCH-THERAPY-METRIC-2026-09-02 — Salvage or drop `codex/kwavers-therapy-metric-verify` [patch] — done 2026-09-02
+## KW-STALE-BRANCH-THERAPY-METRIC-2026-09-02 — Salvage or drop `codex/kwavers-therapy-metric-verify` [patch] — done 2026-09-02
 
 - **Verdict: superseded.** Same pre-rewrite lineage as the GMRES branch (shares the #318/#320 merges); its typed thermal metrics exist on `main` (`kwavers-physics/src/thermal/diffusion/dose.rs`) and the Aequitas typed-coupling deliveries landed through #318/#320. Branch deleted.
 
@@ -406,7 +417,7 @@
   changing and `kwavers-gpu`'s FDTD shader copy becomes deletable (ADR 128).
 - **Last-update:** 2026-09-04.
 
-## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — delivery
+## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -453,12 +464,12 @@
   7 x 4 x 3 passes in 0.900 s; the selector-level Hephaestus run passes in
   0.711 s.
 
-## KW-VISCOACOUSTIC-SENSOR-TRACE-CAPACITY-2026-08-31 — Retain sensor trace capacity [minor] [perf] — complete
+## KW-VISCOACOUSTIC-SENSOR-TRACE-CAPACITY-2026-08-31 — Retain sensor trace capacity [minor] [perf] — done
 
 - **Delivered:** source `1a6fa7b11`, PR #680 head `2465e13e1`, merge `bd7e6fa62`; exact reservation removes warm sensor-trace growth and preserves bitwise values.
 - **Evidence:** zero allocator calls on first and repeated 65-step reserved windows, typed overflow without trace mutation, 944/944 debug tests, focused release tests, Clippy/Rustdoc/doctests/example checks, SemVer 196/196, and independent review GREEN.
 
-## KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 — Skip zero spectral derivatives [patch] [perf] — in progress
+## KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 — Skip zero spectral derivatives [patch] [perf] — in-progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -485,7 +496,7 @@
   hash-different target names to the unchanged four-pair instrument; hosted
   recollection remains pending.
 
-## KW-CI-DRAFT-PR-GATING-2026-08-31 — Skip draft pull-request runners [patch] [ci] — in progress
+## KW-CI-DRAFT-PR-GATING-2026-08-31 — Skip draft pull-request runners [patch] [ci] — in-progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -593,7 +604,7 @@
   automation tests, YAML parsing, and diff checks pass. `actionlint` is not
   installed locally. Hosted hit and compile-interval evidence remain pending.
 
-## ✅ KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 — Keep statistical timing off hosted CI [patch] [arch] [ci] [perf] — done 2026-09-04
+## KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 — Keep statistical timing off hosted CI [patch] [arch] [ci] [perf] — done 2026-09-04
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -656,7 +667,7 @@
   that weakens Criterion instruments or substitutes hosted wall time for local
   paired evidence.
 
-## KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 — Omit inactive-axis state [patch] [perf] — complete
+## KW-VISCOACOUSTIC-DIMENSIONAL-STATE-2026-08-31 — Omit inactive-axis state [patch] [perf] — done
 
 - **Delivered:** source `c6cef1386` (branch `pr/viscoacoustic-dimensional-state`): the
   solver derives its active-axis mask from the grid and retains velocity,
@@ -677,7 +688,7 @@
   unchanged public API; kwavers-solver release lib suite 946/946;
   Clippy/Rustdoc clean for the touched packages.
 
-## KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 — Retain scalar homogeneous coefficients [patch] [perf] — complete
+## KW-VISCOACOUSTIC-UNIFORM-COEFFICIENTS-2026-08-31 — Retain scalar homogeneous coefficients [patch] [perf] — done
 
 - **Delivered:** source `8d6874e68` (branch `perf/viscoacoustic-uniform-coefficients`,
   stacked on `pr/viscoacoustic-dimensional-state`): a private scalar-or-grid
@@ -746,12 +757,12 @@
   add the required ADR/migration guide, and use `cargo-semver-checks` to confirm
   the return-type break. No compatibility wrapper or silent fallback.
 
-## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — complete
+## KW-PSTD-SOURCE-ACTIVITY-CACHE — Retain warm source-step maps [patch] [perf] — done
 
 - **Delivered:** PR #669, source `37f539786`, merge `7e709604b`; retained fixed-size pressure/velocity activity maps remove both warm-run host allocations and reject extent drift before mutation or device work.
 - **Evidence:** GPU-feature Nextest 174/174 (6 skipped), warning-denied all-target Clippy, and independent review GREEN; current-main focused refill/allocation and extent regressions pass 2/2 at `e423ce24d`.
 
-## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — complete
+## KW-FDTD-DEBUG-SCAN — Remove duplicate debug scans [patch] [perf] — done
 
 - **Delivered:** source `41576260e`, PR #670 merge `fb24b26d4`; both temporal schemes inject velocity sources once, and source-free debug phases avoid duplicate full-field scans.
 - **Evidence:** independent review GREEN, release regression and warning-denied solver Clippy passed; current-main analytical source plus unchanged CPML regressions pass 2/2 in 14.649 s at `c4170253f` under the existing Nextest bounds.
@@ -798,7 +809,7 @@
   remains unavailable locally.
 - **Lease:** none; source is committed and hosted draft behavior is collected.
 
-## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in progress
+## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in-progress
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -851,57 +862,22 @@
   shrink (a DoR sub-item once the timings are collected).
 
 
-## ✅ KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — done 2026-09-02
+## KW-INTEGRATION-FAILURE-DIAGNOSTICS — Preserve failed-test output [patch] — done 2026-09-02
 
 - **Delivered:** `scripts/integration_tests.py` passes `--failure-output final` with the existing 4,000-character tails; independent review GREEN at `e47b44a08`.
 - **Hosted collection (2026-09-02):** the flag is live on `main` (`a0eb8c5df`); the merge run of PR #683 (`33587007602`) exercised the runner green. Hosted formatting of an actual failure is observable only on a red run — the runner contract test is the standing evidence.
 
-## ✅ KW-CI-ARCH-DAG — Remove ineffective PR serialization [patch] [perf] — done 2026-09-02
+## KW-CI-ARCH-DAG — Remove ineffective PR serialization [patch] [perf] — done 2026-09-02
 
 - **Delivered:** six ineffective `needs` edges removed from `architecture-validation.yml`; independent review GREEN at `570a763ac`.
 - **Hosted collection (2026-09-02):** `main` run `33587007602` (`a0eb8c5df`) starts every job within its first minute — feature builds, layer boundary, documentation, integration, coverage and CUDA jobs all begin before or alongside `Validate Clean Architecture` (03:26:01–03:28:06Z), so the critical-path edge is gone.
 
-## ✅ KW-PR-PINN-LIB-DUPLICATION-2026-08-29 — Remove duplicate PR PINN library run [patch] [ci] [perf] — done 2026-09-02
+## KW-PR-PINN-LIB-DUPLICATION-2026-08-29 — Remove duplicate PR PINN library run [patch] [ci] [perf] — done 2026-09-02
 
 - **Delivered:** Architecture Validation runs its second PINN library test command only on `push`; CI's `PINN Feature Validation` is the sole pull-request owner.
 - **Hosted collection (2026-09-02):** PR #683 scheduled exactly one PINN test job (`PINN Feature Validation`, success) beside the `pinn` feature *build*; the mainline backstop ran on the merge run `33587007602`.
 
-## KW-PR-PINN-LIB-DUPLICATION-2026-08-29 — Remove duplicate PR PINN library run [patch] [ci] [perf] — delivery
-
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-PR-PINN-LIB-DUPLICATION-2026-08-29 | Keep CI's canonical PINN library validation as the sole pull-request owner while retaining Architecture Validation's identical mainline backstop. | [patch] [ci] [perf] | delivery | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `.github/workflows/architecture-validation.yml`, release notes, workflow-structure evidence |
-
-- **Lease:** none; the implementation increment discharges the workflow and
-  documentation lease.
-- **Evidence:** Architecture Validation and CI independently run the same
-  `kwavers` PINN library graph on Linux Rust 1.97.0. The default `minimal`
-  feature is empty, so `--features pinn` and
-  `--no-default-features --features pinn` select the same graph. Both jobs use
-  restore-only `kwavers-dev` caches on pull requests and cannot exchange the
-  candidate artifacts they compile.
-- **Acceptance:** split only Architecture Validation's second test command into
-  a step guarded by `github.event_name == 'push'`; retain its exact command,
-  `RAYON_NUM_THREADS=2`, `--test-threads=2`, toolchain, profile, cache, job bound,
-  and main/develop behavior. Pull requests schedule exactly one PINN library
-  selection through CI's unchanged `PINN Feature Validation` job. Parsed job
-  comparison finds no other semantic change.
-- **Non-goals:** consolidating the full feature matrix, changing test selection,
-  assertions, workloads, cache policy, profiles, or timeout bounds.
-- **Candidate:** draft PR #672 source `a09995126` runs the unchanged workspace
-  library command on every event and the unchanged PINN library command only
-  when `github.event_name == 'push'`. CI's dedicated PINN job remains
-  byte-identical. PyYAML parsing and normalized job comparison against base
-  `7e709604b` pass: after recombining the split steps, the complete architecture
-  workflow is equal to the base. Pull requests schedule one PINN library
-  selection and mainline pushes retain two. Hosted collection remains.
-- **Independent review:** GREEN through exact cumulative candidate `98c35e2eb`.
-  The review confirms only the second command moved behind the push condition,
-  CI remains byte-identical, both commands preserve their environment and
-  selected graphs, and all other workflow jobs remain unchanged. Hosted
-  pull-request collection remains before merge.
-
-## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — IMPLEMENTED 2026-08-26
+## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — done 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -923,7 +899,7 @@
 - **Not a bound change.** The 15-minute budgets are unchanged and still measure
   what they were meant to measure.
 
-## KW-PINN-UNSEEDED-RNG — no PINN training run can be replayed [patch] — IMPLEMENTED 2026-08-26
+## KW-PINN-UNSEEDED-RNG — no PINN training run can be replayed [patch] — done 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -1019,7 +995,7 @@ is what the seed governs.
   backend/policy configuration (fixed reduction tree), fast path kept as the
   default and the two differential-tested against each other.
 
-## KW-PINN-TESTS-UNLINTED — the pinn clippy gate could not fail [patch] — IMPLEMENTED 2026-08-26
+## KW-PINN-TESTS-UNLINTED — the pinn clippy gate could not fail [patch] — done 2026-08-26
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -1070,7 +1046,7 @@ against the test target, where the rule is used.
 
 Gates: 1331 kwavers-solver tests pass; both new clippy commands exit 0.
 
-## KW-PINN-3D-NO-CONVERGENCE — the learning-rate schedule strangled its own training [major] — IMPLEMENTED 2026-08-25
+## KW-PINN-3D-NO-CONVERGENCE — the learning-rate schedule strangled its own training [major] — done 2026-08-25
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -1154,11 +1130,11 @@ training run can be replayed. It is drawn once per `train()` call, so the loss
 is deterministic *within* a run and this is not the convergence defect — but it
 makes any cross-run comparison noise, which is why the gradient tests build
 fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
-## KW-SWE-SCALING-IS-A-BENCHMARK — Measure scaling outside tests [patch] — IMPLEMENTED 2026-08-25
+## KW-SWE-SCALING-IS-A-BENCHMARK — Measure scaling outside tests [patch] — done 2026-08-25
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KW-SWE-SCALING-IS-A-BENCHMARK | Measure SWE propagation scaling through Criterion without wall-clock assertions in native tests. | [patch] | IMPLEMENTED | unowned | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/nl_swe_performance.rs` |
+| KW-SWE-SCALING-IS-A-BENCHMARK | Measure SWE propagation scaling through Criterion without wall-clock assertions in native tests. | [patch] | IMPLEMENTED | unowned | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/nl_swe_performance.rs` (a module of the `benchmark_suite` target since `6bcc8087d`) |
 
 - The elapsed-time test was removed in `d0cf2f0cb`; `7a6859802` added the
   geometric 16/32/64 Criterion sweep with unchanged solver computation.
@@ -1388,26 +1364,6 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   documentation diagnostics outside this item. PR #674 retargeting, hosted
   verification, and merge remain open.
 
-## KW-SWE-E2E-ELASTIC-MEDIUM-2026-08-30 — Correct bounded SWE workflow [patch] — review
-
-- **Integrator / lease:** Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d`;
-  lease discharged by the candidate commit.
-- **Outcome:** keep the 16³, 10 ms end-to-end workflow and 60-second bound,
-  but replace the fluid `μ=0` fixture with an 8 kPa, ν=0.49 elastic tissue,
-  use a stable explicit step, and derive the detector sampling rate from saved
-  timestamps. Strengthen the workflow oracle from existence checks to finite,
-  nonnegative inversion fields plus a nonzero propagated displacement.
-- **Acceptance:** the exact focused test passes below the committed slow bound;
-  41 uniformly spaced snapshots cover all 400 steps; the full propagation,
-  harmonic analysis, and nonlinear inversion remain exercised without reducing
-  the grid or physical duration. Entry evidence on exact `e7be552c9`: the fluid
-  fixture ran 51,962 CFL steps, retained about 5,198 six-field snapshots, passed
-  locally in 17.021 seconds, and timed out on the hosted runner at 60.093 seconds.
-  Candidate standalone evidence atop `75e2c8f7b`: full-feature Nextest 19/19 in
-  0.382 seconds with the corrected workflow at 0.121 seconds; default-feature
-  warning-denied Clippy passes. Full-feature warning-denied Clippy remains blocked
-  by 69 pre-existing PINN diagnostics outside this test and item.
-
 ## KW-SWE-PROPAGATION-PREFLIGHT-2026-08-29 — Validate propagation before mutation [patch] — review
 
 - **Outcome:** every `ElasticWaveSolver` propagation entry rejects malformed
@@ -1443,49 +1399,17 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
 - **Closure:** generic checked reservation, pre-allocation ordering, exact schedule/layout tests, and zero-reallocation census landed in `177f0f235` through PR #674 / merge `75e31f938`; stale `0619c6a8f` was not replayed because it duplicates the newer implementation.
 - **Verification:** exact-main focused Nextest passes 4/4 at `238cf78a1` plus claim-only `402980724`; no public API or snapshot semantics changed.
 
-## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — todo
+<a id="kw-pr-bench-duplication-2026-08-29"></a>
 
-- **Outcome:** execute the complete Criterion smoke once per pull request
-  instead of compiling and running it independently in two workflows.
-- **Scope / non-goals:** keep `benchmark-regression.yml` as the pull-request
-  owner and restrict the architecture plotting leg's existing dev-profile
-  smoke to mainline pushes. Preserve every benchmark target, feature, command,
-  workload, assertion, profile, cache key, and timeout in the event where it
-  remains active; do not change benchmark code or measurement policy.
-- **Entry evidence:** PR #670 starts both `complete benchmark smoke` and the
-  architecture plotting leg. The former runs all `kwavers` benches with
-  `plotting`; the latter runs the same targets with `--no-default-features
-  --features plotting`, which is the same feature graph because the default
-  `minimal` feature is empty. A local single-target bench-profile build spent
-  3m04s compiling before its smoke began.
-- **Acceptance:** parsed workflow comparison proves only the two architecture
-  step conditions change; pull requests execute the retained optimized smoke
-  exactly once, mainline pushes retain the architecture dev-profile smoke, and
-  the next hosted pull-request collection records unchanged target success with
-  the duplicate job work absent.
+## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — done 2026-08-29
 
-## KW-PR-BENCH-DUPLICATION-2026-08-29 — Remove duplicate PR smoke [patch] [ci] — in progress
+- Delivered by `b8b6b7a91 ci(kwavers): Deduplicate PR benchmark smoke`.
+- Verified 2026-09-08: both plotting bench steps in
+  `.github/workflows/architecture-validation.yml` carry
+  `github.event_name == 'push'`, so `benchmark-regression.yml` is the sole
+  pull-request owner and mainline keeps the dev-profile backstop.
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-PR-BENCH-DUPLICATION-2026-08-29 | Execute the complete plotting-enabled Criterion smoke once per pull request while retaining the existing mainline selection-drift backstop. | [patch] [ci] | in progress | Codex `01a03eb2-6f0a-7301-9290-55b918675e48` | `.github/workflows/architecture-validation.yml`, release and PM records |
-
-- **Scope / non-goals:** `benchmark-regression.yml` remains the pull-request
-  owner. The architecture plotting leg retains its byte-identical dev-profile
-  build and smoke commands on mainline pushes. Benchmark targets, features,
-  workloads, assertions, profiles, cache policy, and timeout bounds do not
-  change.
-- **Entry evidence:** PR #670 schedules both the complete benchmark smoke and
-  the architecture plotting leg. Both select every plotting-enabled `kwavers`
-  benchmark because the default `minimal` feature is empty. A local
-  single-target benchmark-profile build spent 3m04s compiling before smoke
-  execution.
-- **Acceptance:** workflow parsing shows only the two architecture step event
-  conditions change; pull requests schedule the retained benchmark smoke once;
-  mainline pushes retain the architecture smoke; exact candidate `b8b6b7a91`
-  passes syntax, diff, and workflow-contract checks before delivery.
-
-## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — IMPLEMENTED 2026-08-24
+## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — done 2026-08-24
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -1843,7 +1767,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   clipped absorption/CEUS bounds and a fake tissue-range legend series.
 - **Non-goal:** changing simulation values or their analytical assertions.
 
-## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — IMPLEMENTED 2026-08-22
+## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — done 2026-08-22
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -1890,7 +1814,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   parity bound. Its guarantee is the shared registration path, not a
   measurement.
 
-## KW-ABSORPTION-CONFIG-PRECEDENCE — the PSTD absorption coefficient in config is inert [major] — IMPLEMENTED 2026-08-22
+## KW-ABSORPTION-CONFIG-PRECEDENCE — the PSTD absorption coefficient in config is inert [major] — done 2026-08-22
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -1971,7 +1895,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 - **Decision record:** `docs/adr/120-absorption-coefficient-ownership.md`
   (Accepted).
 
-## KW-LOCK-GUARD-01 — the lockfile guard existed but nothing ran it [major] — implemented 2026-08-24
+## KW-LOCK-GUARD-01 — the lockfile guard existed but nothing ran it [major] — done 2026-08-24
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -2007,7 +1931,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   gaia (22), hermes (11), and five more. Promotion is a file copy plus a hook,
   and is tracked at the meta level as `ATLAS-OVERLAY-LOCK-GUARD`.
 
-## KW-GAP-2026-08-20-KWAVEPARITY — Make the k-Wave parity claim reproducible [major] [arch] — implementation complete; hosted verification pending
+## KW-GAP-2026-08-20-KWAVEPARITY — Make the k-Wave parity claim reproducible [major] [arch] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -2061,7 +1985,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   `KWAVERS_SKIP_KWAVE=1` bridge flag it sits behind, are unchanged by this item.
 - **Decision record:** `docs/adr/119-kwave-reference-oracle.md`.
 
-## KW-CI-CACHE-01 — the CI cache never hits [patch] — IMPLEMENTED 2026-08-22
+## KW-CI-CACHE-01 — the CI cache never hits [patch] — done 2026-08-22
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -2103,7 +2027,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   workflows it now matches — not by a green run. `actionlint` is not installed
   locally; adding it to the gate is a follow-up.
 
-## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — implementation complete; hosted verification pending
+## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -2156,14 +2080,14 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   no justification. It is now live under the adopted floor and remains tracked for the
   KW-LINT-1 ratchet; it is not changed by this inheritance item.
 
-## KW-LINT-112 — withdrawn, duplicate of KW-LINT-1
+## KW-LINT-112 — done
 
 - Filed as "decide the workspace clippy floor", then found to duplicate the existing
   KW-LINT-1 ("Burn down the clippy debt baseline"), which owns the adopted floor and its
   remaining debt. Nothing to do here; KW-LINT-1 is the item.
 
 
-## KW-GIT-113 — Drain the kwavers stash backlog [patch] — DONE 2026-08-24
+## KW-GIT-113 — Drain the kwavers stash backlog [patch] — done 2026-08-24
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -2263,7 +2187,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   worth deciding at the same time: whether to enable "Allow auto-merge", which would make
   merge-when-green available and remove the failure mode that produced the #433 merge.
 
-## KW-DOC-105 — Per-crate README landing pages [patch] — ✅ done 2026-08-20
+## KW-DOC-105 — Per-crate README landing pages [patch] — done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -2365,7 +2289,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   board geometry, pinouts, or per-tile layout detail.
 - No code or manifest change was needed to close this.
 
-## KW-DIST-QUEUE-2026-08-20 — close distributed queue completion and deadline contracts [patch] — implementation complete; hosted verification pending
+## KW-DIST-QUEUE-2026-08-20 — close distributed queue completion and deadline contracts [patch] — review
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -3428,7 +3352,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 - Merge note: filed and closed on `fix/xtask-metrics-paths`; KW-DOC-107 and KW-CLEAN-108
   carry the same note about the branch split.
 
-## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in progress 2026-08-19
+## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in-progress 2026-08-19
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -3450,7 +3374,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   source configuration.
 - Non-goals: no Rust, dependency, benchmark, test, or coverage-policy changes.
 
-## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — closed 2026-08-20
+## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -3468,7 +3392,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   development overlay, so Cargo lockfile source state was restored after each
   command and no lockfile change is part of this item.
 
-## KW-EXAMPLES-114 — Complete the heterogeneous attenuation example/book contract [patch] — closed 2026-08-20
+## KW-EXAMPLES-114 — Complete the heterogeneous attenuation example/book contract [patch] — done 2026-08-20
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -3502,7 +3426,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   `32329958998` completed successfully, including 10/10 architecture jobs and
   11/11 CI jobs.
 
-## KW-EXAMPLES-115 — Type and partition the seismic example workflows [major] [arch] — closed 2026-08-21
+## KW-EXAMPLES-115 — Type and partition the seismic example workflows [major] [arch] — done 2026-08-21
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -3758,7 +3682,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   retained as advisory hosted residual risk rather than a claim of hosted
   success.
 
-## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — Apollo co-evolution blocker 2026-08-18
+## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — blocked 2026-08-18
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -3794,7 +3718,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   and the disconnected f64 solver accelerator seam remain tracked boundaries;
   neither is represented as proof of this provider integration.
 
-## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — Reject uninitialized GPU visualization [patch] — verification pending 2026-08-17
+## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — Reject uninitialized GPU visualization [patch] — review 2026-08-17
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
@@ -3804,11 +3728,11 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 - Non-goals: no CPU fallback behind the GPU feature, no FDTD/provider changes, and no renderer ownership changes in Hephaestus or Leto.
 - Gate: source head `b275b7115` passes the required feature-enabled hosted matrix; the PM-only follow-up head must rerun the same gate before closure. Local execution remains blocked by the shared Atlas overlay's stale Asclepius checkout requiring `aequitas ^0.1.0` versus `0.2.0`.
 
-## KWAVERS-COUPLING-CONTRACT-001 — Medium-aware field-coupling inputs [minor]
+## KWAVERS-COUPLING-CONTRACT-001 — Medium-aware field-coupling inputs [minor] — todo
 
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
-| KWAVERS-COUPLING-CONTRACT-001 | Add a typed medium-property provider to `MultiphysicsFieldCoupler` for photoelastic, optical-absorption, and frequency-dependent acoustic-absorption coefficients; retain scalar extraction only at the field-update boundary. | [minor] | open: API extension required; nominal constants remain the documented current contract | Codex | `crates/kwavers-solver/src/multiphysics/field_coupling/`, direct callers/tests, `gap_audit.md` |
+| KWAVERS-COUPLING-CONTRACT-001 | Add a typed medium-property provider to `MultiphysicsFieldCoupler` for photoelastic, optical-absorption, and frequency-dependent acoustic-absorption coefficients; retain scalar extraction only at the field-update boundary. | [minor] | todo | Codex | `crates/kwavers-solver/src/multiphysics/field_coupling/`, direct callers/tests, `gap_audit.md` |
 
 The current field-coupler API accepts only collocated field volumes, so its
 nominal water/tissue coefficients are real defaults rather than hidden input
@@ -3877,7 +3801,7 @@ markers without changing the numerical contract.
   the pre-existing `kwavers-solver` `neg_cmp_op_on_partial_ord` errors at
   `crates/kwavers-solver/src/forward/fdtd/absorption/mod.rs:129`.
 
-## KW-MAT-043 — Direct FWI L-BFGS provider ownership [patch] [arch] — in progress 2026-08-11
+## KW-MAT-043 — Direct FWI L-BFGS provider ownership [patch] [arch] — in-progress 2026-08-11
 
 - Owner: Codex. Scope: the two FWI production callers, the focused FWI
   L-BFGS tests, the existing `kwavers-math` optimization path, and the
@@ -3895,7 +3819,7 @@ markers without changing the numerical contract.
   Clippy, and the consumer check run against the delivered source or record
   the exact infrastructure blocker.
 
-## KWAVERS-AEQ-MET-69 — Type B-mode scan-conversion geometry [major] [arch] — in progress 2026-08-06
+## KWAVERS-AEQ-MET-69 — Type B-mode scan-conversion geometry [major] [arch] — in-progress 2026-08-06
 
 - Owner: Codex; scope: `crates/kwavers-analysis/src/signal_processing/b_mode/`,
   direct tests, ADR 105, and the synchronized gap audit. The dense RF/image
@@ -3912,7 +3836,7 @@ markers without changing the numerical contract.
   value semantics; package check, strict Clippy, Nextest, doctests, Rustdoc,
   formatting, and raw-public-signature scans pass.
 
-## KWAVERS-AEQ-MET-66 — Type thermal-diffusion quantities [major] [arch] — implementation complete; delivery blocked 2026-08-05
+## KWAVERS-AEQ-MET-66 — Type thermal-diffusion quantities [major] [arch] — blocked 2026-08-05
 
 - Owner: Codex; scope: public thermal-diffusion parameters and integration-time
   contracts, their direct solver/orchestrator callers, Python and simulation
@@ -4196,7 +4120,7 @@ markers without changing the numerical contract.
   formula-boundary mismatch, or Eunomia complex-unit incompatibility.
 
 
-## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — in progress
+## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — in-progress
 
 - Owner: Codex; scope: workspace and package registry metadata, every local
   dependency version, provider package aliases, `Cargo.lock`, Rust release
@@ -4708,7 +4632,7 @@ markers without changing the numerical contract.
   responsible for its explicit peak-pressure regression. Its inaccessible
   checkout does not widen or block this repository's delivery boundary.
 
-## KW-UQ-062 — Integrate Tyche uncertainty ownership [major] [arch] — implemented
+## KW-UQ-062 — Integrate Tyche uncertainty ownership [major] [arch] — done
 
 - Owner: /root; scope: Analysis conformal/sensitivity APIs, PINN conformal and
   ensemble statistics, Tyche dependency policy, ADR 043, and synchronized
@@ -4758,7 +4682,7 @@ markers without changing the numerical contract.
 - Evidence target: value-semantic dimension contracts, shader/host ABI
   regression, GPU-feature Nextest, and a Leo consumer gate.
 
-## KW-MED-059 — Consolidate continuous medium access [major] — ✅ done
+## KW-MED-059 — Consolidate continuous medium access [major] — done
 
 - Owner: Codex; scope: `crates/kwavers-medium/src/{wrapper.rs,interface.rs,lib.rs}`.
 - Acceptance: one generic `CoreMedium` entry point serves both concrete and
@@ -4770,7 +4694,7 @@ markers without changing the numerical contract.
 - Versioning: `kwavers-medium` 3.0.0 → 4.0.0; ADR 038 records the public
   removal and value-preservation theorem.
 
-## KW-SOL-058 — Restore elastic-FWI hosted runtime budget [patch] — ✅ done
+## KW-SOL-058 — Restore elastic-FWI hosted runtime budget [patch] — done
 
 - Owner: Codex `/root`; last-update: 2026-08-20; scope:
   elastic SWE point-force/stress/integration modules, elastic-FWI
@@ -4805,7 +4729,7 @@ markers without changing the numerical contract.
   29.031 seconds and the full native suite passes 5,729/5,729. All five hosted
   workflows are green; merge commit `2a291a064` integrates the fix.
 
-## KW-CI-057 — Serialize full workspace test processes [patch] — superseded
+## KW-CI-057 — Serialize full workspace test processes [patch] — done
 
 - The workflow serialization landed, but job `87949355634` still timed out
   `fwi_outperforms_linear_inversion` at 90.010 s. The timeout is a real
@@ -4835,7 +4759,7 @@ markers without changing the numerical contract.
   host, the focused Nextest suite passes all seven cases and package test
   compilation passes. A fresh hosted matrix remains required before merge.
 
-## KW-CI-053 — Update GPU PSTD parity contract [patch] — ✅ review
+## KW-CI-053 — Update GPU PSTD parity contract [patch] — review
 
 - Owner: Codex; scope: `crates/kwavers/tests/gpu_pstd_parity.rs` and its PM
   evidence only.
@@ -4847,7 +4771,7 @@ markers without changing the numerical contract.
   package-scoped nightly rustfmt passes after the direct call-site migration.
 - Residual: focused Nextest and the fresh hosted matrix must complete.
 
-## KW-CI-051 — Remove obsolete deployment workflow [patch] — ✅ review
+## KW-CI-051 — Remove obsolete deployment workflow [patch] — review
 
 - Owner: Codex; scope: `.github/workflows/deploy.yml` only.
 - Acceptance: no workflow references absent deployment artifacts or invalid
@@ -4859,7 +4783,7 @@ markers without changing the numerical contract.
 - Driver: the workflow was inherited from the old PINN service layout and has
   no live repository inputs.
 
-## KW-CI-052 — Lock and parse supported Cargo workflows [patch] — ✅ review
+## KW-CI-052 — Lock and parse supported Cargo workflows [patch] — review
 
 - Owner: Codex; scope: `.github/workflows/ci.yml` and
   `.github/workflows/architecture-validation.yml`.
@@ -4871,7 +4795,7 @@ markers without changing the numerical contract.
 - Driver: the prior CI definition allowed live provider resolution and had
   indentation errors in the build/convergence/validation steps.
 
-## KW-CI-050 — Restore hosted format and CUDA prerequisites [patch] — ✅ review
+## KW-CI-050 — Restore hosted format and CUDA prerequisites [patch] — review
 
 - Owner: Codex; scope: the finite-window PSTD test formatting and CUDA
   container prerequisites in `architecture-validation.yml`.
@@ -4884,7 +4808,7 @@ markers without changing the numerical contract.
 - Driver: Architecture Validation jobs `87924378467` and `87918394437`
   reported the exact stale-format and missing `openssl.pc` failures.
 
-## KW-CI-049 — Align Apollo provider lock [patch] — ✅ review
+## KW-CI-049 — Align Apollo provider lock [patch] — review
 
 - Owner: Codex; scope: `Cargo.lock` and provider-graph synchronization.
 - Acceptance: the lock records Apollo `0.24.0`, the version supplied by the
@@ -5279,7 +5203,7 @@ markers without changing the numerical contract.
   runs the leapfrog path's own measurement at exponents 0.6/1.0/1.4 and holds
   the same 15 % bound.
 
-## KW-CI-102 — Atlas provider checkout was a no-op fetching a whole repo [patch] — DONE (2026-08-17)
+## KW-CI-102 — Atlas provider checkout was a no-op fetching a whole repo [patch] — done (2026-08-17)
 
 Every CI job ran `checkout-atlas-path-dependencies`, which downloads a full
 `ryancinsight/atlas` tarball to materialize sibling provider repos. It
@@ -10484,18 +10408,18 @@ not legitimately forward-vs-inverse layered, before consolidating.
 
 Triage (correctness/arch → tests → features), one WIP item at a time:
 
-1. **[arch] PLC-1 photoacoustic consolidation** — ✅ **DONE (2026-06-19, ADR 026):**
+1. **[arch] PLC-1 photoacoustic consolidation** — **DONE (2026-06-19, ADR 026):**
    consumer analysis showed the 5 locations are mostly layered, not duplicates; the
    real dup was the two `kwavers-simulation` forward pipelines. Removed the dead
    `photoacoustics/` pipeline (1325 LOC); `modalities::photoacoustic` is canonical.
-2. **PLC-2 CEUS consolidation** — ✅ **CLOSED arch (2026-06-19):** verified mostly
+2. **PLC-2 CEUS consolidation** — **CLOSED arch (2026-06-19):** verified mostly
    FALSE POSITIVE. CEUS is correctly layered — `Microbubble`/`MicrobubblePopulation`
    types live in `kwavers-imaging` and physics CEUS re-exports them (not a dup);
    perfusion is image-analysis (imaging) vs forward transport-PDE (physics), distinct
    concerns. Optional [patch] residue: unify perfusion-param extraction
    (`analyze_tic` vs `from_samples`).
 3. **[arch] PLC-3 microbubble SSOT + therapy-physics layering** — shell-model SSOT
-   ✅ DONE (EncapsulatedShellModel trait). **Remainder CONFIRMED real (2026-06-19),
+   DONE (EncapsulatedShellModel trait). **Remainder CONFIRMED real (2026-06-19),
    needs ADR + careful merge:**
    - (a) `therapy/microbubble/shell/properties.rs::MarmottantShellProperties` =
      a 2nd Marmottant impl → fold onto canonical `MarmottantModel`/`EncapsulatedShellModel`.
@@ -10506,16 +10430,16 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
      `kwavers-therapy` (large cross-crate move, own ADR).
    Risk: (a)/(b) change therapy/ceus numerics (different parameterization) — verify
    value-semantic equivalence; do as a focused increment with fresh context.
-4. **PLC-4 time-reversal propagator SSOT** — ✅ **CLOSED (2026-06-19):** verified
+4. **PLC-4 time-reversal propagator SSOT** — **CLOSED (2026-06-19):** verified
    NOT duplicated. General TR delegates to a plugin solver; simulation TR delegates
    to the solver PA reconstructor; PA TR holds the canonical k-space propagator;
    transcranial TR is distinct aberration-correction phase conjugation. Correct
    layering, no consolidation. PLC-5 histotripsy likely WONTFIX (distinct concerns).
-5. **[minor] COV-1 coherence-factor weighting** — ✅ **DONE (2026-06-19):**
+5. **[minor] COV-1 coherence-factor weighting** — **DONE (2026-06-19):**
    Mallart-Fink amplitude CF + Camacho sign CF on the DAS path; fixed a real SAFT
    CF over-suppression bug en route (consolidated to one canonical helper).
    Follow-up [minor]: phase CF (PCF, analytic signal) + generalized CF (GCF, FFT).
-6. **[minor] COV-2 active DMAS** — ✅ **DONE (2026-06-19):** `time_domain::dmas`
+6. **[minor] COV-2 active DMAS** — **DONE (2026-06-19):** `time_domain::dmas`
    (`dmas_combine` + `delay_and_sum_dmas`); passive PAM consolidated onto the
    shared combiner. **[minor] COV-3 curvilinear transmit array** in
    `kwavers-transducer`. **[minor] COV-4 discrete point-scatterer + SIR RF synth**
@@ -10527,7 +10451,7 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
    (both fully implemented; see gap_audit). COV-11 Mur BC = WONTFIX (CPML superior).
 
 ### Remaining genuine coverage gaps (post-verification), best as focused increments:
-- **COV-3 curvilinear/convex transmit array** [minor] — ✅ **DONE (2026-08-19).**
+- **COV-3 curvilinear/convex transmit array** [minor] — **DONE (2026-08-19).**
   `KWaveArray::add_convex_array(&geometry, element_width, element_height)` wires
   the layout into the rasterizer per ADR 112, mapping each element to
   `add_rect_rot_element` at Euler `(0, theta_i deg, 0)` and taking
@@ -10588,7 +10512,7 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
 - **COV-4 discrete point-scatterer + spatial-impulse-response RF synthesis** [minor/major]
   — Field II core; largest. Home `kwavers-phantom` (scatterer cloud) + `kwavers-source`/
   analysis (SIR convolution → RF).
-- **COV-5 bubble shell models** [minor] — ✅ **PARTIAL DONE (2026-06-19):**
+- **COV-5 bubble shell models** [minor] — **PARTIAL DONE (2026-06-19):**
   `EncapsulatedShellModel` trait + RP driver (PLC-3 shell-model SSOT); Church/
   Marmottant refactored on; **Hoff + Sarkar added** with validation. **Deferred:**
   de Jong (verify lumped S_p/S_f prefactor against Doinikov&Bouakaz 2011 PDF before
@@ -10598,13 +10522,13 @@ Triage (correctness/arch → tests → features), one WIP item at a time:
 
 ## CPML → single-pole CFS-PML upgrade [minor] — DONE (2026-06-19)
 
-✅ Implemented in `kwavers-boundary/cpml`: graded κ/α + canonical Roden-Gedney
+Implemented in `kwavers-boundary/cpml`: graded κ/α + canonical Roden-Gedney
 recursion wired into the convolutional (FDTD) kernel; `with_cfs_pml` builder;
 dead `kappa_max`/`alpha_max` config activated (defaults reset 15/0.24 → 1/0 =
 prior effective behavior, FDTD bit-identical); fixed the wrong `a` doc formula.
 94 boundary + 81 FDTD/CPML solver tests pass; clippy clean. Split-field PSTD
 parity untouched (σ profile unchanged).
-**Deferred (tracked):** (a) ✅ **DONE (2026-08-17)** — see below; (b) ✅ **already
+**Deferred (tracked):** (a) **DONE (2026-08-17)** — see below; (b) **already
 done**: `with_cfs_pml_for_frequency(kappa_max, f0)` sets α_max = π·f₀ (the note
 predated it); (c) **3rd CPML impl** found — `solver/forward/pstd/dg/cpml` (DG
 solver) is a separate CPML; evaluate consolidating onto `kwavers-boundary` or
@@ -10625,7 +10549,7 @@ profile although that gradient lives half a cell away. That O(dx) error dominate
 every kappa/alpha comparison. Corrected results below; the Rustdoc claims derived
 from the old numbers were rewritten in the same change.
 
-## KW-BND-097 — Staggered-grid CPML profile sampling [patch] — DONE (2026-08-17)
+## KW-BND-097 — Staggered-grid CPML profile sampling [patch] — done (2026-08-17)
 
 **Root cause.** On the Yee grid `p` sits at cell centers and `u` at faces, so
 `grad p` (which drives the velocity update) is evaluated half a cell from
@@ -13579,7 +13503,7 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   explicit MSVC/Miniforge toolchain, and an isolated environment imports its
   installed `_pykwavers.pyd`.
 
-## KW-CI-103 — Wheel parity must import the installed extension [patch] — DONE (2026-08-19)
+## KW-CI-103 — Wheel parity must import the installed extension [patch] — done (2026-08-19)
 
 - Outcome: run the k-Wave parity suite against the wheel built by the release
   job, not the checkout's pure-Python source tree.

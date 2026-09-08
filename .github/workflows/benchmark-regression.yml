@@ -118,31 +118,65 @@ jobs:
 
           validate_registry() {
             local revision="$1"
+            local benches="$revision/crates/kwavers/benches"
 
-            diff --unified \
-              <(
-                find "$revision/crates/kwavers/benches" \
-                  -maxdepth 1 \
-                  -type f \
-                  -name '*.rs' \
-                  -printf '%f\n' \
-                  | sed 's/\.rs$//' \
-                  | LC_ALL=C sort
-              ) \
-              <(
-                cargo metadata \
-                  --manifest-path "$revision/Cargo.toml" \
-                  --locked \
-                  --no-deps \
-                  --format-version 1 \
-                  | jq --raw-output \
-                    '.packages[]
-                    | select(.name == "kwavers")
-                    | .targets[]
-                    | select(.kind | index("bench"))
-                    | .name' \
-                  | LC_ALL=C sort
-              )
+            local files targets modules covered uncovered orphaned
+
+            files="$(
+              find "$benches" -maxdepth 1 -type f -name '*.rs' -printf '%f\n' \
+                | sed 's/\.rs$//' \
+                | LC_ALL=C sort -u
+            )"
+
+            targets="$(
+              cargo metadata \
+                --manifest-path "$revision/Cargo.toml" \
+                --locked \
+                --no-deps \
+                --format-version 1 \
+                | jq --raw-output \
+                  '.packages[]
+                  | select(.name == "kwavers")
+                  | .targets[]
+                  | select(.kind | index("bench"))
+                  | .name' \
+                | LC_ALL=C sort -u
+            )"
+
+            # A bench file that is not itself a Cargo target can still be
+            # compiled, as a `mod` of one that is: `benchmark_suite.rs`
+            # consolidates seventeen of them that way, which is what
+            # `6bcc8087d` did deliberately. Requiring a one-to-one
+            # file/target correspondence therefore reports that layout as
+            # drift and invites deleting live code; the invariant that
+            # actually matters is that no bench file is dead. `#[path]` is
+            # what the compiler resolves, so read it rather than the `mod`
+            # identifier beside it; a bare `mod x;` resolves to `x.rs` and
+            # is collected too.
+            modules="$(
+              {
+                grep -rhoE '#[[]path[[:space:]]*=[[:space:]]*"[^"]+\.rs"[]]' "$benches"/*.rs \
+                  | sed 's/.*"\(.*\)\.rs".*/\1/'
+                grep -rhoE '^[[:space:]]*mod[[:space:]]+[a-z_0-9]+[[:space:]]*;' "$benches"/*.rs \
+                  | sed 's/.*mod[[:space:]]*//; s/[[:space:]]*;//'
+              } | LC_ALL=C sort -u
+            )"
+
+            covered="$(printf '%s\n%s\n' "$targets" "$modules" | LC_ALL=C sort -u)"
+
+            uncovered="$(comm -23 <(printf '%s\n' "$files") <(printf '%s\n' "$covered"))"
+            if [[ -n "$uncovered" ]]; then
+              echo "::error::$revision: bench files that are neither a Cargo target nor a mod of one:"
+              printf '  %s\n' $uncovered
+              return 1
+            fi
+
+            orphaned="$(comm -13 <(printf '%s\n' "$files") <(printf '%s\n' "$targets"))"
+            if [[ -n "$orphaned" ]]; then
+              echo "::error::$revision: Cargo bench targets with no backing file:"
+              printf '  %s\n' $orphaned
+              return 1
+            fi
           }
 
           validate_registry kwavers-baseline
