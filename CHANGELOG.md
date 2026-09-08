@@ -4,6 +4,25 @@
 
 ### Changed
 
+- **[major] Aperture elements carry a frame and the RF seam passes the
+  field point in it; far-field rectangular elements arrive.**
+  `kwavers-phantom`: `ApertureElement::new(position, normal, width)` takes the
+  in-plane width direction (orthonormalized; `height_axis()` closes the
+  triad), `field_point` returns `[x, y, z]` in the element frame, and
+  `RoundTripKernel::round_trip(x, y, z, dt)` receives those coordinates — a
+  circular provider adapts with `x.hypot(y)`. A kernel returning a non-finite
+  sample is now an `InvalidInput` error instead of a silent point-element
+  fallback. `kwavers-physics`: new
+  `spatial_impulse_response::FarFieldRectangleSir`, the Field II far-field
+  patch model of a rectangular piston (tiled `n_x × n_y`, trapezoid per
+  patch) evaluated by sparse delta integration — the one-way response is the
+  trapezoid sum at every grid node to rounding, degenerate patches are
+  deposited as bin averages, the round trip is auto-convolved on its
+  support — with `far_field_number` for the
+  validity criterion `w²·f/(4·l·c)`; the exact `RectangularPistonSir` is its
+  differential oracle (Rivera, Demené & Tanter, arXiv:2608.26891; Jensen &
+  Svendsen 1992). Migration: add a width direction to every
+  `ApertureElement::new` call and take four coordinates in kernel closures.
 - **[major] Finite-aperture RF synthesis samples kernels over their support
   and integrates once per trace.** `kwavers-phantom`:
   `RoundTripKernel::round_trip(r, z, dt)` returns the two-way kernel from its

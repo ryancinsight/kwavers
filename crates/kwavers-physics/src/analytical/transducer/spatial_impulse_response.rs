@@ -39,6 +39,10 @@
 //! `arccos`/`arcsin` breakpoints (Lockwood & Willette 1973). Circle fully inside
 //! ⇒ `Φ = 2π ⇒ h = c` (the near-field plateau).
 //!
+//! The far-field patch model of a rectangle — the Field II default and the
+//! sparse-delta form of Rivera, Demené & Tanter (2026) — lives in
+//! [`far_field_patch`], with the exact forms here as its oracles.
+//!
 //! # References
 //! - Stepanishen, P. R. (1971). "Transient radiation from pistons in an infinite
 //!   planar baffle." *J. Acoust. Soc. Am.* 49(5B), 1629–1638.
@@ -47,6 +51,10 @@
 //!   piston." *J. Acoust. Soc. Am.* 53(3), 735–741. — rectangular piston SIR.
 //! - Jensen, J. A. (1999). "A new calculation procedure for spatial impulse
 //!   responses in ultrasound." *J. Acoust. Soc. Am.* 105(6), 3266–3274.
+
+pub mod far_field_patch;
+
+pub use far_field_patch::FarFieldRectangleSir;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use std::f64::consts::PI;
@@ -174,22 +182,27 @@ impl CircularPistonSir {
         let h: Vec<f64> = (first_bin..end_bin)
             .map(|k| self.evaluate(r, z, (k as f64 + 0.5) * dt))
             .collect();
-        // Discrete auto-convolution (h ⊛ h)(k·dt) ≈ Σ_i h[i]·h[k−i]·dt over the
-        // support only; grid index of samples[i + j] is 2·first_bin + i + j.
-        let mut samples = vec![0.0_f64; (2 * h.len()).saturating_sub(1)];
-        for (i, &hi) in h.iter().enumerate() {
-            if hi == 0.0 {
-                continue;
-            }
-            for (j, &hj) in h.iter().enumerate() {
-                samples[i + j] += hi * hj * dt;
-            }
-        }
         SampledResponse {
             first_sample: 2 * first_bin,
-            samples,
+            samples: auto_convolve(&h, dt),
         }
     }
+}
+
+/// Discrete auto-convolution `(h ⊛ h)(k·dt) ≈ Σ_i h[i]·h[k−i]·dt` of a
+/// support-local kernel; grid index of `out[i + j]` is twice the input onset
+/// plus `i + j`, and the result is `2·len − 1` long.
+fn auto_convolve(h: &[f64], dt: f64) -> Vec<f64> {
+    let mut out = vec![0.0_f64; (2 * h.len()).saturating_sub(1)];
+    for (i, &hi) in h.iter().enumerate() {
+        if hi == 0.0 {
+            continue;
+        }
+        for (j, &hj) in h.iter().enumerate() {
+            out[i + j] += hi * hj * dt;
+        }
+    }
+    out
 }
 
 /// A kernel sampled over its own support on a uniform `dt` grid.

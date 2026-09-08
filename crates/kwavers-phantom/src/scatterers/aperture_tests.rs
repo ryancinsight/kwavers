@@ -54,7 +54,8 @@ impl CircularPiston {
 }
 
 impl RoundTripKernel for CircularPiston {
-    fn round_trip(&self, r_m: f64, z_m: f64, dt_s: f64) -> Vec<f64> {
+    fn round_trip(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> Vec<f64> {
+        let r_m = x_m.hypot(y_m);
         let h: Vec<f64> = self
             .support_bins(r_m, z_m, dt_s)
             .map(|k| self.evaluate(r_m, z_m, (k as f64 + 0.5) * dt_s))
@@ -100,7 +101,7 @@ fn round_trip_kernel_area_matches_the_closed_form() {
     };
     let dt = 1.0 / 200.0e6;
 
-    let kernel = piston.round_trip(0.0, z, dt);
+    let kernel = piston.round_trip(0.0, 0.0, z, dt);
     let area: f64 = kernel.iter().sum::<f64>() * dt;
     let expected = ((z * z + a * a).sqrt() - z).powi(2);
 
@@ -135,7 +136,7 @@ fn vanishing_aperture_converges_on_the_point_element_model() {
     let positions = [[0.0, 0.0, 0.0], [1.0e-3, 0.0, 0.0]];
     let elements: Vec<ApertureElement> = positions
         .iter()
-        .map(|&p| ApertureElement::new(p, [0.0, 0.0, 1.0]).expect("element"))
+        .map(|&p| ApertureElement::new(p, [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]).expect("element"))
         .collect();
 
     let reference = cloud
@@ -176,7 +177,9 @@ fn a_finite_aperture_smears_the_echo_in_time() {
     // kernel tail so the smeared echo is not clipped by the window edge.
     let cfg = config(fs, 1600);
     let pulse = [1.0];
-    let elements = [ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0]).expect("element")];
+    let elements = [
+        ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]).expect("element"),
+    ];
 
     let wide = CircularPiston {
         radius: 6.0e-3,
@@ -207,19 +210,150 @@ fn a_finite_aperture_smears_the_echo_in_time() {
 
 #[test]
 fn field_point_rejects_targets_at_or_behind_the_face() {
-    let element = ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0]).expect("element");
+    let element =
+        ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]).expect("element");
     assert!(element.field_point([0.0, 0.0, -1.0e-3]).is_none());
     assert!(element.field_point([0.0, 0.0, 0.0]).is_none());
 
-    let (r, z) = element.field_point([3.0, 0.0, 4.0]).expect("in front");
+    let [x, y, z] = element.field_point([3.0, -2.0, 4.0]).expect("in front");
     assert!((z - 4.0).abs() <= 1e-12, "axial distance along the normal");
-    assert!((r - 3.0).abs() <= 1e-12, "lateral offset from the axis");
+    assert!((x - 3.0).abs() <= 1e-12, "offset along the width axis");
+    assert!(
+        (y + 2.0).abs() <= 1e-12,
+        "offset along the height axis (normal × width)"
+    );
+}
+
+/// The frame is orthonormalized from the inputs: a skewed width direction is
+/// projected into the face plane, and the height axis closes a right-handed
+/// triad, so a rectangular kernel sees a consistent orientation whatever the
+/// caller's rounding.
+#[test]
+fn aperture_element_orthonormalizes_its_frame() {
+    let element =
+        ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 2.0], [1.0, 0.0, 0.5]).expect("element");
+    assert!((element.width_axis[0] - 1.0).abs() <= 1e-15);
+    assert!(
+        element.width_axis[2].abs() <= 1e-15,
+        "normal component removed"
+    );
+    let h = element.height_axis();
+    assert!((h[1] - 1.0).abs() <= 1e-15, "height = normal × width = +y");
 }
 
 #[test]
-fn aperture_element_rejects_a_degenerate_normal() {
-    assert!(ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 0.0]).is_err());
-    assert!(ApertureElement::new([f64::NAN, 0.0, 0.0], [0.0, 0.0, 1.0]).is_err());
+fn aperture_element_rejects_a_degenerate_frame() {
+    assert!(ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]).is_err());
+    assert!(ApertureElement::new([f64::NAN, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]).is_err());
+    assert!(
+        ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, 3.0]).is_err(),
+        "a width axis parallel to the normal spans no face plane"
+    );
+}
+
+/// A kernel that depends on the in-plane direction — wider across `y` than
+/// `x` — so that the element frame's orientation is observable in the RF.
+struct AnisotropicBox {
+    width_x: f64,
+    width_y: f64,
+    sound_speed: f64,
+}
+
+impl RoundTripKernel for AnisotropicBox {
+    fn round_trip(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> Vec<f64> {
+        let l = x_m.hypot(y_m).hypot(z_m);
+        let span = (self.width_x * x_m.abs() + self.width_y * y_m.abs()) / (l * self.sound_speed);
+        let bins = (span / dt_s).ceil().max(1.0) as usize;
+        vec![1.0; bins]
+    }
+}
+
+/// ## Theorem
+/// Rotating the whole scene — elements and scatterers together — leaves the
+/// RF unchanged, because the kernel sees the field point in the element's
+/// own frame.
+///
+/// This is what the width axis exists for: an anisotropic kernel evaluated
+/// through a mis-oriented frame would change under a rigid rotation. The two
+/// scenes differ only by rounding in the frame dot products, so the bound is
+/// a few `ε` of the peak.
+#[test]
+fn rf_is_invariant_under_a_rigid_rotation_of_the_scene() {
+    let cfg = config(100.0e6, 1500);
+    let pulse = [0.3, 1.0, -0.5];
+    let kernel = AnisotropicBox {
+        width_x: 0.4e-3,
+        width_y: 4.0e-3,
+        sound_speed: cfg.sound_speed,
+    };
+    let scatterers = [[1.5e-3, 2.0e-3, 7.0e-3], [-0.7e-3, -1.0e-3, 9.0e-3]];
+    let amplitudes = [1.0, -0.4];
+
+    // Rotation by 40° about the x axis then 25° about z (exact trig products).
+    let (ca, sa) = (40.0_f64.to_radians().cos(), 40.0_f64.to_radians().sin());
+    let (cb, sb) = (25.0_f64.to_radians().cos(), 25.0_f64.to_radians().sin());
+    let rotate = |v: [f64; 3]| -> [f64; 3] {
+        let about_x = [v[0], ca * v[1] - sa * v[2], sa * v[1] + ca * v[2]];
+        [
+            cb * about_x[0] - sb * about_x[1],
+            sb * about_x[0] + cb * about_x[1],
+            about_x[2],
+        ]
+    };
+
+    let upright = ScattererCloud::from_points(&scatterers, &amplitudes).expect("cloud");
+    let rotated_points: Vec<[f64; 3]> = scatterers.iter().map(|&p| rotate(p)).collect();
+    let rotated = ScattererCloud::from_points(&rotated_points, &amplitudes).expect("cloud");
+
+    let elements = [
+        ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]).expect("element"),
+        ApertureElement::new([1.0e-3, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0])
+            .expect("element"),
+    ];
+    let rotated_elements: Vec<ApertureElement> = elements
+        .iter()
+        .map(|e| {
+            ApertureElement::new(rotate(e.position), rotate(e.normal), rotate(e.width_axis))
+                .expect("element")
+        })
+        .collect();
+
+    let reference = upright
+        .synthesize_rf_with_aperture(&elements, &pulse, &cfg, &kernel)
+        .expect("upright");
+    let turned = rotated
+        .synthesize_rf_with_aperture(&rotated_elements, &pulse, &cfg, &kernel)
+        .expect("rotated");
+
+    let peak = reference.iter().fold(0.0_f64, |m, v| m.max(v.abs()));
+    assert!(peak > 0.0, "reference must be non-trivial");
+    let worst = reference
+        .iter()
+        .zip(turned.iter())
+        .fold(0.0_f64, |m, (a, b)| m.max((a - b).abs()));
+    assert!(
+        worst <= 1.0e-12 * peak,
+        "a rigid rotation must leave the RF unchanged: worst {worst:.3e} against peak {peak:.3e}"
+    );
+
+    // And the frame is load-bearing: swapping the width axis onto the height
+    // direction changes the trace for this anisotropic kernel.
+    let swapped = [
+        ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0]).expect("element"),
+        ApertureElement::new([1.0e-3, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0])
+            .expect("element"),
+    ];
+    let misoriented = upright
+        .synthesize_rf_with_aperture(&swapped, &pulse, &cfg, &kernel)
+        .expect("swapped");
+    let difference = reference
+        .iter()
+        .zip(misoriented.iter())
+        .fold(0.0_f64, |m, (a, b)| m.max((a - b).abs()));
+    assert!(
+        difference > 1.0e-3 * peak,
+        "an anisotropic kernel must see the frame's orientation"
+    );
 }
 
 /// ## Theorem
@@ -251,8 +385,9 @@ fn trace_accumulation_matches_the_per_pair_association() {
     let dt = 1.0 / fs;
     let pulse = [0.2, 1.0, -0.7, 0.1];
     let elements = [
-        ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0]).expect("element"),
-        ApertureElement::new([1.0e-3, 0.0, 0.0], [0.0, 0.0, 1.0]).expect("element"),
+        ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]).expect("element"),
+        ApertureElement::new([1.0e-3, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0])
+            .expect("element"),
     ];
     let piston = CircularPiston {
         radius: 2.0e-3,
@@ -270,8 +405,8 @@ fn trace_accumulation_matches_the_per_pair_association() {
             let d = element.position;
             let p = scatterer.position;
             let distance = (d[0] - p[0]).hypot(d[1] - p[1]).hypot(d[2] - p[2]);
-            let (r, z) = element.field_point(p).expect("in front");
-            let kernel = piston.round_trip(r, z, dt);
+            let [x, y, z] = element.field_point(p).expect("in front");
+            let kernel = piston.round_trip(x, y, z, dt);
             let area: f64 = kernel.iter().sum::<f64>() * dt;
             let shape: Vec<f64> = kernel.iter().map(|k| k / area).collect();
             let mut echo = vec![0.0_f64; pulse.len() + shape.len() - 1];

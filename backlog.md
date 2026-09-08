@@ -37,7 +37,7 @@
 
 <a id="kw-sir-far-field-patch-2026-09-08"></a>
 
-## KW-SIR-FAR-FIELD-PATCH-2026-09-08 — Sparse-delta far-field patch SIR for array elements [major] [perf] — in-progress
+## KW-SIR-FAR-FIELD-PATCH-2026-09-08 — Sparse-delta far-field patch SIR for array elements [major] [perf] — review
 
 - **Integrator:** claude-fable-5-1; **branch:** `feat/kwavers-sir-far-field-patch`
   (main tree); regions: `kwavers-physics::analytical::transducer::spatial_impulse_response`,
@@ -57,6 +57,32 @@
 - **Class raised to [major]:** the seam's field point gains in-plane
   coordinates (`round_trip(x, y, z, dt)`) and `ApertureElement` gains a width
   axis, both public in `kwavers-phantom`.
+- **Delivered:** `FarFieldRectangleSir` in
+  `kwavers-physics::analytical::transducer::spatial_impulse_response::far_field_patch`
+  (trapezoid per patch, SDI with linear floor/ceiling splitting and a double
+  cumulative sum exact at the nodes, degenerate patches as bin averages,
+  round trip auto-convolved on the support, `far_field_number` for
+  `w²·f/(4·l·c)`); `ApertureElement::new(position, normal, width)` with an
+  orthonormalized frame and `field_point -> [x, y, z]`; a non-finite kernel
+  sample is an error, not a point-element fallback; ADR 113 revised in place.
+- **Evidence.** Convergence to the exact Lockwood–Willette kernel (0.3 × 5 mm
+  element, point 10/3/30 mm, 100 MHz): relative L1 distance 2.94e-2 at 1 × 4
+  patches, 6.64e-3 at 2 × 8, 1.80e-3 at 4 × 16, 4.14e-4 at 8 × 32 — a factor
+  near four per halving, the order two the sagitta bound predicts. Oracles:
+  single-patch trapezoid exact at every node (bound `n²·ε·s·dt`), on-axis
+  delta `A/dt`, symmetry-plane rectangle area-exact, sampled area against a
+  512² Rayleigh integral within the midpoint-rule and kink bounds, support
+  within the sagitta of the exact arrivals, round-trip factorization, rigid
+  rotation invariance of the RF with an anisotropic kernel. Bench
+  `aperture_rf_synthesis_rectangle` (8 elements, 1 × 16 patches, this host,
+  unpinned): 16 scatterers 376.1 µs, 64 scatterers 953.7 µs (noisy interval
+  878–1029 µs), about 1.5 µs per pair against about 0.5 µs for the circular
+  piston in the same run; the circular group is unchanged against its
+  `before` baseline (300 µs / 492 µs, the latter under host contention).
+- **Gate:** `cargo nextest run -p kwavers-phantom -p kwavers-physics --lib -E
+  'package(kwavers-phantom) | test(/spatial_impulse_response/)'` 60/60;
+  `cargo fmt --check`; clippy on phantom (all targets), physics (lib), the
+  bench; `cargo doc --no-deps` under `-D warnings`; doctests — all green.
 
 - **Driver:** the same paper's core result: a far-field rectangular patch's SIR
   is a trapezoid whose second derivative is four signed deltas, so a pair costs

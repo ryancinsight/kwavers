@@ -7,12 +7,15 @@
 //! and the two scatterer counts show whether anything outside the pair loop
 //! (per-element work, allocation) is visible at this scale.
 //!
-//! The scene is a small linear array of circular pistons over a deterministic
-//! scatterer cloud spanning 10–40 mm, at 100 MHz sampling — the two-way kernel
-//! is then a median 10 samples wide and up to about 54 across the cloud, so a
-//! per-pair cost proportional to the trace length (6000 samples) shows against
-//! one proportional to the kernel alone (Rivera, Demené & Tanter 2026, the
-//! sparse-delta cost model).
+//! Two kernel providers run over the same scene, a deterministic scatterer
+//! cloud spanning 10–40 mm at 100 MHz sampling: circular pistons of 0.5 mm
+//! radius (the exact Stepanishen form, `O(Δk²)` per pair with a two-way kernel
+//! a median 10 samples wide and up to about 54 across the cloud), and
+//! 0.3 × 5 mm far-field rectangles tiled 1 × 16 (the sparse-delta form of
+//! Rivera, Demené & Tanter 2026, `O(4M + Δk²)` per pair, with the 5 mm height
+//! seen at up to ±1 mm elevation giving two-way kernels of a median 24 and
+//! up to about 79 samples). A per-pair cost proportional to the trace length
+//! (6000 samples) shows against either.
 //!
 //! # Reading the numbers
 //!
@@ -23,13 +26,24 @@
 use criterion::{
     black_box, criterion_group, criterion_main, BenchmarkId, Criterion, SamplingMode, Throughput,
 };
-use kwavers_phantom::scatterers::{ApertureElement, RfSynthesisConfig, ScattererCloud};
-use kwavers_physics::analytical::transducer::spatial_impulse_response::CircularPistonSir;
+use kwavers_phantom::scatterers::{
+    ApertureElement, RfSynthesisConfig, RoundTripKernel, ScattererCloud,
+};
+use kwavers_physics::analytical::transducer::spatial_impulse_response::{
+    CircularPistonSir, FarFieldRectangleSir,
+};
+use std::num::NonZeroUsize;
 use std::time::Duration;
 
 const SOUND_SPEED: f64 = 1540.0;
 const SAMPLING_FREQUENCY: f64 = 100.0e6;
 const ELEMENT_RADIUS: f64 = 0.5e-3;
+/// Rectangular element half-widths: 0.3 mm pitch-wide, 5 mm tall.
+const RECT_HALF_WIDTH: f64 = 0.15e-3;
+const RECT_HALF_HEIGHT: f64 = 2.5e-3;
+/// Tiling of the rectangle: the 5 mm height into 16 patches keeps the
+/// far-field number `w²·f/(4·l·c)` below 0.005 at 3 MHz and 10 mm.
+const RECT_PATCHES: [usize; 2] = [1, 16];
 const ELEMENT_PITCH: f64 = 1.0e-3;
 const ELEMENT_COUNT: usize = 8;
 /// Deepest scatterer at 40 mm, laterally up to 4 mm off the array end; the
@@ -57,7 +71,8 @@ fn elements() -> Vec<ApertureElement> {
     (0..ELEMENT_COUNT)
         .map(|i| {
             let x = (i as f64 - 0.5 * (ELEMENT_COUNT as f64 - 1.0)) * ELEMENT_PITCH;
-            ApertureElement::new([x, 0.0, 0.0], [0.0, 0.0, 1.0]).expect("finite unit normal")
+            ApertureElement::new([x, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0])
+                .expect("finite orthonormal frame")
         })
         .collect()
 }
@@ -83,27 +98,30 @@ fn cloud(count: usize) -> ScattererCloud {
     cloud
 }
 
-fn aperture_rf_synthesis(c: &mut Criterion) {
-    let mut group = c.benchmark_group("aperture_rf_synthesis");
-    // Budgeted rather than left at criterion's defaults: an iteration was
-    // hundreds of milliseconds on the code this instrument was built against,
-    // so flat sampling at the criterion floor keeps the group inside a few
-    // seconds of the suite's committed bound whatever the code under test.
-    group.sampling_mode(SamplingMode::Flat);
-    group.warm_up_time(Duration::from_millis(300));
-    group.measurement_time(Duration::from_secs(2));
-    group.sample_size(10);
-
-    let config = RfSynthesisConfig {
+fn config() -> RfSynthesisConfig {
+    RfSynthesisConfig {
         sound_speed: SOUND_SPEED,
         sampling_frequency: SAMPLING_FREQUENCY,
         num_samples: NUM_SAMPLES,
         min_distance: 1.0e-3,
         attenuation_db_cm_mhz: 0.5,
         center_frequency_hz: 3.0e6,
-    };
-    let piston = CircularPistonSir::new(ELEMENT_RADIUS, SOUND_SPEED).expect("valid piston");
-    let kernel = |r: f64, z: f64, dt: f64| piston.round_trip_response(r, z, dt).samples;
+    }
+}
+
+/// One provider over the scene at each scatterer count.
+fn synthesis_group(c: &mut Criterion, name: &str, kernel: &impl RoundTripKernel) {
+    let mut group = c.benchmark_group(name);
+    // Budgeted rather than left at criterion's defaults: an iteration was
+    // hundreds of milliseconds on the code this instrument was built against,
+    // so flat sampling at the criterion floor keeps each group inside a few
+    // seconds of the suite's committed bound whatever the code under test.
+    group.sampling_mode(SamplingMode::Flat);
+    group.warm_up_time(Duration::from_millis(300));
+    group.measurement_time(Duration::from_secs(2));
+    group.sample_size(10);
+
+    let config = config();
     let pulse = pulse();
     let elements = elements();
 
@@ -117,7 +135,7 @@ fn aperture_rf_synthesis(c: &mut Criterion) {
                         black_box(&elements),
                         black_box(&pulse),
                         &config,
-                        &kernel,
+                        kernel,
                     )
                     .expect("synthesis succeeds on a valid scene")
             });
@@ -125,6 +143,21 @@ fn aperture_rf_synthesis(c: &mut Criterion) {
     }
 
     group.finish();
+}
+
+fn aperture_rf_synthesis(c: &mut Criterion) {
+    let piston = CircularPistonSir::new(ELEMENT_RADIUS, SOUND_SPEED).expect("valid piston");
+    let circular =
+        |x: f64, y: f64, z: f64, dt: f64| piston.round_trip_response(x.hypot(y), z, dt).samples;
+    synthesis_group(c, "aperture_rf_synthesis", &circular);
+
+    let patches = RECT_PATCHES.map(|n| NonZeroUsize::new(n).expect("non-zero tiling"));
+    let rectangle =
+        FarFieldRectangleSir::new(RECT_HALF_WIDTH, RECT_HALF_HEIGHT, patches, SOUND_SPEED)
+            .expect("valid rectangle");
+    let far_field =
+        |x: f64, y: f64, z: f64, dt: f64| rectangle.round_trip_response(x, y, z, dt).samples;
+    synthesis_group(c, "aperture_rf_synthesis_rectangle", &far_field);
 }
 
 criterion_group!(benches, aperture_rf_synthesis);

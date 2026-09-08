@@ -128,3 +128,18 @@ unit-area kernels into a per-element trace and convolves the pulse into it once;
 differential test pins the new association to the old one within
 reassociation rounding (`backlog.md#kw-sir-trace-accumulation-2026-09-08`
 carries the before/after measurement).
+
+**2026-09-08 — the element frame and the far-field rectangle.** The seam
+passed the field point as `(r, z)`, which only an axisymmetric aperture can
+use; the rectangle this ADR deferred needs the point in the element's own
+plane. `ApertureElement` now carries a width axis (orthonormalized against the
+normal; height is their cross product), `field_point` returns `[x, y, z]` in
+that frame, and `RoundTripKernel::round_trip(x, y, z, dt)` receives it — the
+circular adapter takes `x.hypot(y)`. The rectangular round trip arrives as
+`FarFieldRectangleSir` in `kwavers-physics`: the Field II far-field patch
+model evaluated by sparse delta integration (Rivera, Demené & Tanter 2026),
+the one-way trapezoid sum at every grid node to rounding and auto-convolved
+on its support for the round trip, with `RectangularPistonSir` as its
+differential oracle. A rigid-rotation invariance test guards the frame plumbing, and a
+non-finite kernel sample is now an error rather than a silent point-element
+fallback (`backlog.md#kw-sir-far-field-patch-2026-09-08`).

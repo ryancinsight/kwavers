@@ -418,7 +418,8 @@ impl ScattererCloud {
     ///
     /// # Errors
     /// Returns `KwaversError::InvalidInput` for a non-finite or non-positive
-    /// configuration, an empty pulse, or a non-finite synthesized amplitude.
+    /// configuration, an empty pulse, a non-finite synthesized amplitude, or a
+    /// kernel with a non-finite sample.
     pub fn synthesize_rf_with_aperture(
         &self,
         elements: &[ApertureElement],
@@ -443,7 +444,7 @@ impl ScattererCloud {
                 if distance < config.min_distance {
                     continue;
                 }
-                let Some((r, z)) = element.field_point(scatterer.position) else {
+                let Some([x, y, z]) = element.field_point(scatterer.position) else {
                     continue;
                 };
                 let spreading = 1.0 / (distance * distance);
@@ -464,7 +465,13 @@ impl ScattererCloud {
                 if sample_delay >= num_samples {
                     continue;
                 }
-                let samples = kernel.round_trip(r, z, dt);
+                let samples = kernel.round_trip(x, y, z, dt);
+                if !samples.iter().all(|s| s.is_finite()) {
+                    return Err(KwaversError::InvalidInput(format!(
+                        "round-trip kernel has a non-finite sample for scatterer {:?} in element frame [{x:.3e}, {y:.3e}, {z:.3e}]",
+                        scatterer.position
+                    )));
+                }
                 match aperture::support_and_area(&samples, dt) {
                     Some((support, area)) => {
                         let scale = amplitude / area;
