@@ -46,9 +46,15 @@ fn test_conservation_diagnostics_integration() {
         solver.step();
     }
 
+    let tracker = solver
+        .conservation_tracker
+        .as_ref()
+        .expect("tracker must be active");
+    // Four steps ran, so the tracker must hold their history: an allocated but
+    // never-updated tracker also satisfies `is_some`.
     assert!(
-        solver.conservation_tracker.is_some(),
-        "tracker must be active"
+        !tracker.history.is_empty(),
+        "an active tracker must have recorded the four steps, not merely exist"
     );
     assert!(
         solver.is_solution_valid(),
@@ -127,9 +133,16 @@ fn test_conservation_diagnostics_disable() {
     let mut solver = KZKSolver::new(config).unwrap();
 
     solver.enable_conservation_diagnostics(ConservationTolerances::default());
+    let tracker = solver
+        .conservation_tracker
+        .as_ref()
+        .expect("tracker must be active after enable");
+    // Enable seeds the reference state; a tracker holding a zero reference
+    // would satisfy `is_some` and then measure drift against nothing.
     assert!(
-        solver.conservation_tracker.is_some(),
-        "tracker must be active after enable"
+        tracker.initial_energy.is_finite(),
+        "enable must seed a finite reference energy, got {}",
+        tracker.initial_energy
     );
 
     solver.disable_conservation_diagnostics();

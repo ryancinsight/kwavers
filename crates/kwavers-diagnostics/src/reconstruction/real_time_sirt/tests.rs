@@ -5,6 +5,7 @@ use crate::reconstruction::acoustic_projection::{
 };
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
+use kwavers_core::test_support::assert_invalid_input;
 use kwavers_solver::inverse::reconstruction::unified_sirt::SirtConfig;
 use leto::{Array1, Array3};
 
@@ -42,7 +43,7 @@ fn test_input_validation_empty() {
     // Access validate_input via the pub(crate) path via process_frame
     let mut pipeline = RealTimeSirtPipeline::new(RealTimeSirtConfig::default());
     let result = pipeline.process_frame(&empty, (4, 4, 4));
-    assert!(result.is_err());
+    assert_invalid_input(result, "Empty RF data");
 }
 
 #[test]

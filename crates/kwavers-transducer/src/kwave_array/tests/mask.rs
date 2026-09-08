@@ -42,8 +42,5 @@ fn test_kwave_array_disc_focus_mask_is_planar_and_matches_kwave_python_reference
             }
         }
     }
-    assert!(
-        active_plane.is_some(),
-        "disc weights must activate at least one cell"
-    );
+    active_plane.expect("disc weights must activate at least one cell");
 }

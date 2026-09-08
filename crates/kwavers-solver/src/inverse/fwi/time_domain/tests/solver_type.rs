@@ -128,12 +128,10 @@ fn test_fwi_unsupported_solver_type_returns_error() {
     let processor = FwiProcessor::new(parameters);
     let geometry = FwiGeometry::new(source, sensor_mask);
 
-    let result = processor.generate_synthetic_data(&model, &geometry, &grid);
-    assert!(
-        result.is_err(),
-        "unsupported SolverType::KSpace must return Err, not Ok"
-    );
-    let msg = result.unwrap_err().to_string();
+    let msg = processor
+        .generate_synthetic_data(&model, &geometry, &grid)
+        .expect_err("unsupported SolverType::KSpace must return Err, not Ok")
+        .to_string();
     assert!(
         msg.contains("KSpace"),
         "error message must name the unsupported type; got: {msg}"

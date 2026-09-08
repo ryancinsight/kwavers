@@ -4,6 +4,7 @@ use aequitas::systems::si::{
     units::{Hertz, Meter, MeterPerSecond, Radian, Second},
 };
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
+use kwavers_core::test_support::assert_invalid_input;
 use std::f64::consts::PI;
 
 fn sequencer_40mm() -> TransmissionSequencer {
@@ -39,7 +40,7 @@ fn test_prf_exceeds_max_returns_error() {
     let seq = sequencer_40mm();
     let prf_over = Frequency::from_unit::<Hertz>(seq.max_prf().in_unit::<Hertz>() * 2.0);
     let result = seq.with_prf(prf_over);
-    assert!(result.is_err(), "PRF exceeding max must return Err");
+    assert_invalid_input(result, "exceeds PRF_max");
 }
 
 /// Setting PRF ≤ PRF_max must succeed.

@@ -23,6 +23,8 @@ moirai-parallel = { workspace = true }
 proteus = { workspace = true }
 
 [dev-dependencies]
+# Rejection assertions shared across the workspace's test modules.
+kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 proptest = "1.2"
 
 [lints]

@@ -257,16 +257,11 @@ mod tests {
         let cfg = small_config();
         let array =
             ring_around_slice(cfg.ring_elements, Length::from_base(cfg.ring_diameter_m)).unwrap();
-        let config = build_config(&cfg);
-        assert!(config.is_ok(), "CBS config must build");
+        let config = build_config(&cfg).expect("CBS config must build");
         let slice = slice_with_bump(20, 1500.0, 60.0, 1);
-        let obs = simulate_frequency_observation(
-            &slice,
-            &RingAcquisition::new(&array),
-            3.0e5,
-            &config.unwrap(),
-        )
-        .unwrap();
+        let obs =
+            simulate_frequency_observation(&slice, &RingAcquisition::new(&array), 3.0e5, &config)
+                .unwrap();
         assert_eq!(obs.shape(), [cfg.ring_elements, cfg.ring_elements]);
         assert!(obs.iter().all(|z| z.re.is_finite() && z.im.is_finite()));
         assert!(obs.iter().any(|z| z.norm() > 0.0), "data must be nonzero");

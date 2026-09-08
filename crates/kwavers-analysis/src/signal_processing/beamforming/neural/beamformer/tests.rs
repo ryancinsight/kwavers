@@ -15,10 +15,12 @@ fn test_beamformer_creation() {
     // default: mode=Hybrid, neural_network=Some (Hybrid allocates network)
     let config = NeuralBeamformingConfig::default();
     let beamformer = NeuralBeamformer::new(config).unwrap();
-    assert!(
-        beamformer.neural_network.is_some(),
-        "Hybrid mode must allocate a neural network"
-    );
+    // Every mode allocates today, so the claim is that construction produced
+    // the network, not that Hybrid is special among the modes.
+    beamformer
+        .neural_network
+        .as_ref()
+        .expect("Hybrid mode must allocate a neural network");
 }
 
 #[test]

@@ -56,10 +56,10 @@ fn test_uncertainty_quantifier_creation() {
 
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
     // MonteCarloDropout activates Bayesian path only.
-    assert!(
-        quantifier._bayesian.is_some(),
-        "MonteCarloDropout method must initialize Bayesian component"
-    );
+    quantifier
+        ._bayesian
+        .as_ref()
+        .expect("MonteCarloDropout method must initialize Bayesian component");
     assert!(
         quantifier._ensemble.is_none(),
         "MonteCarloDropout method must not initialize Ensemble component"

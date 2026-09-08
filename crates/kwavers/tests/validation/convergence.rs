@@ -420,8 +420,16 @@ mod tests {
         study.add_measurement(0.5, 0.0); // Zero error would cause log(0)
         study.add_measurement(0.25, 0.25);
 
-        // Should still compute rate from valid points
-        let rate = study.compute_convergence_rate();
-        assert!(rate.is_some());
+        // The zero-error point is dropped, leaving (h, e) = (1.0, 1.0) and
+        // (0.25, 0.25). Their log-log slope is ln(0.25)/ln(0.25) = 1 exactly,
+        // so the surviving fit is first order — the value the discard must
+        // produce, not merely that it produced one.
+        let rate = study
+            .compute_convergence_rate()
+            .expect("two valid points remain after discarding the zero error");
+        assert!(
+            (rate - 1.0).abs() < 1e-12,
+            "expected the first-order slope of the two surviving points, got {rate}"
+        );
     }
 }
