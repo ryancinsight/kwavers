@@ -42,8 +42,9 @@ alone cannot carry that, and for a curved array the orientation differs per
 element (`ConvexArrayGeometry::element_normal`, ADR 112).
 
 **One aperture already has the round trip, with an exact oracle.**
-`CircularPistonSir::round_trip_response(r, z, dt, n)` returns the discretely
-auto-convolved two-way kernel, and its normalization is closed-form:
+`CircularPistonSir::round_trip_response(r, z, dt)` returns the discretely
+auto-convolved two-way kernel over its own support, and its normalization is
+closed-form:
 `Σ_k out[k]·dt = (√(z²+a²) − z)²` on axis. `RectangularPistonSir` exposes
 `evaluate` and the arrival times but no round-trip helper.
 
@@ -100,7 +101,30 @@ is an additional entry point taking aperture-aware elements plus a kernel
 provider.
 
 The cost is real and belongs to the caller: a kernel per element–scatterer pair
-is far more work than one scaled pulse, and the kernel depends only on `(r, z)`,
+is more work than one scaled pulse, and the kernel depends only on `(r, z)`,
 so the seam must let a provider cache or quantize rather than forcing a fresh
 evaluation per pair. That is a reason the provider is injected rather than
-called directly.
+called directly. The per-pair work is bounded to the kernel itself — the
+provider samples only its support, and synthesis places what it returns into
+one trace per element and convolves the pulse once (revision below), so the
+pulse length and the trace length never enter the pair loop.
+
+## Revisions
+
+**2026-09-08 — support-local kernels, integration once per trace.** The first
+implementation sampled the kernel from `t = 0` over a caller-supplied window
+(`kernel_samples`), auto-convolved it against that whole window, convolved the
+pulse per pair, then stripped the leading zeros it had computed: per pair
+`O(T)` evaluations plus `O(T·Δk)` plus `O(Δk·L)`, where `T` is the window,
+`Δk` the kernel width and `L` the pulse length. Rivera, Demené & Tanter
+(arXiv:2608.26891, 2026) make the opposite structure the cost model for SIR
+synthesis — constant work per patch, integration once per trace — and it holds
+for the exact circular kernel too, because convolution distributes over the sum
+of echoes. What changed: `RoundTripKernel::round_trip(r, z, dt)` returns the
+kernel from its onset with no window argument; `round_trip_response` returns
+`SampledResponse` (onset index plus samples, `O(Δk²)`); synthesis accumulates
+unit-area kernels into a per-element trace and convolves the pulse into it once;
+`kernel_samples` and its sizing error are gone. The oracles are unchanged and a
+differential test pins the new association to the old one within
+reassociation rounding (`backlog.md#kw-sir-trace-accumulation-2026-09-08`
+carries the before/after measurement).

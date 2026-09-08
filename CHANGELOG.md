@@ -4,6 +4,21 @@
 
 ### Changed
 
+- **[major] Finite-aperture RF synthesis samples kernels over their support
+  and integrates once per trace.** `kwavers-phantom`:
+  `RoundTripKernel::round_trip(r, z, dt)` returns the two-way kernel from its
+  onset — the window argument is gone — and
+  `ScattererCloud::synthesize_rf_with_aperture` drops `kernel_samples` with its
+  sizing error; synthesis accumulates every scatterer's unit-area kernel into
+  one trace per element and convolves the pulse once. `kwavers-physics`:
+  `CircularPistonSir::round_trip_response(r, z, dt)` returns `SampledResponse`
+  (onset index plus support-local samples) at `O(Δk²)` instead of scanning the
+  whole window. Migration: providers return samples from the kernel onset and
+  callers drop the trailing sample-count argument. The ADR 113 oracles are
+  unchanged; a differential test pins the restructured synthesis to the
+  per-pair association within reassociation rounding, and
+  `crates/kwavers/benches/aperture_rf_synthesis.rs` is the new instrument
+  (Rivera, Demené & Tanter, arXiv:2608.26891, cost model).
 - **[minor] `ElasticPropertyData` derived identities delegate to Proteus.**
   `youngs_modulus`, `poisson_ratio`, `bulk_modulus`, `shear_modulus`,
   `p_wave_speed`, and `s_wave_speed` call
