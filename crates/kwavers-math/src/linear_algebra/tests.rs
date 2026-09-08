@@ -60,14 +60,14 @@ fn symmetric_eigen_rejects_non_symmetric_matrix() {
     let matrix = Array2::<f64>::from_vec([2, 2], vec![1.0, 2.0, 2.0, 1.0]).unwrap();
 
     // This should work since the matrix is symmetric
-    let eigenvalues = leto_ops::application::linalg::symmetric_eigenvalues_jacobi(&matrix.view())
-        .expect("[[1, 2], [2, 1]] is symmetric");
+    let mut eigenvalues =
+        leto_ops::application::linalg::symmetric_eigenvalues_jacobi(&matrix.view())
+            .expect("[[1, 2], [2, 1]] is symmetric");
     // Its spectrum is {3, -1}: asserting only that the call returned would
     // hold for any output the routine cared to produce.
-    let mut sorted = eigenvalues.to_vec();
-    sorted.sort_by(|a, b| a.partial_cmp(b).expect("real eigenvalues are ordered"));
-    assert!((sorted[0] + 1.0).abs() < 1e-10, "got {sorted:?}");
-    assert!((sorted[1] - 3.0).abs() < 1e-10, "got {sorted:?}");
+    eigenvalues.sort_by(|a, b| a.partial_cmp(b).expect("real eigenvalues are ordered"));
+    assert!((eigenvalues[0] + 1.0).abs() < 1e-10, "got {eigenvalues:?}");
+    assert!((eigenvalues[1] - 3.0).abs() < 1e-10, "got {eigenvalues:?}");
 }
 
 #[test]
