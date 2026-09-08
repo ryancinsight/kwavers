@@ -198,7 +198,9 @@ impl FarFieldRectangleSir {
     /// `t ≥ 0`. Such a field point lies within a patch width of the face and
     /// is far outside the model's validity in any case
     /// ([`Self::far_field_number`]). A field point at a patch centre in the
-    /// plane (`l = 0`) is outside the model and yields non-finite samples.
+    /// plane (`l = 0`) is outside the model: the trapezoid has no finite
+    /// corner times, and the response is a single `NaN` sample so that a
+    /// consumer's non-finite check reports it rather than a silent fallback.
     ///
     /// # Panics
     /// Panics if `dt ≤ 0` (a non-positive sample step is a caller bug).
@@ -209,6 +211,14 @@ impl FarFieldRectangleSir {
 
         let t_first = self.first_arrival_time(x, y, z);
         let t_last = self.last_arrival_time(x, y, z);
+        // `l = 0` makes a patch's corner times NaN, which the min/max folds
+        // discard; the support is then unbounded and the model void.
+        if !t_first.is_finite() || !t_last.is_finite() {
+            return SampledResponse {
+                first_sample: 0,
+                samples: vec![f64::NAN],
+            };
+        }
         // The buffer is anchored at the true floor node of the earliest onset,
         // signed, so a corner before the first grid node still splits and
         // cancels correctly; one node of margin below it, two above the

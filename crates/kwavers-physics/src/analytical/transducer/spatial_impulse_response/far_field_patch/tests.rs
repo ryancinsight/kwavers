@@ -373,10 +373,13 @@ fn a_corner_before_the_first_node_keeps_the_plateau() {
     assert!(plateau_nodes >= 200, "got {plateau_nodes} plateau nodes");
 }
 
-/// A degenerate rectangle starting before `t = 0` keeps exactly the area it
-/// has at `t ≥ 0`: the bins that exist take their overlap, nothing more.
+/// A degenerate rectangle straddling `t = 0` keeps exactly the area it has
+/// at `t ≥ 0`: the bins that exist take their overlap, nothing more. This
+/// characterizes the bin-average deposit at the grid's edge; it is not a
+/// regression guard — the clamp the plateau test above replaces already
+/// clipped this case correctly.
 #[test]
-fn a_rectangle_before_the_first_node_keeps_its_representable_area() {
+fn a_rectangle_straddling_the_first_node_keeps_its_representable_area() {
     let s = sir(1, 1);
     let field = [0.0, 0.5e-3, 0.1e-3];
     let dt = 1.0e-8;
@@ -390,6 +393,21 @@ fn a_rectangle_before_the_first_node_keeps_its_representable_area() {
         "area at t ≥ 0: {area:.6e} against {expected:.6e}"
     );
     assert_eq!(response.first_sample, 0);
+}
+
+/// A field point at a patch centre in the aperture plane has `l = 0`: no
+/// finite corner time exists, and the response must say so with a non-finite
+/// sample — the signal the phantom seam turns into an error — rather than
+/// overflow the buffer arithmetic or return an empty kernel that would pass
+/// as a point element.
+#[test]
+fn a_field_point_at_a_patch_centre_yields_a_non_finite_sample() {
+    let s = sir(1, 1);
+    let response = s.response(0.0, 0.0, 0.0, DT);
+    assert_eq!(response.samples.len(), 1);
+    assert!(response.samples[0].is_nan());
+    let two_way = s.round_trip_response(0.0, 0.0, 0.0, DT);
+    assert!(two_way.samples.iter().all(|v| v.is_nan()));
 }
 
 #[test]
