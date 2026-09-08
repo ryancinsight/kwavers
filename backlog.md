@@ -1,5 +1,66 @@
 # Backlog / Strategy
 
+<a id="kw-fft3d-baseline-2026-09-08"></a>
+
+## KW-FFT3D-BASELINE-2026-09-08 — The spectral pair a PSTD step is built on had no timing [patch] [perf] — delivered 2026-09-08
+
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fft3d-baseline`;
+  lane `D:/atlas/worktrees/kwavers-compute-manager` (re-pointed from an idle
+  `main` checkout).
+- **Gap.** A PSTD step transforms a field, applies a k-space operator and
+  transforms back, so the 3-D complex FFT pair is its dominant cost — and it
+  had no benchmark at the shapes the solver plans. `critical_path_benchmarks`
+  has a `kspace_operators` group, but that times `compute_kx`/`compute_ky`,
+  which build the k-space vectors once per plan rather than the transform that
+  runs every step. Nothing measured the transform itself.
+- **Delivered:** `crates/kwavers/benches/fft3d_baseline.rs`, a forward plus
+  normalized-inverse round trip at the extents the solver plans. Budgeted at
+  300 ms warm-up, 2 s measurement, 20 samples per shape rather than criterion's
+  defaults, which would have spent 24 s of the suite's committed bound on one
+  group.
+
+  | extent | round trip | per forward | per element |
+  | --- | --- | --- | --- |
+  | 16³ | 40.7 µs | 20.4 µs | 9.9 ns |
+  | 32³ | 579 µs | 290 µs | 17.7 ns |
+  | 64³ | **3.40 ms** | **1.70 ms** | 13.0 ns |
+
+  The 32³ row is the noisiest (interval 491–707 µs) and sits worse per element
+  than either neighbour; it is recorded as measured rather than smoothed, and
+  it is the row to re-take first on a quiet host.
+- **The number that redirects work: the codelets are a minority of the cost.**
+  A 64³ forward is three axis passes of 4,096 lanes, so 12,288 length-64
+  codelet calls, and the measured forward is 1.70 ms — **138 ns per lane
+  transform**. Apollo's own probe puts a length-32 transform at 18.2 ns, and an
+  `N log N` extrapolation to length 64 gives 43.6 ns, so the codelets account
+  for about **0.54 ms of 1.70 ms, roughly a third**.
+- **The rest is data movement, and the structure says so.** `dimension_3d`'s
+  static path calls `transpose_matrices` four times per forward
+  (`static_impl.rs:142,154,166` and the returning pass); at 64³ each moves the
+  whole 16 MB volume, far outside any cache. That is consistent with the
+  per-element cost being flat-to-rising with extent while codelet work per
+  element grows only as `log N`.
+- **Stated as the estimate it is.** The 43.6 ns figure is extrapolated, not
+  measured, and it is extrapolated from a *latency* reading — a lane pass runs
+  the throughput regime, where apollo measured its arms faster still. Both
+  biases push the same way, so a third is an **upper bound** on the codelet
+  share and the movement share is at least two thirds.
+- **Consequence for the provider item.**
+  [apollo `#apollo-n64-lane-pass`](../apollo/backlog.md#apollo-n64-lane-pass)
+  was filed the same day to optimise the N = 64 codelet as the stack's
+  most-executed kernel. It still is — but this measurement caps what it can
+  win at roughly a third of the transform, and names the larger lever as the
+  axis-pass transposes. The apollo item should be read with this bound on it.
+- **Acceptance (met).** A committed, budgeted benchmark exists for the 3-D
+  complex FFT at the planned extents; the codelet-versus-movement split is
+  attributed with its evidence and its limits.
+- **Next increment, not taken here.** Attribute the split by measurement rather
+  than extrapolation: time an axis pass with the transposes elided against the
+  full pass, or count cycles per phase. Only then is it worth asking whether
+  the transposes can be fused into the lane loop or the pass reordered to move
+  less.
+- **Risk / change class:** [patch] [perf]; **dependencies:** none.
+
 ## KW-ANALYSIS-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-analysis` [patch] — done 2026-09-07 <a id="kw-analysis-value-assertions-2026-09-07"></a>
 
 - **Outcome:** all 14 sites name the rejection. Several distinguished nothing
