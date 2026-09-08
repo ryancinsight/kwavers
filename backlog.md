@@ -480,9 +480,9 @@
 
 ## KW-FFT-HEPHAESTUS-BACKEND-SELECTOR — Select Leto or Hephaestus FFT execution [major] [arch] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-FFT-HEPHAESTUS-BACKEND-SELECTOR | Provide one explicit 1-D, 2-D, and 3-D FFT backend selector whose closed variants are Leto and Hephaestus. | [major] [arch] | delivery | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-math/src/fft/`, `crates/kwavers-gpu/src/pstd_gpu/`, affected simulation configuration, provider pins, ADR 125, and synchronized docs/tests |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-FFT-HEPHAESTUS-BACKEND-SELECTOR | Provide one explicit 1-D, 2-D, and 3-D FFT backend selector whose closed variants are Leto and Hephaestus. | [major] [arch] | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-math/src/fft/`, `crates/kwavers-gpu/src/pstd_gpu/`, affected simulation configuration, provider pins, ADR 125, and synchronized docs/tests |
 
 - **Ownership:** the `Leto` variant uses Apollo's CPU FFT arithmetic over Leto
   storage; the `Hephaestus` variant uses Hephaestus's prepared GPU FFT provider.
@@ -530,34 +530,17 @@
 - **Delivered:** source `1a6fa7b11`, PR #680 head `2465e13e1`, merge `bd7e6fa62`; exact reservation removes warm sensor-trace growth and preserves bitwise values.
 - **Evidence:** zero allocator calls on first and repeated 65-step reserved windows, typed overflow without trace mutation, 944/944 debug tests, focused release tests, Clippy/Rustdoc/doctests/example checks, SemVer 196/196, and independent review GREEN.
 
-## KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 — Skip zero spectral derivatives [patch] [perf] — in-progress
+<a id="kw-viscoacoustic-inactive-axis-2026-08-31"></a>
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 | Replace length-one viscoacoustic derivative staging, FFT dispatch, and wavenumber traversal with an exact zero fill while preserving retained scratch and values. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | viscoacoustic axis derivative/step path, value tests, existing critical-path Criterion instrument, Rustdoc, CHANGELOG |
+## KW-VISCOACOUSTIC-INACTIVE-AXIS-2026-08-31 — Skip zero spectral derivatives [patch] [perf] — done 2026-09-08
 
-- **Lease:** none; source candidate `98000d690` and benchmark instrument `6ca2e8d65` are committed.
-- **Entry evidence:** every viscoacoustic step invoked pressure and velocity derivatives on all three axes. For a length-one periodic axis the only wavenumber is zero, so the derivative is identically zero, but the incumbent helper still traversed the full field around both provider calls. The retained equal-volume Criterion instrument measured 1-D/2-D/3-D entry estimates of 230.93/345.31/276.37 µs and 259.89/363.71/284.99 µs in two 100-sample runs.
-- **Acceptance:** retain one generic derivative helper; establish paired Criterion baselines before mutation; an inactive axis writes positive zeros without touching complex FFT scratch or dispatching a transform; repeated finite nontrivial 1-D and 2-D inactive derivatives remain bitwise equal to the incumbent FFT route, non-finite samples cannot contaminate an inactive derivative, and the existing repeated-step value suites remain green; 3-D arithmetic and provider dispatch remain unchanged; no allocation, workload, benchmark-timed-region, or timeout change.
-- **Stop condition:** reject the production candidate unless controlled paired Criterion time estimates improve materially without regressing the active-axis control or changing values.
-- **Candidate evidence:** the exact singleton-axis differential passes in debug and release and proves finite-field bitwise output identity, positive-zero isolation for NaN/±inf samples, and unchanged retained scratch; all 15 filtered viscoacoustic tests, including the existing warm 65-step allocation ledger, pass with zero allocations/reallocations and bitwise trace parity. Paired candidate estimates were 114.98/281.92/281.57 µs and 127.12/236.63/278.02 µs. Criterion reports significant 1-D reductions of 50.4–52.3% and 49.3–51.8%, significant 2-D reductions of 9.1–13.5% and 33.0–36.6%, and no significant 3-D change (`p=0.40` and `p=0.10`). Production warning-denied Clippy, Rustdoc, doctests, formatting, and diff checks pass; the all-test-target lint gate reaches this module without a diagnostic but remains blocked by 94 pre-existing warnings in unrelated tests. Independent review remains pending.
-- **Hosted correction:** PR #681 run `33433562701` completed all four
-  45-case benchmark pairs with zero regressions and zero universe mismatches,
-  but the aggregate gate falsely rejected all 180 equal-confidence intervals
-  after approximate JSON float parsing rounded the recorded value down by one
-  unit in the last place. Atlas PR #144 merged the exact-roundtrip correction
-  as `9c33b4af1ac44ba43e4d26eaf9cb215218db248e`; this consumer pin update changes
-  no production code, benchmark input, timed region, confidence rule, or
-  timeout. Exact-head recollection remains pending.
-- **Executable-scope correction:** exact-head run `33439956718` proved
-  `performance_baseline` and `simd_field_ops` byte-identical across base and
-  candidate; only `critical_path_benchmarks` differed. The workflow nevertheless
-  remeasured all three targets and rejected an unrelated byte-identical
-  `simd_field_operations/multiply/10000` result. The candidate now passes only
-  hash-different target names to the unchanged four-pair instrument; hosted
-  recollection remains pending.
-
-<a id="kw-ci-draft-pr-gating-2026-08-31"></a>
+- Delivered by `98000d690 perf(viscoacoustic): Skip singleton FFTs`, confirmed
+  an ancestor of `main`.
+- Value oracle re-run 2026-09-08: `cargo nextest run -p kwavers-solver
+  -E 'test(viscoacoustic)'` passes 25/25 in 29.9 s, including the warm
+  allocation-ledger contracts that assert no allocation during stepping.
+- The item recorded `in-progress` in its heading and `review` in its table --
+  the drift that prompted removing the duplicated Status column board-wide.
 
 ## KW-CI-DRAFT-PR-GATING-2026-08-31 — Skip draft pull-request runners [patch] [ci] — done 2026-09-08
 
@@ -577,9 +560,9 @@
 
 ## KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 — Bound complete benchmark smoke [patch] [ci] [perf] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 | Bring the complete Criterion smoke under the committed 300-second suite budget without removing a benchmark, changing an input/workload, or weakening a smoke assertion. | [patch] [ci] [perf] | review | Codex `01a0253c` | `crates/kwavers/benches`, bench target declarations, benchmark smoke runner, compile/link timing evidence |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 | Bring the complete Criterion smoke under the committed 300-second suite budget without removing a benchmark, changing an input/workload, or weakening a smoke assertion. | [patch] [ci] [perf] | Codex `01a0253c` | `crates/kwavers/benches`, bench target declarations, benchmark smoke runner, compile/link timing evidence |
 
 - **Lease:** none. Source/evidence commit `6bcc8087d`; independent review,
   hosted confirmation, and merge remain.
@@ -623,9 +606,9 @@
 
 ## KW-CI-BENCH-CACHE-RESTORE-2026-08-31 — Restore benchmark build cache [patch] [ci] [perf] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CI-BENCH-CACHE-RESTORE-2026-08-31 | Make the benchmark smoke consume the repository's retained Rust cache instead of cold-compiling the dependency graph on every pull request. | [patch] [ci] [perf] | review | Codex `01a0253c` | benchmark-regression cache setup and exact hosted cache/compile evidence |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-CI-BENCH-CACHE-RESTORE-2026-08-31 | Make the benchmark smoke consume the repository's retained Rust cache instead of cold-compiling the dependency graph on every pull request. | [patch] [ci] [perf] | Codex `01a0253c` | benchmark-regression cache setup and exact hosted cache/compile evidence |
 
 - **Lease:** none. Source commit `36ff1269b`; independent review, hosted cache
   confirmation, and merge remain.
@@ -655,9 +638,9 @@
 
 ## KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 — Keep statistical timing off hosted CI [patch] [arch] [ci] [perf] — done 2026-09-04
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 | Retain controlled local Criterion comparison as performance evidence while limiting pull-request CI to bounded build-and-single-iteration benchmark verification. | [patch] [arch] [ci] [perf] | done | Buffy (Freebuff) | benchmark-regression workflow, local benchmark runner/evidence contract, ADR 045, CHANGELOG |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31 | Retain controlled local Criterion comparison as performance evidence while limiting pull-request CI to bounded build-and-single-iteration benchmark verification. | [patch] [arch] [ci] [perf] | Buffy (Freebuff) | benchmark-regression workflow, local benchmark runner/evidence contract, ADR 045, CHANGELOG |
 
 - **Entry evidence:** Accepted ADR 045 and the current pull-request workflow
   still launch four full phase-reversed Criterion replications whenever one of
@@ -770,9 +753,9 @@
 
 ## KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 — Reject invalid numeric domains [major] — done 2026-09-06
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 | Reject non-finite material, spacing, time-step, relaxation, and absorbing-layer parameters before allocation or state mutation. | [major] | done | Buffy (Codebuff) | viscoacoustic constructors and absorbing-layer configuration, error contracts, boundary tests, ADR and migration note |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-VISCOACOUSTIC-FINITE-DOMAIN-2026-08-31 | Reject non-finite material, spacing, time-step, relaxation, and absorbing-layer parameters before allocation or state mutation. | [major] | Buffy (Codebuff) | viscoacoustic constructors and absorbing-layer configuration, error contracts, boundary tests, ADR and migration note |
 
 - **Delivered:** PR #719, merge `819ab02c`; every viscoacoustic constructor
   parameter is validated finite-and-positive before any allocation
@@ -818,9 +801,9 @@
 
 ## KW-CI-DRAFT-PR-GATING-2026-08-30 — Skip draft pull-request runners [patch] [ci] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CI-DRAFT-PR-GATING-2026-08-30 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request job predicates in the seven PR-triggered workflows; normalized workflow and event-contract tests; PM evidence |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-CI-DRAFT-PR-GATING-2026-08-30 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request job predicates in the seven PR-triggered workflows; normalized workflow and event-contract tests; PM evidence |
 
 - **Entry evidence:** opening draft PR #675 at exact head `04b42089b`
   launched Architecture Validation `33343792381`, CI `33343792379`, Legacy
@@ -860,9 +843,9 @@
 
 ## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in-progress
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-ID census, build-timing instrumentation, focused CI/PM evidence |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-ID census, build-timing instrumentation, focused CI/PM evidence |
 
 - **Entry evidence:** isolated cold runs spent 2m37s compiling the GPU-enabled
   simulation graph and 2m15s compiling the GPU-enabled Python graph; their
@@ -928,9 +911,9 @@
 
 ## KW-CI-FULL-HISTORY-CHECKOUT — CI clones all of history to run tests [patch] — done 2026-08-26
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CI-FULL-HISTORY-CHECKOUT | Stop fetching full history in jobs that never read it. | [patch] | IMPLEMENTED | unowned | `.github/workflows/ci.yml`, `.github/workflows/gpu-parity.yml` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-CI-FULL-HISTORY-CHECKOUT | Stop fetching full history in jobs that never read it. | [patch] | unowned | `.github/workflows/ci.yml`, `.github/workflows/gpu-parity.yml` |
 
 - **Evidence:** `Heavy Validation (kuznetsov)` was killed at its 15-minute
   bound on PR #655. The log accounts for the time exactly: "Fetching the
@@ -950,9 +933,9 @@
 
 ## KW-PINN-UNSEEDED-RNG — no PINN training run can be replayed [patch] — done 2026-08-26
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-PINN-UNSEEDED-RNG | Make PINN training sampling reproducible (collocation and boundary) so a training run can be replayed from its inputs. | [patch] | IMPLEMENTED | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/solver/` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-PINN-UNSEEDED-RNG | Make PINN training sampling reproducible (collocation and boundary) so a training run can be replayed from its inputs. | [patch] | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/solver/` |
 
 - **Evidence:** `generate_collocation_points` draws each coordinate from
   `rand::random::<f64>()` -- the unseeded global generator. Nothing records the
@@ -1006,9 +989,9 @@ is what the seed governs.
 
 ## KW-PINN-NONDETERMINISTIC-REDUCTION — one seed, one input, two answers [patch] — todo (leading hypothesis refuted 2026-08-26)
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-PINN-NONDETERMINISTIC-REDUCTION | Give PINN training a deterministic reduction path so a seeded run reproduces bitwise. | [patch] | todo | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/`, `MoiraiBackend` reductions |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-PINN-NONDETERMINISTIC-REDUCTION | Give PINN training a deterministic reduction path so a seeded run reproduces bitwise. | [patch] | unowned | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/`, `MoiraiBackend` reductions |
 
 - **Evidence:** with `KW-PINN-UNSEEDED-RNG` fixed and the collocation draw
   verified identical across two runs, three epochs at one seed gave total
@@ -1046,9 +1029,9 @@ is what the seed governs.
 
 ## KW-PINN-TESTS-UNLINTED — the pinn clippy gate could not fail [patch] — done 2026-08-26
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-PINN-TESTS-UNLINTED | Close the gate that let clippy diagnostics accumulate in pinn test code. | [patch] | IMPLEMENTED | unowned | `.github/workflows/ci.yml`, `crates/kwavers-solver/src/inverse/pinn/**/tests.rs` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-PINN-TESTS-UNLINTED | Close the gate that let clippy diagnostics accumulate in pinn test code. | [patch] | unowned | `.github/workflows/ci.yml`, `crates/kwavers-solver/src/inverse/pinn/**/tests.rs` |
 
 - **Evidence:** `ci.yml` ran `cargo clippy -p kwavers --features pinn --lib --
   -D warnings` with `continue-on-error: true`. Three holes, not one. Clippy
@@ -1097,9 +1080,9 @@ Gates: 1331 kwavers-solver tests pass; both new clippy commands exit 0.
 
 ## KW-PINN-3D-NO-CONVERGENCE — the learning-rate schedule strangled its own training [major] — done 2026-08-25
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-PINN-3D-NO-CONVERGENCE | Find why training plateaued far from an optimum the network represents exactly, and fix it. | [major] | review | agent/session-d49f3b0a | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/solver/training.rs`, `crates/kwavers-solver/.../tests/gradients.rs`, `crates/kwavers/tests/pinn_{bc,ic}_validation.rs` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-PINN-3D-NO-CONVERGENCE | Find why training plateaued far from an optimum the network represents exactly, and fix it. | [major] | agent/session-d49f3b0a | `crates/kwavers-solver/src/inverse/pinn/ml/wave_equation_3d/solver/training.rs`, `crates/kwavers-solver/.../tests/gradients.rs`, `crates/kwavers/tests/pinn_{bc,ic}_validation.rs` |
 
 ### What was eliminated first
 
@@ -1181,18 +1164,18 @@ makes any cross-run comparison noise, which is why the gradient tests build
 fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
 ## KW-SWE-SCALING-IS-A-BENCHMARK — Measure scaling outside tests [patch] — done 2026-08-25
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-SWE-SCALING-IS-A-BENCHMARK | Measure SWE propagation scaling through Criterion without wall-clock assertions in native tests. | [patch] | IMPLEMENTED | unowned | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/nl_swe_performance.rs` (a module of the `benchmark_suite` target since `6bcc8087d`) |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-SWE-SCALING-IS-A-BENCHMARK | Measure SWE propagation scaling through Criterion without wall-clock assertions in native tests. | [patch] | unowned | `crates/kwavers/tests/swe_3d_validation.rs`, `crates/kwavers/benches/nl_swe_performance.rs` (a module of the `benchmark_suite` target since `6bcc8087d`) |
 
 - The elapsed-time test was removed in `d0cf2f0cb`; `7a6859802` added the
   geometric 16/32/64 Criterion sweep with unchanged solver computation.
 
 ## KW-SWE-FORCE-PREPARATION — Prepare Gaussian body forces once [patch] [perf] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-SWE-FORCE-PREPARATION | Remove repeated spatial and normalization transcendental evaluation from ordinary elastic propagation while preserving the exact field history and workloads. | [patch] [perf] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | elastic propagation/integration hot kernels and tests, NL-SWE scheduling, release notes, exact benchmark and hosted evidence |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-SWE-FORCE-PREPARATION | Remove repeated spatial and normalization transcendental evaluation from ordinary elastic propagation while preserving the exact field history and workloads. | [patch] [perf] | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | elastic propagation/integration hot kernels and tests, NL-SWE scheduling, release notes, exact benchmark and hosted evidence |
 
 - **Lease:** none; exact PR #670 candidate `734f4abe3` is under independent
   re-review and hosted review.
@@ -1460,9 +1443,9 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
 
 ## KW-KWAVE-DISTRIBUTED-SOURCE — pin k-Wave's mask-cell ordering [minor] — done 2026-08-24
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-KWAVE-DISTRIBUTED-SOURCE | Extend the k-Wave reference set with a distributed multi-cell source, so the mask-to-signal mapping kwavers claims in `collect_pressure_indices_fortran` is held to the reference rather than assumed. | [minor] | review | agent/session-d49f3b0a | `scripts/generate_kwave_reference.py`, `crates/kwavers/tests/kwave_reference_parity.rs`, `docs/adr/119-kwave-reference-oracle.md` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-KWAVE-DISTRIBUTED-SOURCE | Extend the k-Wave reference set with a distributed multi-cell source, so the mask-to-signal mapping kwavers claims in `collect_pressure_indices_fortran` is held to the reference rather than assumed. | [minor] | agent/session-d49f3b0a | `scripts/generate_kwave_reference.py`, `crates/kwavers/tests/kwave_reference_parity.rs`, `docs/adr/119-kwave-reference-oracle.md` |
 
 - **Gap it closes:** every driven case in the set used one masked cell, where
   there is exactly one signal row and any mapping between mask and signal
@@ -1481,9 +1464,9 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
 
 ## KW-SOLVER-TEST-UNRUN — CI compiles `solver_test` but never runs it [patch] — done 2026-09-06
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-SOLVER-TEST-UNRUN | Run the integration tests CI currently only compiles, and fix the CFL derivation the omission has been hiding. | [patch] | done | Buffy (Codebuff) | `crates/kwavers/tests/solver_test.rs`, `crates/kwavers-solver/src/forward/fdtd/`, `.github/workflows/architecture-validation.yml` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-SOLVER-TEST-UNRUN | Run the integration tests CI currently only compiles, and fix the CFL derivation the omission has been hiding. | [patch] | Buffy (Codebuff) | `crates/kwavers/tests/solver_test.rs`, `crates/kwavers-solver/src/forward/fdtd/`, `.github/workflows/architecture-validation.yml` |
 
 - **Delivered:** already on main via commit `476321bef` (ADR 124's
   integration-baseline change): `test_fdtd_solver` and
@@ -1515,9 +1498,9 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
   not run; each is a test whose failure is invisible.
 ## KW-SWE-VOLUMETRIC-COVERAGE — the volumetric coverage metric measures the whole grid [patch] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-SWE-VOLUMETRIC-COVERAGE | Make `VolumetricQualityMetrics::coverage` measure the same eligible domain as wavefront tracking. | [patch] | review | current session | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, `crates/kwavers/tests/swe_3d_validation.rs` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-SWE-VOLUMETRIC-COVERAGE | Make `VolumetricQualityMetrics::coverage` measure the same eligible domain as wavefront tracking. | [patch] | current session | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, `crates/kwavers/tests/swe_3d_validation.rs` |
 
 - **Surfaced by:** the integration-test baseline
   (`KW-INTEGRATION-TESTS-UNRUN`) on its first real use, as a regression outside
@@ -1569,9 +1552,9 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
 
 ## KW-SWE-TRACKER-MEMORY — bound tracker-only retention [minor] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-SWE-TRACKER-MEMORY | Track volumetric arrivals without retaining velocity fields that the caller does not consume. | [minor] | review | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, tracker-only Kwavers callers and tests |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-SWE-TRACKER-MEMORY | Track volumetric arrivals without retaining velocity fields that the caller does not consume. | [minor] | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `crates/kwavers-solver/src/forward/elastic/swe/core/solver/volumetric.rs`, tracker-only Kwavers callers and tests |
 
 - **Lease:** none; corrected candidate
   `cceb434960cfa79b6e28d3a6e3cc41a68f0d32f1` is committed in draft PR #676
@@ -1625,9 +1608,9 @@ fixed inputs rather than using the solver's. Filed as KW-PINN-UNSEEDED-RNG.
 
 ## KW-INTEGRATION-TESTS-UNRUN — integration tests compiled but not run [patch] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-INTEGRATION-TESTS-UNRUN | Run the integration tests CI compiles but never executes, and burn down the 17 failures that were hiding there. | [patch] | review | current session (stale-claim takeover 2026-08-25) | `scripts/integration_tests.py`, `.config/integration-test-baseline.txt`, `.github/workflows/architecture-validation.yml`, integration-test failures named below |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-INTEGRATION-TESTS-UNRUN | Run the integration tests CI compiles but never executes, and burn down the 17 failures that were hiding there. | [patch] | current session (stale-claim takeover 2026-08-25) | `scripts/integration_tests.py`, `.config/integration-test-baseline.txt`, `.github/workflows/architecture-validation.yml`, integration-test failures named below |
 
 - **Evidence:** `crates/kwavers/tests/` holds 92 files. The strict clippy step
   compiles all of them (`--all-targets`); the test-coverage job runs `--lib`
@@ -1793,9 +1776,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-TEST-FIGURE-ISOLATION — integration tests overwrite tracked figures [patch] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-TEST-FIGURE-ISOLATION | Make plotting integration tests isolated and deterministic without rewriting committed goldens during ordinary test runs. | [patch] | review | current session | `crates/kwavers/tests/*plot*`, `crates/kwavers/tests/imaging_literature_validation.rs`, `crates/kwavers/test-figures/` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-TEST-FIGURE-ISOLATION | Make plotting integration tests isolated and deterministic without rewriting committed goldens during ordinary test runs. | [patch] | current session | `crates/kwavers/tests/*plot*`, `crates/kwavers/tests/imaging_literature_validation.rs`, `crates/kwavers/test-figures/` |
 
 - **Evidence:** the complete integration run rewrites tracked PNGs under
   `crates/kwavers/test-figures/` even when the plotting implementation is not
@@ -1818,9 +1801,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-PSTD-PLUGIN-SOURCES-DROPPED — the plugin path discards its sources [major] — done 2026-08-22
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-PSTD-PLUGIN-SOURCES-DROPPED | Make `PSTDPlugin` apply the sources it is given, or make the parameter's inapplicability a compile-time fact rather than a silent no-op. | [major] | todo | unowned | `crates/kwavers-solver/src/forward/pstd/plugin.rs`, `crates/kwavers-solver/src/plugin/` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-PSTD-PLUGIN-SOURCES-DROPPED | Make `PSTDPlugin` apply the sources it is given, or make the parameter's inapplicability a compile-time fact rather than a silent no-op. | [major] | unowned | `crates/kwavers-solver/src/forward/pstd/plugin.rs`, `crates/kwavers-solver/src/plugin/` |
 
 - **Evidence:** `PSTDPlugin::initialize` constructs its `PSTDSolver` with
   `GridSource::default()` — an empty source — and `PSTDPlugin::update` syncs the
@@ -1865,9 +1848,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-ABSORPTION-CONFIG-PRECEDENCE — the PSTD absorption coefficient in config is inert [major] — done 2026-08-22
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-ABSORPTION-CONFIG-PRECEDENCE | Make `PSTDConfig::absorption_mode`'s `alpha_coeff` either authoritative, or documented and typed as the fallback it actually is. | [major] | todo | unowned | `crates/kwavers-solver/src/forward/pstd/physics/absorption/init.rs`, `crates/kwavers-solver/src/forward/pstd/config.rs`, `crates/kwavers-medium/src/homogeneous/` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-ABSORPTION-CONFIG-PRECEDENCE | Make `PSTDConfig::absorption_mode`'s `alpha_coeff` either authoritative, or documented and typed as the fallback it actually is. | [major] | unowned | `crates/kwavers-solver/src/forward/pstd/physics/absorption/init.rs`, `crates/kwavers-solver/src/forward/pstd/config.rs`, `crates/kwavers-medium/src/homogeneous/` |
 
 - **Evidence:** `initialize_absorption_operators` reads
   `medium.alpha_coefficient(..)` and uses the config's `alpha_coeff` only when
@@ -1946,9 +1929,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-LOCK-GUARD-01 — the lockfile guard existed but nothing ran it [major] — done 2026-08-24
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-LOCK-GUARD-01 | Run `scripts/lockfile.py --check` where it can actually stop a corrupt lock: before the push, and in the main CI workflow. | [major] | implemented | current session | `.githooks/pre-push`, `.github/workflows/ci.yml`, `README.md` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-LOCK-GUARD-01 | Run `scripts/lockfile.py --check` where it can actually stop a corrupt lock: before the push, and in the main CI workflow. | [major] | current session | `.githooks/pre-push`, `.github/workflows/ci.yml`, `README.md` |
 
 - **Evidence:** `scripts/lockfile.py` has existed and has described this trap
   precisely, citing `KW-CI-087`. It was invoked from `benchmark-regression.yml`
@@ -1982,9 +1965,11 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-GAP-2026-08-20-KWAVEPARITY — Make the k-Wave parity claim reproducible [major] [arch] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-GAP-2026-08-20-KWAVEPARITY | Bring the k-Wave differential oracle inside the repository so the README's headline parity result is reproducible from a clean clone and enforced in the default gate. | [major] [arch] | implementation complete | current session, lane `test/kwavers-kwave-parity-oracle` | `scripts/generate_kwave_reference.py`, `crates/kwavers/tests/reference/kwave/`, `crates/kwavers/tests/kwave_reference_parity.rs`, `docs/adr/119-kwave-reference-oracle.md`, `README.md`, `.gitignore` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-GAP-2026-08-20-KWAVEPARITY | Bring the k-Wave differential oracle inside the repository so the README's headline parity result is reproducible from a clean clone and enforced in the default gate. | [major] [arch] | current session, lane `test/kwavers-kwave-parity-oracle` | `scripts/generate_kwave_reference.py`, `crates/kwavers/tests/reference/kwave/`, `crates/kwavers/tests/kwave_reference_parity.rs`, `docs/adr/119-kwave-reference-oracle.md`, `README.md`, `.gitignore` |
+
+- Carried by the removed Status cell: implementation complete.
 
 - **Evidence of the gap:** the README located the harness at
   `external/k-wave-julia/benchmarks/kwavers`, which `.gitignore:10`/`:96`
@@ -2036,9 +2021,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-CI-CACHE-01 — the CI cache never hits [patch] — done 2026-08-22
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CI-CACHE-01 | Make the dependency cache actually restore, and stop superseded runs holding queue slots. | [patch] | implemented | current session, lane `ci/kwavers-cache-and-triggers` | `.github/workflows/` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-CI-CACHE-01 | Make the dependency cache actually restore, and stop superseded runs holding queue slots. | [patch] | current session, lane `ci/kwavers-cache-and-triggers` | `.github/workflows/` |
 
 - **Evidence:** every cache entry was keyed on an exact
   `hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml')` with **no
@@ -2078,9 +2063,11 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-BOOK-116 | The published Kwavers book executes one deterministic Rust oracle and the shared workflow builds the exact package before `mdbook test`. | [patch] | implementation complete; hosted verification pending | Codex | `.github/workflows/book-pages.yml`, `docs/book/examples/basic_simulation.md`, this item |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-BOOK-116 | The published Kwavers book executes one deterministic Rust oracle and the shared workflow builds the exact package before `mdbook test`. | [patch] | Codex | `.github/workflows/book-pages.yml`, `docs/book/examples/basic_simulation.md`, this item |
+
+- Carried by the removed Status cell: implementation complete; hosted verification pending.
 
 - Non-goals: no changes to the concurrently modified transducer files and no
   expansion of the Python binding or ensemble-model contract.
@@ -2097,9 +2084,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-LINT-111 — Put every member on workspace lint inheritance [patch] — done 2026-08-20
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-LINT-111 | All 24 workspace members inherit `[workspace.lints]`, and no member re-declares a rule the workspace already owns. | [patch] | done | Claude | `crates/{kwavers,kwavers-driver,kwavers-python}/Cargo.toml` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-LINT-111 | All 24 workspace members inherit `[workspace.lints]`, and no member re-declares a rule the workspace already owns. | [patch] | Claude | `crates/{kwavers,kwavers-driver,kwavers-python}/Cargo.toml` |
 
 - Premise correction at item opening. This item was filed as "three crates miss the Atlas
   clippy floor (`clippy::all` + `pedantic`), ~1,155 warnings to burn down". The opening
@@ -2138,9 +2125,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-GIT-113 — Drain the kwavers stash backlog [patch] — done 2026-08-24
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-GIT-113 | The repository's stash list is empty; anything of value in it is committed on a branch. | [patch] | done | current session | `git stash` entries in the kwavers gitdir |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-GIT-113 | The repository's stash list is empty; anything of value in it is committed on a branch. | [patch] | current session | `git stash` entries in the kwavers gitdir |
 
 - **Executed 2026-08-24 on the peer triage above.** `git stash list` is empty.
   Nothing was discarded that had not first been either preserved on `origin` or
@@ -2204,9 +2191,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   trigger: owner confirms which entries may be dropped.
 ## KW-CI-115 — Enforce the merge gate on main [minor] — todo
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CI-115 | `main` cannot take a merge whose verification has not passed. | [minor] | todo | unclaimed (needs repository-admin rights) | GitHub repository settings: branch protection or a ruleset on `main` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-CI-115 | `main` cannot take a merge whose verification has not passed. | [minor] | unclaimed (needs repository-admin rights) | GitHub repository settings: branch protection or a ruleset on `main` |
 
 - The gap: `main` is unprotected. `GET /repos/ryancinsight/kwavers/branches/main/protection`
   returns `404 Branch not protected`, so there are no required status checks and no review
@@ -2238,9 +2225,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-DOC-105 — Per-crate README landing pages [patch] — done 2026-08-20
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-DOC-105 | Every workspace crate publishes a real registry landing page, single-sourced as its crate documentation and mechanically enforced. | [patch] | done | Claude | `crates/*/README.md`, each `crates/*/src/lib.rs` doc attribute, `xtask/src/readme_audit.rs`, `.github/workflows/architecture-validation.yml`, root `README.md` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-DOC-105 | Every workspace crate publishes a real registry landing page, single-sourced as its crate documentation and mechanically enforced. | [patch] | Claude | `crates/*/README.md`, each `crates/*/src/lib.rs` doc attribute, `xtask/src/readme_audit.rs`, `.github/workflows/architecture-validation.yml`, root `README.md` |
 
 - Acceptance: no crate under `crates/` lacks a `README.md` or a manifest
   `description`; each README is the crate documentation via
@@ -2269,9 +2256,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-DOC-106 — Correct and settle the driver/python crate docs [patch] — done 2026-08-20
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-DOC-106 | `kwavers-driver` single-sources its README as crate docs with every claim re-verified; `kwavers-python` keeps two documents by rule, both corrected. | [patch] | done | Claude | `crates/kwavers-driver/{README.md,src/lib.rs}`, `crates/kwavers-python/{README.md,src/lib.rs}`, `xtask/src/readme_audit.rs` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-DOC-106 | `kwavers-driver` single-sources its README as crate docs with every claim re-verified; `kwavers-python` keeps two documents by rule, both corrected. | [patch] | Claude | `crates/kwavers-driver/{README.md,src/lib.rs}`, `crates/kwavers-python/{README.md,src/lib.rs}`, `xtask/src/readme_audit.rs` |
 
 - Acceptance: no crate README contradicts the tree; the single-sourcing exemption is a
   stated rule rather than a name list; `cargo run -p xtask -- check-readmes` passes and
@@ -2321,9 +2308,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-DOC-109 — Review driver publication surface [patch] — done 2026-08-20
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-DOC-109 | The published `kwavers-driver` landing page discloses only what the project intends to publish. | [patch] | done | Claude | `crates/kwavers-driver/{README.md,Cargo.toml}`, `.gitignore` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-DOC-109 | The published `kwavers-driver` landing page discloses only what the project intends to publish. | [patch] | Claude | `crates/kwavers-driver/{README.md,Cargo.toml}`, `.gitignore` |
 
 - The question: `kwavers-driver` is `publish = true`, so its README is a public crates.io
   page, while the example programs it grew out of are gitignored as CONFIDENTIAL
@@ -2340,9 +2327,11 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-DIST-QUEUE-2026-08-20 — close distributed queue completion and deadline contracts [patch] — review
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-DIST-QUEUE-2026-08-20 | Make distributed queue completion include executing tasks, replace worker polling with scheduler notification, and reject timestamp overflow. | [patch] | implementation complete; hosted verification pending | Codex | `crates/kwavers-analysis/src/distributed/{queue,scheduler,task,mod}.rs`, this item, `gap_audit.md`, `CHANGELOG.md` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-DIST-QUEUE-2026-08-20 | Make distributed queue completion include executing tasks, replace worker polling with scheduler notification, and reject timestamp overflow. | [patch] | Codex | `crates/kwavers-analysis/src/distributed/{queue,scheduler,task,mod}.rs`, this item, `gap_audit.md`, `CHANGELOG.md` |
+
+- Carried by the removed Status cell: implementation complete; hosted verification pending.
 
 - Acceptance: `wait_all` waits for queued and executing tasks; workers wait on
   the scheduler condition variable; deadline overflow returns typed
@@ -2366,9 +2355,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-CLEAN-108 — Delete the tracked driver backup file [patch] — done 2026-08-20
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CLEAN-108 | No editor backup artifacts are tracked, and the ignore rule that should have stopped this one actually matches it. | [patch] | done | Claude | `crates/kwavers-driver/src/physics/mod.rs.bak-final`, `.gitignore` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-CLEAN-108 | No editor backup artifacts are tracked, and the ignore rule that should have stopped this one actually matches it. | [patch] | Claude | `crates/kwavers-driver/src/physics/mod.rs.bak-final`, `.gitignore` |
 
 - Merge note: filed on `feat/aperture-sir-seam` (commit `7f9a4e718`), closed here on
   `fix/xtask-metrics-paths` because a peer moved the shared tree between branches. Keep
@@ -2394,9 +2383,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-DOC-107 — Move driver migration plans out of module docstrings [patch] — done 2026-08-20
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-DOC-107 | `kwavers-driver` module docs describe what each module is, not the phased plan that produced it. | [patch] | done | Claude | 83 files under `crates/kwavers-driver/src/` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-DOC-107 | `kwavers-driver` module docs describe what each module is, not the phased plan that produced it. | [patch] | Claude | 83 files under `crates/kwavers-driver/src/` |
 
 - Merge note: this item was filed on `feat/aperture-sir-seam` (commit `7f9a4e718`) and
   closed here on `fix/xtask-metrics-paths`, because a peer moved the shared tree onto a
@@ -2434,9 +2423,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-LINT-1 — Burn down the clippy debt baseline [patch] — todo
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | in progress | Codex | Workspace lint ratchet; `unused_self`, `return_self_not_must_use`, and `unnecessary_literal_bound` are clean; remaining debt lines are tracked below |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | Codex | Workspace lint ratchet; `unused_self`, `return_self_not_must_use`, and `unnecessary_literal_bound` are clean; remaining debt lines are tracked below |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
   `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
@@ -3355,9 +3344,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-CORE-LOG-1 — Decide whether the console log sink belongs on stdout [patch] — todo
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CORE-LOG-1 | `CombinedLogger`'s console stream is a decision with a stated reason, not an unexamined default. | [patch] | todo | unclaimed | `crates/kwavers-core/src/log/file.rs` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-CORE-LOG-1 | `CombinedLogger`'s console stream is a decision with a stated reason, not an unexamined default. | [patch] | unclaimed | `crates/kwavers-core/src/log/file.rs` |
 
 - `CombinedLogger::log` writes each record to stdout via `println!` when `console` is set.
   That is what `clippy::print_stdout` exists to catch, and the site carries a per-site
@@ -3371,9 +3360,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-DOC-110 — Document the audit slice submodules [patch] — done 2026-08-20
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-DOC-110 | `crates/kwavers-driver/src/audit/` satisfies the crate's `#![deny(missing_docs)]` without a blanket allow. | [patch] | done | Claude | `crates/kwavers-driver/src/audit/{mod,antenna,crosstalk,shorts}.rs` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-DOC-110 | `crates/kwavers-driver/src/audit/` satisfies the crate's `#![deny(missing_docs)]` without a blanket allow. | [patch] | Claude | `crates/kwavers-driver/src/audit/{mod,antenna,crosstalk,shorts}.rs` |
 
 - The defect: `src/audit/mod.rs` carried `#![allow(missing_docs)]` covering the whole audit
   facade, so `#![deny(missing_docs)]` at the crate root did not reach it, and
@@ -3421,9 +3410,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — done 2026-08-20
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | closed | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KWAVERS-SONO-113 | Route dimensioned sonoluminescence power through Aequitas, assemble one authoritative field pass, and synchronize tests, examples, and book pages. | [major] [arch] | Codex | `crates/kwavers-physics/src/optics/sonoluminescence/`, sonoluminescence examples, `docs/book/examples/`, ADR 114, this item |
 
 - Acceptance: emission components carry Aequitas `VolumetricPowerDensity`; Cherenkov spectral yield is not added to the dimensioned power field; one field traversal computes enabled dimensioned components without temporary field clones; the integrated step refreshes emission from updated state; constructor state uses `BubbleParameters`; placeholder molecular-line and example paths are removed; focused value-semantic tests, example builds/runs, book tests/build, and package gates pass.
 - Non-goals: GPU kernels, Python bindings, and unrelated legacy migration surfaces remain separate items.
@@ -3439,9 +3428,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-EXAMPLES-114 — Complete the heterogeneous attenuation example/book contract [patch] — done 2026-08-20
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-EXAMPLES-114 | Split the heterogeneous power-law attenuation experiment by concern, add one source-linked book page, remove stale example links, and retain the measured analytical-oracle evidence. | [patch] | closed | Codex | `crates/kwavers/examples/{heterogeneous_power_law_attenuation.rs,heterogeneous_power_law_attenuation/,README.md}`, `docs/book/{SUMMARY.md,media_and_tissue_models.md,examples/}`, this item, `CHANGELOG.md` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-EXAMPLES-114 | Split the heterogeneous power-law attenuation experiment by concern, add one source-linked book page, remove stale example links, and retain the measured analytical-oracle evidence. | [patch] | Codex | `crates/kwavers/examples/{heterogeneous_power_law_attenuation.rs,heterogeneous_power_law_attenuation/,README.md}`, `docs/book/{SUMMARY.md,media_and_tissue_models.md,examples/}`, this item, `CHANGELOG.md` |
 
 - Acceptance: the example entry point is a manifest over named configuration,
   propagation, measurement, experiment, and artifact modules; every example
@@ -3473,9 +3462,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KW-EXAMPLES-115 — Type and partition the seismic example workflows [major] [arch] — done 2026-08-21
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | closed | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, `kwavers-signal`/`kwavers-solver` provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 117, PM artifacts |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KW-EXAMPLES-115 | Replace the three seismic example monoliths with explicit typed workflows that call Atlas providers directly and document value-semantic 2-D/3-D behavior. | [major] [arch] | Codex | `crates/kwavers/examples/{seismic_imaging_demo,seismic_imaging_3d_demo,transcranial_fwi}*`, shared seismic modules, `kwavers-signal`/`kwavers-solver` provider call sites, `crates/kwavers/Cargo.toml`, seismic book pages, ADR 117, PM artifacts |
 
 - Acceptance: each example entry point is a manifest over SRP leaf modules no
   larger than 500 lines; shared acquisition, CT, physical configuration,
@@ -3729,9 +3718,11 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — blocked 2026-08-18
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 | Delete the consumer-owned collocated raw-WGPU FDTD path and validate the real Hephaestus `Fdtd3dOps` provider against an independent f32 CPU stencil. | [minor] [arch] | implementation complete; blocked on Apollo 0.27.0 default | Codex | `crates/kwavers-gpu/src/{gpu,validation/gpu_cpu_equivalence}/`, affected allocation test, PM artifacts |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 | Delete the consumer-owned collocated raw-WGPU FDTD path and validate the real Hephaestus `Fdtd3dOps` provider against an independent f32 CPU stencil. | [minor] [arch] | Codex | `crates/kwavers-gpu/src/{gpu,validation/gpu_cpu_equivalence}/`, affected allocation test, PM artifacts |
+
+- Carried by the removed Status cell: implementation complete; blocked on Apollo 0.27.0 default.
 
 - Acceptance: provider-owned typed buffers and kernels execute velocity then
   pressure updates; the CPU oracle uses the same mathematical contract in
@@ -3765,9 +3756,11 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — Reject uninitialized GPU visualization [patch] — review 2026-08-17
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| ATLAS-KWAVERS-HEPHAESTUS-VIS-104 | GPU-enabled multi-field rendering returns the existing typed feature/resource error until the renderer and data pipeline are initialized; initialized GPU rendering and CPU fallback retain every field. | [patch] | implementation complete; exact-head hosted verification pending 2026-08-17 | Codex | `crates/kwavers-analysis/src/visualization/engine/mod.rs`, `crates/kwavers-analysis/src/visualization/mod.rs`, `gap_audit.md`, `CHANGELOG.md` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| ATLAS-KWAVERS-HEPHAESTUS-VIS-104 | GPU-enabled multi-field rendering returns the existing typed feature/resource error until the renderer and data pipeline are initialized; initialized GPU rendering and CPU fallback retain every field. | [patch] | Codex | `crates/kwavers-analysis/src/visualization/engine/mod.rs`, `crates/kwavers-analysis/src/visualization/mod.rs`, `gap_audit.md`, `CHANGELOG.md` |
+
+- Carried by the removed Status cell: implementation complete; exact-head hosted verification pending 2026-08-17.
 
 - Acceptance: valid multi-field input never returns `Ok(())` when GPU resources are absent; initialized GPU rendering processes every field; invalid field-count input and non-GPU fallback remain value-semantic.
 - Non-goals: no CPU fallback behind the GPU feature, no FDTD/provider changes, and no renderer ownership changes in Hephaestus or Leto.
@@ -3775,9 +3768,9 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 
 ## KWAVERS-COUPLING-CONTRACT-001 — Medium-aware field-coupling inputs [minor] — todo
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KWAVERS-COUPLING-CONTRACT-001 | Add a typed medium-property provider to `MultiphysicsFieldCoupler` for photoelastic, optical-absorption, and frequency-dependent acoustic-absorption coefficients; retain scalar extraction only at the field-update boundary. | [minor] | todo | Codex | `crates/kwavers-solver/src/multiphysics/field_coupling/`, direct callers/tests, `gap_audit.md` |
+| ID | Outcome | Class | Owner | Scope |
+|----|---------|-------|-------|-------|
+| KWAVERS-COUPLING-CONTRACT-001 | Add a typed medium-property provider to `MultiphysicsFieldCoupler` for photoelastic, optical-absorption, and frequency-dependent acoustic-absorption coefficients; retain scalar extraction only at the field-update boundary. | [minor] | Codex | `crates/kwavers-solver/src/multiphysics/field_coupling/`, direct callers/tests, `gap_audit.md` |
 
 The current field-coupler API accepts only collocated field volumes, so its
 nominal water/tissue coefficients are real defaults rather than hidden input
