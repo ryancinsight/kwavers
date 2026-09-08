@@ -1,5 +1,34 @@
 # Backlog / Strategy
 
+<a id="kw-mnemosyne-global-allocator-2026-09-08"></a>
+
+## KW-MNEMOSYNE-GLOBAL-ALLOCATOR-2026-09-08 — Route kwavers allocation through Mnemosyne [patch] — todo
+
+- **Outcome:** the `kwavers` binary and `xtask` install `mnemosyne::Mnemosyne`
+  as their `#[global_allocator]`, `kwavers-alloc-probe`'s
+  `ThreadScopedAllocator` forwards to it instead of `System`, and
+  `DomainPMLBoundary` holds `AlignedVec`. First-party supremacy: Mnemosyne is
+  the stack's allocator, and kwavers is currently on `System`.
+- **Entry evidence:** `chore/kwavers-xtask-mnemosyne-allocator` (pushed;
+  2026-09-02, 110 behind `main`) carries the work as a 3-file, +21/-14 source
+  delta -- `crates/kwavers-alloc-probe/src/lib.rs`,
+  `crates/kwavers-boundary/src/pml/mod.rs`, `xtask/src/main.rs` -- plus four
+  superseded `mnemosyne rev` pin advances. None of its seven commits is in
+  `main`.
+- **Not a cherry-pick.** The delta imports `mnemosyne::Mnemosyne`, and `main`
+  depends only on `mnemosyne-arena`, `mnemosyne-backend`, and `mnemosyne-core`;
+  the facade crate is a manifest addition the branch made through pin commits
+  that are now stale. Port the source delta onto the current pin, do not
+  resurrect the branch's pins.
+- **The probe change needs its own oracle.** `ThreadScopedAllocator` backs the
+  allocation-contract tests, so swapping what it forwards to can move the
+  counts those tests assert. The migration must show the contracts hold under
+  Mnemosyne, or state which counts changed and why -- an allocator that pools
+  or batches does not have to allocate one-for-one with `System`.
+- **Acceptance:** the binary, xtask, and probe use Mnemosyne; the allocation
+  contract suite passes with its assertions re-derived rather than relaxed; the
+  mnemosyne pin is `main`'s current one.
+
 <a id="kw-orphaned-benches-2026-09-08"></a>
 
 ## KW-ORPHANED-BENCHES-2026-09-08 — The bench registry gate does not model modules [patch] [ci] — done 2026-09-08
