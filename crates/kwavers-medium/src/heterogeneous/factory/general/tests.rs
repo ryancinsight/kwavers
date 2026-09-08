@@ -4,6 +4,7 @@ use kwavers_core::constants::fundamental::{
 };
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
+use kwavers_core::test_support::assert_rejects;
 use kwavers_grid::Grid;
 use leto::Array3;
 
@@ -142,5 +143,8 @@ fn test_from_elastic_arrays_stability_violation() {
 
     let result =
         HeterogeneousFactory::from_elastic_arrays(cp.view(), cs.view(), rho.view(), MHZ_TO_HZ);
-    assert!(result.is_err(), "Expected stability error");
+    // c_s = 900 against c_p = 1000 violates 2*c_s^2 <= c_p^2; the message
+    // names the voxel and both speeds, so a shape or density rejection cannot
+    // satisfy this test.
+    assert_rejects(result, "Stability violated at voxel");
 }
