@@ -4165,19 +4165,22 @@ markers without changing the numerical contract.
   formula-boundary mismatch, or Eunomia complex-unit incompatibility.
 
 
-## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — in-progress
+<a id="kw-release-crates-01"></a>
 
-- Owner: Codex; scope: workspace and package registry metadata, every local
-  dependency version, provider package aliases, `Cargo.lock`, Rust release
-  documentation, and publication of the 23 reusable Rust packages.
-- Non-goals: publishing `kwavers-python` or `xtask`, changing package versions,
-  or changing the independent Python wheel pipeline.
-- Acceptance: locked metadata identifies exactly 23 publishable packages in an
-  acyclic dependency order; each package passes `cargo publish --dry-run` from
-  the exact merged source; repository and hosted gates pass; every version is
-  indexed on crates.io; each crate trusts only
-  `.github/workflows/rust-release.yml` in the `crates-io` environment; and every
-  package version has a matching GitHub Release.
+## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — blocked
+
+- **Blocker:** release authority. Publication is the release delivery state and
+  needs the user's explicit authorization; no agent grant covers it.
+- **Re-open trigger:** the user authorizes publishing the Rust closure.
+- **Preparation verified 2026-09-08:** the workspace holds exactly 23
+  publishable packages with `kwavers-python` the sole `publish = false`
+  member -- matching this item's scope and non-goals -- and no publishable
+  crate depends on it, so the publishable set is dependency-closed.
+- **Not yet true:** `crates.io` indexes none of them (`kwavers`, `kwavers-core`,
+  `kwavers-solver`, `kwavers-physics`, `kwavers-alloc-probe` all return no
+  published version), so the acceptance clause "every version is indexed" is
+  outstanding and will be until the release runs.
+
 ## KWAVERS-AEQ-MET-33 — Type plasmonics quantities [major] — done 2026-08-02
 
 - Owner: Codex; scope: `crates/kwavers-physics/src/electromagnetic/plasmonics/**`,
@@ -4781,16 +4784,16 @@ markers without changing the numerical contract.
   allocation/performance defect, now owned by KW-SOL-058 rather than a runner
   oversubscription issue.
 
-## KW-GPU-056 — Align Hephaestus device-limit contract [patch] — in-progress
+<a id="kw-gpu-056"></a>
 
-- Owner: Codex; scope: `crates/kwavers-gpu/src/gpu/` and
-  `crates/kwavers-gpu/src/beamforming/three_dimensional/provider.rs`.
-- Acceptance: every explicit `hephaestus_core::DeviceLimits` initializer carries
-  the aggregate buffer/acceleration-structure limit; WGPU preserves the
-  provider baseline and CUDA reports `None` for the non-applicable capability.
-- Evidence: hosted Architecture Validation job `87946612531` reported four
-  `E0063` diagnostics after Hephaestus added the field. Focused GPU check and
-  feature validation must pass on the refreshed provider graph.
+## KW-GPU-056 — Align Hephaestus device-limit contract [patch] — done 2026-09-08
+
+- Verified 2026-09-08: `cargo check -p kwavers-gpu --all-features` is clean, so
+  the four `E0063` diagnostics that drove the item are gone and every explicit
+  `DeviceLimits` initializer carries the field Hephaestus added.
+- Checked with features on purpose: the crate's `default` feature set is empty,
+  so a default check never reaches the WGPU or CUDA provider paths the
+  acceptance names.
 
 ## KW-SOL-054 — Repair AVX-512 FDTD layout contract [patch] — in-progress
 
