@@ -320,6 +320,10 @@ name = "critical_path_benchmarks"
 harness = false
 
 [[bench]]
+name = "fft3d_baseline"
+harness = false
+
+[[bench]]
 name = "benchmark_suite"
 harness = false
 
