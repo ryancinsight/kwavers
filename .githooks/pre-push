@@ -1,27 +1,26 @@
 #!/usr/bin/env bash
+#
+# Atlas member-side lockfile pre-push guard.
+#
 # Refuse a push whose Cargo.lock cannot resolve under `--locked`.
 #
-# This repository is normally worked on inside the Atlas stack, whose
+# A member is normally worked on inside the Atlas stack, whose
 # `.cargo/config.toml` carries a `[patch]` overlay redirecting every first-party
 # dependency to a local working tree. Cargo finds that config by walking up from
-# the current directory, so *any* cargo command run from inside the stack — a
-# test run, a check, a build — rewrites `Cargo.lock` with every
-# `source = "git+..."` line stripped.
-#
-# That lock resolves perfectly under the same overlay, which is why local
-# verification never sees the problem, and fails every `--locked` job in CI,
-# which has no overlay. The gap between those two facts is the whole reason this
-# hook exists: the lockfile is the one artifact whose correctness cannot be
-# established from inside the environment that produces it.
+# the current directory, so *any* cargo command run from inside the stack -- a
+# test run, a check, a build -- rewrites `Cargo.lock` with every
+# `source = "git+..."` line stripped. That lock resolves perfectly under the
+# same overlay, which is why local verification never sees the problem, and
+# fails every `--locked` job in CI, which has no overlay.
 #
 # `scripts/lockfile.py --check` runs cargo from outside the overlay and is the
 # same check CI runs, so a push that would fail there never reaches a runner.
 #
 # Install (git does not apply tracked hooks on its own):
 #
-#     git config core.hooksPath .githooks
+#     python scripts/atlas-lock-form.py install-hooks
 #
-# Bypass deliberately, for a push that does not touch dependency resolution:
+# Bypass deliberately:
 #
 #     SKIP_LOCKFILE_CHECK=1 git push
 set -euo pipefail
@@ -31,7 +30,53 @@ if [ "${SKIP_LOCKFILE_CHECK:-0}" = "1" ]; then
   exit 0
 fi
 
-repo_root="$(git rev-parse --show-toplevel)"
+# A managed worktree may be owned by a different filesystem account than the
+# process pushing from it, and git does not propagate command-line config into
+# hooks. Re-inject the checkout path so child git calls stay valid.
+repo_root="$(git -c safe.directory="$PWD" rev-parse --show-toplevel)"
+export GIT_CONFIG_COUNT=1
+export GIT_CONFIG_KEY_0=safe.directory
+export GIT_CONFIG_VALUE_0="$repo_root"
+
+# The check measures the *working tree*, but the push carries a revision range.
+# Those differ whenever the pushed commits were not checked out -- a plumbing
+# push, or a push from a tree sitting on another branch -- and then the hook
+# refuses a push on the strength of state that push does not contain. Read the
+# range git supplies on stdin and skip when nothing in it touches dependency
+# resolution: a push that changes no manifest and no lock cannot make the lock
+# worse than the base already found acceptable.
+touches_dependency_state=unknown
+if [ ! -t 0 ]; then
+  touches_dependency_state=no
+  zero="$(printf '0%.0s' $(seq 40))"
+  while read -r _local_ref local_sha _remote_ref remote_sha; do
+    # A branch deletion carries no content.
+    [ "$local_sha" = "$zero" ] && continue
+    if [ "$remote_sha" = "$zero" ]; then
+      # New branch: compare against whatever the remote already has, so a long
+      # series is not read as touching everything. With no upstream to compare
+      # against, fall back to running the check.
+      base="$(git merge-base "$local_sha" HEAD 2>/dev/null || true)"
+      [ -z "$base" ] && { touches_dependency_state=unknown; break; }
+    else
+      base="$remote_sha"
+    fi
+    if ! changed="$(git diff --name-only "$base" "$local_sha" 2>/dev/null)"; then
+      touches_dependency_state=unknown
+      break
+    fi
+    if printf '%s\n' "$changed" | grep -qE '(^|/)Cargo\.(lock|toml)$'; then
+      touches_dependency_state=yes
+      break
+    fi
+  done
+fi
+
+if [ "$touches_dependency_state" = "no" ]; then
+  echo "pre-push: no Cargo.lock or Cargo.toml in the pushed range; lockfile check not needed" >&2
+  exit 0
+fi
+
 checker="$repo_root/scripts/lockfile.py"
 
 if [ ! -f "$checker" ]; then
