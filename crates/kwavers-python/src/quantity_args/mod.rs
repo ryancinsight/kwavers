@@ -30,6 +30,8 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::{Borrowed, FromPyObject};
 
+use aequitas_python::protocol::{BASE_ATTR, DIMENSION_ATTR};
+
 /// Parameter accepting a base-unit float or a matching quantity.
 pub use aequitas_python::Dimensioned;
 
@@ -92,14 +94,26 @@ impl<'py> FromPyObject<'_, 'py> for PyDegrees {
     type Error = PyErr;
 
     fn extract(object: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(degrees) = object.extract::<f64>() {
-            if !degrees.is_finite() {
-                return Err(PyValueError::new_err("angle must be finite"));
-            }
-            return Ok(Self(Angle::from_unit::<Degree>(degrees)));
+        // Order matters here more than anywhere: `f64` extraction honours
+        // `__float__`, so reading the number first would take a quantity's
+        // magnitude and call it degrees whatever unit it actually carries.
+        // A declared quantity goes through the dimension check.
+        let declares_quantity = object.hasattr(BASE_ATTR).unwrap_or(false)
+            && object.hasattr(DIMENSION_ATTR).unwrap_or(false);
+        if declares_quantity {
+            let angle: PyAngle = object.extract()?;
+            return Ok(Self(angle.quantity()));
         }
-        let angle: PyAngle = object.extract()?;
-        Ok(Self(angle.quantity()))
+        match object.extract::<f64>() {
+            Ok(degrees) if degrees.is_finite() => Ok(Self(Angle::from_unit::<Degree>(degrees))),
+            Ok(_) => Err(PyValueError::new_err("angle must be finite")),
+            // Neither a number nor a declared quantity: let the quantity
+            // extractor produce the diagnostic naming what it wanted.
+            Err(_) => {
+                let angle: PyAngle = object.extract()?;
+                Ok(Self(angle.quantity()))
+            }
+        }
     }
 }
 

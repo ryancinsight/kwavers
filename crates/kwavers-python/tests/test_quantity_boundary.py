@@ -176,3 +176,55 @@ def test_steering_angle_still_rejects_a_non_finite_float() -> None:
     array = kw.TransducerArray2D(64, 0.3e-3, 5e-3, 0.35e-3, 1540.0, 3e6)
     with pytest.raises(ValueError):
         array.set_steering_angle(float("nan"))
+
+
+# --- a quantity that is also a number ---------------------------------------
+
+
+class FloatConvertibleQuantity(Quantity):
+    """A quantity that also converts to float, as pint's does."""
+
+    def __float__(self) -> float:
+        return self.__aequitas_base__
+
+
+def test_a_float_convertible_quantity_is_still_dimension_checked() -> None:
+    """The regression: `__float__` must not bypass the dimension check.
+
+    `f64` extraction goes through `PyFloat_AsDouble`, which honours
+    `__float__`. Reading the number first took such an object's magnitude as
+    base units with its dimension never examined -- a time accepted where a
+    length belonged, silently.
+    """
+    sneaky = FloatConvertibleQuantity(2.0, TIME)
+    assert float(sneaky) == 2.0, "the fixture must convert, or it tests nothing"
+    with pytest.raises(ValueError, match="expected a quantity"):
+        kw.cmut_collapse_voltage(sneaky, 1e-6, 0.2e-6)
+
+
+def test_a_float_convertible_quantity_reads_its_protocol_value() -> None:
+    class Misleading(FloatConvertibleQuantity):
+        def __float__(self) -> float:
+            return 999.0
+
+    honest = kw.cmut_collapse_voltage(20e-6, 1e-6, 0.2e-6)
+    via_protocol = kw.cmut_collapse_voltage(
+        Misleading(20e-6, LENGTH), 1e-6, 0.2e-6
+    )
+    assert via_protocol == honest
+
+
+def test_steering_angle_does_not_read_a_quantity_as_degrees() -> None:
+    # The float arm of `PyDegrees` means degrees, so a float-convertible
+    # quantity slipping into it would be scaled by pi/180 on top of its own
+    # unit -- wrong twice over.
+    array = kw.TransducerArray2D(64, 0.3e-3, 5e-3, 0.35e-3, 1540.0, 3e6)
+    with pytest.raises(ValueError):
+        array.set_steering_angle(FloatConvertibleQuantity(1.0, LENGTH))
+
+    array.set_steering_angle(
+        FloatConvertibleQuantity(math.radians(30.0), ANGLE, "angle")
+    )
+    plain = kw.TransducerArray2D(64, 0.3e-3, 5e-3, 0.35e-3, 1540.0, 3e6)
+    plain.set_steering_angle(30.0)
+    assert array.steering_angle == pytest.approx(plain.steering_angle)
