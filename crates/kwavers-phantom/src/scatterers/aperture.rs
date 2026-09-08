@@ -10,10 +10,14 @@
 //! This crate does not depend on `kwavers-physics`, which owns the SIR closed
 //! forms, and deliberately does not gain that edge (ADR 113). Instead the
 //! kernel is injected: a caller supplies a [`RoundTripKernel`] — any
-//! `Fn(f64, f64, f64) -> Vec<f64>` implements it — and the physics closed form
-//! supplies it through a one-line adapter,
-//! `|r, z, dt| piston.round_trip_response(r, z, dt).samples`, the onset index
-//! discarded because synthesis applies the round-trip delay itself.
+//! `Fn(f64, f64, f64, f64) -> Vec<f64>` implements it — and a physics closed
+//! form supplies it through a one-line adapter, for a circular piston
+//! `|x, y, z, dt| piston.round_trip_response(x.hypot(y), z, dt).samples` and
+//! for a far-field rectangle `rect.round_trip_response(x, y, z, dt).samples`,
+//! the onset index discarded because synthesis applies the round-trip delay
+//! itself. The field point reaches the provider in the element's own frame —
+//! `x` along the element's width axis, `y` along its height, `z` along its
+//! outward normal — so an anisotropic aperture sees its orientation.
 //!
 //! # How the kernel enters
 //!
@@ -58,24 +62,32 @@ use std::ops::RangeInclusive;
 ///
 /// A bare position cannot express an aperture: the spatial impulse response is
 /// a function of the field point in the element's own frame, so the element
-/// must carry the outward normal that defines it. `ConvexArrayGeometry`
-/// produces exactly this pair (ADR 112).
+/// carries the outward normal that defines its axis and the in-plane width
+/// axis that orients a rectangular face. `ConvexArrayGeometry` produces the
+/// centre and normal (ADR 112); the width axis is the array's lateral tangent
+/// there.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ApertureElement {
     /// Element centre \[m].
     pub position: [f64; 3],
     /// Outward unit normal of the element face.
     pub normal: [f64; 3],
+    /// Unit vector along the element's width, in the face plane.
+    pub width_axis: [f64; 3],
 }
 
 impl ApertureElement {
-    /// Construct from a centre and an outward normal.
+    /// Construct from a centre, an outward normal, and a width direction.
+    ///
+    /// The normal is normalized; the width direction has its component along
+    /// the normal removed and is then normalized, so a slightly skewed input
+    /// still yields an orthonormal frame. The height axis is `normal × width`.
     ///
     /// # Errors
-    /// Returns `KwaversError::InvalidInput` if either vector is non-finite or
-    /// the normal has zero length.
-    pub fn new(position: [f64; 3], normal: [f64; 3]) -> KwaversResult<Self> {
-        for (name, v) in [("position", position), ("normal", normal)] {
+    /// Returns `KwaversError::InvalidInput` if any vector is non-finite, the
+    /// normal has zero length, or the width direction is parallel to it.
+    pub fn new(position: [f64; 3], normal: [f64; 3], width: [f64; 3]) -> KwaversResult<Self> {
+        for (name, v) in [("position", position), ("normal", normal), ("width", width)] {
             if !v.iter().all(|c| c.is_finite()) {
                 return Err(KwaversError::InvalidInput(format!(
                     "ApertureElement {name} must be finite, got {v:?}"
@@ -88,19 +100,44 @@ impl ApertureElement {
                 "ApertureElement normal must have non-zero length".to_owned(),
             ));
         }
+        let normal = [normal[0] / norm, normal[1] / norm, normal[2] / norm];
+        let along = dot(width, normal);
+        let in_plane = [
+            width[0] - along * normal[0],
+            width[1] - along * normal[1],
+            width[2] - along * normal[2],
+        ];
+        let width_norm = dot(in_plane, in_plane).sqrt();
+        if width_norm <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "ApertureElement width axis must not be parallel to the normal".to_owned(),
+            ));
+        }
         Ok(Self {
             position,
-            normal: [normal[0] / norm, normal[1] / norm, normal[2] / norm],
+            normal,
+            width_axis: [
+                in_plane[0] / width_norm,
+                in_plane[1] / width_norm,
+                in_plane[2] / width_norm,
+            ],
         })
     }
 
-    /// Field-point coordinates `(r, z)` of `target` in this element's frame:
-    /// `z` along the outward normal, `r` the lateral offset from that axis.
+    /// Unit vector along the element's height, `normal × width_axis`.
+    #[must_use]
+    pub fn height_axis(&self) -> [f64; 3] {
+        cross(self.normal, self.width_axis)
+    }
+
+    /// Field-point coordinates `[x, y, z]` of `target` in this element's
+    /// frame: `x` along the width axis, `y` along the height axis, `z` along
+    /// the outward normal.
     ///
     /// Returns `None` when the target is at or behind the face (`z <= 0`),
     /// where a baffled-piston SIR is not defined.
     #[must_use]
-    pub fn field_point(&self, target: [f64; 3]) -> Option<(f64, f64)> {
+    pub fn field_point(&self, target: [f64; 3]) -> Option<[f64; 3]> {
         let d = [
             target[0] - self.position[0],
             target[1] - self.position[1],
@@ -112,12 +149,7 @@ impl ApertureElement {
         if !z.is_finite() || z <= 0.0 {
             return None;
         }
-        let lateral = [
-            d[0] - z * self.normal[0],
-            d[1] - z * self.normal[1],
-            d[2] - z * self.normal[2],
-        ];
-        Some((dot(lateral, lateral).sqrt(), z))
+        Some([dot(d, self.width_axis), dot(d, self.height_axis()), z])
     }
 }
 
@@ -126,27 +158,32 @@ impl ApertureElement {
 /// A provider samples the kernel over **its own support only** — from the
 /// round-trip onset `2·d_min/c` to `2·d_max/c` — so the cost of one call is the
 /// kernel's width in samples and nothing else. The `samples` of
-/// `CircularPistonSir::round_trip_response` are exactly that; its onset index
-/// is dropped at the seam, because synthesis applies the round-trip delay
-/// itself. Implementations are free to cache: the kernel depends only on
-/// `(r, z)`, while synthesis evaluates it once per element–scatterer pair.
+/// `CircularPistonSir::round_trip_response` and
+/// `FarFieldRectangleSir::round_trip_response` are exactly that; the onset
+/// index is dropped at the seam, because synthesis applies the round-trip
+/// delay itself. Implementations are free to cache: the kernel depends only
+/// on the field point in the element frame, while synthesis evaluates it once
+/// per element–scatterer pair.
 pub trait RoundTripKernel {
-    /// Two-way kernel samples for a field point at lateral offset `r_m` and
-    /// axial distance `z_m`, on a `dt_s` grid, starting at the kernel's onset.
+    /// Two-way kernel samples for a field point at `[x_m, y_m, z_m]` in the
+    /// element's frame (width, height, outward normal — see
+    /// [`ApertureElement::field_point`]), on a `dt_s` grid, starting at the
+    /// kernel's onset.
     ///
     /// An empty return means the support is narrower than one sample; synthesis
     /// then treats the aperture as a point element. Leading or trailing zeros
     /// are tolerated and stripped, but they are wasted work, not delay: the
-    /// delay is synthesis's own.
-    fn round_trip(&self, r_m: f64, z_m: f64, dt_s: f64) -> Vec<f64>;
+    /// delay is synthesis's own. A non-finite sample is a provider defect and
+    /// is reported by synthesis rather than absorbed.
+    fn round_trip(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> Vec<f64>;
 }
 
 impl<F> RoundTripKernel for F
 where
-    F: Fn(f64, f64, f64) -> Vec<f64>,
+    F: Fn(f64, f64, f64, f64) -> Vec<f64>,
 {
-    fn round_trip(&self, r_m: f64, z_m: f64, dt_s: f64) -> Vec<f64> {
-        self(r_m, z_m, dt_s)
+    fn round_trip(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> Vec<f64> {
+        self(x_m, y_m, z_m, dt_s)
     }
 }
 
@@ -190,6 +227,14 @@ pub(super) fn convolve_into(out: &mut [f64], trace: &[f64], pulse: &[f64], dt: f
 
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0].mul_add(b[0], a[1].mul_add(b[1], a[2] * b[2]))
+}
+
+fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
 }
 
 #[cfg(test)]
