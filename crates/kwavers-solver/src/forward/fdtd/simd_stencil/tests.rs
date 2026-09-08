@@ -1,4 +1,5 @@
 use super::{FdtdSimdStencilConfig, FdtdSimdStencilProcessor};
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array3;
 
 #[test]
@@ -12,7 +13,7 @@ fn test_stencil_creation() {
 fn test_dimension_validation() {
     let config = FdtdSimdStencilConfig::default();
     let result = FdtdSimdStencilProcessor::new(2, 64, 64, config);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Grid dimensions must be at least 3");
 }
 
 #[test]

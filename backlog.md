@@ -1,5 +1,201 @@
 # Backlog / Strategy
 
+<a id="kw-fft3d-baseline-2026-09-08"></a>
+
+## KW-FFT3D-BASELINE-2026-09-08 — The spectral pair a PSTD step is built on had no timing [patch] [perf] — delivered 2026-09-08
+
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fft3d-baseline`;
+  lane `D:/atlas/worktrees/kwavers-compute-manager` (re-pointed from an idle
+  `main` checkout).
+- **Gap.** A PSTD step transforms a field, applies a k-space operator and
+  transforms back, so the 3-D complex FFT pair is its dominant cost — and it
+  had no benchmark at the shapes the solver plans. `critical_path_benchmarks`
+  has a `kspace_operators` group, but that times `compute_kx`/`compute_ky`,
+  which build the k-space vectors once per plan rather than the transform that
+  runs every step. Nothing measured the transform itself.
+- **Delivered:** `crates/kwavers/benches/fft3d_baseline.rs`, a forward plus
+  normalized-inverse round trip at the extents the solver plans. Budgeted at
+  300 ms warm-up, 2 s measurement, 20 samples per shape rather than criterion's
+  defaults, which would have spent 24 s of the suite's committed bound on one
+  group.
+
+  | extent | round trip | per forward | per element |
+  | --- | --- | --- | --- |
+  | 16³ | 40.7 µs | 20.4 µs | 9.9 ns |
+  | 32³ | 579 µs | 290 µs | 17.7 ns |
+  | 64³ | **3.40 ms** | **1.70 ms** | 13.0 ns |
+
+  The 32³ row is the noisiest (interval 491–707 µs) and sits worse per element
+  than either neighbour; it is recorded as measured rather than smoothed, and
+  it is the row to re-take first on a quiet host.
+- **The number that redirects work: the codelets are a minority of the cost.**
+  A 64³ forward is three axis passes of 4,096 lanes, so 12,288 length-64
+  codelet calls, and the measured forward is 1.70 ms — **138 ns per lane
+  transform**. Apollo's own probe puts a length-32 transform at 18.2 ns, and an
+  `N log N` extrapolation to length 64 gives 43.6 ns, so the codelets account
+  for about **0.54 ms of 1.70 ms, roughly a third**.
+- **The rest is data movement, and the structure says so.** `dimension_3d`'s
+  static path calls `transpose_matrices` four times per forward
+  (`static_impl.rs:142,154,166` and the returning pass); at 64³ each moves the
+  whole 16 MB volume, far outside any cache. That is consistent with the
+  per-element cost being flat-to-rising with extent while codelet work per
+  element grows only as `log N`.
+- **Stated as the estimate it is.** The 43.6 ns figure is extrapolated, not
+  measured, and it is extrapolated from a *latency* reading — a lane pass runs
+  the throughput regime, where apollo measured its arms faster still. Both
+  biases push the same way, so a third is an **upper bound** on the codelet
+  share and the movement share is at least two thirds.
+- **Consequence for the provider item.**
+  [apollo `#apollo-n64-lane-pass`](../apollo/backlog.md#apollo-n64-lane-pass)
+  was filed the same day to optimise the N = 64 codelet as the stack's
+  most-executed kernel. It still is — but this measurement caps what it can
+  win at roughly a third of the transform, and names the larger lever as the
+  axis-pass transposes. The apollo item should be read with this bound on it.
+- **Acceptance (met).** A committed, budgeted benchmark exists for the 3-D
+  complex FFT at the planned extents; the codelet-versus-movement split is
+  attributed with its evidence and its limits.
+- **Next increment, not taken here.** Attribute the split by measurement rather
+  than extrapolation: time an axis pass with the transposes elided against the
+  full pass, or count cycles per phase. Only then is it worth asking whether
+  the transposes can be fused into the lane loop or the pass reordered to move
+  less.
+- **Risk / change class:** [patch] [perf]; **dependencies:** none.
+
+## KW-ANALYSIS-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-analysis` [patch] — done 2026-09-07 <a id="kw-analysis-value-assertions-2026-09-07"></a>
+
+- **Outcome:** all 14 sites name the rejection. Several distinguished nothing
+  before: `MUSICProcessor::new` rejects a zero source count, an oversized
+  source count, and a sensor count below two through the same variant, so the
+  two MUSIC tests were interchangeable; the same held for `ModelOrderConfig`'s
+  sensor and sample bounds and for the neural `SensorGeometry` triple, where
+  one test covered three distinct guards.
+- **`test_neural_layer_dimension_mismatch` collapses** from an `is_err()` plus
+  an `if let Err(..)`/`else { panic! }` block to one helper call carrying the
+  same claim.
+- **Shown to bite:** swapping the zero-source guard's message for the
+  two-sensor one fails `test_music_invalid_num_sources_zero`; the old
+  assertion passed. Reverted, file re-verified against `HEAD`.
+- **Evidence:** the conformance class for this crate goes 14 → 0;
+  `cargo nextest run -p kwavers-analysis --lib` 744/744; fmt clean.
+- **Remaining stack-wide:** 73 sites (kwavers 9, kwavers-therapy 8,
+  kwavers-medium/-math/-imaging 6 each, kwavers-driver 3,
+  kwavers-transducer/-gpu/-diagnostics 2 each, and the rest).
+
+## KW-PHYSICS-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-physics` [patch] — done 2026-09-07 <a id="kw-physics-value-assertions-2026-09-07"></a>
+
+- **Outcome:** all 17 sites assert the cause. Sixteen are rejections, now
+  checked through `kwavers_core::test_support::{assert_invalid_input,
+  assert_rejects}`; the seventeenth was
+  `traj.dissolution_time.is_some()`, replaced by binding the time and
+  asserting it falls inside the integration horizon — an `is_some` on an
+  integrator result says only that the loop terminated.
+- **One test already carried the right claim in the wrong shape:**
+  `test_fuse_insufficient_modalities` followed its `is_err()` with an
+  `if let Err(...)` that checked the message. The helper states it in one
+  line and drops the unreachable `else { panic! }`.
+- **Shown to bite:** swapping the buckling guard's reported parameter to
+  `rupture_ratio` fails `test_validation_invalid_buckling_ratio`; the old
+  assertion passed. Reverted, file re-verified against `HEAD`.
+- **Evidence:** the conformance class for this crate goes 17 → 0;
+  `cargo nextest run -p kwavers-physics --lib` 1562/1562; fmt clean. The
+  crate's 26 pre-existing clippy warnings (println! in test modules,
+  single-character patterns in `phase_shifting`) are unchanged and land in no
+  file this item touched — CI does not hold this crate to `-D warnings`.
+- **Remaining stack-wide:** 87 sites (kwavers-analysis 14, kwavers 9,
+  kwavers-therapy 8, kwavers-medium/-math/-imaging 6 each, kwavers-driver 3,
+  kwavers-transducer/-gpu/-diagnostics 2 each).
+
+## KW-SOLVER-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-solver` [patch] — done 2026-09-07 <a id="kw-solver-value-assertions-2026-09-07"></a>
+
+- **Outcome:** all 19 `assert!(result.is_err())` sites in `kwavers-solver`
+  assert the typed variant and the message fragment naming the violated
+  constraint. Two `#[cfg(test)]` helpers carry the form:
+  `assert_invalid_input` (variant + cause, for the `InvalidInput` contract) and
+  `assert_rejects` (cause only, for contracts rejecting through `Validation`
+  or `InternalError`).
+- **A live defect, not only a form violation.** `test_avx512_invalid_dimensions`
+  called a constructor that rejects both on `nx < 4` *and* on a host without
+  AVX-512, returning different variants. On any non-AVX-512 machine the test
+  passed without ever reaching the dimension check — the assertion could not
+  fail on the defect it was written for. `test_avx512_invalid_tile_size` had
+  the same shape.
+- **Shown to bite:** changing the production dimension guard to return
+  `FeatureNotAvailable` instead of `InvalidInput` fails
+  `test_avx512_invalid_dimensions`; under the old assertion it passed. The
+  mutation was reverted and the file re-verified byte-identical.
+- **Evidence:** the class count for this crate goes 19 → 0 by the atlas
+  conformance detector; `cargo nextest run -p kwavers-solver --lib` 950/950
+  (2 skipped); clippy `-p kwavers-solver --all-targets -D warnings` and fmt
+  clean.
+- **Remaining stack-wide:** 104 sites in the other kwavers crates
+  (kwavers-physics 17, kwavers-analysis 14, kwavers 9, kwavers-therapy 8,
+  kwavers-medium/-math/-imaging 6 each, the rest smaller) — one item per crate,
+  same pattern.
+
+## KW-GPU-COMPUTE-COMMANDS-2026-09-07 — Delete the orphaned WGPU command helper [patch] — done 2026-09-07 <a id="kw-gpu-compute-commands-2026-09-07"></a>
+
+- **Outcome:** `gpu::compute` held only `WgpuComputeCommands` after its two
+  FDTD dispatchers were deleted. Nothing constructs it: the sole reference in
+  the workspace was its own `size_of::<T>() > 0` test, which cannot fail on a
+  struct with two non-zero-sized fields — an existence-only assertion guarding
+  an unreachable type. Module, type, and test deleted; the `pub mod` and
+  re-export go with them.
+- **Why it survived two deletions:** it was the shared helper of the pair, so
+  removing the pair left it without a caller. Superseded artifacts belong in
+  the change that supersedes them; this is that residue collected one commit
+  late.
+- **Evidence:** `git grep` for the type returns nothing; clippy
+  `-p kwavers-gpu --features gpu --all-targets -D warnings` clean; nextest
+  164/164 (was 165 — the deleted test is the module's own).
+
+## KW-GPU-FDTD-SHADER-COPY-2026-09-06 — Delete the unwired `kwavers-gpu` FDTD stencil copy [patch] — done 2026-09-07 <a id="kw-gpu-fdtd-shader-copy-2026-09-06"></a>
+
+- **Landed:** PR #728 (`21d0b191a`). 775 lines deleted, 1 added.
+- **Outcome:** `gpu::compute::fdtd_gpu` (`WgpuFdtdPressureDispatcher`,
+  `PressureParams`, `shaders/fdtd_pressure.wgsl`) and its CPU reference
+  `fdtd_cpu` (`FdtdCpuReferenceDispatcher`) are a second 6-point Laplacian
+  wave-update kernel with no dispatch site: `WgpuFdtdPressureDispatcher` is not
+  re-exported past its module, and `FdtdCpuReferenceDispatcher` exists only as
+  its value-semantic reference. Delete both with the shader and their tests.
+- **Acceptance:** no reference to the deleted items remains
+  (`git grep` to zero); `cargo clippy -p kwavers-gpu --all-targets -D warnings`
+  and `cargo nextest run -p kwavers-gpu` clean.
+- **Delivered:** `aa738cefe` deletes 775 lines and adds one. `git grep` for
+  each deleted name returns nothing but this entry.
+- **Blocked on, then unblocked by, a dependency defect this change did not
+  cause.** kwavers could not resolve its lock at all: Moirai's workspace went
+  0.6.0 on its default branch at 2026-09-06 21:34 while ten members still
+  required `^0.5.0` from that same branch, so `cargo metadata --locked` and
+  `scripts/lockfile.py --check` both failed and the pre-push gate refused every
+  push. Root cause and the ordered sweep are recorded at atlas
+  `backlog.md#atlas-moirai-06-forward-sweep`; this branch carries kwavers' own
+  half (`moirai-parallel` 0.5 → 0.6) plus the regenerated lock.
+- **Filed in passing:** `gpu::compute_manager::fdtd_cpu` is a *third*
+  hand-rolled first-difference sweep in `kwavers-gpu`, this one reachable. It
+  is a consolidation target for the leto/hephaestus seam, not part of this
+  deletion — see `KW-GPU-COMPUTE-MANAGER-STENCIL-2026-09-07`.
+
+## KW-GPU-COMPUTE-MANAGER-STENCIL-2026-09-07 — Delete `compute_manager`, the third stencil copy [patch] — done 2026-09-07 <a id="kw-gpu-compute-manager-stencil-2026-09-07"></a>
+
+- **Re-scoped from rewrite to deletion on evidence.** The item was filed as
+  "route the sweep through leto" on the assumption `compute_manager` was
+  reachable. It is not: `git grep ComputeManager` outside the file itself
+  returns one line, its own `pub mod` declaration. The velocity-divergence
+  sweep, the absorption loop, and the raw `wgpu::Device`/`Queue`/buffer
+  accessors have no call site in the workspace.
+- **What it was:** a "GPU compute manager" whose field updates are CPU triple
+  loops — its own doc says so ("current field-update helpers below are CPU
+  routines") — and whose module doc claims to keep "raw WGPU handles confined
+  to the WGPU specialization" while exposing `device()`, `queue()`,
+  `create_buffer` and `write_buffer` verbatim. A scaffold whose GPU side never
+  arrived, contradicting its own contract. Deleted rather than wired: an
+  unused capability is deleted outright, and the seam it gestured at is the
+  one leto and hephaestus already own (ADR 128).
+- **Evidence:** `cargo clippy -p kwavers-gpu --features gpu --all-targets
+  -D warnings` clean; nextest 165/165 (was 168 — the three deleted tests are
+  the module's own); `cargo check -p kwavers-gpu --features gpu --lib` clean.
+
+
 ## ✅ KW-PY-SIMULATION-MOD-SLICES-2026-09-02 — Slice `simulation_py/mod.rs` to the file target [patch] — done 2026-09-02
 
 - **Delivered:** `mod.rs` (803 → 236 lines) is the pyclass, its constructor and the module tree; the `#[pymethods]` groups live where their concern does — `configuration.rs` (config objects, thermal/poroelastic), `pml.rs` (PML geometry and k-space numerics), `physics.rs` (nonlinearity, absorption, Helmholtz) — under the crate's existing `multiple-pymethods` feature; `run/execute.rs` holds `Simulation.run` and `run/prepare.rs` the pure conversions it was inlining (CFL time step with its named Courant number, solver/FFT-backend maps, elastic velocity source, IVP axis). The `kwavers_error_to_py_local` alias "kept for old solver files" is deleted and its six callers use the one name.
@@ -13033,7 +13229,7 @@ breast-imaging reconstruction.
 - Closed the bacterial-channel coverage gap in `physics::acoustics::therapy::sonogenetics` by adding `MscLG22N` and `MscS` to the existing `MechanoChannel` abstraction, updating theorem/proof documentation for two-state gating, and preserving one canonical `compute_p_open` dispatch path.
 - Closed the sonogenetics channel organization gap by moving the two-state gating theorem, pressure-threshold theorem, channel identity table, canonical parameters, and ion-current theorem into domain-scoped nested files while preserving the single canonical dispatch path.
 - Corrected `ion_current` to return injected depolarizing current `g·n·P_open·(E_rev − V_m)`, matching the LIF equation contract while documenting the distinction from electrophysiology outward-current sign.
-- Residual performance follow-up: `cargo test -p kwavers --lib` passes but reports `solver::forward::nonlinear::kzk::solver::tests::test_conservation_diagnostics_disable` and `solver::validation::numerical_accuracy::pstd::tests::test_pstd_phase_velocity_accuracy` as running beyond 60 seconds; optimize the real KZK/PSTD paths before treating this as closed performance debt.
+- Residual performance follow-up — **discharged, verified stale 2026-09-08.** This entry recorded `solver::forward::nonlinear::kzk::solver::tests::test_conservation_diagnostics_disable` and `solver::validation::numerical_accuracy::pstd::tests::test_pstd_phase_velocity_accuracy` as running beyond 60 seconds, and asked that the real KZK/PSTD paths be optimized before the debt was called closed. Re-run under the committed nextest budget they now measure **0.018 s and 0.500 s** — three orders inside the 60 s termination bound, not near it. Whatever fixed them landed between the note and today; the note was left claiming open performance debt that does not exist, which is a trap for the next reader of this file rather than a defect in the solver. Re-open only on a fresh breach, which the committed budget will report on its own.
 
 ## Thermal Property Law Modernization
 - Closed the thermal absorption placeholder gap in `physics::thermal::properties`: the previous `1 - 0.02 ΔT` law could become negative during ablation heating. The replacement is a positive exponential soft-tissue law using the same `0.015 1/°C` coefficient as the bioheat absorption model.

@@ -1,6 +1,7 @@
 use super::arrhenius::ArrheniusValidator;
 use super::kinetics_database::ValidatedKinetics;
 use super::literature::LiteratureValue;
+use kwavers_core::test_support::assert_rejects;
 
 #[test]
 fn test_literature_value_creation() {
@@ -112,7 +113,7 @@ fn test_kinetics_database_completeness() {
 fn test_unknown_reaction() {
     let kinetics = ValidatedKinetics::new();
     let result = kinetics.validate("unknown_reaction", 1e8);
-    assert!(result.is_err());
+    assert_rejects(result, "Unknown reaction: unknown_reaction");
 }
 
 #[test]

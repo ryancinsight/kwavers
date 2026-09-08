@@ -1,6 +1,7 @@
 use super::beamformer::compute_lag_coherence;
 use super::*;
 use eunomia::Complex64;
+use kwavers_core::test_support::assert_rejects;
 use leto::{Array2, Array3};
 
 #[test]
@@ -37,7 +38,7 @@ fn test_slsc_rejects_single_element() {
     let data = Array2::from_elem((1, 10), Complex64::new(1.0, 0.0));
     let slsc = SlscBeamformer::new();
     let result = slsc.process(&data);
-    assert!(result.is_err());
+    assert_rejects(result, "SLSC requires at least 2 array elements");
 }
 
 #[test]
@@ -292,7 +293,7 @@ fn slsc_batch_rejects_single_element() {
     let data = Array3::from_elem((1, 3, 8), Complex64::new(1.0, 0.0));
     let config = SlscConfig::default();
     let result = process_slsc_batch(&data, &config);
-    assert!(result.is_err(), "batch with n_elements=1 must return Err");
+    assert_rejects(result, "SLSC requires at least 2 array elements");
 }
 
 // ─── MultiLagSlsc exact value tests ───────────────────────────────────────────

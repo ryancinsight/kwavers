@@ -82,6 +82,8 @@ name = "elastic_shear_fwi_lesion"
 required-features = ["clinical-imaging"]
 
 [dev-dependencies]
+# Rejection assertions shared across the workspace's test modules.
+kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 kwavers-alloc-probe = { path = "../kwavers-alloc-probe" }
 proteus = { workspace = true }
 

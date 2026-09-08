@@ -4,6 +4,7 @@ use super::{
 };
 use eunomia::assert_relative_eq;
 use eunomia::Complex64;
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array2;
 
 #[test]
@@ -42,7 +43,7 @@ fn test_sample_covariance_insufficient_snapshots() {
     let data = Array2::<Complex64>::from_elem((8, 4), Complex64::default());
 
     let result = estimate_sample_covariance(&data, 0.0);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Insufficient snapshots");
 
     let cov = estimate_sample_covariance(&data, 1e-4).unwrap();
     assert_eq!(

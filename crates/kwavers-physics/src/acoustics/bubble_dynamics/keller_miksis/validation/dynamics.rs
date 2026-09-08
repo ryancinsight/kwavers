@@ -4,6 +4,7 @@ use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleSt
 use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::test_support::assert_rejects;
 
 #[test]
 fn test_keller_miksis_creation() {
@@ -124,7 +125,9 @@ fn test_keller_miksis_mach_limit() {
 
     let result = model.calculate_acceleration(&mut state, 0.0, 0.0, 0.0);
 
-    assert!(result.is_err(), "High Mach number should be rejected");
+    // The Keller-Miksis equation is singular as Ṙ → c; the guard fires at
+    // mach > 0.95 and reports the offending ratio as the CFL limit.
+    assert_rejects(result, "exceeds CFL limit 0.96");
 }
 
 #[test]

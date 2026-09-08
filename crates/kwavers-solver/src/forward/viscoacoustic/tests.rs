@@ -4,6 +4,7 @@
 
 use super::ViscoacousticMemorySolver;
 use kwavers_core::error::KwaversError;
+use kwavers_core::test_support::assert_invalid_input;
 use kwavers_math::fft::Complex64;
 use leto::Array3;
 use std::f64::consts::TAU;
@@ -773,7 +774,7 @@ fn finite_domain_rejects_non_finite_field_elements() {
         &ones.clone(),
         &[(dm_neg, ones)],
     );
-    assert!(r.is_err(), "ΔM < 0 must be rejected");
+    assert_invalid_input(r, "finite ΔM≥0");
 }
 
 #[test]
@@ -813,7 +814,7 @@ fn absorbing_layer_extreme_thickness_never_panics() {
     // these can be hosted by an 8-cell axis, so the layer stays cleared.
     for thickness in [usize::MAX, usize::MAX - 1, n, n + 1, 5, 4] {
         let r = s.enable_absorbing_layer(thickness, 2.0e6);
-        assert!(r.is_ok(), "thickness {thickness} must not panic or error");
+        r.expect("an 8-cell axis accepts every thickness by clearing the layer");
         assert!(
             s.damping_decay_state().is_none(),
             "an 8-cell axis cannot host thickness {thickness}"

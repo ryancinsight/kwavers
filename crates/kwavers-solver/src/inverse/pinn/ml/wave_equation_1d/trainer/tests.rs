@@ -2,6 +2,7 @@ use super::super::config::PinnConfig;
 use super::trainer_impl::PinnTrainer;
 use coeus_core::MoiraiBackend;
 use kwavers_core::constants::fundamental::SOUND_SPEED_AIR;
+use kwavers_core::test_support::assert_invalid_input;
 use leto::{Array1, Array2};
 
 type TestBackend = MoiraiBackend;
@@ -34,7 +35,7 @@ fn test_trainer_with_invalid_config() {
         ..Default::default()
     };
     let trainer = PinnTrainer::<TestBackend>::new(config);
-    assert!(trainer.is_err());
+    assert_invalid_input(trainer, "Must have at least one hidden layer");
 }
 
 #[test]
@@ -68,7 +69,7 @@ fn test_train_mismatched_dimensions() {
     let t_data = linspace(0.0, 0.1, 30);
     let u_data = Array2::zeros((20, 1));
     let result = trainer.train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, 10);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Data dimensions must match");
 }
 
 #[test]
@@ -83,7 +84,7 @@ fn test_train_invalid_u_shape() {
     let t_data = linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 2));
     let result = trainer.train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, 10);
-    assert!(result.is_err());
+    assert_invalid_input(result, "u_data must have shape [N, 1]");
 }
 
 #[test]

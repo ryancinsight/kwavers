@@ -1,4 +1,5 @@
 use super::*;
+use kwavers_core::test_support::assert_invalid_input;
 
 fn assert_close(actual: f64, expected: f64) {
     let bound = 8.0 * f64::EPSILON * expected.abs().max(1.0);
@@ -22,7 +23,7 @@ fn test_config_validation_negative_dt() {
         ..Default::default()
     };
     let result = ThermalAcousticCoupler::new(config);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Time step must be positive");
 }
 
 #[test]
@@ -32,7 +33,9 @@ fn test_config_validation_cfl_acoustic() {
         ..Default::default()
     };
     let result = ThermalAcousticCoupler::new(config);
-    assert!(result.is_err());
+    // The acoustic CFL bound, not the thermal one: both are InvalidInput, so
+    // the message fragment is what separates them.
+    assert_invalid_input(result, "CFL violation (acoustic)");
 }
 
 #[test]

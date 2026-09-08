@@ -1,6 +1,7 @@
 use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
 use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
+use kwavers_core::test_support::assert_invalid_input;
 
 use super::*;
 
@@ -64,11 +65,11 @@ fn sensor_geometry_rejects_invalid_dimensions_and_parameters() {
         frequency,
         sound_speed,
     );
-    assert!(zero_elements.is_err());
+    assert_invalid_input(zero_elements, "dimensions must be positive");
 
     let zero_pitch =
         SensorGeometry::linear_array(8, Length::from_unit::<Meter>(0.0), frequency, sound_speed);
-    assert!(zero_pitch.is_err());
+    assert_invalid_input(zero_pitch, "finite positive pitch");
 
     let nonfinite_frequency = SensorGeometry::linear_array(
         8,
@@ -76,7 +77,7 @@ fn sensor_geometry_rejects_invalid_dimensions_and_parameters() {
         Frequency::from_unit::<Hertz>(f64::NAN),
         sound_speed,
     );
-    assert!(nonfinite_frequency.is_err());
+    assert_invalid_input(nonfinite_frequency, "finite positive pitch");
 }
 
 #[test]

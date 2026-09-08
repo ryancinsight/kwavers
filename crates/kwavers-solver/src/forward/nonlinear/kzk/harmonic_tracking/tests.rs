@@ -2,6 +2,7 @@ use super::tracker::HarmonicTracker;
 use super::types::{HarmonicAnalysis, HarmonicConfig};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array1;
 
 #[test]
@@ -114,5 +115,5 @@ fn test_empty_pressure_handling() {
     let empty_pressure = Array1::zeros([0]);
 
     let result = tracker.analyze_harmonics(&empty_pressure);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Pressure array is empty");
 }

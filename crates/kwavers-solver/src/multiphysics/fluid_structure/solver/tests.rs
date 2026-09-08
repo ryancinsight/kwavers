@@ -1,4 +1,5 @@
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use kwavers_core::test_support::assert_rejects;
 use leto::Array3;
 
 use super::super::interface::{FsiInterface, FsiInterfaceSpec};
@@ -23,7 +24,7 @@ fn water_steel_spec(normal: [f64; 3], n: usize) -> FsiInterfaceSpec {
 #[test]
 fn test_zero_normal_rejected() {
     let interface = FsiInterface::new(water_steel_spec([0.0, 0.0, 0.0], 64));
-    assert!(interface.is_err());
+    assert_rejects(interface, "normal vector cannot be zero");
 }
 
 /// Test ghost cell traction balance at planar water-steel interface.
