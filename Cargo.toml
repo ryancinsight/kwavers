@@ -14,12 +14,12 @@ horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae" }
 # These repos carry their own [workspace], so Cargo resolves their internal
 # inheritance against THEIR roots â€” no path scaffolding needed here. SSOT: members
 # inherit via `{ workspace = true }`.
-ritk-core = { version = "0.10.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-io = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-image = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-spatial = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-registration = { version = "0.54.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-core = { version = "0.10.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
+ritk-io = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
+ritk-image = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
+ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
+ritk-spatial = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
+ritk-registration = { version = "0.54.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
 coeus-core = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-tensor = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-autograd = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
