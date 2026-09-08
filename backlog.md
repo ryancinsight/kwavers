@@ -1,5 +1,37 @@
 # Backlog / Strategy
 
+<a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>
+
+## KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08 — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — todo
+
+- **Outcome:** the pull-request path runs the affected-scope checks; the full
+  matrix (extra toolchains, heavy validation, coverage) moves to the scheduled
+  selection-drift backstop, bringing verification round-trip toward the
+  five-minute job target.
+- **Measured 2026-09-08, `main` runs:** CI/CD Pipeline 94 and 114 min wall
+  clock, Architecture Validation 75 min, Deploy mdBook 64 and 95 min. Job
+  runtimes in run `34257329545` sum to about 82 min but run in parallel, so
+  most of the wall clock is inter-job queueing, not work: runner starvation.
+- **Slowest per-PR jobs:** Code Coverage 25m, PINN Feature Validation 12m,
+  Heavy Validation (absorption decay) 10m, Build & Test (stable) 8m, Heavy
+  Validation (kuznetsov) 7m, Build & Test (beta) 5m, (nightly) 4m.
+- **Against policy:** extra toolchains, heavy suites, and coverage are the
+  scheduled backstop, not per-PR gates; coverage is a ratchet, not a merge
+  gate. One pull request currently starts about 24 checks across 5 always-on
+  workflows.
+- **Why it matters now:** with no ruleset and no required checks, `--auto`
+  merges immediately rather than enqueueing, so there is no queue to absorb
+  the latency — merges land on partial evidence (kwavers#742 merged on its
+  decisive check while 20 others were queued). Requiring checks on top of a
+  100-minute pipeline would institutionalize the starvation instead of curing
+  it, so job and queue speed comes first, then the ruleset.
+- **Decomposition:** (1) move beta/nightly toolchains, heavy validation, and
+  coverage to schedule; (2) re-measure round-trip; (3) wire the remaining
+  affected-scope checks as required status checks and let auto-merge enqueue.
+- **Acceptance:** a pull request's verification round-trip is measured after
+  (1), the moved jobs still run on schedule with unchanged commands and
+  budgets, and no check is deleted.
+
 <a id="kw-mnemosyne-global-allocator-2026-09-08"></a>
 
 ## KW-MNEMOSYNE-GLOBAL-ALLOCATOR-2026-09-08 — Route kwavers allocation through Mnemosyne [patch] — todo
