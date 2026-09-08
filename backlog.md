@@ -71,6 +71,30 @@
   refused at push even when the working-tree lock resolves; a push whose range
   touches no manifest or lock still skips; the hook's added cost is measured.
 
+<a id="kw-gpu-tests-skip-without-proving-absence-2026-09-08"></a>
+
+## KW-GPU-TESTS-SKIP-WITHOUT-PROVING-ABSENCE-2026-09-08 — A broken GPU skips instead of failing [patch] — todo
+
+- **Outcome:** the GPU-gated tests skip only when a GPU is genuinely
+  unavailable, and fail when one is present but the context will not build.
+- **Asymmetry, measured 2026-09-08:** `avx512_stencil/tests.rs`'s
+  `processor_or_skip` asserts `!is_x86_feature_detected!("avx512f")` before
+  skipping, so a present-but-broken feature fails. `gpu_buffer_tests.rs` and
+  `gpu_compute_backend_patterns.rs` instead swallow the error from
+  `CoreGpuContext::try_new()`, print "GPU not available, skipping test", and
+  early-return -- a driver fault or a regression inside `try_new` reads exactly
+  like absent hardware, and the suite reports green.
+- **Verified the tests do run where hardware exists:** all six
+  `gpu_buffer_tests` executed on this host with no skip message. The exposure
+  is the hosted runners, which have no GPU and so take the silent path on every
+  run.
+- **Design question the fix must answer:** absence needs an oracle independent
+  of `try_new()` -- enumerating adapters and asserting that if any adapter
+  exists the context must build is the candidate; the AVX-512 helper had
+  `is_x86_feature_detected!` for free and the GPU case does not.
+- **Acceptance:** with an adapter present, a forced `try_new` failure fails the
+  suite rather than skipping it; with no adapter, the tests still skip.
+
 <a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>
 
 ## KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08 — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — todo
