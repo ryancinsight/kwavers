@@ -2,53 +2,11 @@
 
 <a id="kw-sir-trace-accumulation-2026-09-08"></a>
 
-## KW-SIR-TRACE-ACCUMULATION-2026-09-08 — Finite-aperture RF synthesis pays per pair for the whole trace [major] [perf] — review
+## KW-SIR-TRACE-ACCUMULATION-2026-09-08 — Finite-aperture RF synthesis pays per pair for the whole trace [major] [perf] — done 2026-09-08
 
-- **Integrator:** claude-fable-5-1; **branch:** `perf/kwavers-sir-trace-accumulation`
-  (main tree, re-pointed from the merged `refactor/kwavers-elastic-constructors`).
-- **Driver:** Rivera, Demené & Tanter, "Sparse Delta Integration method for the
-  calculation of spatiotemporal pressure fields of arbitrary ultrasound transducer
-  geometries", arXiv:2608.26891 (2026): a patch's SIR cost must not scale with its
-  width in samples or with the trace length. `synthesize_rf_with_aperture` scales
-  with both — per element–scatterer pair it samples the round-trip kernel from
-  `t = 0` over the whole window (O(T) `acos` calls), auto-convolves it against
-  that window (O(T·Δk)), convolves the pulse per pair (O(Δk·L)), then strips the
-  leading zeros it just computed.
-- **Outcome:** `CircularPistonSir::round_trip_response` samples its own support
-  only (onset + samples, O(Δk²)); the seam returns support-local samples;
-  synthesis accumulates unit-area kernels into one trace per element and
-  convolves the pulse once per element; `kernel_samples` and its sizing error go.
-- **Acceptance:** the ADR 113 oracles hold (on-axis area `(√(z²+a²)−z)²`,
-  vanishing-aperture convergence on `synthesize_rf`, smearing conserves the
-  integrated echo); a differential test pins the restructured synthesis to a
-  naive per-pair reference within reassociation rounding; the new
-  `crates/kwavers/benches/aperture_rf_synthesis.rs` records before and after.
-- **Class:** [major] — `RoundTripKernel::round_trip`, `synthesize_rf_with_aperture`
-  and `round_trip_response` change signature (no callers beyond tests); ADR 113
-  revised in place. Residual: the echo delay is the centre distance while the
-  kernel's own onset is discarded (ADR 113's temporal-shape choice, unchanged).
-- **Measured** (`aperture_rf_synthesis`, 8 pistons of 0.5 mm, 100 MHz, 6000
-  samples, criterion `--baseline before`, this host, unpinned):
-
-  | scatterers | pairs | before | after | ratio |
-  | --- | --- | --- | --- | --- |
-  | 16 | 128 | 1.398 ms | 284.6 µs | 4.9× |
-  | 64 | 512 | 6.786 ms | 379.3 µs | 17.9× |
-
-  The after rows differ by 95 µs over 384 extra pairs, so a pair now costs
-  about 0.25 µs and roughly 30 µs per element does not scale with the cloud:
-  the trace and row zeroing, the row copy into the array, and the
-  once-per-element pulse convolution. That residual is the next question for
-  this instrument, not this item's. Also surfaced: main was red on lockfile
-  integrity since #727; fixed in #738 before this landed.
-- **Gate evidence** (branch head, outside the overlay, `CARGO_TARGET_DIR`
-  shared): `cargo nextest run -p kwavers-phantom -p kwavers-physics --lib -E
-  'package(kwavers-phantom) | test(/spatial_impulse_response/)'` 49/49;
-  `cargo fmt --check`; `cargo clippy -p kwavers-phantom --all-targets`,
-  `-p kwavers-physics --lib`, `-p kwavers --bench aperture_rf_synthesis`, all
-  `-D warnings`; `cargo doc --no-deps` under `RUSTDOCFLAGS=-D warnings`;
-  `cargo test --doc` for both crates. Judge pass (separate context): oracles
-  1–4 PASS by independent reimplementation, HOLD on a stale seam doc, fixed.
+- Delivered: PR [#739](https://github.com/ryancinsight/kwavers/pull/739), commit `f9e16113e` (ADR 113 revised; CHANGELOG Unreleased).
+- Outcome: the kernel provider samples its own support and synthesis integrates once per trace; `aperture_rf_synthesis` 64 scatterers 6.786 ms → 379.3 µs (17.9×), 16 scatterers 4.9×; a ~30 µs per-element residual is the instrument's next question.
+- Surfaced and fixed on the way: main red on lockfile integrity since #727 (#738).
 
 <a id="kw-sir-far-field-patch-2026-09-08"></a>
 
