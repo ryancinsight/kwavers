@@ -135,6 +135,7 @@ pub fn create_loader(path: &str) -> KwaversResult<Box<dyn MedicalImageLoader>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kwavers_core::test_support::assert_rejects;
 
     #[test]
     fn test_medical_image_metadata_creation() {
@@ -170,6 +171,6 @@ mod tests {
     #[test]
     fn test_loader_factory_invalid() {
         let result = create_loader("test.xyz");
-        assert!(result.is_err());
+        assert_rejects(result, "Unsupported medical image format");
     }
 }

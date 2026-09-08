@@ -1,6 +1,7 @@
 use super::loader::DicomImageLoader;
 use super::types::DicomModality;
 use crate::medical::MedicalImageLoader;
+use kwavers_core::test_support::assert_rejects;
 
 #[test]
 fn test_dicom_loader_creation() {
@@ -93,15 +94,25 @@ fn test_dicom_compute_affine() {
 #[test]
 fn test_dicom_single_file_error() {
     let mut loader = DicomImageLoader::new();
-    let result = loader.load("test.dcm");
-    assert!(result.is_err());
+    // The path must exist for the loader to reach its single-file branch. The
+    // previous form passed "test.dcm", which does not exist, so this test and
+    // `test_dicom_invalid_path` both exercised the missing-path branch and
+    // neither covered the case this one is named for.
+    let directory = tempfile::tempdir().expect("temp dir");
+    let file = directory.path().join("slice.dcm");
+    std::fs::write(&file, b"not a real DICOM").expect("write the placeholder file");
+    let result = loader.load(&file.to_string_lossy());
+    assert_rejects(
+        result,
+        "Please provide directory path containing complete series",
+    );
 }
 
 #[test]
 fn test_dicom_invalid_path() {
     let mut loader = DicomImageLoader::new();
     let result = loader.load("/nonexistent/path/to/dicom");
-    assert!(result.is_err());
+    assert_rejects(result, "Path does not exist");
 }
 
 #[test]
