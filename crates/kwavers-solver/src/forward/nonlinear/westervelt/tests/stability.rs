@@ -28,16 +28,22 @@ fn pressure_prev2_allocated_after_first_step() {
 
     let dt = solver.calculate_dt(&medium, &grid).unwrap();
     solver.update(&medium, &grid, &[], 0.0, dt).unwrap();
-    assert!(
-        solver.pressure_prev2.is_some(),
-        "pp2 must exist after step 1 (lazy allocation in history rotation)"
+    let pp2 = solver
+        .pressure_prev2
+        .as_ref()
+        .expect("pp2 must exist after step 1 (lazy allocation in history rotation)");
+    assert_eq!(
+        pp2.shape(),
+        solver.pressure.shape(),
+        "the rotated history must be allocated at the field's shape"
     );
 
     solver.update(&medium, &grid, &[], dt, dt).unwrap();
-    assert!(
-        solver.pressure_prev2.is_some(),
-        "pp2 must remain allocated on subsequent steps"
-    );
+    let pp2 = solver
+        .pressure_prev2
+        .as_ref()
+        .expect("pp2 must remain allocated on subsequent steps");
+    assert_eq!(pp2.shape(), solver.pressure.shape());
 }
 
 /// **Theorem (nonlinear steepening, Hamilton & Blackstock 1998 §2):**

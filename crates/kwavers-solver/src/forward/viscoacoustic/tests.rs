@@ -756,10 +756,7 @@ fn finite_domain_rejects_non_finite_field_elements() {
         &ones,
         &[(dm_zero.clone(), ones.clone())],
     );
-    assert!(
-        r.is_ok(),
-        "ΔM = 0 is a lossless voxel and must stay accepted"
-    );
+    r.expect("ΔM = 0 is a lossless voxel and must stay accepted");
     let mut dm_neg = dm_zero;
     dm_neg[[2, 0, 0]] = -1.0;
     let r = ViscoacousticMemorySolver::new_heterogeneous(
