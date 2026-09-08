@@ -1,5 +1,54 @@
 # Backlog / Strategy
 
+## KW-VALUE-ASSERTIONS-SWEEP-2026-09-08 — Close the existence-only assertion class [patch] — done 2026-09-08 <a id="kw-value-assertions-sweep-2026-09-08"></a>
+
+- **Outcome:** the remaining 73 sites across twelve crates now assert the
+  cause. The conformance detector reports `existence_only_assertions` 73 → 0
+  for the repository; with the three crates closed on 2026-09-07 the class is
+  empty.
+- **Three tests could not fail on the defect they were named for.**
+  - `test_dicom_single_file_error` and `test_unified_loader_unsupported_format`
+    both passed paths that do not exist. Both loaders check existence first, so
+    each test exercised the missing-path branch — the same branch its sibling
+    test covered — and the single-file and unsupported-format branches were
+    never reached. Both now write a real file to a per-test temp directory.
+  - `test_kwave_compatibility_mode` asserted `result.is_some()` on a value the
+    loop had just wrapped in `Some`, discarding ten `KwaversResult`s.
+- **Weaker, but real:** `test_convergence_zero_error_handling` accepted any
+  rate (the two surviving points give exactly 1.0); the two proptest cases
+  asserted only that a solver constructed, and the CFL one now asserts the
+  solver's own stability bound accepts a step at the bound and rejects one past
+  it; `test_avx512_*`-style variant confusion recurred in
+  `kwavers-medium`'s temperature guards and `kwavers-imaging`'s loaders, where
+  neighbouring tests were interchangeable.
+- **Not converted, restructured instead:** `nonlinear3d/forward/source/plan.rs`
+  carried `assert!(source_body_mask.is_some(), ...)` as a *production*
+  precondition. It is now `expect` with the same invariant. The underlying
+  smell — an `Option` argument that one `SourceDomain` variant makes mandatory
+  — is filed as `KW-SOURCE-DOMAIN-OPTIONAL-MASK-2026-09-08`.
+- **Shown to bite:** giving the DICOM single-file branch the missing-path
+  message fails `test_dicom_single_file_error`, and swapping the acoustic
+  sound-speed guard's message for the density one fails
+  `test_validation_physical_constraints`; both passed under the old
+  assertions. Reverted and both files verified against `HEAD`.
+- **Evidence:** nextest per crate — solver 950/950, physics 1562/1562,
+  analysis+diagnostics+transducer+physics 2918/2918, therapy+imaging 411/411,
+  medium 215/215, math 129/129, driver 494/494, gpu 164/164, and `kwavers`
+  integration 542/542 (3 skipped). fmt clean; clippy `-D warnings` on
+  kwavers-core (all features), kwavers-solver, and kwavers-gpu (gpu feature)
+  clean.
+
+## KW-SOURCE-DOMAIN-OPTIONAL-MASK-2026-09-08 — `SourceDomain::ExteriorCoupling` needs a mask the type does not require [patch] — todo <a id="kw-source-domain-optional-mask-2026-09-08"></a>
+
+- **Outcome:** `nonlinear3d::forward::source::plan` takes
+  `source_body_mask: Option<&[bool]>` and panics when the domain is
+  `ExteriorCoupling` and the mask is absent — mutually dependent arguments
+  standing as independent ones. Carry the mask in the variant
+  (`ExteriorCoupling { body_mask }`) so the invalid combination is
+  unrepresentable and the runtime check disappears.
+- **Acceptance:** the panic site is gone; every caller passes the mask through
+  the variant; the existing plan tests pass unchanged.
+
 <a id="kw-orphaned-benches-2026-09-08"></a>
 
 ## KW-ORPHANED-BENCHES-2026-09-08 — The bench registry gate does not model modules [patch] [ci] — done 2026-09-08

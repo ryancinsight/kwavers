@@ -1,5 +1,6 @@
 //! Unit tests for `BrainAtlas`.
 
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array3 as LetoArray3;
 
 use super::BrainAtlas;
@@ -44,7 +45,10 @@ fn test_invalid_annotation_shape_is_rejected() {
     let image = LetoArray3::zeros([4, 4, 4]);
     let annotation = LetoArray3::zeros((4, 4, 3));
     let result = BrainAtlas::with_annotation(image, annotation, [0.1, 0.1, 0.1], [0.0; 3]);
-    assert!(result.is_err());
+    assert_invalid_input(
+        result,
+        "Atlas annotation shape must match reference image shape",
+    );
 }
 
 #[test]

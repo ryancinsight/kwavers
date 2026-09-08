@@ -2,6 +2,7 @@ use super::linear::LinearInterpolator;
 use super::traits::Interpolator;
 use super::trilinear::NumericsTrilinearInterpolator;
 use eunomia::assert_abs_diff_eq;
+use kwavers_core::test_support::assert_rejects;
 use leto::{Array1, Array3};
 
 #[test]
@@ -85,9 +86,10 @@ fn test_interpolation_out_of_bounds() {
     let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
     let data = Array3::zeros([5, 5, 5]);
+    // x = 1.0 with dx = 0.1 lands on cell 10 of a 5-cell axis.
     let result = interp.interpolate_point(data.view(), 1.0, 0.0, 0.0);
 
-    assert!(result.is_err());
+    assert_rejects(result, "outside domain");
 }
 
 #[test]

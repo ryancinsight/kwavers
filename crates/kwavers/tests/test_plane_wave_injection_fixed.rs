@@ -100,11 +100,7 @@ fn test_plane_wave_boundary_injection_fdtd() -> KwaversResult<()> {
     println!("  Amplitude ratio: {:.3}", max_amp / amplitude.max(1e-10));
 
     // Assertions
-    assert!(
-        arrival_time.is_some(),
-        "No arrival detected in pressure signal"
-    );
-    let arrival = arrival_time.unwrap();
+    let arrival = arrival_time.expect("no arrival detected in the pressure signal");
 
     // Arrival time should be within 20% of expected (accounting for numerical dispersion)
     let arrival_error = (arrival - expected_arrival).abs() / expected_arrival;
@@ -223,11 +219,7 @@ fn test_plane_wave_boundary_injection_pstd() -> KwaversResult<()> {
     println!("  Amplitude ratio: {:.3}", max_amp / amplitude.max(1e-10));
 
     // Assertions
-    assert!(
-        arrival_time.is_some(),
-        "No arrival detected in pressure signal"
-    );
-    let arrival = arrival_time.unwrap();
+    let arrival = arrival_time.expect("no arrival detected in the pressure signal");
 
     // Arrival time should be within 20% of expected (PSTD is more accurate)
     let arrival_error = (arrival - expected_arrival).abs() / expected_arrival;
@@ -406,8 +398,9 @@ fn test_boundary_vs_fullgrid_injection() -> KwaversResult<()> {
     println!("  FullGrid amplitude: {:.2e} Pa", amp_full);
 
     // BoundaryOnly should have correct arrival time
-    assert!(arrival_boundary.is_some(), "BoundaryOnly: no arrival");
-    let boundary_error = (arrival_boundary.unwrap() - expected_arrival).abs() / expected_arrival;
+    let arrival_boundary =
+        arrival_boundary.expect("BoundaryOnly injection must produce a detectable arrival");
+    let boundary_error = (arrival_boundary - expected_arrival).abs() / expected_arrival;
     assert!(
         boundary_error < 0.20,
         "BoundaryOnly arrival error {:.1}% exceeds 20%",

@@ -10,6 +10,7 @@ use super::subspot::{gbm_subspot_covered_fraction, gbm_subspot_raster};
 use super::types::TranscranialFusPlanConfig;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BRAIN;
+use kwavers_core::test_support::assert_invalid_input;
 use leto::{Array2, Array3};
 
 #[test]
@@ -26,7 +27,7 @@ fn focused_cap_count_and_radius() {
 #[test]
 fn focused_cap_rejects_invalid_polar_span() {
     let result = focused_cap_positions(64, 0.15, 1.18, 0.22);
-    assert!(result.is_err(), "theta_min >= theta_max must be rejected");
+    assert_invalid_input(result, "0 <= theta_min < theta_max <= pi");
 }
 
 #[test]
@@ -98,7 +99,7 @@ fn subspot_covered_fraction_counts_radius_supported_tumor_voxels() {
 fn subspot_raster_empty_returns_error() {
     let mask = Array3::from_elem((8, 8, 8), false);
     let result = gbm_subspot_raster(&mask, [1.0e-3; 3], 3.0e-3);
-    assert!(result.is_err());
+    assert_invalid_input(result, "tumor mask contains no active voxels");
 }
 
 #[test]

@@ -1,4 +1,5 @@
 use super::{distance3, make_circle, make_line, normalize3, *};
+use kwavers_core::test_support::assert_rejects;
 
 #[test]
 fn test_make_disc_basic() {
@@ -27,10 +28,11 @@ fn test_make_disc_invalid_radius() {
     let center = [1.6e-3, 1.6e-3, 0.0];
 
     let result = make_disc(grid, spacing, center, -1.0);
-    assert!(result.is_err());
+    assert_rejects(result, "Radius must be positive");
 
+    // Zero is the boundary of the same guard, not a separate one.
     let result = make_disc(grid, spacing, center, 0.0);
-    assert!(result.is_err());
+    assert_rejects(result, "Radius must be positive");
 }
 
 #[test]
@@ -60,7 +62,7 @@ fn test_make_ball_invalid_radius() {
     let center = [1.6e-3, 1.6e-3, 1.6e-3];
 
     let result = make_ball(grid, spacing, center, -1.0);
-    assert!(result.is_err());
+    assert_rejects(result, "Radius must be positive");
 }
 
 #[test]

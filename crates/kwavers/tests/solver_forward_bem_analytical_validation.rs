@@ -242,9 +242,8 @@ mod tests {
 
     #[test]
     fn test_mie_solution_creation() {
-        let mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0);
-        assert!(mie.is_ok());
-        let mie = mie.unwrap();
+        let mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0)
+            .expect("a 1 cm sphere at 100 kHz in water is inside the supported parameter range");
         assert_eq!(mie.radius, 0.01);
         assert_eq!(mie.frequency, 1e5);
         assert!(mie.num_terms >= 10);
@@ -253,8 +252,8 @@ mod tests {
     #[test]
     fn test_mie_coefficients_computation() {
         let mut mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0).unwrap();
-        let result = mie.compute_coefficients();
-        assert!(result.is_ok());
+        mie.compute_coefficients()
+            .expect("coefficients converge for a 1 cm sphere at 100 kHz");
         assert!(!mie.mie_coefficients.is_empty());
         // First coefficient should be significant
         assert!(mie.mie_coefficients[0].norm() > 0.01);

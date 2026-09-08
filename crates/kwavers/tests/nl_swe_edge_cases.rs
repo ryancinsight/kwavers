@@ -422,13 +422,8 @@ mod edge_case_tests {
 
         for (i, config) in configs.into_iter().enumerate() {
             let solver = NonlinearElasticWaveSolver::new(&grid, &medium, material.clone(), config);
-            assert!(
-                solver.is_ok(),
-                "Solver configuration {} should create successfully",
-                i
-            );
-
-            let solver = solver.unwrap();
+            let solver = solver
+                .unwrap_or_else(|error| panic!("solver configuration {i} must build: {error}"));
             let initial_disp = Array3::zeros((8, 8, 8));
             let result = solver.propagate_waves(&initial_disp);
 
@@ -462,13 +457,9 @@ mod edge_case_tests {
                 material.clone(),
                 NonlinearSWEConfig::default(),
             );
-            assert!(
-                solver.is_ok(),
-                "Should create solver for grid size {}x{}x{}",
-                nx,
-                ny,
-                nz
-            );
+            solver.unwrap_or_else(|error| {
+                panic!("solver must build for grid {nx}x{ny}x{nz}: {error}")
+            });
         }
     }
 }

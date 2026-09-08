@@ -224,11 +224,9 @@ fn validate_mvdr_numerical_stability() {
 
     let steering_vector = Array1::from_elem(num_sensors, Complex64::new(1.0, 0.0));
 
-    let weights_no_loading = mvdr_no_loading.compute_weights(&covariance, &steering_vector);
-    assert!(
-        weights_no_loading.is_err(),
-        "Singular covariance without diagonal loading must return Err"
-    );
+    mvdr_no_loading
+        .compute_weights(&covariance, &steering_vector)
+        .expect_err("a rank-one covariance is singular without diagonal loading");
 
     // With sufficiently large diagonal loading, the matrix becomes invertible and MVDR
     // should satisfy unity gain robustly.
@@ -879,10 +877,13 @@ fn validate_fusion_registration_validation() {
     );
 
     // Fusion should fail with only one modality
-    let fusion_result = fusion.fuse();
+    let rejection = fusion
+        .fuse()
+        .expect_err("fusion needs a second modality")
+        .to_string();
     assert!(
-        fusion_result.is_err(),
-        "Fusion should fail with only one modality"
+        rejection.contains("At least two modalities"),
+        "the rejection must name the missing modality, got {rejection:?}"
     );
 
     // Add second modality

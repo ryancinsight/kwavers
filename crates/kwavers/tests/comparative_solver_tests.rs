@@ -824,11 +824,8 @@ mod tests {
     #[test]
     fn test_comparative_test_execution() {
         // Run a quick test with minimal configuration
-        let result = run_comparative_tests();
-        assert!(
-            result.is_ok(),
-            "Comparative tests should execute successfully"
-        );
+        run_comparative_tests()
+            .expect("the comparative suite runs to completion on its own fixtures");
     }
 
     #[test]

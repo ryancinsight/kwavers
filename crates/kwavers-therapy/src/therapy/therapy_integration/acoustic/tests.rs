@@ -1,5 +1,6 @@
 use super::AcousticWaveSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use kwavers_core::test_support::assert_invalid_input;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 
@@ -107,7 +108,7 @@ fn test_advance_negative_duration() {
     let mut solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
 
     let result = solver.advance(-1e-6);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Duration must be non-negative");
 }
 
 #[test]

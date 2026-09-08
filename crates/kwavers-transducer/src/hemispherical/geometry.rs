@@ -114,6 +114,7 @@ impl ElementPlacement {
 mod tests {
     use super::*;
     use aequitas::systems::si::units::Meter;
+    use kwavers_core::test_support::assert_invalid_input;
 
     #[test]
     fn generated_elements_use_source_domain_hemisphere() {
@@ -158,7 +159,7 @@ mod tests {
     fn zero_elements_are_rejected() {
         let geometry = HemisphereGeometry::new(Length::from_unit::<Meter>(0.15)).unwrap();
         let result = ElementPlacement::generate_elements(&geometry, 0);
-        assert!(result.is_err());
+        assert_invalid_input(result, "spherical-cap layout requires at least one element");
     }
 
     #[test]
