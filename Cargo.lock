@@ -3113,6 +3113,7 @@ dependencies = [
  "ritk-io",
  "ritk-registration",
  "ritk-spatial",
+ "tempfile",
 ]
 
 [[package]]
