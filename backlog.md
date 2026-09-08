@@ -55,7 +55,7 @@
 - Premise corrected on the way: a trace-level fourth-order integral of split deltas drifts, so the round trip is the auto-convolution on the support; a judge pass caught an index clamp that mangled kernels for field points within a patch width of the face, fixed with signed anchoring and two regressions. Post-merge judge pass confirmed the fix bit-identical elsewhere; its two residuals (an `l = 0` overflow now a NaN sample, a mislabelled regression test) closed forward in PR [#745](https://github.com/ryancinsight/kwavers/pull/745), `dd71c1b01`.
 <a id="kw-fft3d-baseline-2026-09-08"></a>
 
-## KW-FFT3D-BASELINE-2026-09-08 — The spectral pair a PSTD step is built on had no timing [patch] [perf] — done 2026-09-08
+## KW-FFT3D-BASELINE-2026-09-08 — The spectral pair a PSTD step is built on had no timing [patch] [perf] — done 2026-09-08; attribution corrected same day
 
 - **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fft3d-baseline`;
   lane `D:/atlas/worktrees/kwavers-compute-manager` (re-pointed from an idle
@@ -98,20 +98,36 @@
   the throughput regime, where apollo measured its arms faster still. Both
   biases push the same way, so a third is an **upper bound** on the codelet
   share and the movement share is at least two thirds.
+- **Attribution corrected 2026-09-08, the same day, by direct measurement.**
+  The apollo item below extended its lane probe to N = 64 and measured the
+  shipped length-64 codelet at **61.6 ns per lane transform on a performance
+  core and 132 ns on an efficiency core** — against the 43.6 ns this entry
+  extrapolated. So the codelets are **12,288 x 61.6 ns = 0.76 ms of the 1.70 ms
+  forward, 45%, on performance cores**, and on efficiency cores 1.62 ms, close
+  to the whole transform. A 64³ pass is spread by `moirai` across both core
+  types, so the true share sits between those and depends on the mix. The
+  statement this replaces — "about a third; movement at least two thirds" —
+  was wrong in the direction it warned it might be, and by more than the
+  warning allowed for: the `N log N` step from 32 to 64 undercounts, and the
+  efficiency core is 2.1x slower than the performance core at this size where
+  it was 1.3–1.5x at smaller ones. **The axis-pass transposes are no longer
+  unambiguously the larger lever; the codelet is at least comparable, and on
+  efficiency cores dominant.**
 - **Consequence for the provider item.**
   [apollo `#apollo-n64-lane-pass`](../apollo/backlog.md#apollo-n64-lane-pass)
-  was filed the same day to optimise the N = 64 codelet as the stack's
-  most-executed kernel. It still is — but this measurement caps what it can
-  win at roughly a third of the transform, and names the larger lever as the
-  axis-pass transposes. The apollo item should be read with this bound on it.
+  confirmed the shipped N = 64 arm is faster than its scalar fallback in both
+  regimes on both cores (1.80x / 1.20x), so there is no arm change to make; the
+  cost is the arm's own body. What the corrected split points at instead is the
+  efficiency-core tail of a distributed pass, which needs a pass-level profile
+  neither repository has yet.
 - **Acceptance (met).** A committed, budgeted benchmark exists for the 3-D
   complex FFT at the planned extents; the codelet-versus-movement split is
   attributed with its evidence and its limits.
-- **Next increment, not taken here.** Attribute the split by measurement rather
-  than extrapolation: time an axis pass with the transposes elided against the
-  full pass, or count cycles per phase. Only then is it worth asking whether
-  the transposes can be fused into the lane loop or the pass reordered to move
-  less.
+- **Next increment, not taken here.** The codelet half of the split is now
+  measured; the movement half is still inferred as the remainder. Time an axis
+  pass with the transposes elided against the full pass, and record which core
+  type each lane ran on, so the pass-level cost is attributed by measurement on
+  both axes before anything is fused or reordered.
 - **Risk / change class:** [patch] [perf]; **dependencies:** none.
 
 ## KW-ANALYSIS-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-analysis` [patch] — done 2026-09-07 <a id="kw-analysis-value-assertions-2026-09-07"></a>
