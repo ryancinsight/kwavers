@@ -525,35 +525,23 @@
   hash-different target names to the unchanged four-pair instrument; hosted
   recollection remains pending.
 
-## KW-CI-DRAFT-PR-GATING-2026-08-31 — Skip draft pull-request runners [patch] [ci] — in-progress
+<a id="kw-ci-draft-pr-gating-2026-08-31"></a>
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CI-DRAFT-PR-GATING-2026-08-31 | Prevent draft pull requests from consuming hosted runners while preserving every ready-PR and push verification contract. | [patch] [ci] | in progress | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | Pull-request activity lists and root-job predicates in the seven PR-triggered workflows; normalized workflow evidence; release notes |
+## KW-CI-DRAFT-PR-GATING-2026-08-31 — Skip draft pull-request runners [patch] [ci] — done 2026-09-08
 
-- **Dependency / lease:** branch `ci/draft-pr-gating` remains stacked on PR #681;
-  source correction `0db7b8a03` discharges the workflow, CHANGELOG, and item
-  lease. PR #675 remains the separate draft compile-graph experiment.
-- **Entry evidence:** draft PR #675 launched seven workflows before the prior
-  reviewed candidate proved that all 28 jobs could be skipped at dispatch.
-  Draft creation of PR #681 repeated the full hosted fan-out before it was made
-  ready, confirming the runner-cost defect on current source.
-- **Acceptance:** draft `opened`, `synchronize`, and `reopened` events schedule
-  no runner-backed job; direct non-draft opens and `ready_for_review` retain all
-  existing jobs; `converted_to_draft` cancels the active same-ref run without
-  starting runner-backed jobs; push and manual-dispatch behavior is unchanged.
-  Preserve every path filter, command, matrix, cache key, feature, workload,
-  assertion, and timeout. Existing job conditions must compose with the draft
-  predicate.
-- **Evidence:** all ten current workflows parse, exactly seven PR workflows use
-  the event list `opened`, `reopened`, `synchronize`, `ready_for_review`, and
-  `converted_to_draft`, and 17 root/aggregator predicates reject drafts. Static
-  independent review found the omitted conversion event in the prior candidate;
-  `0db7b8a03` closes that cancellation hole without changing commands, matrices,
-  or job predicates. The earlier exact draft run skipped all five applicable
-  jobs, including the benchmark pair and `always()` aggregator. Retargeting to
-  `main`, hosted ready-to-draft cancellation evidence, the full ready-PR run,
-  independent correction review, and merge remain.
+- **Mostly delivered, with one job left open.** All seven PR-triggered
+  workflows carry the `ready_for_review`/`converted_to_draft` activity types,
+  and every job is draft-guarded except `ci.yml`'s `semver`, which alone had
+  neither its own condition nor a `needs: lockfile` to inherit one from. It ran
+  on every draft pull request, and a semver run builds a baseline as well as a
+  head across 23 packages.
+- **Fix:** `semver` carries the same guard the other twelve inherit.
+- **Acceptance, re-derived from the workflows:** a job reaches a runner on a
+  draft pull request when it carries no draft condition and needs no job that
+  does. Across the seven workflows -- adr-index 1, architecture-validation 8,
+  benchmark-regression 1, book-pages 1, ci 12, legacy-migration-audit 2,
+  python-wheel-smoke 2 -- that set is now empty. It was `{ci.yml: [semver]}`
+  before.
 
 ## KW-CI-BENCH-SMOKE-BUDGET-2026-08-31 — Bound complete benchmark smoke [patch] [ci] [perf] — review
 

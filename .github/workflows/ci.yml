@@ -40,6 +40,10 @@ jobs:
   # Atlas ATLAS-SEMVER-GATE-FLEETWIDE-2026-08-28.
   semver:
     name: SemVer gate
+    # The one job in this workflow with no `needs: lockfile` to inherit
+    # the draft guard from, so it carries its own; a semver run builds a
+    # baseline as well as a head, across 23 packages.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     uses: ryancinsight/atlas/.github/workflows/semver-gate.yml@da9d549bc50dbb9c4e1d18dca8f37d17059098cb
     with:
       package: kwavers-alloc-probe,kwavers-analysis,kwavers-boundary,kwavers-core,kwavers-diagnostics,kwavers-driver,kwavers-field,kwavers-gpu,kwavers-grid,kwavers-imaging,kwavers-math,kwavers-medium,kwavers-mesh,kwavers-phantom,kwavers-physics,kwavers-receiver,kwavers-signal,kwavers-simulation,kwavers-solver,kwavers-source,kwavers-therapy,kwavers-transducer,kwavers
