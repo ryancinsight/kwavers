@@ -304,9 +304,7 @@ fn run_experiment_rejects_non_v2_manifest() {
         damping_footprint: ResistorPackage::Smd2512,
     });
     // The budget validation itself will fail first (wrong lane count).
-    let rejection = b
-        .expect_err("48-lane manifest must fail validate_v2_energy_budget")
-        .to_string();
+    let rejection = b.expect_err("48-lane manifest must fail validate_v2_energy_budget");
     assert!(
         rejection.contains("TX lanes"),
         "the rejection must name the lane count, got {rejection:?}"
