@@ -1,5 +1,32 @@
 # Backlog / Strategy
 
+<a id="kw-orphaned-benches-2026-09-08"></a>
+
+## KW-ORPHANED-BENCHES-2026-09-08 — Sixteen files in `benches/` are not benchmarks [patch] [ci] — todo
+
+- **Symptom:** the `complete benchmark smoke` job fails its `validate_registry`
+  step, which diffs the `benches/*.rs` stems against the Cargo bench target
+  registry. 25 files, 9 declared.
+- **Not a registry omission.** The 16 undeclared files carry no
+  `criterion_main!`, no `fn main`, and no `#[bench]`, so they cannot be a
+  target under either harness setting: `harness = false` wants a `main` they do
+  not have, and the default harness has nothing to collect. Declaring them was
+  tried and all 16 fail to compile with `E0601: main function not found`.
+- **`autobenches = false`** (`crates/kwavers/Cargo.toml:17`), so nothing has
+  ever compiled them. 2845 lines that no gate has read.
+- **Why it surfaced now:** the registry validation landed with
+  KW-CI-LOCAL-CRITERION-EVIDENCE-2026-08-31, and the job triggers on
+  `pull_request` only -- pushes to `main` never run it, which is how the drift
+  survived. The gate is correct; the condition is older than the gate.
+- **Not caused by the PR that found it.** kwavers#726 touches neither
+  `crates/kwavers/benches/` nor `crates/kwavers/Cargo.toml`.
+- **Decision needed before work:** whether the 16 hold salvageable measurement
+  intent (repair into real Criterion benches) or are superseded drafts
+  (delete). That is an owner's call on 2845 lines, not a mechanical cleanup;
+  the files are listed in the job log and recoverable from git either way.
+- **Acceptance:** `validate_registry` passes on both revisions, and every file
+  under `benches/` is a declared, compiling target.
+
 <a id="kw-sir-trace-accumulation-2026-09-08"></a>
 
 ## KW-SIR-TRACE-ACCUMULATION-2026-09-08 — Finite-aperture RF synthesis pays per pair for the whole trace [major] [perf] — done 2026-09-08
