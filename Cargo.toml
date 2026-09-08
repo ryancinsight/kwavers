@@ -8,7 +8,7 @@ aequitas = { version = "0.2.0", git = "https://github.com/ryancinsight/aequitas"
 # reader and `Dimensioned<D>`, so the extraction lives once upstream rather
 # than being reimplemented here. Unpublished by design: the wheel is its
 # deliverable, and this crate consumes it as a library.
-aequitas-python = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas" }
+aequitas_python = { package = "aequitas-python", version = "0.1.0", git = "https://github.com/ryancinsight/aequitas" }
 asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
 hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
 proteus = { package = "proteus-mat", version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
