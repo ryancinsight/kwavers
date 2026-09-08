@@ -141,41 +141,71 @@ impl CircularPistonSir {
     }
 
     /// Two-way (monostatic pulse-echo) diffraction kernel `(h ⊛ h)(t)` at field
-    /// point `(r, z)`, sampled at step `dt` over `[0, n_samples·dt)`.
+    /// point `(r, z)`, sampled at step `dt` over its own support.
     ///
     /// For an element that both transmits and receives, the pulse-echo spatial
     /// response is the convolution of the transmit and receive SIRs; with a single
     /// aperture `h_tx = h_rx = h`, so the diffraction part is `h ⊛ h` (Jensen 1991).
     /// Convolving this with the electrical excitation gives the Field II echo — the
-    /// finite-aperture refinement of the point-element `1/r²` model. The one-way
-    /// SIR is sampled at bin midpoints and discretely auto-convolved.
+    /// finite-aperture refinement of the point-element `1/r²` model.
     ///
-    /// To capture the full kernel choose `n_samples ≥ ⌈2·last_arrival_time/dt⌉`
-    /// (the two-way support ends at `2·d_max/c`). The convolution integral
-    /// factorizes, `∫(h⊛h)dt = (∫h dt)²`, and on-axis `∫h dt = √(z²+a²) − z`, so
-    /// `Σ_k out`K`·dt = (√(z²+a²) − z)²` — the exact normalization.
+    /// The one-way SIR is sampled at the bin midpoints `(k + ½)·dt` that fall
+    /// inside `[d_min/c, d_max/c)` — its support, `Δk` bins wide — and discretely
+    /// auto-convolved, so the cost is `O(Δk²)` and independent of where the
+    /// support sits on the grid. The result starts at grid index
+    /// `2·⌈d_min/(c·dt) − ½⌉` and is `2·Δk − 1` samples long; sampling from
+    /// `t = 0` instead would spend `O(t_max/dt)` evaluations on zeros per field
+    /// point (Rivera, Demené & Tanter 2026 make this the cost model for SIR
+    /// kernels). An aperture whose support is narrower than one bin yields no
+    /// samples.
+    ///
+    /// The convolution integral factorizes, `∫(h⊛h)dt = (∫h dt)²`, and on-axis
+    /// `∫h dt = √(z²+a²) − z`, so `Σ_k samples[k]·dt = (√(z²+a²) − z)²` — the
+    /// exact normalization.
     ///
     /// # Panics
     /// Panics if `dt ≤ 0` (a non-positive sample step is a caller bug).
     #[must_use]
-    pub fn round_trip_response(&self, r: f64, z: f64, dt: f64, n_samples: usize) -> Vec<f64> {
+    pub fn round_trip_response(&self, r: f64, z: f64, dt: f64) -> SampledResponse {
         assert!(dt > 0.0, "round_trip_response requires dt > 0, got {dt}");
-        // One-way SIR sampled at bin midpoints on the dt grid.
-        let h: Vec<f64> = (0..n_samples)
+        // Bins whose midpoint (k + ½)·dt lies in [first, last): the one-way support.
+        let first_bin = (self.first_arrival_time(r, z) / dt - 0.5).ceil().max(0.0) as usize;
+        let end_bin = (self.last_arrival_time(r, z) / dt - 0.5).ceil().max(0.0) as usize;
+        let h: Vec<f64> = (first_bin..end_bin)
             .map(|k| self.evaluate(r, z, (k as f64 + 0.5) * dt))
             .collect();
-        // Discrete auto-convolution (h ⊛ h)(k·dt) ≈ Σ_i h[i]·h[k−i]·dt, truncated.
-        let mut out = vec![0.0_f64; n_samples];
+        // Discrete auto-convolution (h ⊛ h)(k·dt) ≈ Σ_i h[i]·h[k−i]·dt over the
+        // support only; grid index of samples[i + j] is 2·first_bin + i + j.
+        let mut samples = vec![0.0_f64; (2 * h.len()).saturating_sub(1)];
         for (i, &hi) in h.iter().enumerate() {
             if hi == 0.0 {
                 continue;
             }
-            for (j, &hj) in h.iter().enumerate().take(n_samples - i) {
-                out[i + j] += hi * hj * dt;
+            for (j, &hj) in h.iter().enumerate() {
+                samples[i + j] += hi * hj * dt;
             }
         }
-        out
+        SampledResponse {
+            first_sample: 2 * first_bin,
+            samples,
+        }
     }
+}
+
+/// A kernel sampled over its own support on a uniform `dt` grid.
+///
+/// Sample `i` sits at grid index `first_sample + i`. For the round-trip kernel
+/// that is time `(first_sample + i + 1)·dt`: it is the discrete convolution of
+/// two midpoint-sampled one-way responses, and the two half-bin offsets add.
+/// Everything before `first_sample` and after the last sample is zero by
+/// construction.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SampledResponse {
+    /// Grid index of `samples[0]`.
+    pub first_sample: usize,
+    /// Kernel samples from the onset; empty when the support is narrower than
+    /// one bin.
+    pub samples: Vec<f64>,
 }
 
 /// A flat rectangular piston in an infinite rigid baffle, centered on the axis

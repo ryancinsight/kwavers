@@ -246,8 +246,8 @@ fn round_trip_kernel_integral_equals_oneway_squared() {
     let dt = 2e-9;
     let last = s.last_arrival_time(0.0, Z);
     let n = (2.2 * last / dt).ceil() as usize; // cover the two-way support 2·d_max
-    let kernel = s.round_trip_response(0.0, Z, dt, n);
-    let integral: f64 = kernel.iter().sum::<f64>() * dt;
+    let kernel = s.round_trip_response(0.0, Z, dt);
+    let integral: f64 = kernel.samples.iter().sum::<f64>() * dt;
 
     // Exact (to machine precision) factorization against the SAME discretization
     // of the one-way SIR — this is the convolution identity ∫(h⊛h)dt = (∫h dt)².
@@ -279,24 +279,36 @@ fn round_trip_kernel_is_a_triangle_over_the_two_way_support() {
     let dt = 2e-9;
     let t1 = Z / C; // one-way first arrival
     let t2 = (Z * Z + A * A).sqrt() / C; // one-way last arrival
-    let n = (2.2 * t2 / dt).ceil() as usize;
-    let kernel = s.round_trip_response(0.0, Z, dt, n);
+    let kernel = s.round_trip_response(0.0, Z, dt);
 
-    // No echo before the round-trip onset 2·t1 (allow a couple bins of slack).
+    // The kernel starts at the round-trip onset 2·t1 (allow a couple bins of
+    // slack) and is sampled over its support only: no leading zeros.
     let n_onset = (2.0 * t1 / dt) as usize;
     assert!(
-        kernel[..n_onset.saturating_sub(3)]
-            .iter()
-            .all(|&v| v == 0.0),
-        "two-way kernel must be zero before 2·t1"
+        kernel.first_sample.abs_diff(n_onset) <= 3,
+        "two-way kernel must start at 2·t1, got bin {} against {n_onset}",
+        kernel.first_sample
+    );
+    assert!(
+        kernel.samples.first().is_some_and(|&v| v > 0.0),
+        "support-local sampling must not carry leading zeros"
+    );
+    // Support ends at 2·t2: 2·Δk − 1 samples from the onset.
+    let n_end = (2.0 * t2 / dt) as usize;
+    let last_bin = kernel.first_sample + kernel.samples.len();
+    assert!(
+        last_bin.abs_diff(n_end) <= 3,
+        "two-way kernel must end at 2·t2, got bin {last_bin} against {n_end}"
     );
     // Peak near (t1 + t2).
     let k_peak = kernel
+        .samples
         .iter()
         .enumerate()
         .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
         .unwrap()
-        .0;
+        .0
+        + kernel.first_sample;
     let t_peak = (k_peak as f64 + 0.5) * dt;
     assert!(
         (t_peak - (t1 + t2)).abs() < 5.0 * dt,

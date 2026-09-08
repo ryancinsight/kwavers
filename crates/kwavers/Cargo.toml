@@ -324,6 +324,10 @@ name = "fft3d_baseline"
 harness = false
 
 [[bench]]
+name = "aperture_rf_synthesis"
+harness = false
+
+[[bench]]
 name = "benchmark_suite"
 harness = false
 

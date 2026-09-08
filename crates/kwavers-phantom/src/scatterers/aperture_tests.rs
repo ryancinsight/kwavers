@@ -6,8 +6,8 @@ use super::*;
 /// A circular-piston round-trip kernel, reimplemented here as a test double so
 /// this crate's tests do not reach into `kwavers-physics` — the dependency the
 /// seam exists to avoid. Mirrors `CircularPistonSir::round_trip_response`:
-/// the one-way Tupholme–Stepanishen SIR sampled at bin midpoints and discretely
-/// auto-convolved.
+/// the one-way Tupholme–Stepanishen SIR sampled at the bin midpoints inside
+/// its support and discretely auto-convolved, returned from its onset.
 struct CircularPiston {
     radius: f64,
     sound_speed: f64,
@@ -37,17 +37,34 @@ impl CircularPiston {
     }
 }
 
+impl CircularPiston {
+    /// One-way support `[d_min, d_max)/c` as the bins whose midpoints fall in it.
+    fn support_bins(&self, r: f64, z: f64, dt: f64) -> core::ops::Range<usize> {
+        let (a, c) = (self.radius, self.sound_speed);
+        let d_min = if r <= a {
+            z
+        } else {
+            (z * z + (r - a).powi(2)).sqrt()
+        };
+        let d_max = (z * z + (r + a).powi(2)).sqrt();
+        let first = (d_min / c / dt - 0.5).ceil().max(0.0) as usize;
+        let end = (d_max / c / dt - 0.5).ceil().max(0.0) as usize;
+        first..end
+    }
+}
+
 impl RoundTripKernel for CircularPiston {
-    fn round_trip(&self, r_m: f64, z_m: f64, dt_s: f64, n_samples: usize) -> Vec<f64> {
-        let h: Vec<f64> = (0..n_samples)
+    fn round_trip(&self, r_m: f64, z_m: f64, dt_s: f64) -> Vec<f64> {
+        let h: Vec<f64> = self
+            .support_bins(r_m, z_m, dt_s)
             .map(|k| self.evaluate(r_m, z_m, (k as f64 + 0.5) * dt_s))
             .collect();
-        let mut out = vec![0.0_f64; n_samples];
+        let mut out = vec![0.0_f64; (2 * h.len()).saturating_sub(1)];
         for (i, &hi) in h.iter().enumerate() {
             if hi == 0.0 {
                 continue;
             }
-            for (j, &hj) in h.iter().enumerate().take(n_samples - i) {
+            for (j, &hj) in h.iter().enumerate() {
                 out[i + j] += hi * hj * dt_s;
             }
         }
@@ -82,10 +99,8 @@ fn round_trip_kernel_area_matches_the_closed_form() {
         sound_speed: c,
     };
     let dt = 1.0 / 200.0e6;
-    // Support ends at 2*d_max/c with d_max = sqrt(z^2 + a^2).
-    let n = (2.0 * (z * z + a * a).sqrt() / c / dt).ceil() as usize + 8;
 
-    let kernel = piston.round_trip(0.0, z, dt, n);
+    let kernel = piston.round_trip(0.0, z, dt);
     let area: f64 = kernel.iter().sum::<f64>() * dt;
     let expected = ((z * z + a * a).sqrt() - z).powi(2);
 
@@ -132,8 +147,7 @@ fn vanishing_aperture_converges_on_the_point_element_model() {
         sound_speed: cfg.sound_speed,
     };
     let refined = cloud
-        // Kernel sampled from t = 0, so it must reach past 2*d_max/c.
-        .synthesize_rf_with_aperture(&elements, &pulse, &cfg, &tiny, 900)
+        .synthesize_rf_with_aperture(&elements, &pulse, &cfg, &tiny)
         .expect("aperture-coupled");
 
     let peak = reference.iter().fold(0.0_f64, |m, v| m.max(v.abs()));
@@ -169,7 +183,7 @@ fn a_finite_aperture_smears_the_echo_in_time() {
         sound_speed: cfg.sound_speed,
     };
     let refined = cloud
-        .synthesize_rf_with_aperture(&elements, &pulse, &cfg, &wide, 1300)
+        .synthesize_rf_with_aperture(&elements, &pulse, &cfg, &wide)
         .expect("aperture-coupled");
 
     let occupied = refined.iter().filter(|v| v.abs() > 1.0e-12).count();
@@ -208,30 +222,87 @@ fn aperture_element_rejects_a_degenerate_normal() {
     assert!(ApertureElement::new([f64::NAN, 0.0, 0.0], [0.0, 0.0, 1.0]).is_err());
 }
 
-/// A kernel window too short to reach the round trip is a caller sizing error,
-/// not a silently empty trace.
+/// ## Theorem
+/// Convolution distributes over addition: `pulse ⊛ Σ_s a_s·k_s(t − τ_s)` equals
+/// `Σ_s a_s·(pulse ⊛ k_s)(t − τ_s)`.
 ///
-/// The sub-resolution fallback and an undersized window both produce an
-/// all-zero kernel, so without this discriminator the two are indistinguishable
-/// and an undersized call would quietly return the point-element answer while
-/// claiming to model the aperture.
+/// ## Why this is the oracle
+/// Synthesis accumulates every scatterer's scaled, delayed unit-area kernel
+/// into one trace per element and convolves the pulse once (the per-pair cost
+/// model of Rivera, Demené & Tanter 2026). The reference below is the other
+/// association — convolve per pair, then place — written out naively. The two
+/// differ only by floating-point reassociation: each output sample is a sum of
+/// at most `S·L` products (`S` scatterers, `L` pulse taps), so the bound is
+/// `S·L·ε ≈ 2.7e-15` of the largest term at `S·L = 12`, and `1e-12` relative
+/// to the trace peak holds that with over two orders of margin.
 #[test]
-fn an_undersized_kernel_window_is_an_error() {
-    let cloud = ScattererCloud::from_points(&[[0.0, 0.0, 8.0e-3]], &[1.0]).expect("cloud");
-    let cfg = config(100.0e6, 1600);
-    let elements = [ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0]).expect("element")];
+fn trace_accumulation_matches_the_per_pair_association() {
+    let cloud = ScattererCloud::from_points(
+        &[
+            [0.0, 0.0, 6.0e-3],
+            [0.8e-3, 0.3e-3, 9.0e-3],
+            [-0.5e-3, 0.0, 7.5e-3],
+        ],
+        &[1.0, -0.6, 0.3],
+    )
+    .expect("cloud");
+    let fs = 100.0e6;
+    let cfg = config(fs, 1500);
+    let dt = 1.0 / fs;
+    let pulse = [0.2, 1.0, -0.7, 0.1];
+    let elements = [
+        ApertureElement::new([0.0, 0.0, 0.0], [0.0, 0.0, 1.0]).expect("element"),
+        ApertureElement::new([1.0e-3, 0.0, 0.0], [0.0, 0.0, 1.0]).expect("element"),
+    ];
     let piston = CircularPiston {
-        radius: 3.0e-3,
+        radius: 2.0e-3,
         sound_speed: cfg.sound_speed,
     };
 
-    // Round trip to 8 mm is ~1039 samples at 100 MHz; 100 cannot reach it.
-    let err = cloud
-        .synthesize_rf_with_aperture(&elements, &[1.0], &cfg, &piston, 100)
-        .expect_err("an unreachable kernel window must be reported");
-    let message = format!("{err}");
+    let refined = cloud
+        .synthesize_rf_with_aperture(&elements, &pulse, &cfg, &piston)
+        .expect("aperture-coupled");
+
+    // Naive per-pair association: unit-area kernel ⊛ pulse, placed at the delay.
+    let mut reference = vec![vec![0.0_f64; cfg.num_samples]; elements.len()];
+    for (element, row) in elements.iter().zip(reference.iter_mut()) {
+        for scatterer in cloud.scatterers() {
+            let d = element.position;
+            let p = scatterer.position;
+            let distance = (d[0] - p[0]).hypot(d[1] - p[1]).hypot(d[2] - p[2]);
+            let (r, z) = element.field_point(p).expect("in front");
+            let kernel = piston.round_trip(r, z, dt);
+            let area: f64 = kernel.iter().sum::<f64>() * dt;
+            let shape: Vec<f64> = kernel.iter().map(|k| k / area).collect();
+            let mut echo = vec![0.0_f64; pulse.len() + shape.len() - 1];
+            for (i, &pi) in pulse.iter().enumerate() {
+                for (j, &sj) in shape.iter().enumerate() {
+                    echo[i + j] += pi * sj * dt;
+                }
+            }
+            let amplitude = scatterer.amplitude / (distance * distance);
+            let delay = (2.0 * distance / cfg.sound_speed * fs).round() as usize;
+            for (offset, &e) in echo.iter().enumerate() {
+                if delay + offset < cfg.num_samples {
+                    row[delay + offset] += amplitude * e;
+                }
+            }
+        }
+    }
+
+    let peak = reference
+        .iter()
+        .flatten()
+        .fold(0.0_f64, |m, v| m.max(v.abs()));
+    assert!(peak > 0.0, "reference must be non-trivial");
+    let mut worst = 0.0_f64;
+    for (e, row) in reference.iter().enumerate() {
+        for (k, &expected) in row.iter().enumerate() {
+            worst = worst.max((refined[[e, k]] - expected).abs());
+        }
+    }
     assert!(
-        message.contains("kernel_samples"),
-        "the error must name the parameter to fix, got: {message}"
+        worst <= 1.0e-12 * peak,
+        "trace accumulation must match the per-pair association to reassociation rounding: worst {worst:.3e} against peak {peak:.3e}"
     );
 }

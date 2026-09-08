@@ -26,8 +26,9 @@
 //!
 //! It does **not** model finite-aperture diffraction — the Tupholme–Stepanishen
 //! spatial impulse response that Field II convolves in for extended elements.
-//! That refines the near-field response and is a tracked follow-up; the
-//! point-element model is exact for point elements and far-field scatterers.
+//! [`ScattererCloud::synthesize_rf_with_aperture`] adds that refinement through
+//! an injected kernel (ADR 113); the point-element model is exact for point
+//! elements and far-field scatterers.
 //! [`ScattererCloud::synthesize_rf_with_transmit`] additionally models one
 //! active plane-wave or virtual-source transmit event received by every element.
 //! The event's travel-time and spreading law are represented once by
@@ -396,7 +397,7 @@ impl ScattererCloud {
     ///
     /// Same echo model as [`Self::synthesize_rf`] — monostatic
     /// synthetic-aperture, `1/r²` round-trip spreading, optional power-law
-    /// attenuation — with the pulse convolved by each element's round-trip
+    /// attenuation — with each echo convolved by the element's round-trip
     /// spatial impulse response for that scatterer's geometry.
     ///
     /// The kernel enters as a **unit-area** filter, so it contributes the
@@ -407,35 +408,36 @@ impl ScattererCloud {
     /// instead would converge on silence, because its area
     /// `(√(z²+a²) − z)²` tends to zero with the radius. See ADR 113.
     ///
-    /// `kernel_samples` sets the kernel's sampled length on the `1/fs` grid.
-    /// A provider samples from `t = 0`, so this must reach past `2·d_max/c` for
-    /// the deepest scatterer — roughly `2·z·fs/c` samples — or the kernel is all
-    /// zeros there and that scatterer drops out. Synthesis strips the leading
-    /// zeros, so the delay is applied once, not twice.
+    /// Per element, every scatterer's scaled kernel is placed at its round-trip
+    /// delay into one trace, and the pulse is convolved into that trace once;
+    /// the per-pair cost is the kernel the provider returns, which samples its
+    /// own support (see [`RoundTripKernel`]). An aperture whose two-way support
+    /// is narrower than one sample has no representable shape and enters as the
+    /// point-element impulse — physically it *is* a point element, and dropping
+    /// the scatterer would replace a real echo with silence.
     ///
     /// # Errors
     /// Returns `KwaversError::InvalidInput` for a non-finite or non-positive
-    /// configuration, an empty pulse, `kernel_samples == 0`, or a non-finite
-    /// synthesized amplitude.
+    /// configuration, an empty pulse, or a non-finite synthesized amplitude.
     pub fn synthesize_rf_with_aperture(
         &self,
         elements: &[ApertureElement],
         pulse: &[f64],
         config: &RfSynthesisConfig,
         kernel: &impl RoundTripKernel,
-        kernel_samples: usize,
     ) -> KwaversResult<Array2<f64>> {
         let positions: Vec<[f64; 3]> = elements.iter().map(|e| e.position).collect();
         let attenuation_np_m = self.validate_synthesis(&positions, pulse, config)?;
-        if kernel_samples == 0 {
-            return Err(KwaversError::InvalidInput(
-                "synthesize_rf_with_aperture requires kernel_samples > 0".to_owned(),
-            ));
-        }
         let dt = 1.0 / config.sampling_frequency;
+        let num_samples = config.num_samples;
 
-        let mut rf = Array2::<f64>::zeros([elements.len(), config.num_samples]);
+        let mut rf = Array2::<f64>::zeros([elements.len(), num_samples]);
+        // Reused across elements: the accumulated diffraction trace and the
+        // pulse-convolved row, so the per-element cost carries no allocation.
+        let mut trace = vec![0.0_f64; num_samples];
+        let mut row = vec![0.0_f64; num_samples];
         for (element_index, element) in elements.iter().enumerate() {
+            trace.fill(0.0);
             for &scatterer in &self.scatterers {
                 let distance = distance(element.position, scatterer.position);
                 if distance < config.min_distance {
@@ -444,31 +446,6 @@ impl ScattererCloud {
                 let Some((r, z)) = element.field_point(scatterer.position) else {
                     continue;
                 };
-                // The kernel is sampled from t = 0 and its support starts near
-                // the round-trip arrival, so a window that cannot reach the
-                // arrival can never contain it. That is a caller sizing error
-                // and is reported, not absorbed -- otherwise it is
-                // indistinguishable from the sub-resolution case below.
-                let round_trip_time = 2.0 * distance / config.sound_speed;
-                if (kernel_samples as f64) * dt < round_trip_time {
-                    return Err(KwaversError::InvalidInput(format!(
-                        "kernel_samples = {kernel_samples} spans {:.3e} s, short of the {round_trip_time:.3e} s                          round trip to scatterer {:?}; size it past 2*d_max/c",
-                        (kernel_samples as f64) * dt,
-                        scatterer.position
-                    )));
-                }
-                let raw = kernel.round_trip(r, z, dt, kernel_samples);
-                // An aperture whose two-way support is shorter than one sample
-                // has no representable shape -- no sample midpoint lands inside
-                // it. Physically that *is* a point element, so it degrades to
-                // the point-element impulse rather than dropping the scatterer,
-                // which would replace a real echo with silence.
-                let effective = match aperture::unit_area_shape(&raw, dt) {
-                    Some(shaped) => aperture::convolve(pulse, &shaped, dt),
-                    None => pulse.to_vec(),
-                };
-
-                let time_s = 2.0 * distance / config.sound_speed;
                 let spreading = 1.0 / (distance * distance);
                 let amplitude =
                     scatterer.amplitude * spreading * (-attenuation_np_m * 2.0 * distance).exp();
@@ -478,19 +455,33 @@ impl ScattererCloud {
                         scatterer.position
                     )));
                 }
+                let time_s = 2.0 * distance / config.sound_speed;
                 let sample_delay = (time_s * config.sampling_frequency).round();
                 if !sample_delay.is_finite() || sample_delay < 0.0 {
                     continue;
                 }
                 let sample_delay = sample_delay as usize;
-                for (offset, &sample) in effective.iter().enumerate() {
-                    let Some(index) = sample_delay.checked_add(offset) else {
-                        continue;
-                    };
-                    if index < config.num_samples {
-                        rf[[element_index, index]] += amplitude * sample;
-                    }
+                if sample_delay >= num_samples {
+                    continue;
                 }
+                let samples = kernel.round_trip(r, z, dt);
+                match aperture::support_and_area(&samples, dt) {
+                    Some((support, area)) => {
+                        let scale = amplitude / area;
+                        for (slot, &sample) in
+                            trace[sample_delay..].iter_mut().zip(&samples[support])
+                        {
+                            *slot += scale * sample;
+                        }
+                    }
+                    // A unit-area impulse on the grid is 1/dt at one sample.
+                    None => trace[sample_delay] += amplitude / dt,
+                }
+            }
+            row.fill(0.0);
+            aperture::convolve_into(&mut row, &trace, pulse, dt);
+            for (index, &value) in row.iter().enumerate() {
+                rf[[element_index, index]] = value;
             }
         }
         Ok(rf)
