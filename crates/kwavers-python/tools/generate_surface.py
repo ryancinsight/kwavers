@@ -789,7 +789,14 @@ def quantity_aliases(root: Path) -> set[str]:
     if not module.exists():
         return set()
     text = module.read_text(encoding="utf-8")
-    return set(re.findall(r'pub type (\w+) = Dimensioned<', text))
+    # Aliases over `Dimensioned<D>`, plus the hand-written parameter types in
+    # the same module: both accept a float or a protocol quantity, so both map
+    # to the same Python type. `PyDegrees` is one -- its float arm is degrees
+    # rather than base units, a distinction Python types cannot express and
+    # the docstring carries.
+    return set(re.findall(r'pub type (\w+) = Dimensioned<', text)) | set(
+        re.findall(r'pub struct (Py\w+)\(', text)
+    )
 
 
 def facade_symbols(root: Path) -> tuple[list[str], list[str]]:

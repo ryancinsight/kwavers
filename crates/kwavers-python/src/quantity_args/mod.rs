@@ -24,6 +24,11 @@
 //! NumPy conversions.
 
 use aequitas::systems::si::dimensions;
+use aequitas::systems::si::quantities::Angle;
+use aequitas::systems::si::units::Degree;
+use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
+use pyo3::{Borrowed, FromPyObject};
 
 /// Parameter accepting a base-unit float or a matching quantity.
 pub use aequitas_python::Dimensioned;
@@ -62,6 +67,41 @@ pub type PyReciprocalLength = Dimensioned<dimensions::ReciprocalLength>;
 /// Still worth naming: it rejects a quantity that carries a dimension, so a
 /// pressure cannot be passed where a fraction belongs.
 pub type PyDimensionless = Dimensioned<dimensions::Dimensionless>;
+
+/// Parameter whose bare-float arm is **degrees**, not base units.
+///
+/// `TransducerArray2D.set_steering_angle` has always documented and accepted
+/// degrees. Typing it as [`PyAngle`] would keep that call site compiling while
+/// silently reinterpreting every existing caller's number as radians, so the
+/// float arm keeps its published meaning and only the quantity arm is new. A
+/// quantity is read in radians, its own base unit, whatever unit it was built
+/// from -- `angle(30.0, "deg")` and `angle(pi/6, "rad")` are the same value
+/// here, and both differ from the bare float `30.0`.
+#[derive(Clone, Copy, Debug)]
+pub struct PyDegrees(Angle<f64>);
+
+impl PyDegrees {
+    /// The angle, as an Aequitas quantity in radians.
+    #[must_use]
+    pub const fn quantity(self) -> Angle<f64> {
+        self.0
+    }
+}
+
+impl<'py> FromPyObject<'_, 'py> for PyDegrees {
+    type Error = PyErr;
+
+    fn extract(object: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(degrees) = object.extract::<f64>() {
+            if !degrees.is_finite() {
+                return Err(PyValueError::new_err("angle must be finite"));
+            }
+            return Ok(Self(Angle::from_unit::<Degree>(degrees)));
+        }
+        let angle: PyAngle = object.extract()?;
+        Ok(Self(angle.quantity()))
+    }
+}
 
 #[cfg(test)]
 mod tests;

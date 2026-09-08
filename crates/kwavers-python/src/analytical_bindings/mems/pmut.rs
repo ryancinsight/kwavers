@@ -1,31 +1,28 @@
 //! PMUT scalar model bindings.
 
 use super::helpers::pmut;
-use aequitas::systems::si::quantities::{ElectricPotential, Frequency, MassDensity, Velocity};
-use aequitas::systems::si::units::{
-    Hertz, KilogramPerCubicMeter, MeterPerSecond, Pascal, Volt, Watt,
-};
+use aequitas::systems::si::units::{Hertz, Pascal, Watt};
 use pyo3::prelude::*;
+
+use crate::quantity_args::{PyElectricPotential, PyFrequency, PyLength, PyMassDensity, PyVelocity};
 
 /// PMUT immersion resonance `Hz` (film = "aln" | "pzt").
 #[pyfunction]
 pub fn pmut_resonance_immersion(
     film: &str,
-    radius: f64,
-    t_p: f64,
-    t_s: f64,
-    density_fluid: f64,
+    radius: PyLength,
+    t_p: PyLength,
+    t_s: PyLength,
+    density_fluid: PyMassDensity,
 ) -> PyResult<f64> {
     Ok(pmut(film, radius, t_p, t_s)?
-        .immersion_resonance(MassDensity::from_unit::<KilogramPerCubicMeter>(
-            density_fluid,
-        ))
+        .immersion_resonance(density_fluid.quantity())
         .in_unit::<Hertz>())
 }
 
 /// PMUT effective electromechanical coupling k² [-].
 #[pyfunction]
-pub fn pmut_coupling_k2(film: &str, radius: f64, t_p: f64, t_s: f64) -> PyResult<f64> {
+pub fn pmut_coupling_k2(film: &str, radius: PyLength, t_p: PyLength, t_s: PyLength) -> PyResult<f64> {
     Ok(pmut(film, radius, t_p, t_s)?.coupling_k2().into_base())
 }
 
@@ -33,16 +30,16 @@ pub fn pmut_coupling_k2(film: &str, radius: f64, t_p: f64, t_s: f64) -> PyResult
 #[pyfunction]
 pub fn pmut_self_heating(
     film: &str,
-    radius: f64,
-    t_p: f64,
-    t_s: f64,
-    v_ac: f64,
-    freq: f64,
+    radius: PyLength,
+    t_p: PyLength,
+    t_s: PyLength,
+    v_ac: PyElectricPotential,
+    freq: PyFrequency,
 ) -> PyResult<f64> {
     Ok(pmut(film, radius, t_p, t_s)?
         .self_heating_power(
-            ElectricPotential::from_unit::<Volt>(v_ac),
-            Frequency::from_unit::<Hertz>(freq),
+            v_ac.quantity(),
+            freq.quantity(),
         )
         .in_unit::<Watt>())
 }
@@ -51,15 +48,13 @@ pub fn pmut_self_heating(
 #[pyfunction]
 pub fn pmut_fractional_bandwidth(
     film: &str,
-    radius: f64,
-    t_p: f64,
-    t_s: f64,
-    density_fluid: f64,
+    radius: PyLength,
+    t_p: PyLength,
+    t_s: PyLength,
+    density_fluid: PyMassDensity,
 ) -> PyResult<f64> {
     Ok(pmut(film, radius, t_p, t_s)?
-        .fractional_bandwidth(MassDensity::from_unit::<KilogramPerCubicMeter>(
-            density_fluid,
-        ))
+        .fractional_bandwidth(density_fluid.quantity())
         .into_base())
 }
 
@@ -67,18 +62,18 @@ pub fn pmut_fractional_bandwidth(
 #[pyfunction]
 pub fn pmut_max_output_pressure(
     film: &str,
-    radius: f64,
-    t_p: f64,
-    t_s: f64,
-    drive_voltage: f64,
-    density_fluid: f64,
-    sound_speed_fluid: f64,
+    radius: PyLength,
+    t_p: PyLength,
+    t_s: PyLength,
+    drive_voltage: PyElectricPotential,
+    density_fluid: PyMassDensity,
+    sound_speed_fluid: PyVelocity,
 ) -> PyResult<f64> {
     Ok(pmut(film, radius, t_p, t_s)?
         .max_output_pressure(
-            ElectricPotential::from_unit::<Volt>(drive_voltage),
-            MassDensity::from_unit::<KilogramPerCubicMeter>(density_fluid),
-            Velocity::from_unit::<MeterPerSecond>(sound_speed_fluid),
+            drive_voltage.quantity(),
+            density_fluid.quantity(),
+            sound_speed_fluid.quantity(),
         )
         .in_unit::<Pascal>())
 }
