@@ -37,7 +37,26 @@
 
 <a id="kw-sir-far-field-patch-2026-09-08"></a>
 
-## KW-SIR-FAR-FIELD-PATCH-2026-09-08 — Sparse-delta far-field patch SIR for array elements [minor] [perf] — todo
+## KW-SIR-FAR-FIELD-PATCH-2026-09-08 — Sparse-delta far-field patch SIR for array elements [major] [perf] — in-progress
+
+- **Integrator:** claude-fable-5-1; **branch:** `feat/kwavers-sir-far-field-patch`
+  (main tree); regions: `kwavers-physics::analytical::transducer::spatial_impulse_response`,
+  `kwavers-phantom::scatterers::aperture`, `crates/kwavers/benches/aperture_rf_synthesis.rs`.
+- **Premise corrected before work (2026-09-08):** the fourth-order cumulative
+  sum per trace in the outcome below is unsound — linear floor/ceiling splitting
+  preserves a delta's zeroth and first moments, which makes the *double*
+  integral exact at every grid node, but not the second and third, so a
+  quadruple integral of a split train does not return to zero after its
+  support and the trace drifts. The paper itself uses time-domain SDI only for
+  the one-way SIR and a spectral form for pulse-echo. Here the one-way element
+  SIR is built by SDI on a support-local buffer (exact at nodes), the round
+  trip is its direct auto-convolution on that buffer, and the pulse-echo trace
+  accumulation of KW-SIR-TRACE-ACCUMULATION-2026-09-08 is unchanged. The
+  spectral form is rejected for the monostatic path at these scales: per pair
+  it costs `O(M·T/2)` complex terms against `O(4M + Δk²)` here.
+- **Class raised to [major]:** the seam's field point gains in-plane
+  coordinates (`round_trip(x, y, z, dt)`) and `ApertureElement` gains a width
+  axis, both public in `kwavers-phantom`.
 
 - **Driver:** the same paper's core result: a far-field rectangular patch's SIR
   is a trapezoid whose second derivative is four signed deltas, so a pair costs
