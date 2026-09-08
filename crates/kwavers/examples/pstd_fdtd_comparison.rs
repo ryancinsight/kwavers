@@ -504,8 +504,16 @@ mod tests {
         let grid = Grid::new(NX, NX, NX, DX, DX, DX).unwrap();
         let source = gaussian_initial_source(&grid, CFL * DX / C0);
 
-        assert!(source.p0.is_some());
-        assert!(source.u0.is_some());
+        // The IVP-only case must allocate exactly the initial-value fields, at
+        // the grid's shape: `is_some()` alone would hold for an empty or
+        // wrongly sized allocation.
+        let p0 = source.p0.as_ref().expect("IVP source sets p0");
+        let u0 = source.u0.as_ref().expect("IVP source sets u0");
+        assert_eq!(p0.shape(), [NX, NX, NX]);
+        let (ux0, uy0, uz0) = u0;
+        assert_eq!(ux0.shape(), [NX, NX, NX]);
+        assert_eq!(uy0.shape(), [NX, NX, NX]);
+        assert_eq!(uz0.shape(), [NX, NX, NX]);
         assert!(source.p_signal.is_none());
         assert!(source.p_mask.is_none());
         assert!(source.u_signal.is_none());

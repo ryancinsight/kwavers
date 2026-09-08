@@ -150,14 +150,10 @@ fn test_multilateration_poor_geometry() {
         .collect();
 
     // Collinear sensors should fail with degenerate geometry error
-    let result = multi.localize(&arrival_times);
-    assert!(
-        result.is_err(),
-        "Expected error for degenerate collinear geometry"
-    );
-
-    // Error message should mention degenerate geometry or matrix not invertible
-    let error_msg = result.unwrap_err().to_string();
+    let error_msg = multi
+        .localize(&arrival_times)
+        .expect_err("collinear sensors leave the multilateration system rank-deficient")
+        .to_string();
     assert!(
         error_msg.contains("degenerate") || error_msg.contains("invertible"),
         "Expected degenerate geometry error, got: {}",
