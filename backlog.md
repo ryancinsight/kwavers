@@ -52,7 +52,7 @@
 
 - Delivered: PR [#741](https://github.com/ryancinsight/kwavers/pull/741), commit `3a4638dad` (ADR 113 revised; CHANGELOG Unreleased).
 - Outcome: `FarFieldRectangleSir` (Field II far-field patches by sparse delta integration, exact at the grid nodes for the one-way response, `RectangularPistonSir` as oracle: relative L1 2.94e-2 → 4.14e-4 over 1×4 to 8×32 patches, order two); the phantom seam carries the element frame (`ApertureElement` width axis, `round_trip(x, y, z, dt)`); bench `aperture_rf_synthesis_rectangle` 376 µs / 954 µs at 16 / 64 scatterers.
-- Premise corrected on the way: a trace-level fourth-order integral of split deltas drifts, so the round trip is the auto-convolution on the support; a judge pass caught an index clamp that mangled kernels for field points within a patch width of the face, fixed with signed anchoring and two regressions.
+- Premise corrected on the way: a trace-level fourth-order integral of split deltas drifts, so the round trip is the auto-convolution on the support; a judge pass caught an index clamp that mangled kernels for field points within a patch width of the face, fixed with signed anchoring and two regressions. Post-merge judge pass confirmed the fix bit-identical elsewhere; its two residuals (an `l = 0` overflow now a NaN sample, a mislabelled regression test) closed forward in PR [#745](https://github.com/ryancinsight/kwavers/pull/745), `dd71c1b01`.
 <a id="kw-fft3d-baseline-2026-09-08"></a>
 
 ## KW-FFT3D-BASELINE-2026-09-08 — The spectral pair a PSTD step is built on had no timing [patch] [perf] — done 2026-09-08
