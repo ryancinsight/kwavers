@@ -1,4 +1,5 @@
 use super::*;
+use kwavers_core::test_support::assert_rejects;
 
 #[test]
 fn test_register_optical_validation() {
@@ -10,10 +11,7 @@ fn test_register_optical_validation() {
     invalid_data[[0, 0, 0]] = -1.0;
 
     let result = fusion.register_optical(&invalid_data, 550e-9);
-    assert!(
-        result.is_err(),
-        "Must enforce physical constraint: Intensity >= 0"
-    );
+    assert_rejects(result, "Optical intensity values must be non-negative");
 
     let valid_data = Array3::<f64>::ones([4, 4, 2]);
     fusion.register_optical(&valid_data, 550e-9).unwrap();

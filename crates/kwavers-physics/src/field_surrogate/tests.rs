@@ -2,6 +2,7 @@
 //! synthetic kernels (no real PSTD runs needed) to exercise resampling,
 //! placement, and `(f0, pnp)` blending invariants.
 
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array3;
 
 use super::{
@@ -131,11 +132,11 @@ fn test_cube_construction_validates_cartesian_completeness() {
 fn test_cube_construction_rejects_missing_corner() {
     let k1 = synthetic_gaussian_kernel(20, 20, 20, 1.0e-3, 0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA);
     let k4 = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
+    // Two kernels at opposite corners leave the (f0_max, pnp_min) corner
+    // unfilled; the rejection names the missing pair, so an "empty input"
+    // rejection cannot satisfy this test.
     let result = KernelCube::new(vec![k1, k4]);
-    assert!(
-        result.is_err(),
-        "missing-corner cube must fail construction"
-    );
+    assert_invalid_input(result, "missing kernel for");
 }
 
 #[test]
