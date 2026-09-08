@@ -121,12 +121,11 @@ impl TransducerArray2D {
             center_position: [Length::from_unit::<Meter>(0.0); 3],
         };
 
-        let inner = KwaversTransducerArray2D::new(
-            config,
-            sound_speed.quantity(),
-            frequency.quantity(),
-        )
-        .map_err(|e| PyValueError::new_err(format!("Failed to create transducer array: {}", e)))?;
+        let inner =
+            KwaversTransducerArray2D::new(config, sound_speed.quantity(), frequency.quantity())
+                .map_err(|e| {
+                    PyValueError::new_err(format!("Failed to create transducer array: {}", e))
+                })?;
 
         Ok(TransducerArray2D {
             inner,
@@ -237,11 +236,7 @@ impl TransducerArray2D {
             return Err(PyValueError::new_err("Position coordinates must be finite"));
         }
         self.inner
-            .set_center_position([
-                x.quantity(),
-                y.quantity(),
-                z.quantity(),
-            ])
+            .set_center_position([x.quantity(), y.quantity(), z.quantity()])
             .map_err(PyValueError::new_err)?;
         Ok(())
     }

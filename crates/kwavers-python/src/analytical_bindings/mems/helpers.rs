@@ -10,15 +10,16 @@ use pyo3::prelude::*;
 use crate::quantity_args::PyLength;
 
 pub(super) fn cmut(radius: PyLength, thickness: PyLength, gap: PyLength) -> PyResult<CmutCell> {
-    CmutCell::silicon(
-        radius.quantity(),
-        thickness.quantity(),
-        gap.quantity(),
-    )
-    .ok_or_else(|| PyValueError::new_err("invalid CMUT geometry (all dimensions must be > 0)"))
+    CmutCell::silicon(radius.quantity(), thickness.quantity(), gap.quantity())
+        .ok_or_else(|| PyValueError::new_err("invalid CMUT geometry (all dimensions must be > 0)"))
 }
 
-pub(super) fn pmut(film: &str, radius: PyLength, t_p: PyLength, t_s: PyLength) -> PyResult<PmutCell> {
+pub(super) fn pmut(
+    film: &str,
+    radius: PyLength,
+    t_p: PyLength,
+    t_s: PyLength,
+) -> PyResult<PmutCell> {
     PmutCell::new(
         radius.quantity(),
         t_p.quantity(),

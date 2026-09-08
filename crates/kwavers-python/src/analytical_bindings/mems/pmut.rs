@@ -22,7 +22,12 @@ pub fn pmut_resonance_immersion(
 
 /// PMUT effective electromechanical coupling k² [-].
 #[pyfunction]
-pub fn pmut_coupling_k2(film: &str, radius: PyLength, t_p: PyLength, t_s: PyLength) -> PyResult<f64> {
+pub fn pmut_coupling_k2(
+    film: &str,
+    radius: PyLength,
+    t_p: PyLength,
+    t_s: PyLength,
+) -> PyResult<f64> {
     Ok(pmut(film, radius, t_p, t_s)?.coupling_k2().into_base())
 }
 
@@ -37,10 +42,7 @@ pub fn pmut_self_heating(
     freq: PyFrequency,
 ) -> PyResult<f64> {
     Ok(pmut(film, radius, t_p, t_s)?
-        .self_heating_power(
-            v_ac.quantity(),
-            freq.quantity(),
-        )
+        .self_heating_power(v_ac.quantity(), freq.quantity())
         .in_unit::<Watt>())
 }
 

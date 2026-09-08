@@ -13,7 +13,12 @@ use super::{PyDimensionless, PyLength, PyMassDensity, PyPressure};
 /// Deliberately not a `pyaequitas` object: the contract this crate depends on
 /// is the attribute protocol, so the test exercises that and needs no wheel
 /// installed to run.
-fn quantity<'py>(py: Python<'py>, base: f64, exponents: &str, semantics: &str) -> Bound<'py, PyAny> {
+fn quantity<'py>(
+    py: Python<'py>,
+    base: f64,
+    exponents: &str,
+    semantics: &str,
+) -> Bound<'py, PyAny> {
     let source = format!(
         "class Foreign:\n    __aequitas_base__ = {base}\n    __aequitas_dimension__ = ({exponents}, '{semantics}')\n\nresult = Foreign()\n"
     );

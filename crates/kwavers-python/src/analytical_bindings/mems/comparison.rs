@@ -5,7 +5,9 @@ use aequitas::systems::si::units::{Pascal, Volt, Watt};
 use kwavers_transducer::mems::comparison;
 use pyo3::prelude::*;
 
-use crate::quantity_args::{PyDimensionless, PyElectricPotential, PyLength, PyMassDensity, PyReciprocalLength, PyVelocity};
+use crate::quantity_args::{
+    PyDimensionless, PyElectricPotential, PyLength, PyMassDensity, PyReciprocalLength, PyVelocity,
+};
 
 /// Therapy comparison. Returns
 /// `[cmut_output_pa, pmut_output_pa, cmut_flex_derating, cmut_heating,
