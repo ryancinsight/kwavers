@@ -23,7 +23,6 @@ on:
   push:
     branches:
       - main
-      - codex/kwavers-atlas-integration
     paths-ignore:
       - 'backlog.md'
       - 'CHANGELOG.md'
@@ -34,7 +33,6 @@ on:
     types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
     branches:
       - main
-      - codex/kwavers-atlas-integration
     paths-ignore:
       - 'backlog.md'
       - 'CHANGELOG.md'

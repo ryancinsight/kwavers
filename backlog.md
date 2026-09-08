@@ -3401,27 +3401,23 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 - Merge note: filed and closed on `fix/xtask-metrics-paths`; KW-DOC-107 and KW-CLEAN-108
   carry the same note about the branch split.
 
-## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — in-progress 2026-08-19
+<a id="kw-ci-104"></a>
 
-| ID | Outcome | Class | Status | Owner | Scope |
-|----|---------|-------|--------|-------|-------|
-| KW-CI-104 | Normalize the Ubuntu package mirror once and install each job's system packages through one bounded repository-local action. | [patch] | implementation complete; hosted verification pending | Codex | `.github/actions/install-system-dependencies/action.yml`, Ubuntu workflow callers, this item |
+## KW-CI-104 — Centralize reliable Ubuntu dependency installation [patch] — todo
 
-- Acceptance: no affected job contacts `azure.archive.ubuntu.com`; update and
-  installation retain finite deadlines and retries; the repeated workflow
-  scripts consolidate into one action; workflow lint and exact-head hosted
-  jobs pass without changing test, benchmark, or coverage inputs.
-- Evidence: Architecture Validation run `32276583436`, job `96145340888`, and
-  CI/CD Pipeline run `32276583452`, job `96145341309`, independently exhausted
-  the eight-minute `apt-get update` deadline against the Azure mirror on
-  Python integration PR #410. The same PR's wheel job passed after its local
-  source normalization selected `archive.ubuntu.com`.
-- Local verification: `actionlint` 1.7.12 passes every workflow and the local
-  action; both composite-action Bash programs parse; `git diff --check` and
-  residue scans pass. The CUDA container retains its pre-checkout bootstrap,
-  which cannot call repository-local code and does not use the affected runner
-  source configuration.
-- Non-goals: no Rust, dependency, benchmark, test, or coverage-policy changes.
+- **Verified 2026-09-08, partially delivered.**
+  `.github/actions/install-system-dependencies/action.yml` exists, normalizes
+  the mirror (`azure.archive.ubuntu.com` -> `archive.ubuntu.com`), and five
+  workflows call it.
+- **Remaining:** three sites still hand-roll `apt-get` outside the action --
+  `architecture-validation.yml:422` and `:427` (inside the
+  `nvidia/cuda:13.2.0-devel-ubuntu22.04` container, which carries its own
+  sources and its own retry/timeout flags) and `python-wheel-smoke.yml:114`
+  (a hosted runner `apt-get install` that does not normalize the mirror, so it
+  keeps the exposure this item exists to remove).
+- **Acceptance:** every hosted-runner package install routes through the
+  action; a container job either routes through it or records why its base
+  image is exempt.
 
 ## KWAVERS-SONO-113 — Type sonoluminescence emission and close the example/book slice [major] [arch] — done 2026-08-20
 
@@ -4925,103 +4921,31 @@ markers without changing the numerical contract.
   regression passes 8/8. The package's all-feature Clippy reaches the separate
   `kwavers-solver` lint ratchet below.
 
-## KW-LINT-047 — Solver all-feature lint ratchet [patch] — in-progress
+<a id="kw-lint-047"></a>
 
-- Owner: Codex; scope: coherent offline `Cargo.lock` feature resolution plus
-  `crates/kwavers-solver` machine-applicable Clippy corrections exposed through
-  `kwavers-analysis --all-features`.
-- Acceptance: the solver compiles under its complete feature set and its
-  warning-denied Clippy gate has no remaining source diagnostics; behavior is
-  unchanged and existing solver regressions retain their value semantics.
-- Increment 2026-08-17: replaced the partial-order negated comparisons in
-  `forward/fdtd/absorption/mod.rs` with an explicit `partial_cmp` predicate.
-  The absorption regression filter passes 8/8 and the package all-target
-  warning-denied Clippy gate now passes; remaining ratchet findings, if any,
-  are discovered by the hosted matrix.
-- Driver: 79 source diagnostics prevented the public analysis package from
-  completing its all-feature warning-denied gate.
-- Evidence: the complete solver feature set compiles, warning-denied solver
-  Clippy passes across all targets, and its full Nextest suite passes 844
-  runnable tests with 4 ignored after two invalid test oracles were corrected.
-  The locked `kwavers --all-features` facade check passes. The all-target gate
-  is reconciling stale test and example APIs exposed by concurrent provider
-  migration. Current RITK and Hephaestus dependency warnings remain outside
-  this crate's lint scope.
+## KW-LINT-047 — Solver all-feature lint ratchet [patch] — todo
 
-## KW-CI-046 — Atlas-path CI and security audit [patch] — in-progress
+- **Not met. Measured 2026-09-08**, `cargo clippy -p kwavers-solver --features
+  pinn --all-targets`: 84 diagnostics -- 28 `unused_self`, 26 missing
+  `# Errors`, 11 `println!`, 7 missing `# Panics`, 6 missing `#[must_use]`, 4
+  `assert!` with an equality comparison, 2 doc-link/recursion findings.
+- The 2026-08-17 increment recorded the gate passing; it does not pass now,
+  under this configuration. `println!` in a library crate is its own floor
+  violation (engineering_gates: lint floor denies `print_stdout` there), and
+  `unused_self` at 28 sites is a design finding rather than a mechanical fix.
+- **Acceptance:** the measured count reaches zero under the named
+  configuration, or each survivor carries `#[expect(lint, reason = ...)]`.
 
-- Owner: Codex; scope: reusable GitHub Actions setup for the sibling Atlas path
-  providers declared by `Cargo.toml`, root Cargo-deny policy, stale
-  architecture-workflow cleanup, portable hosted CPU code generation, explicit
-  CUDA-runtime compilation, native Nextest invocation, WGPU 30 provider
-  alignment, Leto API migration required by the public `full` build, and the
-  native solver literature-validation module targeted by CI.
-- Acceptance: every Cargo job materializes the manifest-declared sibling
-  providers at the `codex/kwavers-atlas-integration` submodule revisions before
-  resolving the workspace; no workflow invokes the deleted
-  `scripts/validate_architecture.sh`;
-  native test jobs use Nextest, with doctests retaining Rustdoc's supported
-  runner; hosted CPU jobs never use `target-cpu=native`; CUDA runtime code
-  compiles against its required toolkit; and the security job evaluates the
-  root policy against the Kwavers manifest and rejects unapproved sources,
-  licenses, and advisories. The public `full` package build uses the same WGPU
-  30 immediate-data ABI as its Hephaestus provider and all Leto operations
-  propagate their fallible view/index contracts. Solver literature validation
-  is a compiled native module with value-semantic reference regressions rather
-  than an empty test filter.
-- Driver: PR #288 fails before compilation because `../apollo` and the other
-  Atlas path providers are absent in GitHub Actions. The architecture workflow
-  separately invokes a script deleted in commit `91514cad2`.
-- Evidence: GitHub Actions run `29443042765` reports the missing
-  `apollo/crates/apollo-fft/Cargo.toml`; the first repair run proves that
-  provider defaults are insufficient (`apollo-fft` 0.17.0 conflicts with
-  RITK's `^0.15.0`), while Atlas `main` pins incompatible Apollo 0.14. The
-  committed Kwavers Atlas integration branch pins Apollo 0.15. The next
-  architecture rerun materializes all 12 providers and exposes the first real
-  source error: Linux `CPU_SET` receives an immutable set in the explicit-CPU
-  branch. Strict Clippy then finds two manual NUMA-mask ceiling divisions.
-  The legacy audit also misclassifies NumPy's PyO3 ndarray facade as direct
-  ndarray use; it now distinguishes those boundaries and removes 1,477 stale
-  allowlist entries. Local manifest-path resolution finds all 12 sibling
-  providers. The root `deny.toml` now uses strict registry/Git allowlists,
-  records only exact license exceptions for `cuda-oxide`, `colored`, and
-  `epaint`, removes unused direct DICOM 0.8 workspace pins, and updates the
-  lock graph through RITK DICOM 0.10 and patched advisory releases. Local
-  Cargo-deny licenses, advisories, and sources checks pass. The two remaining
-  yanked notices are non-advisory `spin` 0.9.8 (Flume 0.11.1) and 0.10.0
-  (Burn) transitive constraints.
-  Re-open trigger: any coordinated-provider checkout, manifest
-  resolution, or subsequent CI-job failure on the repaired PR head.
-  The first rerun additionally proves that the old committed native-CPU flag
-  can SIGILL on hosted runners and that a CPU runner cannot build the explicit
-  CUDA runtime. Both are environmental configuration defects, not acceptable
-  reasons to suppress the checks: portable CPU workflow legs now compile the
-  supported feature surface while a CUDA 13.2 container compiles the runtime
-  provider. The resulting GPU PINN compile also exposed a source defect: it
-  interpreted Coeus `[out, in]` weights as `[in, out]`, read device tensors as
-  host slices, hid constructor errors behind `.ok()`, and returned a fixed
-  uncertainty vector. The corrected implementation uses Coeus backend
-  readback, authoritative weight orientation, propagated construction errors,
-  and an analytical half-step quantization bound. The direct WGPU 26
-  dependency is now removed: Kwavers uses the WGPU 30 provider selected by
-  Hephaestus, with former push-constant kernels expressed through WGPU
-  immediate data and map-range failures propagated as typed GPU errors. The
-  Leto call sites exposed by the public `full` build now use native shapes,
-  views, and fallible axes without ndarray fallback adapters. Workspace Rustdoc
-  compiles under the legacy warning baseline while the deployable public
-  `kwavers` facade remains warning-denied; the extensive physics Rustdoc-link
-  cleanup remains tracked ratchet work rather than a CI suppression. The first
-  repaired remote run proved the solver workflow's `validation::literature`
-  filter selected no module. Its source and tests existed but `validation::mod`
-  omitted the module declaration. Restoring the native edge corrected the
-  nested `TWO_PI` scope and Leto three-axis index; nine literature regressions
-  now pass locally, including an exact Treeby snapshot and multi-time
-  dimension-contract rejection. The architecture job's first full-facade build
-  also lacked the fontconfig development package already present in the other
-  Cargo CI jobs; its system prerequisites now match that established contract.
-  The strict rerun also identifies and removes three no-op Leto `Array3`
-  conversions in the touched FD monitor, preserving the public facade's
-  warning-denied contract.
+## KW-CI-046 — Atlas-path CI and security audit [patch] — done 2026-09-08
+
+- Verified against the tree: `scripts/validate_architecture.sh` is absent with
+  zero workflow references, and no workflow passes `target-cpu=native`.
+- The stale `codex/kwavers-atlas-integration` push and pull_request triggers in
+  `legacy-migration-audit.yml` are removed; that branch does not exist on
+  origin, and a vendor-prefixed ref namespace is not a branch name we keep.
+- The acceptance clause about materializing siblings at that branch's submodule
+  revisions is obsolete: first-party dependencies now resolve by git+version
+  and, locally, through the stack development overlay.
 
 ## KW-IMG-044 — Active complex-I/Q imaging primitives [minor] — done
 
