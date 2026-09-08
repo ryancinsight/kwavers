@@ -3340,6 +3340,7 @@ dependencies = [
  "log",
  "moirai-parallel 0.6.0",
  "parking_lot",
+ "proteus-mat",
  "rand 0.8.8",
  "rand_chacha 0.3.1",
  "serde",
