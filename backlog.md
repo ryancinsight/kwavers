@@ -29,6 +29,14 @@
   the two sets union rather than partition. Verified against the tree: 26
   files, 10 targets, 17 modules, union 26, no uncovered file and no target
   without a file.
+- **The gate's misreading had already been made once.** `985478bb2` (peer,
+  2026-09-02) read `fdtd_propagation_benchmark`'s missing declaration as the
+  bench being unregistered and re-added both a `[[bench]]` entry and a
+  `criterion_main!`, though `6bcc8087d` had made the file a module of
+  `benchmark_suite` a day earlier. It has built into two binaries since, and
+  `cargo bench --benches` ran and reported its measurements twice. It was the
+  only suite module carrying an entry point. Both are removed; 9 targets now,
+  union still 26.
 
 <a id="kw-sir-trace-accumulation-2026-09-08"></a>
 
