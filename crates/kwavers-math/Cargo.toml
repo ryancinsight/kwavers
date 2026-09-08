@@ -23,6 +23,8 @@ rand = "0.8"
 apollo = { workspace = true }
 
 [dev-dependencies]
+# Rejection assertions shared across the workspace's test modules.
+kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 
 [lints]
 workspace = true

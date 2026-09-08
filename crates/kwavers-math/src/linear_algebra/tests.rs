@@ -41,9 +41,7 @@ fn eigenvalues_returns_only_eigenvalues() {
     let result = leto_ops::application::linalg::eigenvalues(&matrix.view());
 
     // Should succeed for symmetric matrices
-    assert!(result.is_ok());
-
-    let eigenvalues = result.unwrap();
+    let eigenvalues = result.expect("a real symmetric matrix always has a real spectrum");
 
     // Check that we get 2 eigenvalues
     assert_eq!(eigenvalues.len(), 2);
@@ -62,8 +60,14 @@ fn symmetric_eigen_rejects_non_symmetric_matrix() {
     let matrix = Array2::<f64>::from_vec([2, 2], vec![1.0, 2.0, 2.0, 1.0]).unwrap();
 
     // This should work since the matrix is symmetric
-    let result = leto_ops::application::linalg::symmetric_eigenvalues_jacobi(&matrix.view());
-    assert!(result.is_ok());
+    let eigenvalues = leto_ops::application::linalg::symmetric_eigenvalues_jacobi(&matrix.view())
+        .expect("[[1, 2], [2, 1]] is symmetric");
+    // Its spectrum is {3, -1}: asserting only that the call returned would
+    // hold for any output the routine cared to produce.
+    let mut sorted = eigenvalues.to_vec();
+    sorted.sort_by(|a, b| a.partial_cmp(b).expect("real eigenvalues are ordered"));
+    assert!((sorted[0] + 1.0).abs() < 1e-10, "got {sorted:?}");
+    assert!((sorted[1] - 3.0).abs() < 1e-10, "got {sorted:?}");
 }
 
 #[test]
