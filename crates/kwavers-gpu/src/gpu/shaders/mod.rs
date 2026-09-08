@@ -8,7 +8,6 @@
 //!
 //! | File                       | Loaded by                                   |
 //! |----------------------------|---------------------------------------------|
-//! | `fdtd_pressure.wgsl`       | `gpu::compute::fdtd_gpu`                    |
 //! | `acoustic_field.wgsl`      | `gpu::compute_kernels::acoustic_field`      |
 //!
 //! The active PSTD propagation shader lives with its solver at

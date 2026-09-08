@@ -1,5 +1,6 @@
 use super::estimator::ModelOrderEstimator;
 use super::types::{ModelOrderConfig, ModelOrderCriterion, ModelOrderResult};
+use kwavers_core::test_support::assert_invalid_input;
 
 #[test]
 fn test_config_creation() {
@@ -12,13 +13,13 @@ fn test_config_creation() {
 #[test]
 fn test_config_validation_too_few_sensors() {
     let result = ModelOrderConfig::new(1, 100);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Number of sensors must be ≥ 2");
 }
 
 #[test]
 fn test_config_validation_too_few_samples() {
     let result = ModelOrderConfig::new(10, 5);
-    assert!(result.is_err());
+    assert_invalid_input(result, "must be ≥ number of sensors");
 }
 
 #[test]

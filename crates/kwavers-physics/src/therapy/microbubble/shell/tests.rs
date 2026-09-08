@@ -2,6 +2,7 @@ use super::properties::MarmottantShellProperties;
 use super::state::ShellState;
 use aequitas::systems::si::quantities::{DynamicViscosity, Length, SurfaceTension, Velocity};
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
+use kwavers_core::test_support::assert_rejects;
 
 #[test]
 fn test_create_shell() {
@@ -167,7 +168,7 @@ fn test_validation_invalid_buckling_ratio() {
         1.5,
         1.6,
     );
-    assert!(result.is_err());
+    assert_rejects(result, "buckling_ratio");
 }
 
 #[test]
@@ -179,7 +180,7 @@ fn test_validation_invalid_rupture_ratio() {
         0.85,
         0.9,
     );
-    assert!(result.is_err());
+    assert_rejects(result, "rupture_ratio");
 }
 
 #[test]

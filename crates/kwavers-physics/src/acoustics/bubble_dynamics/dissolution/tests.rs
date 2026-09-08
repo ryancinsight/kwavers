@@ -132,7 +132,13 @@ fn shelled_dissolution_time_exceeds_free() {
 fn trajectory_is_monotone_decreasing_and_volume_ratio_bounded() {
     let model = EpsteinPlessetDissolution::new(GasDiffusionParams::air_in_water(0.0));
     let traj = integrate_dissolution(&model, 2e-6, 1e-5, 1.0, 1e-9);
-    assert!(traj.dissolution_time.is_some(), "should fully dissolve");
+    let dissolution_time = traj
+        .dissolution_time
+        .expect("a 2 um air bubble dissolves inside the 1 s horizon");
+    assert!(
+        dissolution_time > 0.0 && dissolution_time <= 1.0,
+        "dissolution time {dissolution_time} s must lie inside the integration horizon"
+    );
     for k in 1..traj.radius.len() {
         assert!(
             traj.radius[k] <= traj.radius[k - 1] + 1e-15,

@@ -1,5 +1,140 @@
 # Backlog / Strategy
 
+## KW-ANALYSIS-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-analysis` [patch] — done 2026-09-07 <a id="kw-analysis-value-assertions-2026-09-07"></a>
+
+- **Outcome:** all 14 sites name the rejection. Several distinguished nothing
+  before: `MUSICProcessor::new` rejects a zero source count, an oversized
+  source count, and a sensor count below two through the same variant, so the
+  two MUSIC tests were interchangeable; the same held for `ModelOrderConfig`'s
+  sensor and sample bounds and for the neural `SensorGeometry` triple, where
+  one test covered three distinct guards.
+- **`test_neural_layer_dimension_mismatch` collapses** from an `is_err()` plus
+  an `if let Err(..)`/`else { panic! }` block to one helper call carrying the
+  same claim.
+- **Shown to bite:** swapping the zero-source guard's message for the
+  two-sensor one fails `test_music_invalid_num_sources_zero`; the old
+  assertion passed. Reverted, file re-verified against `HEAD`.
+- **Evidence:** the conformance class for this crate goes 14 → 0;
+  `cargo nextest run -p kwavers-analysis --lib` 744/744; fmt clean.
+- **Remaining stack-wide:** 73 sites (kwavers 9, kwavers-therapy 8,
+  kwavers-medium/-math/-imaging 6 each, kwavers-driver 3,
+  kwavers-transducer/-gpu/-diagnostics 2 each, and the rest).
+
+## KW-PHYSICS-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-physics` [patch] — done 2026-09-07 <a id="kw-physics-value-assertions-2026-09-07"></a>
+
+- **Outcome:** all 17 sites assert the cause. Sixteen are rejections, now
+  checked through `kwavers_core::test_support::{assert_invalid_input,
+  assert_rejects}`; the seventeenth was
+  `traj.dissolution_time.is_some()`, replaced by binding the time and
+  asserting it falls inside the integration horizon — an `is_some` on an
+  integrator result says only that the loop terminated.
+- **One test already carried the right claim in the wrong shape:**
+  `test_fuse_insufficient_modalities` followed its `is_err()` with an
+  `if let Err(...)` that checked the message. The helper states it in one
+  line and drops the unreachable `else { panic! }`.
+- **Shown to bite:** swapping the buckling guard's reported parameter to
+  `rupture_ratio` fails `test_validation_invalid_buckling_ratio`; the old
+  assertion passed. Reverted, file re-verified against `HEAD`.
+- **Evidence:** the conformance class for this crate goes 17 → 0;
+  `cargo nextest run -p kwavers-physics --lib` 1562/1562; fmt clean. The
+  crate's 26 pre-existing clippy warnings (println! in test modules,
+  single-character patterns in `phase_shifting`) are unchanged and land in no
+  file this item touched — CI does not hold this crate to `-D warnings`.
+- **Remaining stack-wide:** 87 sites (kwavers-analysis 14, kwavers 9,
+  kwavers-therapy 8, kwavers-medium/-math/-imaging 6 each, kwavers-driver 3,
+  kwavers-transducer/-gpu/-diagnostics 2 each).
+
+## KW-SOLVER-VALUE-ASSERTIONS-2026-09-07 — Existence-only rejection tests in `kwavers-solver` [patch] — done 2026-09-07 <a id="kw-solver-value-assertions-2026-09-07"></a>
+
+- **Outcome:** all 19 `assert!(result.is_err())` sites in `kwavers-solver`
+  assert the typed variant and the message fragment naming the violated
+  constraint. Two `#[cfg(test)]` helpers carry the form:
+  `assert_invalid_input` (variant + cause, for the `InvalidInput` contract) and
+  `assert_rejects` (cause only, for contracts rejecting through `Validation`
+  or `InternalError`).
+- **A live defect, not only a form violation.** `test_avx512_invalid_dimensions`
+  called a constructor that rejects both on `nx < 4` *and* on a host without
+  AVX-512, returning different variants. On any non-AVX-512 machine the test
+  passed without ever reaching the dimension check — the assertion could not
+  fail on the defect it was written for. `test_avx512_invalid_tile_size` had
+  the same shape.
+- **Shown to bite:** changing the production dimension guard to return
+  `FeatureNotAvailable` instead of `InvalidInput` fails
+  `test_avx512_invalid_dimensions`; under the old assertion it passed. The
+  mutation was reverted and the file re-verified byte-identical.
+- **Evidence:** the class count for this crate goes 19 → 0 by the atlas
+  conformance detector; `cargo nextest run -p kwavers-solver --lib` 950/950
+  (2 skipped); clippy `-p kwavers-solver --all-targets -D warnings` and fmt
+  clean.
+- **Remaining stack-wide:** 104 sites in the other kwavers crates
+  (kwavers-physics 17, kwavers-analysis 14, kwavers 9, kwavers-therapy 8,
+  kwavers-medium/-math/-imaging 6 each, the rest smaller) — one item per crate,
+  same pattern.
+
+## KW-GPU-COMPUTE-COMMANDS-2026-09-07 — Delete the orphaned WGPU command helper [patch] — done 2026-09-07 <a id="kw-gpu-compute-commands-2026-09-07"></a>
+
+- **Outcome:** `gpu::compute` held only `WgpuComputeCommands` after its two
+  FDTD dispatchers were deleted. Nothing constructs it: the sole reference in
+  the workspace was its own `size_of::<T>() > 0` test, which cannot fail on a
+  struct with two non-zero-sized fields — an existence-only assertion guarding
+  an unreachable type. Module, type, and test deleted; the `pub mod` and
+  re-export go with them.
+- **Why it survived two deletions:** it was the shared helper of the pair, so
+  removing the pair left it without a caller. Superseded artifacts belong in
+  the change that supersedes them; this is that residue collected one commit
+  late.
+- **Evidence:** `git grep` for the type returns nothing; clippy
+  `-p kwavers-gpu --features gpu --all-targets -D warnings` clean; nextest
+  164/164 (was 165 — the deleted test is the module's own).
+
+## KW-GPU-FDTD-SHADER-COPY-2026-09-06 — Delete the unwired `kwavers-gpu` FDTD stencil copy [patch] — done 2026-09-07 <a id="kw-gpu-fdtd-shader-copy-2026-09-06"></a>
+
+- **Landed:** PR #728 (`21d0b191a`). 775 lines deleted, 1 added.
+- **Outcome:** `gpu::compute::fdtd_gpu` (`WgpuFdtdPressureDispatcher`,
+  `PressureParams`, `shaders/fdtd_pressure.wgsl`) and its CPU reference
+  `fdtd_cpu` (`FdtdCpuReferenceDispatcher`) are a second 6-point Laplacian
+  wave-update kernel with no dispatch site: `WgpuFdtdPressureDispatcher` is not
+  re-exported past its module, and `FdtdCpuReferenceDispatcher` exists only as
+  its value-semantic reference. Delete both with the shader and their tests.
+- **Acceptance:** no reference to the deleted items remains
+  (`git grep` to zero); `cargo clippy -p kwavers-gpu --all-targets -D warnings`
+  and `cargo nextest run -p kwavers-gpu` clean.
+- **Delivered:** `aa738cefe` deletes 775 lines and adds one. `git grep` for
+  each deleted name returns nothing but this entry.
+- **Blocked on, then unblocked by, a dependency defect this change did not
+  cause.** kwavers could not resolve its lock at all: Moirai's workspace went
+  0.6.0 on its default branch at 2026-09-06 21:34 while ten members still
+  required `^0.5.0` from that same branch, so `cargo metadata --locked` and
+  `scripts/lockfile.py --check` both failed and the pre-push gate refused every
+  push. Root cause and the ordered sweep are recorded at atlas
+  `backlog.md#atlas-moirai-06-forward-sweep`; this branch carries kwavers' own
+  half (`moirai-parallel` 0.5 → 0.6) plus the regenerated lock.
+- **Filed in passing:** `gpu::compute_manager::fdtd_cpu` is a *third*
+  hand-rolled first-difference sweep in `kwavers-gpu`, this one reachable. It
+  is a consolidation target for the leto/hephaestus seam, not part of this
+  deletion — see `KW-GPU-COMPUTE-MANAGER-STENCIL-2026-09-07`.
+
+## KW-GPU-COMPUTE-MANAGER-STENCIL-2026-09-07 — Delete `compute_manager`, the third stencil copy [patch] — done 2026-09-07 <a id="kw-gpu-compute-manager-stencil-2026-09-07"></a>
+
+- **Re-scoped from rewrite to deletion on evidence.** The item was filed as
+  "route the sweep through leto" on the assumption `compute_manager` was
+  reachable. It is not: `git grep ComputeManager` outside the file itself
+  returns one line, its own `pub mod` declaration. The velocity-divergence
+  sweep, the absorption loop, and the raw `wgpu::Device`/`Queue`/buffer
+  accessors have no call site in the workspace.
+- **What it was:** a "GPU compute manager" whose field updates are CPU triple
+  loops — its own doc says so ("current field-update helpers below are CPU
+  routines") — and whose module doc claims to keep "raw WGPU handles confined
+  to the WGPU specialization" while exposing `device()`, `queue()`,
+  `create_buffer` and `write_buffer` verbatim. A scaffold whose GPU side never
+  arrived, contradicting its own contract. Deleted rather than wired: an
+  unused capability is deleted outright, and the seam it gestured at is the
+  one leto and hephaestus already own (ADR 128).
+- **Evidence:** `cargo clippy -p kwavers-gpu --features gpu --all-targets
+  -D warnings` clean; nextest 165/165 (was 168 — the three deleted tests are
+  the module's own); `cargo check -p kwavers-gpu --features gpu --lib` clean.
+
+
 ## ✅ KW-PY-SIMULATION-MOD-SLICES-2026-09-02 — Slice `simulation_py/mod.rs` to the file target [patch] — done 2026-09-02
 
 - **Delivered:** `mod.rs` (803 → 236 lines) is the pyclass, its constructor and the module tree; the `#[pymethods]` groups live where their concern does — `configuration.rs` (config objects, thermal/poroelastic), `pml.rs` (PML geometry and k-space numerics), `physics.rs` (nonlinearity, absorption, Helmholtz) — under the crate's existing `multiple-pymethods` feature; `run/execute.rs` holds `Simulation.run` and `run/prepare.rs` the pure conversions it was inlining (CFL time step with its named Courant number, solver/FFT-backend maps, elastic velocity source, IVP axis). The `kwavers_error_to_py_local` alias "kept for old solver files" is deleted and its six callers use the one name.

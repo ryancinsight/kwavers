@@ -1,5 +1,6 @@
 use super::*;
 use crate::inverse::pinn::elastic_2d::Config;
+use kwavers_core::test_support::assert_invalid_input;
 
 type TestBackend = coeus_core::MoiraiBackend;
 
@@ -56,7 +57,7 @@ fn test_empty_batch_error() {
 
     let points: Vec<(f64, f64, f64)> = vec![];
     let result = predictor.predict_batch(&points);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Points array cannot be empty");
 }
 
 #[test]

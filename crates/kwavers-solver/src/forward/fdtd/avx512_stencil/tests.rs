@@ -1,5 +1,6 @@
 use super::{FdtdAvx512Config, FdtdAvx512StencilProcessor};
 use crate::test_support::test_info;
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array3;
 
 #[test]
@@ -22,7 +23,9 @@ fn test_avx512_processor_creation() {
 fn test_avx512_invalid_dimensions() {
     let config = FdtdAvx512Config::default();
     let result = FdtdAvx512StencilProcessor::new(2, 32, 32, config);
-    assert!(result.is_err());
+    // The constructor also rejects with FeatureNotAvailable on a host without
+    // AVX-512, which is why `is_err()` here asserted nothing about dimensions.
+    assert_invalid_input(result, "Grid dimensions must be >= 4");
 }
 
 #[test]
@@ -32,7 +35,7 @@ fn test_avx512_invalid_tile_size() {
         ..FdtdAvx512Config::default()
     };
     let result = FdtdAvx512StencilProcessor::new(32, 32, 32, config);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Tile size must be power of 2");
 }
 
 #[test]
@@ -133,7 +136,7 @@ fn test_pressure_update_mismatch() {
         let p_prev = Array3::zeros((12, 12, 12));
         let u_div = Array3::zeros((16, 16, 16));
         let result = processor.update_pressure_avx512(&p_curr, &p_prev, &u_div);
-        assert!(result.is_err());
+        assert_invalid_input(result, "All fields must have identical dimensions");
     }
 }
 

@@ -1,5 +1,6 @@
 //! Tests for `PolynomialFilter` and `PolynomialFilterConfig`.
 
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array2;
 
 use super::config::PolynomialFilterConfig;
@@ -95,7 +96,7 @@ fn test_insufficient_frames() {
     let data = Array2::<f64>::zeros((10, 5));
     let result = filter.filter(&data);
 
-    assert!(result.is_err());
+    assert_invalid_input(result, "must be > polynomial order");
 }
 
 // ─── Exact value-semantic tests (normal equations derived) ────────────────────

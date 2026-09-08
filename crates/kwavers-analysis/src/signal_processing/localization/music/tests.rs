@@ -2,6 +2,7 @@ use crate::signal_processing::localization::model_order::ModelOrderCriterion;
 use crate::signal_processing::localization::{AcousticLocalizationConfig, LocalizationProcessor};
 use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use kwavers_core::test_support::assert_invalid_input;
 use leto::Array2;
 
 use super::{MUSICConfig, MUSICProcessor};
@@ -19,7 +20,7 @@ fn test_music_invalid_num_sources_zero() {
         ..Default::default()
     };
     let result = MUSICProcessor::new(&config);
-    assert!(result.is_err());
+    assert_invalid_input(result, "Number of sources must be > 0");
 }
 
 #[test]
@@ -29,7 +30,7 @@ fn test_music_invalid_num_sources_too_many() {
         ..Default::default()
     };
     let result = MUSICProcessor::new(&config);
-    assert!(result.is_err());
+    assert_invalid_input(result, "must be < number of sensors");
 }
 
 #[test]

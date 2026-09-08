@@ -43,6 +43,8 @@ eunomia = { workspace = true }
 channels = ["dep:flume"]
 # `From<ritk_registration::…RegistrationError>` for KwaversError.
 registration = ["dep:ritk-registration"]
+# Exposes `test_support`'s rejection assertions to other crates' test modules.
+test-util = []
 
 
 [lints]

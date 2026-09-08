@@ -1,5 +1,6 @@
 use super::readonly::PluginFieldAccess;
 use crate::acoustics::state::PhysicsState;
+use kwavers_core::test_support::assert_rejects;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 
@@ -41,5 +42,5 @@ fn test_unauthorized_access() {
 
     // Try to access an undeclared field
     let result = access.get_field(UnifiedFieldType::Density);
-    assert!(result.is_err());
+    assert_rejects(result, "Density");
 }

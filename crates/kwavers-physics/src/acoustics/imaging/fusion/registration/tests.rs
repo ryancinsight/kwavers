@@ -2,6 +2,7 @@ use super::coordinates::generate_coordinate_arrays;
 use super::resampling::{resample_to_target_grid, trilinear_interpolate};
 use super::transforms::apply_inverse_transform;
 use super::validation::validate_registration_compatibility;
+use kwavers_core::test_support::assert_rejects;
 use leto::Array3;
 
 #[test]
@@ -104,5 +105,5 @@ fn test_validate_registration_compatibility_valid() {
 #[test]
 fn test_validate_registration_compatibility_invalid() {
     let result = validate_registration_compatibility([10, 10, 10], [200, 200, 200]);
-    assert!(result.is_err());
+    assert_rejects(result, "Incompatible dimensions for registration");
 }
