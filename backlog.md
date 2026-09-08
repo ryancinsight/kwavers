@@ -4859,17 +4859,28 @@ markers without changing the numerical contract.
   so a default check never reaches the WGPU or CUDA provider paths the
   acceptance names.
 
-## KW-SOL-054 — Repair AVX-512 FDTD layout contract [patch] — in-progress
+<a id="kw-sol-054"></a>
 
-- Owner: Codex; scope: `crates/kwavers-solver/src/forward/fdtd/avx512_stencil/`
-  and synchronized PM evidence.
-- Acceptance: pressure and velocity AVX-512 kernels use Leto C-order strides,
-  cover all interior vector tails, validate raw-pointer layout preconditions,
-  and match analytical uniform/linear reference fields on an AVX-512 host.
-- Evidence: Architecture Validation job `87932791305` observed the old kernel
-  write `0` at interior `[8, 8, 8]` for a uniform `7.5` field. On an AVX-512
-  host, the focused Nextest suite passes all seven cases and package test
-  compilation passes. A fresh hosted matrix remains required before merge.
+## KW-SOL-054 — Repair AVX-512 FDTD layout contract [patch] — todo
+
+- **Cannot be verified here, and is not verified anywhere.** The acceptance
+  requires matching analytical reference fields *on an AVX-512 host*. This
+  machine reports `avx512f=false` (hybrid Core Ultra; AVX-512 is fused off), so
+  the seven `avx512` tests pass on the scalar fallback.
+- Two of them assert nothing when they do: `processor_or_skip` returns `None`
+  without the feature and the bodies of
+  `pressure_update_keeps_interior_constant_for_uniform_field` and
+  `velocity_update_matches_linear_pressure_gradient` early-return. The helper
+  is right to separate a genuine environment limit from a defect -- it asserts
+  the feature really is absent before skipping -- but a green run on this host
+  is evidence about the fallback, not the kernels.
+- **No CI host runs them either:** no workflow sets an AVX-512 runner or
+  `target-feature`, so the kernels ship unexercised on every machine class
+  available to this project.
+- **Acceptance:** the value-semantic cases run somewhere that reports
+  `avx512f=true` -- a self-hosted runner, or an emulator (SDE-class) invoked by
+  a scheduled job -- and the run is recorded; until then the kernels carry no
+  behavioral evidence and the item stays open.
 
 ## KW-CI-053 — Update GPU PSTD parity contract [patch] — review
 
