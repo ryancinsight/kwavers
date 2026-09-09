@@ -135,7 +135,6 @@ fn fractional_laplacian_absorption_decay_ratio_matches_alpha_omega_y_power_law()
             beta: &beta,
             attenuation_np_per_m_mhz: Some(alpha_field),
             attenuation_power_law_y: Some(&attenuation_y),
-            source_body_mask: None,
             n,
             spacing_m,
             aperture: &aperture,

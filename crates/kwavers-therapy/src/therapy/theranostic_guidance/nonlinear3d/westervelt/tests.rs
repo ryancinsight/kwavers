@@ -49,13 +49,11 @@ fn source_calibration_never_overdrives_configured_transducer_pressure() {
     config.cycles = 2.0;
     config.cfl = 0.4;
     let schedule = time_schedule(&speed, n, spacing_m, &config);
-    let body = vec![true; cells];
     let source_scale = calibrated_source_scale(SourceCalibrationInput {
         background_speed: &speed,
         density: &density,
         attenuation_alpha0: &attenuation,
         attenuation_y: &attenuation_y,
-        body: &body,
         target: &target,
         n,
         spacing_m,
@@ -69,7 +67,6 @@ fn source_calibration_never_overdrives_configured_transducer_pressure() {
         beta: &beta,
         attenuation_np_per_m_mhz: Some(&attenuation),
         attenuation_power_law_y: Some(&attenuation_y),
-        source_body_mask: Some(&body),
         n,
         spacing_m,
         aperture: &aperture,

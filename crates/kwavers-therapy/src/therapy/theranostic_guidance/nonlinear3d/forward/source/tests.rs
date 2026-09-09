@@ -46,7 +46,6 @@ fn source_plan_preserves_per_element_drive_weights() {
         1.0e-3,
         &aperture,
         SourceEncoding { index: 0, count: 1 },
-        None,
     );
 
     assert_eq!(plan.encoding_weights, vec![1.0, 1.0, 1.0, 1.0]);
@@ -98,7 +97,6 @@ fn source_plan_steers_with_straight_ray_slowness() {
         1.0e-3,
         &aperture,
         SourceEncoding { index: 0, count: 1 },
-        None,
     );
 
     assert!(
@@ -141,7 +139,6 @@ fn focused_delays_align_emission_phase_at_focus() {
         1.0e-3,
         &aperture,
         SourceEncoding { index: 0, count: 1 },
-        None,
     );
     let arrivals = sources
         .iter()
@@ -195,7 +192,6 @@ fn focused_delays_apply_fast_skull_path_phase_correction() {
         1.0e-3,
         &aperture,
         SourceEncoding { index: 0, count: 1 },
-        None,
     );
 
     assert!(
@@ -237,7 +233,6 @@ fn source_injection_imposes_bounded_pressure_without_accumulating_drive() {
         1.0e-3,
         &aperture,
         SourceEncoding { index: 0, count: 1 },
-        None,
     );
     let mut config = Nonlinear3dConfig::new(AnatomyKind::Liver);
     config.frequency_hz = MHZ_TO_HZ;
@@ -281,7 +276,9 @@ fn exterior_coupling_source_stencil_excludes_body_cells() {
         }],
         receiver_points_m: Vec::new(),
         model_name: "coupling_stencil_test".to_owned(),
-        source_domain: SourceDomain::ExteriorCoupling,
+        source_domain: SourceDomain::ExteriorCoupling {
+            body_mask: body.clone(),
+        },
         focus: GridIndex { x: 3, y: 3, z: 4 },
     };
     let speed = vec![SOUND_SPEED_WATER_SIM; cells];
@@ -292,7 +289,6 @@ fn exterior_coupling_source_stencil_excludes_body_cells() {
         1.0e-3,
         &aperture,
         SourceEncoding { index: 0, count: 1 },
-        Some(&body),
     );
 
     let stencil = &plan.source_stencils[0];
@@ -330,7 +326,6 @@ fn exterior_coupling_source_stencil_excludes_body_cells() {
         1.0e-3,
         &aperture,
         SourceEncoding { index: 0, count: 1 },
-        Some(&body),
     );
     assert!(metrics.source_support_min > 1);
     assert!(metrics.source_support_mean > 1.0);

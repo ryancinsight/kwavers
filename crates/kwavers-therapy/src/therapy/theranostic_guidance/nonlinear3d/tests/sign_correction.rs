@@ -81,7 +81,6 @@ fn forward_westervelt_exhibits_physical_forward_steepening_with_corrected_sign()
         beta: &beta_field,
         attenuation_np_per_m_mhz: None,
         attenuation_power_law_y: None,
-        source_body_mask: None,
         n,
         spacing_m,
         aperture: &aperture,

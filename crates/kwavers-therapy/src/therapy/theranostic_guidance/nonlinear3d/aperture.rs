@@ -64,7 +64,9 @@ pub(crate) fn build_aperture(
         model_name,
         source_domain: match volume.anatomy {
             AnatomyKind::Brain => SourceDomain::TissueBoundary,
-            AnatomyKind::Liver | AnatomyKind::Kidney => SourceDomain::ExteriorCoupling,
+            AnatomyKind::Liver | AnatomyKind::Kidney => SourceDomain::ExteriorCoupling {
+                body_mask: volume.body_mask.iter().copied().collect(),
+            },
         },
         focus: volume.focus,
     })
