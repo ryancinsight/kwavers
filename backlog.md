@@ -2367,11 +2367,11 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 - Blocked on: dropping a stash destroys parked work that is not otherwise on `origin`, so
   the discards need explicit authorization even where the assessment is unambiguous. Re-open
   trigger: owner confirms which entries may be dropped.
-## KW-CI-115 — Enforce the merge gate on main [minor] — todo
+## KW-CI-115 — Enforce the merge gate on main [minor] — in-progress
 
 | ID | Outcome | Class | Owner | Scope |
 |----|---------|-------|-------|-------|
-| KW-CI-115 | `main` cannot take a merge whose verification has not passed. | [minor] | unclaimed (needs repository-admin rights) | GitHub repository settings: branch protection or a ruleset on `main` |
+| KW-CI-115 | `main` cannot take a merge whose verification has not passed. | [minor] | claude-opus-5 | GitHub repository settings: branch protection or a ruleset on `main` |
 
 - The gap: `main` is unprotected. `GET /repos/ryancinsight/kwavers/branches/main/protection`
   returns `404 Branch not protected`, so there are no required status checks and no review
