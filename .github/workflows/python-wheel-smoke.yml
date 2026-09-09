@@ -90,8 +90,8 @@ jobs:
       - name: Prepare Ubuntu package index
         uses: ./source/.github/actions/install-system-dependencies
 
-      - name: Install k-Wave HDF5 runtime
-        shell: bash
+      - name: Select the k-Wave HDF5 runtime packages
+        id: hdf5-runtime
         run: |
           set -euo pipefail
           hdf5_runtime_packages=()
@@ -111,7 +111,13 @@ jobs:
             echo "No Ubuntu packages provide libhdf5_serial.so.103 and libhdf5_serial_hl.so.100" >&2
             exit 1
           fi
-          sudo timeout 180s apt-get install --no-install-recommends -y "${hdf5_runtime_packages[@]}"
+          printf 'packages=%s\n' "${hdf5_runtime_packages[*]}" >> "$GITHUB_OUTPUT"
+
+      - name: Install k-Wave HDF5 runtime
+        uses: ./source/.github/actions/install-system-dependencies
+        with:
+          packages: ${{ steps.hdf5-runtime.outputs.packages }}
+          refresh: "false"
 
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
