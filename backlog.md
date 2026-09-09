@@ -1,5 +1,42 @@
 # Backlog / Strategy
 
+<a id="kw-errors-docs-are-template-output-2026-09-09"></a>
+
+## KW-ERRORS-DOCS-ARE-TEMPLATE-OUTPUT-2026-09-09 — 300 functions document an error they cannot return [patch] — todo
+
+- **Outcome:** an `# Errors` section names the condition that produces the
+  error, or it does not exist. No function documents a failure it cannot have.
+- **Measured 2026-09-09**, repo-wide across `crates/`:
+  - **1141** occurrences of the identical line
+    ``- Returns [`Err`] if an internal constraint is violated.``, in **544**
+    files. A second template supplies **297** of
+    ``- Propagates any [`crate::KwaversError`] returned by called functions.``
+  - **300** of those sections sit on functions that **cannot fail** -- the
+    signature returns neither `Result` nor `Option`. By crate: kwavers-solver
+    92, kwavers-analysis 50, kwavers-physics 44, kwavers-simulation 16,
+    kwavers-therapy 15, kwavers-transducer 11, kwavers-receiver 11,
+    kwavers-medium 11.
+  - Specimens: `pub fn num_sensors(&self) -> usize`,
+    `pub fn is_leaf(&self) -> bool`, `fn backend_type(&self) -> BackendType`,
+    each carrying "Returns [`Err`] if an internal constraint is violated."
+- **Two defects, not one.** The 300 are *false*: they tell a reader a function
+  can fail when it cannot. The remaining ~840 are *contentless*: on a genuinely
+  fallible function, "an internal constraint is violated" names no invariant,
+  no input range, and no caller remedy, which is what the standard asks an
+  `# Errors` section for.
+- **This is what satisfying a lint without reading the code looks like.**
+  `clippy::missing_errors_doc` fires on a missing section, not on a useless
+  one, so a template silenced it repo-wide. The open KW-LINT-047 rows counting
+  26 "missing `# Errors`" must not be closed by extending this template --
+  that would be gaming the measure.
+- **Order:** delete the 300 false sections first (mechanical, and they are
+  wrong rather than merely empty); then replace the contentless ones on
+  fallible functions, per crate, with the actual failure conditions.
+- **Acceptance:** zero `# Errors` sections on functions returning neither
+  `Result` nor `Option`, enforced by a check in the conformance scan so the
+  template cannot return; and the remaining sections name a condition rather
+  than a category.
+
 <a id="kw-pinn-gradient-helper-dead-2026-09-09"></a>
 
 ## KW-PINN-GRADIENT-HELPER-DEAD-2026-09-09 — Route the y-gradient check through its helper [patch] [fix] — done 2026-09-09
