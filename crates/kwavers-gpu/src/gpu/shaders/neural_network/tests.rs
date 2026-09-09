@@ -3,7 +3,16 @@ use eunomia::assert_relative_eq;
 use hephaestus_core::DevicePreference;
 
 fn create_test_gpu_device() -> Option<GpuDevice> {
-    GpuDevice::create(DevicePreference::HighPerformance).ok()
+    match GpuDevice::create(DevicePreference::HighPerformance) {
+        Ok(device) => Some(device),
+        Err(error) if error.is_gpu_absent() => {
+            eprintln!("no compatible GPU adapter on this host, skipping");
+            None
+        }
+        Err(error) => panic!(
+            "a present GPU adapter failed device creation, which is a defect rather than absent hardware: {error}"
+        ),
+    }
 }
 
 fn expected_activation(input: &[f32], activation_type: u32) -> Vec<f32> {
@@ -23,7 +32,6 @@ fn expected_activation(input: &[f32], activation_type: u32) -> Vec<f32> {
 #[test]
 fn test_gpu_activation_matches_contract() {
     let Some(device) = create_test_gpu_device() else {
-        eprintln!("GPU not available, skipping test");
         return;
     };
 
@@ -43,7 +51,6 @@ fn test_gpu_activation_matches_contract() {
 #[test]
 fn test_gpu_activation_rejects_unknown_type() {
     let Some(device) = create_test_gpu_device() else {
-        eprintln!("GPU not available, skipping test");
         return;
     };
 

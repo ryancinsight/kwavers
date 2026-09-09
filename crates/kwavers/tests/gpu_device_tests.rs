@@ -8,43 +8,40 @@ use kwavers_core::error::KwaversResult;
 use kwavers_gpu::gpu::device::{DeviceFeature, DevicePreference, GpuDevice, GpuDeviceInfo};
 use kwavers_gpu::gpu::{BufferUsage, GpuBufferData};
 
+mod common;
+
 fn create_device(preference: DevicePreference) -> KwaversResult<GpuDevice> {
     GpuDevice::try_create(preference)
 }
 
 #[test]
 fn test_device_creation_high_performance() {
-    match create_device(DevicePreference::HighPerformance) {
-        Ok(device) => {
-            assert!(device.limits().max_buffer_size > 0);
-            assert!(device.wgpu_queue().get_timestamp_period() > 0.0);
-        }
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-        }
+    if let Some(device) = common::or_skip(
+        "high-performance device",
+        create_device(DevicePreference::HighPerformance),
+    ) {
+        assert!(device.limits().max_buffer_size > 0);
+        assert!(device.wgpu_queue().get_timestamp_period() > 0.0);
     }
 }
 
 #[test]
 fn test_device_creation_low_power() {
-    match create_device(DevicePreference::LowPower) {
-        Ok(device) => {
-            assert!(device.limits().max_buffer_size > 0);
-        }
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-        }
+    if let Some(device) = common::or_skip(
+        "low-power device",
+        create_device(DevicePreference::LowPower),
+    ) {
+        assert!(device.limits().max_buffer_size > 0);
     }
 }
 
 #[test]
 fn test_device_info() {
-    let device = match create_device(DevicePreference::HighPerformance) {
-        Ok(d) => d,
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-            return;
-        }
+    let Some(device) = common::or_skip(
+        "high-performance device",
+        create_device(DevicePreference::HighPerformance),
+    ) else {
+        return;
     };
 
     let info = device.info();
@@ -67,12 +64,11 @@ fn test_device_info() {
 
 #[test]
 fn test_device_limits() {
-    let device = match create_device(DevicePreference::HighPerformance) {
-        Ok(d) => d,
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-            return;
-        }
+    let Some(device) = common::or_skip(
+        "high-performance device",
+        create_device(DevicePreference::HighPerformance),
+    ) else {
+        return;
     };
 
     let limits = device.limits();
@@ -117,12 +113,11 @@ fn test_device_limits() {
 
 #[test]
 fn test_device_features() {
-    let device = match create_device(DevicePreference::HighPerformance) {
-        Ok(d) => d,
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-            return;
-        }
+    let Some(device) = common::or_skip(
+        "high-performance device",
+        create_device(DevicePreference::HighPerformance),
+    ) else {
+        return;
     };
 
     // Test feature checking
@@ -139,33 +134,35 @@ fn test_device_features() {
 
 #[test]
 fn test_device_multiple_instances() {
-    // Test creating multiple device instances
-    let device1 = create_device(DevicePreference::HighPerformance);
-    let device2 = create_device(DevicePreference::HighPerformance);
+    let Some(first) = common::or_skip(
+        "first of two devices",
+        create_device(DevicePreference::HighPerformance),
+    ) else {
+        return;
+    };
 
-    match (device1, device2) {
-        (Ok(d1), Ok(d2)) => {
-            // Both devices should be independently valid
-            assert!(d1.limits().max_buffer_size > 0);
-            assert!(d2.limits().max_buffer_size > 0);
+    // The host has an adapter, so the second acquisition has no absence excuse:
+    // a device that can be opened once and not twice is the defect this test
+    // exists to catch.
+    let second = create_device(DevicePreference::HighPerformance)
+        .expect("a second device must open on a host whose first one did");
 
-            // They should have the same capabilities but be different instances
-            assert_eq!(d1.limits().max_buffer_size, d2.limits().max_buffer_size);
-        }
-        _ => {
-            eprintln!("GPU not available, skipping test");
-        }
-    }
+    assert!(first.limits().max_buffer_size > 0);
+    assert!(second.limits().max_buffer_size > 0);
+    assert_eq!(
+        first.limits().max_buffer_size,
+        second.limits().max_buffer_size,
+        "two devices on one adapter must report the same limits"
+    );
 }
 
 #[test]
 fn test_device_queue_operations() {
-    let device: GpuDevice = match create_device(DevicePreference::HighPerformance) {
-        Ok(d) => d,
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-            return;
-        }
+    let Some(device) = common::or_skip(
+        "high-performance device",
+        create_device(DevicePreference::HighPerformance),
+    ) else {
+        return;
     };
 
     let buffer = GpuBufferData::create_on_device(

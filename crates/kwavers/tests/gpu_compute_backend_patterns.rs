@@ -11,9 +11,11 @@ use kwavers_gpu::backend::GPUBackend;
 use kwavers_solver::backend::traits::{BackendType, ComputeBackend, GpuProvider};
 use leto::Array3 as LetoArray3;
 
+mod common;
+
 #[test]
 fn gpu_backend_reports_provider_identity_when_available() {
-    let Ok(backend) = GPUBackend::new() else {
+    let Some(backend) = common::or_skip("GPU backend", GPUBackend::new()) else {
         return;
     };
 
@@ -23,7 +25,7 @@ fn gpu_backend_reports_provider_identity_when_available() {
 
 #[test]
 fn gpu_backend_rejects_unknown_device_id_when_available() {
-    let Ok(mut backend) = GPUBackend::new() else {
+    let Some(mut backend) = common::or_skip("GPU backend", GPUBackend::new()) else {
         return;
     };
 
@@ -39,7 +41,7 @@ fn gpu_backend_rejects_unknown_device_id_when_available() {
 
 #[test]
 fn gpu_backend_dispatches_provider_native_elementwise_when_available() {
-    let Ok(backend) = GPUBackend::new() else {
+    let Some(backend) = common::or_skip("GPU backend", GPUBackend::new()) else {
         return;
     };
 

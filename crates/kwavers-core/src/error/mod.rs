@@ -220,6 +220,33 @@ pub enum KwaversError {
     Leto(String),
 }
 
+impl KwaversError {
+    /// Whether this error means the host has no compatible accelerator at all,
+    /// as opposed to having one that failed.
+    ///
+    /// The distinction is the difference between selecting a CPU path and
+    /// hiding a device fault behind one. Only [`SystemError::GpuNotAvailable`]
+    /// reports genuine absence; every other GPU-acquisition failure -- a driver
+    /// fault, an adapter that cannot meet the requested limits, a regression in
+    /// context construction -- describes hardware that is present and not
+    /// working, which a caller must surface rather than route around.
+    ///
+    /// Callers deciding a backend use this instead of matching the variant by
+    /// hand, so "absent" has one definition. Tests use it to decide whether a
+    /// skip is honest.
+    ///
+    /// ```
+    /// use kwavers_core::error::{KwaversError, SystemError};
+    ///
+    /// assert!(KwaversError::from(SystemError::GpuNotAvailable).is_gpu_absent());
+    /// assert!(!KwaversError::GpuError("device lost".into()).is_gpu_absent());
+    /// ```
+    #[must_use]
+    pub fn is_gpu_absent(&self) -> bool {
+        matches!(self, Self::System(SystemError::GpuNotAvailable))
+    }
+}
+
 impl From<leto::LetoError> for KwaversError {
     fn from(err: leto::LetoError) -> Self {
         Self::Leto(err.to_string())
@@ -260,5 +287,27 @@ impl From<ritk_registration::RegistrationError> for KwaversError {
 impl From<ritk_registration::classical::RegistrationError> for KwaversError {
     fn from(err: ritk_registration::classical::RegistrationError) -> Self {
         Self::InvalidInput(err.to_string())
+    }
+}
+
+#[cfg(test)]
+mod gpu_absence_tests {
+    use super::{KwaversError, SystemError};
+
+    #[test]
+    fn only_the_typed_absence_reports_an_absent_gpu() {
+        assert!(KwaversError::from(SystemError::GpuNotAvailable).is_gpu_absent());
+    }
+
+    #[test]
+    fn a_present_adapter_that_failed_is_not_absence() {
+        // The distinction the callers depend on: this error must route to a
+        // surfaced failure, never to a silent CPU path or a skipped test.
+        assert!(!KwaversError::GpuError("device lost".into()).is_gpu_absent());
+        assert!(!KwaversError::InternalError("driver timeout".into()).is_gpu_absent());
+        assert!(!KwaversError::from(SystemError::ResourceUnavailable {
+            resource: "gpu memory".into(),
+        })
+        .is_gpu_absent());
     }
 }
