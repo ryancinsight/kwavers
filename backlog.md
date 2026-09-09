@@ -5134,6 +5134,30 @@ markers without changing the numerical contract.
 ## KW-LINT-047 — Solver all-feature lint ratchet [patch] — in-progress
 
 - **Integrator:** claude-opus-5, claimed 2026-09-09.
+- **First increment `93e88e24d`, 84 -> 75, riding [#759](https://github.com/ryancinsight/kwavers/pull/759).**
+  All 11 `print_stdout` sites gone. They were print-debugging inside
+  `#[cfg(test)]` modules, and removing them exposed why they existed: five
+  tests asserted nothing that could fail and printed the property they named.
+  `analytic.rs` bound its analytic expectation to `_expected` and asserted
+  `is_finite()`. Those oracles are unreachable -- the model is an untrained,
+  randomly initialised network, so finite differences is the only valid oracle
+  and `first_deriv.rs`/`second_deriv.rs` already apply it. Point coverage moved
+  there; the property-in-name-only tests were deleted.
+- **Lane convergence, not a separate delivery:** a peer switched this lane's
+  branch mid-increment and built `chore/kwavers-manifest-row` on top of the
+  commit, so it lands with their driver refactor rather than its own pull
+  request. Content verified intact on their branch (authorship, message, all
+  five file changes). `fix/kw-solver-lint-ratchet` on origin had been left
+  pointing at `main` and is deleted.
+- **Finding for whoever takes the remainder:** `second_deriv.rs` deliberately
+  did not absorb the deleted analytic points. Both sides there are finite
+  differences at different step sizes (`coeus_autograd` has no double-backward),
+  so disagreement scales with the fourth derivative and `REL_TOL_SECOND` is
+  empirical, not derived -- the added point measured rel_err 2.59e-2 against
+  the 1e-2 bound. Extending that test needs a derived per-point bound first.
+- **Remaining 75:** 28 `unused_self` (a design finding, not a mechanical fix),
+  26 missing `# Errors`, 7 missing `# Panics`, 6 `#[must_use]`, 4 `assert!`
+  with an equality comparison, 2 doc-link/recursion.
 - **Not met. Measured 2026-09-08**, `cargo clippy -p kwavers-solver --features
   pinn --all-targets`: 84 diagnostics -- 28 `unused_self`, 26 missing
   `# Errors`, 11 `println!`, 7 missing `# Panics`, 6 missing `#[must_use]`, 4
