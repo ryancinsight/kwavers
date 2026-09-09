@@ -4,6 +4,14 @@
 
 ### Changed
 
+- **[patch] The console log sink writes to stderr.** `CombinedLogger`'s
+  console stream was stdout, so log records interleaved with whatever a run
+  actually produced and corrupted piped or redirected output. Buffering settles
+  it beyond convention: stdout is block-buffered when it is not a terminal, so
+  an aborted run lost precisely the records explaining why. Anything that
+  captured kwavers log output from stdout must read stderr instead; the file
+  sink is unchanged.
+
 - **[major] Aperture elements carry a frame and the RF seam passes the
   field point in it; far-field rectangular elements arrive.**
   `kwavers-phantom`: `ApertureElement::new(position, normal, width)` takes the

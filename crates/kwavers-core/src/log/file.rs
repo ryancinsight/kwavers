@@ -5,6 +5,17 @@ use std::fs::OpenOptions;
 use std::io::{self, BufWriter, Write};
 use std::sync::Mutex;
 
+/// A logger that writes every record to a file and, optionally, to the
+/// console.
+///
+/// The console stream is stderr. Diagnostics share a process with whatever the
+/// program actually produces, and a run whose results are piped or redirected
+/// must not have log records interleaved into that data. The buffering settles
+/// it beyond convention: stdout is block-buffered when it is not a terminal, so
+/// a run that aborts loses precisely the records explaining why, while stderr
+/// is unbuffered and each record has reached the descriptor before the next
+/// line runs. That also keeps console records ordered against the file sink,
+/// which flushes on `Warn` and above.
 #[derive(Debug)]
 pub struct CombinedLogger {
     console: bool,
@@ -36,14 +47,7 @@ impl Log for CombinedLogger {
                 }
             }
             if self.console {
-                // This type is the console sink itself -- writing the record to
-                // stdout is its contract, not incidental output from library
-                // code. Ratchet: whether a log sink belongs on stdout rather
-                // than stderr is tracked separately as KW-CORE-LOG-1.
-                #[expect(clippy::print_stdout, reason = "console log sink")]
-                {
-                    println!("{message}");
-                }
+                eprintln!("{message}");
             }
         }
     }
