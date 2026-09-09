@@ -35,7 +35,10 @@ fn test_trainer_with_invalid_config() {
         ..Default::default()
     };
     let trainer = PinnTrainer::<TestBackend>::new(config);
-    assert_invalid_input(trainer, "Must have at least one hidden layer");
+    // The trainer rejects at config validation, whose message names the
+    // configuration; the network constructor's sibling message ("Must have
+    // ...") would pass a looser substring and not distinguish the two.
+    assert_invalid_input(trainer, "Configuration must have at least one hidden layer");
 }
 
 #[test]
