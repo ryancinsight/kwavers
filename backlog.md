@@ -38,23 +38,16 @@
   kwavers-core (all features), kwavers-solver, and kwavers-gpu (gpu feature)
   clean.
 
-## KW-SOURCE-DOMAIN-OPTIONAL-MASK-2026-09-08 — `SourceDomain::ExteriorCoupling` needs a mask the type does not require [arch] [patch] — todo <a id="kw-source-domain-optional-mask-2026-09-08"></a>
+## KW-SOURCE-DOMAIN-OPTIONAL-MASK-2026-09-08 — `SourceDomain::ExteriorCoupling` needs a mask the type does not require [arch] — done 2026-09-09 <a id="kw-source-domain-optional-mask-2026-09-08"></a>
 
-- **Outcome:** `SourceDomain::ExteriorCoupling` carries an owned `body_mask`, so
-  the mask cannot be absent when the domain requires it. Design and rejected
-  alternatives: [ADR 130](docs/adr/130-exterior-coupling-carries-its-mask.md).
-- **Reclassified [arch]:** the closure is wider than the one panic the item
-  named -- `forward/source/stencil.rs:67` panics identically, and the change
-  crosses `Nonlinear3dAperture`, `ForwardInput`, plan, stencil, `adjoint.rs`,
-  and twelve `ForwardInput` construction sites.
-- **Established 2026-09-09:** every production site passes `Some(...)`
-  (objective, steering, calibration, fwi x2), so the `Option` models test
-  convenience and the panic guards a combination production never produces;
-  `build_aperture` already holds `volume.body_mask` and returns `Result`, so
-  the variant can be filled where the domain is already chosen.
-- **Acceptance:** both `expect` sites gone with no runtime check replacing
-  them; `ForwardInput::source_body_mask` removed; the 59 `nonlinear3d` tests
-  and the `forward/source` plan tests pass with their assertions unchanged.
+- Delivered: `ExteriorCoupling { body_mask: Vec<bool> }`, filled by
+  `build_aperture`; both `expect` sites gone with no runtime check replacing
+  them, and the mask no longer threaded through six input structs. Net -45
+  lines. Design and rejected alternatives:
+  [ADR 130](docs/adr/130-exterior-coupling-carries-its-mask.md).
+- Verified: 59 `nonlinear3d` and 350 `kwavers-therapy` tests pass, matching the
+  pre-change baseline; `git grep` finds zero `source_body_mask` references and
+  zero exterior-coupling `expect`s.
 
 ## KW-PREPUSH-CHECKS-THE-WRONG-TREE-2026-09-08 — The lockfile hook verifies the working tree, not the push [patch] [ci] — done 2026-09-08
 
