@@ -77,7 +77,7 @@ fn manifest(role: StackBoardRole, pin_nets: &[&str]) -> StackBoardManifest {
         connector_x_mm: 35.0,
         connector_y_mm: 7.0,
         connector_rot_deg: 0.0,
-        pin_nets: pin_nets.iter().map(|s| s.to_string()).collect(),
+        pin_nets: pin_nets.iter().map(|s| (*s).to_string()).collect(),
     }
 }
 

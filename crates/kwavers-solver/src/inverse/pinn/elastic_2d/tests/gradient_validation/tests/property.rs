@@ -7,24 +7,6 @@ use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 type B = super::TestBackend;
 
 #[test]
-fn test_gradient_linearity() {
-    // Property: ∂(αf + βg)/∂x = α∂f/∂x + β∂g/∂x
-    let config = Config::default();
-    let model = ElasticPINN2D::<B>::new(&config).unwrap();
-
-    let x = 0.5;
-    let y = 0.5;
-    let t = 0.5;
-    let component = 0;
-
-    let grad = autodiff_gradient_x(&model, x, y, t, component).unwrap();
-
-    assert!(grad.is_finite(), "Gradient should be finite");
-
-    println!("Gradient linearity validated: ∂u/∂x = {:.6e}", grad);
-}
-
-#[test]
 fn test_gradient_batch_consistency() {
     // Property: Gradient should be consistent across batch processing
     let config = Config::default();
@@ -63,20 +45,19 @@ fn test_gradient_batch_consistency() {
 
     let rel_error = ((single_grad - batch_grad).abs()) / (single_grad.abs() + 1e-10);
 
-    println!(
-        "Batch consistency: single={:.6e}, batch={:.6e}, rel_err={:.6e}",
-        single_grad, batch_grad, rel_error
-    );
-
     assert!(
         rel_error < 1e-5,
-        "Gradient should be consistent across batch sizes"
+        "a gradient must not depend on the batch it was computed in:          single={single_grad:.6e}, batch={batch_grad:.6e}, rel_err={rel_error:.6e}"
     );
 }
 
+/// The forward pass and its gradient stay finite at an interior point.
+///
+/// Named for what it asserts. It was `test_pde_residual_components`, which
+/// computes no residual -- non-finite values are the classic autodiff failure
+/// and that is the real property here.
 #[test]
-fn test_pde_residual_components() {
-    // Validate that PDE residual computation doesn't produce NaN/Inf
+fn forward_and_gradient_stay_finite() {
     let config = Config::forward_problem(1e9, 5e8, DENSITY_WATER_NOMINAL);
     let model = ElasticPINN2D::<B>::new(&config).unwrap();
     let backend = B::default();
@@ -109,41 +90,5 @@ fn test_pde_residual_components() {
         du_dx_val.is_finite(),
         "Gradient should be finite, got {}",
         du_dx_val
-    );
-
-    println!(
-        "PDE residual component validation: ∂uₓ/∂x = {:.6e}",
-        du_dx_val
-    );
-}
-
-#[test]
-fn test_gradient_symmetry_property() {
-    // Property test: For symmetric inputs (x,y) and (y,x),
-    // gradients should show expected symmetry properties
-
-    let config = Config::default();
-    let model = ElasticPINN2D::<B>::new(&config).unwrap();
-
-    let x1 = 0.3;
-    let y1 = 0.7;
-    let t = 0.5;
-
-    let grad_x_at_xy = autodiff_gradient_x(&model, x1, y1, t, 0).unwrap();
-    let grad_y_at_xy = autodiff_gradient_y(&model, x1, y1, t, 0).unwrap();
-
-    let grad_x_at_yx = autodiff_gradient_x(&model, y1, x1, t, 0).unwrap();
-    let grad_y_at_yx = autodiff_gradient_y(&model, y1, x1, t, 0).unwrap();
-
-    assert!(grad_x_at_xy.is_finite() && grad_y_at_xy.is_finite());
-    assert!(grad_x_at_yx.is_finite() && grad_y_at_yx.is_finite());
-
-    println!(
-        "Gradient symmetry: (x,y)=({:.1},{:.1}) → ∂u/∂x={:.4e}, ∂u/∂y={:.4e}",
-        x1, y1, grad_x_at_xy, grad_y_at_xy
-    );
-    println!(
-        "                   (x,y)=({:.1},{:.1}) → ∂u/∂x={:.4e}, ∂u/∂y={:.4e}",
-        y1, x1, grad_x_at_yx, grad_y_at_yx
     );
 }

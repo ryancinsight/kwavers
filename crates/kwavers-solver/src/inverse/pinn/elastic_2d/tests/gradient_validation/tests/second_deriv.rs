@@ -8,6 +8,14 @@ type B = super::TestBackend;
 // Autodiff-vs-second-difference check on identically initialized models.
 // Measured 2026-08-22: ~20 ms, stable across 5/5 runs (rel tol 1e-2,
 // h = 1e-4), so the previous ignore is lifted.
+//
+// Both sides are finite-difference-based today: `coeus_autograd::Var::grad()`
+// returns a plain non-differentiable `Tensor`, so there is no double-backward
+// and `autodiff_second_derivative_xx` reconstructs the second derivative by
+// differencing (see `ml::autodiff_utils::second_order`). When coeus_autograd
+// gains double-backward this becomes a genuine autodiff-vs-FD comparison
+// rather than two spellings of the same method, and the tolerance should be
+// re-derived at that point.
 #[test]
 fn test_second_derivative_xx_vs_finite_difference() {
     let config = Config::default();
@@ -15,6 +23,13 @@ fn test_second_derivative_xx_vs_finite_difference() {
     let model_autodiff = ElasticPINN2D::<B>::new(&config).unwrap();
     let model_fd = ElasticPINN2D::<B>::new(&config).unwrap();
 
+    // Deliberately not extended with the deleted analytic test's points.
+    // `REL_TOL_SECOND` is empirical, not derived: both sides here are finite
+    // differences of the same function at different step sizes, so their
+    // disagreement scales with the fourth derivative at the point, which
+    // nothing bounds. Adding (0.3, 0.5, 0.1) measured rel_err 2.59e-2 against
+    // the 1e-2 bound -- not a defect in the method, and not a reason to widen
+    // a tolerance to fit it either. Tracked as KW-LINT-047's finding.
     let test_points = vec![(0.5, 0.5, 0.5), (0.3, 0.7, 0.2)];
 
     for (x, y, t) in test_points {
@@ -26,17 +41,6 @@ fn test_second_derivative_xx_vs_finite_difference() {
             let abs_error = (autodiff_second - fd_second).abs();
             let rel_error = abs_error / (fd_second.abs() + 1e-8);
 
-            println!(
-                "∂²u{}/∂x² at ({:.2},{:.2},{:.2}): autodiff={:.6e}, FD={:.6e}, rel_err={:.6e}",
-                if component == 0 { "ₓ" } else { "ᵧ" },
-                x,
-                y,
-                t,
-                autodiff_second,
-                fd_second,
-                rel_error
-            );
-
             assert!(
                 rel_error < REL_TOL_SECOND || abs_error < 1e-5,
                 "Second derivative mismatch: autodiff={:.6e}, FD={:.6e}, rel_err={:.6e}",
@@ -45,41 +49,5 @@ fn test_second_derivative_xx_vs_finite_difference() {
                 rel_error
             );
         }
-    }
-}
-
-#[test]
-#[ignore = "Both paths are now finite-difference-based on this untrained model (coeus_autograd has no double-backward — see autodiff_utils::second_order's weight-gradient contract), so this duplicates test_second_derivative_xx_vs_finite_difference; retained for its is_finite() smoke coverage. Re-enable trigger: remove the ignore when coeus_autograd gains double-backward and the analytic polynomial path is exercised for real."]
-fn test_analytic_polynomial_second_derivative() {
-    // Polynomial: u(x) = x² → ∂u/∂x = 2x → ∂²u/∂x² = 2
-    // This tests the finite-difference second-derivative path on a known
-    // analytic function.
-    //
-    // NOTE: `coeus_autograd::Var::grad()` returns a plain, non-differentiable
-    // `Tensor` (no double-backward support), so `autodiff_second_derivative_xx`
-    // is finite-difference-based (see
-    // `ml::autodiff_utils::second_order::compute_second_derivative_2d`),
-    // not a nested-autodiff reconstruction.
-
-    let config = Config::default();
-    let model = ElasticPINN2D::<B>::new(&config).unwrap();
-
-    let test_points = vec![(0.3, 0.5, 0.1), (0.5, 0.5, 0.5), (0.7, 0.3, 0.2)];
-
-    for (x, y, t) in test_points {
-        let second_deriv = autodiff_second_derivative_xx(&model, x, y, t, 0).unwrap();
-
-        assert!(
-            second_deriv.is_finite(),
-            "∂²u/∂x² should be finite at ({},{},{})",
-            x,
-            y,
-            t
-        );
-
-        println!(
-            "Analytic polynomial: ∂²u/∂x² at ({:.2},{:.2},{:.2}) = {:.6e} (finite ✓)",
-            x, y, t, second_deriv
-        );
     }
 }

@@ -16,11 +16,17 @@ fn test_first_derivative_x_vs_finite_difference() {
     let model_autodiff = ElasticPINN2D::<B>::new(&config).unwrap();
     let model_fd = ElasticPINN2D::<B>::new(&config).unwrap();
 
+    // The last two came from `analytic.rs`, which claimed to check these
+    // points against a closed-form sine derivative but asserted only
+    // finiteness. The points are worth keeping; the oracle they now run
+    // against is the one that can actually fail.
     let test_points = vec![
         (0.3, 0.5, 0.1),
         (0.5, 0.5, 0.5),
         (0.7, 0.3, 0.8),
         (0.2, 0.8, 0.2),
+        (0.0, 0.5, 0.5),
+        (0.25, 0.5, 0.5),
     ];
 
     for (x, y, t) in test_points {
@@ -30,17 +36,6 @@ fn test_first_derivative_x_vs_finite_difference() {
 
             let abs_error = (autodiff_grad - fd_grad).abs();
             let rel_error = abs_error / (fd_grad.abs() + 1e-10);
-
-            println!(
-                "∂u{}/∂x at ({:.2},{:.2},{:.2}): autodiff={:.6e}, FD={:.6e}, rel_err={:.6e}",
-                if component == 0 { "ₓ" } else { "ᵧ" },
-                x,
-                y,
-                t,
-                autodiff_grad,
-                fd_grad,
-                rel_error
-            );
 
             assert!(
                 rel_error < REL_TOL_FIRST || abs_error < 1e-6,
@@ -98,20 +93,9 @@ fn test_first_derivative_y_vs_finite_difference() {
             let abs_error = (autodiff_grad - fd_grad).abs();
             let rel_error = abs_error / (fd_grad.abs() + 1e-10);
 
-            println!(
-                "∂u{}/∂y at ({:.2},{:.2},{:.2}): autodiff={:.6e}, FD={:.6e}, rel_err={:.6e}",
-                if component == 0 { "ₓ" } else { "ᵧ" },
-                x,
-                y,
-                t,
-                autodiff_grad,
-                fd_grad,
-                rel_error
-            );
-
             assert!(
                 rel_error < REL_TOL_FIRST || abs_error < 1e-6,
-                "Gradient mismatch for ∂u/∂y"
+                "∂u/∂y mismatch: autodiff={autodiff_grad:.6e}, FD={fd_grad:.6e},                  rel_err={rel_error:.6e} at ({x},{y},{t}), component {component}"
             );
         }
     }
