@@ -5131,8 +5131,9 @@ markers without changing the numerical contract.
 
 <a id="kw-lint-047"></a>
 
-## KW-LINT-047 — Solver all-feature lint ratchet [patch] — todo
+## KW-LINT-047 — Solver all-feature lint ratchet [patch] — in-progress
 
+- **Integrator:** claude-opus-5, claimed 2026-09-09.
 - **Not met. Measured 2026-09-08**, `cargo clippy -p kwavers-solver --features
   pinn --all-targets`: 84 diagnostics -- 28 `unused_self`, 26 missing
   `# Errors`, 11 `println!`, 7 missing `# Panics`, 6 missing `#[must_use]`, 4
