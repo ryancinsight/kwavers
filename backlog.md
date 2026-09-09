@@ -3507,21 +3507,16 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 - Already clean, and not by suppression: `kwavers-core` and the `kwavers` facade — the two
   crates CI gates with `-D warnings` — trip none of the debt lints.
 
-## KW-CORE-LOG-1 — Decide whether the console log sink belongs on stdout [patch] — in-progress
+## KW-CORE-LOG-1 — Decide whether the console log sink belongs on stdout [patch] — done
 
-| ID | Outcome | Class | Owner | Scope |
-|----|---------|-------|-------|-------|
-| KW-CORE-LOG-1 | `CombinedLogger`'s console stream is a decision with a stated reason, not an unexamined default. | [patch] | claude-opus-5 | `crates/kwavers-core/src/log/file.rs` |
-
-- `CombinedLogger::log` writes each record to stdout via `println!` when `console` is set.
-  That is what `clippy::print_stdout` exists to catch, and the site carries a per-site
-  `#[expect]` because the type is the sink itself rather than incidental library output.
-- The open question is the stream, not the lint: diagnostics on stdout interleave with a
-  program's actual output, which is why `eprintln!` is the convention for log sinks. Changing
-  it is an observable behaviour change for anything piping kwavers output, so it was left
-  alone in a lint-adoption commit.
-- Acceptance: either move the console sink to stderr and note it in the CHANGELOG, or record
-  in the type's Rustdoc why stdout is correct here.
+- **Decided: stderr.** Merged in #758. stdout is block-buffered when it is not a
+  terminal, so an aborted run lost exactly the records explaining why, and
+  console records could arrive out of order against the file sink's `Warn`
+  flush. Recorded on the type's Rustdoc and in the CHANGELOG; the `#[expect]`
+  retires with it.
+- **Held by a test**, since `eprintln!` cannot be captured in-process: a child
+  with separate pipes must show the record on stderr and not on stdout.
+  Restoring `println!` fails it.
 
 ## KW-DOC-110 — Document the audit slice submodules [patch] — done 2026-08-20
 
