@@ -145,6 +145,20 @@ jobs:
           python -m pip install --disable-pip-version-check dist/*.whl
           python -m pip install --disable-pip-version-check "k-wave-python>=0.4.1,<0.7"
 
+      - name: Run the dimensioned-boundary suite against the installed wheel
+        # The boundary accepts a base-unit float or a protocol quantity, and
+        # rejects the wrong dimension. Nothing else in CI exercises that: the
+        # `ci.yml` Python step runs only the stub-staleness and typed-consumer
+        # tests, and the parity suite below runs only k-Wave comparisons. The
+        # fixtures are duck-typed, so this needs no second wheel installed.
+        shell: bash
+        env:
+          KWAVERS_PYTHON_PACKAGE: installed
+        run: |
+          set -euo pipefail
+          source wheel-smoke/bin/activate
+          python -m pytest --import-mode=importlib --disable-warnings -q             source/crates/kwavers-python/tests/test_quantity_boundary.py
+
       - name: Run value-semantic k-Wave parity suite
         shell: bash
         env:

@@ -5,8 +5,8 @@
 //! lives in `kwavers_analysis::signal_processing::pam`.
 
 use crate::breast_fwi_bindings::complex_compat::{leto1_to_nd1, nd_to_leto2};
-use aequitas::systems::si::quantities::{Frequency, Length, Velocity};
-use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond};
+use aequitas::systems::si::quantities::Length;
+use aequitas::systems::si::units::Meter;
 use kwavers_analysis::signal_processing::beamforming::adaptive::subspace::MUSIC;
 use kwavers_analysis::signal_processing::beamforming::{
     beamform_image_das, ImagingDasApodization, ImagingDasConfig,
@@ -22,6 +22,8 @@ use leto_ops::application::linalg::{hermitian_eigen_jacobi, HermitianEigenConfig
 use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
+
+use crate::quantity_args::{PyFrequency, PyVelocity};
 
 pub fn register_pam(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(passive_acoustic_map_das, m)?)?;
@@ -161,8 +163,8 @@ fn passive_acoustic_map_das<'py>(
     passive_data: PyReadonlyArray2<f64>,
     sensor_positions: PyReadonlyArray2<f64>,
     grid_points: PyReadonlyArray2<f64>,
-    sound_speed: f64,
-    sampling_frequency: f64,
+    sound_speed: PyVelocity,
+    sampling_frequency: PyFrequency,
     window_size: usize,
     apodization: &str,
     coherence_weighting: bool,
@@ -192,8 +194,8 @@ fn passive_acoustic_map_das<'py>(
         })
         .collect();
     let config = DelayAndSumConfig {
-        sound_speed: Velocity::from_unit::<MeterPerSecond>(sound_speed),
-        sampling_frequency: Frequency::from_unit::<Hertz>(sampling_frequency),
+        sound_speed: sound_speed.quantity(),
+        sampling_frequency: sampling_frequency.quantity(),
         window_size,
         apodization: parse_apodization(apodization)?,
         coherence_weighting,
@@ -231,13 +233,13 @@ fn beamform_image_delay_and_sum<'py>(
     sensor_data: PyReadonlyArray2<f64>,
     sensor_positions: PyReadonlyArray2<f64>,
     grid_points: PyReadonlyArray2<f64>,
-    sound_speed: f64,
-    sampling_frequency: f64,
+    sound_speed: PyVelocity,
+    sampling_frequency: PyFrequency,
     apodization: &str,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let config = ImagingDasConfig::new(
-        sound_speed,
-        sampling_frequency,
+        sound_speed.base(),
+        sampling_frequency.base(),
         parse_imaging_apodization(apodization)?,
     )
     .map_err(|err| PyValueError::new_err(format!("kwavers imaging_das config error: {err}")))?;

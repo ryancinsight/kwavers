@@ -174,6 +174,18 @@
   contract suite passes with its assertions re-derived rather than relaxed; the
   mnemosyne pin is `main`'s current one.
 
+<a id="kw-semver-informational-reports-red-2026-09-08"></a>
+
+## KW-SEMVER-INFORMATIONAL-REPORTS-RED-2026-09-08 — The informational SemVer gate reported red [patch] [ci] — done 2026-09-08
+
+- Delivered on `feat/aequitas-quantity-boundary`: both `semver-gate.yml`
+  callers advance from atlas `da9d549bc` (job-level `continue-on-error`, which
+  still concludes the job as failure) to `744acdf83` (step-level, atlas
+  `d6686df76`).
+- The reported breaks are main's own, recorded under CHANGELOG `Unreleased` as
+  `[major]` with migration notes; the PR touches only `kwavers-python`. The
+  gate was working, its pin was stale.
+
 <a id="kw-orphaned-benches-2026-09-08"></a>
 
 ## KW-ORPHANED-BENCHES-2026-09-08 — The bench registry gate does not model modules [patch] [ci] — done 2026-09-08

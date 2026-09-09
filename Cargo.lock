@@ -36,10 +36,20 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/aequitas#a442d16a444c9c56934f0dffd19e06c527e1420b"
+source = "git+https://github.com/ryancinsight/aequitas#93f55a50ac836587ad9545c56ebd999fcdfd5df4"
 dependencies = [
  "eunomia",
  "serde",
+ "typenum",
+]
+
+[[package]]
+name = "aequitas-python"
+version = "0.1.0"
+source = "git+https://github.com/ryancinsight/aequitas#93f55a50ac836587ad9545c56ebd999fcdfd5df4"
+dependencies = [
+ "aequitas",
+ "pyo3",
  "typenum",
 ]
 
@@ -3206,6 +3216,7 @@ name = "kwavers-python"
 version = "0.1.0"
 dependencies = [
  "aequitas",
+ "aequitas-python",
  "anyhow",
  "asclepius",
  "coeus-core",

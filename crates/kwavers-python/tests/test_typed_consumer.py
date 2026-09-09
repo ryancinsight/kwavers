@@ -101,13 +101,47 @@ def typed_usage() -> Tuple[int, Optional[float], str]:
     medium = build_medium()
     c: float = medium.sound_speed
     return nx, dx, label
+
+
+class _Reading:
+    """An object carrying the Aequitas quantity protocol.
+
+    Deliberately not a `pyaequitas` import: a dimensioned parameter is typed
+    structurally, so a consumer type-checks against it without depending on
+    that package at all.
+    """
+
+    @property
+    def __aequitas_base__(self) -> float:
+        return 2.5e-6
+
+    @property
+    def __aequitas_dimension__(
+        self,
+    ) -> Tuple[Tuple[int, int, int, int, int, int, int], str]:
+        return ((1, 0, 0, 0, 0, 0, 0), "base")
+
+
+def dimensioned_arguments() -> Tuple[float, float]:
+    # Both forms are accepted: a float in canonical SI base units, which is
+    # the contract these signatures always had, and a protocol quantity.
+    from_floats = pykwavers.mems_clamped_plate_resonance(
+        1.7e11, 2.0e-6, 0.28, 3100.0, 4.0e-5
+    )
+    length = _Reading()
+    from_quantity = pykwavers.mems_clamped_plate_resonance(
+        1.7e11, length, 0.28, 3100.0, length
+    )
+    return from_floats, from_quantity
 '''
 
 
 @pytest.mark.skipif(shutil.which("mypy") is None, reason="mypy not installed")
 def test_typed_consumer_passes_strict_mypy():
-    if not FIXTURE.exists():
-        FIXTURE.write_text(FIXTURE_TEXT, encoding="utf-8")
+    # Written unconditionally: the fixture is generated from FIXTURE_TEXT, and
+    # writing it only when absent let the two diverge silently -- an edit to the
+    # embedded source then checked nothing, because mypy read a stale file.
+    FIXTURE.write_text(FIXTURE_TEXT, encoding="utf-8")
     # Run mypy against the generated stubs + the consumer fixture with
     # --strict. The optional bridge modules (kwave_bridge, kwave_python_bridge)
     # are deliberately outside the typed contract (they wrap untyped external

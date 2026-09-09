@@ -1,9 +1,11 @@
-use aequitas::systems::si::quantities::{Angle, Frequency, Length, Pressure, Velocity};
-use aequitas::systems::si::units::{Hertz, Meter, MeterPerSecond, Pascal, Radian};
+use aequitas::systems::si::quantities::{Length, Pressure};
+use aequitas::systems::si::units::{Hertz, Meter, Pascal, Radian};
 use leto::Array1;
 use numpy::PyReadonlyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+
+use crate::quantity_args::{PyDegrees, PyFrequency, PyLength, PyVelocity};
 
 use crate::breast_fwi_bindings::complex_compat::nd_to_leto1;
 
@@ -75,36 +77,36 @@ impl TransducerArray2D {
     #[pyo3(signature = (number_elements, element_width, element_length, element_spacing, sound_speed, frequency))]
     fn new(
         number_elements: usize,
-        element_width: f64,
-        element_length: f64,
-        element_spacing: f64,
-        sound_speed: f64,
-        frequency: f64,
+        element_width: PyLength,
+        element_length: PyLength,
+        element_spacing: PyLength,
+        sound_speed: PyVelocity,
+        frequency: PyFrequency,
     ) -> PyResult<Self> {
         if number_elements == 0 {
             return Err(PyValueError::new_err("Number of elements must be positive"));
         }
-        if !element_width.is_finite() || element_width <= 0.0 {
+        if !element_width.base().is_finite() || element_width.base() <= 0.0 {
             return Err(PyValueError::new_err(
                 "Element width must be finite and positive",
             ));
         }
-        if !element_length.is_finite() || element_length <= 0.0 {
+        if !element_length.base().is_finite() || element_length.base() <= 0.0 {
             return Err(PyValueError::new_err(
                 "Element length must be finite and positive",
             ));
         }
-        if !element_spacing.is_finite() || element_spacing < element_width {
+        if !element_spacing.base().is_finite() || element_spacing.base() < element_width.base() {
             return Err(PyValueError::new_err(
                 "Element spacing must be finite and >= element width",
             ));
         }
-        if !sound_speed.is_finite() || sound_speed <= 0.0 {
+        if !sound_speed.base().is_finite() || sound_speed.base() <= 0.0 {
             return Err(PyValueError::new_err(
                 "Sound speed must be finite and positive",
             ));
         }
-        if !frequency.is_finite() || frequency <= 0.0 {
+        if !frequency.base().is_finite() || frequency.base() <= 0.0 {
             return Err(PyValueError::new_err(
                 "Frequency must be finite and positive",
             ));
@@ -112,19 +114,18 @@ impl TransducerArray2D {
 
         let config = TransducerArray2DConfig {
             number_elements,
-            element_width: Length::from_unit::<Meter>(element_width),
-            element_length: Length::from_unit::<Meter>(element_length),
-            element_spacing: Length::from_unit::<Meter>(element_spacing),
+            element_width: element_width.quantity(),
+            element_length: element_length.quantity(),
+            element_spacing: element_spacing.quantity(),
             curvature: ArrayCurvature::Flat,
             center_position: [Length::from_unit::<Meter>(0.0); 3],
         };
 
-        let inner = KwaversTransducerArray2D::new(
-            config,
-            Velocity::from_unit::<MeterPerSecond>(sound_speed),
-            Frequency::from_unit::<Hertz>(frequency),
-        )
-        .map_err(|e| PyValueError::new_err(format!("Failed to create transducer array: {}", e)))?;
+        let inner =
+            KwaversTransducerArray2D::new(config, sound_speed.quantity(), frequency.quantity())
+                .map_err(|e| {
+                    PyValueError::new_err(format!("Failed to create transducer array: {}", e))
+                })?;
 
         Ok(TransducerArray2D {
             inner,
@@ -140,16 +141,16 @@ impl TransducerArray2D {
     /// distance : float
     ///     Focus distance from array (INF for no focusing)
     #[pyo3(signature = (distance))]
-    fn set_focus_distance(&mut self, distance: f64) -> PyResult<()> {
-        if distance.is_infinite() {
+    fn set_focus_distance(&mut self, distance: PyLength) -> PyResult<()> {
+        if distance.base().is_infinite() {
             self.inner.clear_focus_distance();
-        } else if !distance.is_finite() || distance <= 0.0 {
+        } else if !distance.base().is_finite() || distance.base() <= 0.0 {
             return Err(PyValueError::new_err(
                 "Focus distance must be finite and positive, or infinity to clear",
             ));
         } else {
             self.inner
-                .set_focus_distance(Length::from_unit::<Meter>(distance))
+                .set_focus_distance(distance.quantity())
                 .map_err(PyValueError::new_err)?;
         }
         Ok(())
@@ -157,16 +158,16 @@ impl TransducerArray2D {
 
     /// Set elevation focus distance `m`.
     #[pyo3(signature = (distance))]
-    fn set_elevation_focus_distance(&mut self, distance: f64) -> PyResult<()> {
-        if distance.is_infinite() {
+    fn set_elevation_focus_distance(&mut self, distance: PyLength) -> PyResult<()> {
+        if distance.base().is_infinite() {
             self.inner.clear_elevation_focus_distance();
-        } else if !distance.is_finite() || distance <= 0.0 {
+        } else if !distance.base().is_finite() || distance.base() <= 0.0 {
             return Err(PyValueError::new_err(
                 "Elevation focus distance must be finite and positive, or infinity to clear",
             ));
         } else {
             self.inner
-                .set_elevation_focus_distance(Length::from_unit::<Meter>(distance))
+                .set_elevation_focus_distance(distance.quantity())
                 .map_err(PyValueError::new_err)?;
         }
         Ok(())
@@ -179,12 +180,9 @@ impl TransducerArray2D {
     /// angle : float
     ///     Steering angle in degrees (0 = straight ahead)
     #[pyo3(signature = (angle))]
-    fn set_steering_angle(&mut self, angle: f64) -> PyResult<()> {
-        if !angle.is_finite() {
-            return Err(PyValueError::new_err("Steering angle must be finite"));
-        }
+    fn set_steering_angle(&mut self, angle: PyDegrees) -> PyResult<()> {
         self.inner
-            .set_steering_angle(Angle::from_unit::<Radian>(angle.to_radians()))
+            .set_steering_angle(angle.quantity())
             .map_err(PyValueError::new_err)?;
         Ok(())
     }
@@ -233,16 +231,12 @@ impl TransducerArray2D {
 
     /// Set center position.
     #[pyo3(signature = (x, y, z))]
-    fn set_position(&mut self, x: f64, y: f64, z: f64) -> PyResult<()> {
-        if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+    fn set_position(&mut self, x: PyLength, y: PyLength, z: PyLength) -> PyResult<()> {
+        if !x.base().is_finite() || !y.base().is_finite() || !z.base().is_finite() {
             return Err(PyValueError::new_err("Position coordinates must be finite"));
         }
         self.inner
-            .set_center_position([
-                Length::from_unit::<Meter>(x),
-                Length::from_unit::<Meter>(y),
-                Length::from_unit::<Meter>(z),
-            ])
+            .set_center_position([x.quantity(), y.quantity(), z.quantity()])
             .map_err(PyValueError::new_err)?;
         Ok(())
     }
