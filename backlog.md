@@ -86,27 +86,17 @@
   revision named, matching tree exits 0 after the real `--check` runs, and a
   range touching no manifest or lock still skips.
 
-## KW-GPU-TESTS-SKIP-WITHOUT-PROVING-ABSENCE-2026-09-08 — A broken GPU skips instead of failing [patch] — todo
+## KW-GPU-TESTS-SKIP-WITHOUT-PROVING-ABSENCE-2026-09-08 — A broken GPU skips instead of failing [patch] — done
 
-- **Outcome:** the GPU-gated tests skip only when a GPU is genuinely
-  unavailable, and fail when one is present but the context will not build.
-- **Asymmetry, measured 2026-09-08:** `avx512_stencil/tests.rs`'s
-  `processor_or_skip` asserts `!is_x86_feature_detected!("avx512f")` before
-  skipping, so a present-but-broken feature fails. `gpu_buffer_tests.rs` and
-  `gpu_compute_backend_patterns.rs` instead swallow the error from
-  `CoreGpuContext::try_new()`, print "GPU not available, skipping test", and
-  early-return -- a driver fault or a regression inside `try_new` reads exactly
-  like absent hardware, and the suite reports green.
-- **Verified the tests do run where hardware exists:** all six
-  `gpu_buffer_tests` executed on this host with no skip message. The exposure
-  is the hosted runners, which have no GPU and so take the silent path on every
-  run.
-- **Design question the fix must answer:** absence needs an oracle independent
-  of `try_new()` -- enumerating adapters and asserting that if any adapter
-  exists the context must build is the candidate; the AVX-512 helper had
-  `is_x86_feature_detected!` for free and the GPU case does not.
-- **Acceptance:** with an adapter present, a forced `try_new` failure fails the
-  suite rather than skipping it; with no adapter, the tests still skip.
+- **Outcome:** merged in #757. The oracle already existed and only the tests
+  discarded it -- `is_gpu_absent` names it once, `GpuDevice::try_create` no
+  longer collapses every failure into a stringly-typed `Config` error, and one
+  admission helper covers the sites across five files. Four swallowed *compute*
+  failures now panic too.
+- **Evidence:** 29/29 GPU tests run and pass on this host (0 skipped), 71/71
+  kwavers-core, both feature configurations clean. Acceptance is executable and
+  runs without a GPU: a forced non-absence error must panic, only genuine
+  absence may skip.
 
 <a id="kw-local-gate-is-one-third-built-2026-09-08"></a>
 
@@ -118,6 +108,12 @@
 - **Measured added wall clock**, warm shared cache, one leaf package: 0s when
   no package owns the change, 9s clean, 6-11s to refuse fmt, clippy, and test
   failures. `Cargo.lock` byte-identical across every probe.
+- **Follow-on #756:** the gate refused its own author's push on first real use.
+  It runs inside the overlay, so a broken graph fails on a crate under
+  `~/.cargo` and it reported that as the change's own clippy failure. Error
+  locations now decide, defaulting to blaming the change -- probing an earlier
+  cut let a deliberately failing test pass, because a test failure emits no
+  compile diagnostics at all.
 
 <a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>
 
