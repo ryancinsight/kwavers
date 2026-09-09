@@ -3507,11 +3507,11 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 - Already clean, and not by suppression: `kwavers-core` and the `kwavers` facade — the two
   crates CI gates with `-D warnings` — trip none of the debt lints.
 
-## KW-CORE-LOG-1 — Decide whether the console log sink belongs on stdout [patch] — todo
+## KW-CORE-LOG-1 — Decide whether the console log sink belongs on stdout [patch] — in-progress
 
 | ID | Outcome | Class | Owner | Scope |
 |----|---------|-------|-------|-------|
-| KW-CORE-LOG-1 | `CombinedLogger`'s console stream is a decision with a stated reason, not an unexamined default. | [patch] | unclaimed | `crates/kwavers-core/src/log/file.rs` |
+| KW-CORE-LOG-1 | `CombinedLogger`'s console stream is a decision with a stated reason, not an unexamined default. | [patch] | claude-opus-5 | `crates/kwavers-core/src/log/file.rs` |
 
 - `CombinedLogger::log` writes each record to stdout via `println!` when `console` is set.
   That is what `clippy::print_stdout` exists to catch, and the site carries a per-site
