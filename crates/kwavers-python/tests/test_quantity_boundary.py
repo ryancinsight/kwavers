@@ -228,3 +228,39 @@ def test_steering_angle_does_not_read_a_quantity_as_degrees() -> None:
     plain = kw.TransducerArray2D(64, 0.3e-3, 5e-3, 0.35e-3, 1540.0, 3e6)
     plain.set_steering_angle(30.0)
     assert array.steering_angle == pytest.approx(plain.steering_angle)
+
+
+def test_a_nan_magnitude_does_not_reach_a_computation() -> None:
+    """The defect this boundary was tightened for.
+
+    `pmut_self_heating` multiplies its drive voltage, so a `NaN` that extracts
+    comes back as a `NaN` power -- a non-finite result from a call that
+    reported success. The extractor rejects it instead (aequitas ADR 0016,
+    revised 2026-09-09).
+    """
+    with pytest.raises(ValueError):
+        kw.pmut_self_heating("pzt", 1.0e-4, 1.0e-6, 5.0e-6, float("nan"), 1.0e6)
+
+
+def test_an_infinite_magnitude_does_not_reach_a_computation() -> None:
+    with pytest.raises(ValueError):
+        kw.pmut_self_heating("pzt", 1.0e-4, 1.0e-6, 5.0e-6, float("inf"), 1.0e6)
+
+
+def test_a_finite_drive_voltage_still_computes() -> None:
+    power = kw.pmut_self_heating("pzt", 1.0e-4, 1.0e-6, 5.0e-6, 10.0, 1.0e6)
+    assert math.isfinite(power) and power > 0.0, f"expected a finite positive power, got {power}"
+
+
+def test_the_focus_distance_sentinel_survives_the_tightening() -> None:
+    """`INF` clears the focus, as the docstring has always published."""
+    array = kw.TransducerArray2D(16, 0.3e-3, 10.0e-3, 0.5e-3, 1540.0, 1.0e6)
+    array.set_focus_distance(float("inf"))
+    array.set_elevation_focus_distance(float("inf"))
+
+
+def test_a_nan_focus_distance_is_still_rejected() -> None:
+    """The sentinel is infinity, not "any non-finite value"."""
+    array = kw.TransducerArray2D(16, 0.3e-3, 10.0e-3, 0.5e-3, 1540.0, 1.0e6)
+    with pytest.raises(ValueError):
+        array.set_focus_distance(float("nan"))

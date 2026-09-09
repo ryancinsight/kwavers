@@ -33,10 +33,18 @@ use pyo3::{Borrowed, FromPyObject};
 use aequitas_python::protocol::{BASE_ATTR, DIMENSION_ATTR};
 
 /// Parameter accepting a base-unit float or a matching quantity.
-pub use aequitas_python::Dimensioned;
+pub use aequitas_python::{Dimensioned, MayBeInfinite};
 
 /// Length in metres.
 pub type PyLength = Dimensioned<dimensions::Length>;
+
+/// Length in metres, admitting an infinite sentinel.
+///
+/// `TransducerArray2D.set_focus_distance` documents `INF` as "no focusing" and
+/// clears the focus on it, so this parameter opts out of the finite-only
+/// default rather than losing a published contract. `NaN` stays rejected --
+/// the extractor admits the sentinel, not the absence of a value.
+pub type PyFocusDistance = Dimensioned<dimensions::Length, MayBeInfinite>;
 
 /// Plane or rotational angle in radians.
 ///

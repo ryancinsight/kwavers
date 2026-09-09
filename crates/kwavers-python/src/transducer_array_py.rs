@@ -5,7 +5,7 @@ use numpy::PyReadonlyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use crate::quantity_args::{PyDegrees, PyFrequency, PyLength, PyVelocity};
+use crate::quantity_args::{PyDegrees, PyFocusDistance, PyFrequency, PyLength, PyVelocity};
 
 use crate::breast_fwi_bindings::complex_compat::nd_to_leto1;
 
@@ -141,12 +141,12 @@ impl TransducerArray2D {
     /// distance : float
     ///     Focus distance from array (INF for no focusing)
     #[pyo3(signature = (distance))]
-    fn set_focus_distance(&mut self, distance: PyLength) -> PyResult<()> {
+    fn set_focus_distance(&mut self, distance: PyFocusDistance) -> PyResult<()> {
         if distance.base().is_infinite() {
             self.inner.clear_focus_distance();
-        } else if !distance.base().is_finite() || distance.base() <= 0.0 {
+        } else if distance.base() <= 0.0 {
             return Err(PyValueError::new_err(
-                "Focus distance must be finite and positive, or infinity to clear",
+                "Focus distance must be positive, or infinity to clear",
             ));
         } else {
             self.inner
@@ -158,12 +158,12 @@ impl TransducerArray2D {
 
     /// Set elevation focus distance `m`.
     #[pyo3(signature = (distance))]
-    fn set_elevation_focus_distance(&mut self, distance: PyLength) -> PyResult<()> {
+    fn set_elevation_focus_distance(&mut self, distance: PyFocusDistance) -> PyResult<()> {
         if distance.base().is_infinite() {
             self.inner.clear_elevation_focus_distance();
-        } else if !distance.base().is_finite() || distance.base() <= 0.0 {
+        } else if distance.base() <= 0.0 {
             return Err(PyValueError::new_err(
-                "Elevation focus distance must be finite and positive, or infinity to clear",
+                "Elevation focus distance must be positive, or infinity to clear",
             ));
         } else {
             self.inner
