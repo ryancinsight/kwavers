@@ -115,7 +115,6 @@ fn westervelt_fdtd_point_source_generates_measurable_second_harmonic_content() {
         beta: &beta_field,
         attenuation_np_per_m_mhz: None,
         attenuation_power_law_y: None,
-        source_body_mask: None,
         n,
         spacing_m,
         aperture: &aperture,

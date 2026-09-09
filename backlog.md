@@ -38,18 +38,16 @@
   kwavers-core (all features), kwavers-solver, and kwavers-gpu (gpu feature)
   clean.
 
-## KW-SOURCE-DOMAIN-OPTIONAL-MASK-2026-09-08 — `SourceDomain::ExteriorCoupling` needs a mask the type does not require [patch] — todo <a id="kw-source-domain-optional-mask-2026-09-08"></a>
+## KW-SOURCE-DOMAIN-OPTIONAL-MASK-2026-09-08 — `SourceDomain::ExteriorCoupling` needs a mask the type does not require [arch] — done 2026-09-09 <a id="kw-source-domain-optional-mask-2026-09-08"></a>
 
-- **Outcome:** `nonlinear3d::forward::source::plan` takes
-  `source_body_mask: Option<&[bool]>` and panics when the domain is
-  `ExteriorCoupling` and the mask is absent — mutually dependent arguments
-  standing as independent ones. Carry the mask in the variant
-  (`ExteriorCoupling { body_mask }`) so the invalid combination is
-  unrepresentable and the runtime check disappears.
-- **Acceptance:** the panic site is gone; every caller passes the mask through
-  the variant; the existing plan tests pass unchanged.
-
-<a id="kw-prepush-checks-the-wrong-tree-2026-09-08"></a>
+- Delivered: `ExteriorCoupling { body_mask: Vec<bool> }`, filled by
+  `build_aperture`; both `expect` sites gone with no runtime check replacing
+  them, and the mask no longer threaded through six input structs. Net -45
+  lines. Design and rejected alternatives:
+  [ADR 130](docs/adr/130-exterior-coupling-carries-its-mask.md).
+- Verified: 59 `nonlinear3d` and 350 `kwavers-therapy` tests pass, matching the
+  pre-change baseline; `git grep` finds zero `source_body_mask` references and
+  zero exterior-coupling `expect`s.
 
 ## KW-PREPUSH-CHECKS-THE-WRONG-TREE-2026-09-08 — The lockfile hook verifies the working tree, not the push [patch] [ci] — done 2026-09-08
 

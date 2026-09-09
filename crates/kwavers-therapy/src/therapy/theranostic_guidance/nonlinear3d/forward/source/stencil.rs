@@ -13,10 +13,9 @@ pub(super) fn finite_source_stencil(
     n: usize,
     spacing_m: f64,
     aperture: &Nonlinear3dAperture,
-    source_body_mask: Option<&[bool]>,
 ) -> Vec<(usize, f64)> {
-    if aperture.source_domain == SourceDomain::ExteriorCoupling {
-        return exterior_finite_area_stencil(idx, n, spacing_m, aperture, source_body_mask);
+    if let SourceDomain::ExteriorCoupling { body_mask } = &aperture.source_domain {
+        return exterior_finite_area_stencil(idx, n, spacing_m, aperture, body_mask);
     }
     let offsets = [
         (0, 0, 0, 1.0),
@@ -62,9 +61,8 @@ fn exterior_finite_area_stencil(
     n: usize,
     spacing_m: f64,
     aperture: &Nonlinear3dAperture,
-    source_body_mask: Option<&[bool]>,
+    body: &[bool],
 ) -> Vec<(usize, f64)> {
-    let body = source_body_mask.expect("exterior coupling source stencil requires body mask");
     let radius_cells = exterior_element_radius_cells(aperture, spacing_m);
     let radius_m = radius_cells * spacing_m;
     let axial_sigma_m = (0.5 * spacing_m).max(1.0e-12);

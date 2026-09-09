@@ -234,10 +234,15 @@ pub(crate) struct Nonlinear3dAperture {
     pub focus: GridIndex,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// Where the sources sit, carrying exactly what that placement needs.
+///
+/// Exterior coupling deposits through the CT-derived body mask, so the variant
+/// owns it: the mask cannot be absent where it is required, and no runtime
+/// check stands in for the type (ADR 130).
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum SourceDomain {
     TissueBoundary,
-    ExteriorCoupling,
+    ExteriorCoupling { body_mask: Vec<bool> },
 }
 
 #[derive(Clone, Debug)]

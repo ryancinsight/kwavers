@@ -42,7 +42,6 @@ pub(super) struct ForwardInput<'a> {
     /// Per-voxel power-law exponent `y`. Required when
     /// `attenuation_np_per_m_mhz` is `Some` and not all zero.
     pub(super) attenuation_power_law_y: Option<&'a [f64]>,
-    pub(super) source_body_mask: Option<&'a [bool]>,
     pub(super) n: usize,
     pub(super) spacing_m: f64,
     pub(super) aperture: &'a Nonlinear3dAperture,
@@ -60,7 +59,6 @@ pub(super) struct ReplayInput<'a> {
     pub(super) beta: &'a [f64],
     pub(super) attenuation_np_per_m_mhz: Option<&'a [f64]>,
     pub(super) attenuation_power_law_y: Option<&'a [f64]>,
-    pub(super) source_body_mask: Option<&'a [bool]>,
     pub(super) n: usize,
     pub(super) spacing_m: f64,
     pub(super) aperture: &'a Nonlinear3dAperture,
@@ -108,7 +106,6 @@ pub(super) fn forward_with_schedule(input: ForwardInput<'_>) -> ForwardResult {
         input.spacing_m,
         input.aperture,
         input.encoding,
-        input.source_body_mask,
     );
     let mut source_mask = vec![false; cells];
     for cell in source_cells(&source_plan) {
@@ -222,7 +219,6 @@ pub(super) fn forward_dense_history_for_test(input: ForwardInput<'_>) -> Vec<f64
         input.spacing_m,
         input.aperture,
         input.encoding,
-        input.source_body_mask,
     );
     let drive = DriveContext {
         config: input.config,
@@ -296,7 +292,6 @@ pub(super) fn replay_history_segment_into(
         input.spacing_m,
         input.aperture,
         input.encoding,
-        input.source_body_mask,
     );
     let drive = DriveContext {
         config: input.config,

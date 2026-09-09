@@ -29,20 +29,13 @@ pub fn run_fwi(
     let target = volume.target_mask.iter().copied().collect::<Vec<_>>();
     let schedule = time_schedule(&true_speed, n, volume.spacing_m, config);
     let encodings = SourceEncoding::all(config.source_encoding_count);
-    let source_plan_metrics = source_plan_metrics(
-        &true_speed,
-        n,
-        volume.spacing_m,
-        aperture,
-        encodings[0],
-        Some(&body),
-    );
+    let source_plan_metrics =
+        source_plan_metrics(&true_speed, n, volume.spacing_m, aperture, encodings[0]);
     let source_scale = calibrated_source_scale(SourceCalibrationInput {
         background_speed: &background,
         density: &density,
         attenuation_alpha0: &attenuation_alpha0,
         attenuation_y: &attenuation_y,
-        body: &body,
         target: &target,
         n,
         spacing_m: volume.spacing_m,
@@ -61,7 +54,6 @@ pub fn run_fwi(
                 beta: &true_beta,
                 attenuation_np_per_m_mhz: Some(&attenuation_alpha0),
                 attenuation_power_law_y: Some(&attenuation_y),
-                source_body_mask: Some(&body),
                 n,
                 spacing_m: volume.spacing_m,
                 aperture,
@@ -106,7 +98,6 @@ pub fn run_fwi(
                 beta: &current_beta,
                 attenuation_np_per_m_mhz: Some(&attenuation_alpha0),
                 attenuation_power_law_y: Some(&attenuation_y),
-                source_body_mask: Some(&body),
                 n,
                 spacing_m: volume.spacing_m,
                 aperture,
@@ -137,7 +128,6 @@ pub fn run_fwi(
                 attenuation_np_per_m_mhz: Some(&attenuation_alpha0),
                 attenuation_power_law_y: Some(&attenuation_y),
                 body: &inversion,
-                source_body_mask: &body,
                 n,
                 spacing_m: volume.spacing_m,
                 aperture,
@@ -217,7 +207,6 @@ pub fn run_fwi(
             density: &density,
             attenuation_np_per_m_mhz: &attenuation_alpha0,
             attenuation_power_law_y: &attenuation_y,
-            source_body_mask: &body,
             n,
             spacing_m: volume.spacing_m,
             aperture,
@@ -262,7 +251,6 @@ pub fn run_fwi(
             background_speed: &background,
             background_beta: &background_beta,
             body: &inversion,
-            source_body_mask: &body,
             n,
             spacing_m: volume.spacing_m,
             aperture,

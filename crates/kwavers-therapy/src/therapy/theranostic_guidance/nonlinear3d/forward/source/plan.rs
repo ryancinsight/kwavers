@@ -28,14 +28,10 @@ pub(in crate::therapy::theranostic_guidance::nonlinear3d::forward) fn build_sour
     spacing_m: f64,
     aperture: &Nonlinear3dAperture,
     encoding: SourceEncoding,
-    source_body_mask: Option<&[bool]>,
 ) -> SourcePlan {
-    if aperture.source_domain == SourceDomain::ExteriorCoupling {
-        source_body_mask.expect("exterior coupling sources require the CT-derived body mask");
-    }
-    if let Some(mask) = source_body_mask {
+    if let SourceDomain::ExteriorCoupling { body_mask } = &aperture.source_domain {
         assert_eq!(
-            mask.len(),
+            body_mask.len(),
             n * n * n,
             "source body mask length must match the propagation grid"
         );
@@ -43,7 +39,7 @@ pub(in crate::therapy::theranostic_guidance::nonlinear3d::forward) fn build_sour
     let source_stencils = aperture
         .sources
         .iter()
-        .map(|idx| finite_source_stencil(*idx, n, spacing_m, aperture, source_body_mask))
+        .map(|idx| finite_source_stencil(*idx, n, spacing_m, aperture))
         .collect::<Vec<_>>();
     let travel_times_s = aperture
         .sources
@@ -78,9 +74,8 @@ pub(in crate::therapy::theranostic_guidance::nonlinear3d) fn source_plan_metrics
     spacing_m: f64,
     aperture: &Nonlinear3dAperture,
     encoding: SourceEncoding,
-    source_body_mask: Option<&[bool]>,
 ) -> SourcePlanMetrics {
-    let plan = build_source_plan(speed, n, spacing_m, aperture, encoding, source_body_mask);
+    let plan = build_source_plan(speed, n, spacing_m, aperture, encoding);
     let support_min = plan.source_stencils.iter().map(Vec::len).min().unwrap_or(0);
     let support_max = plan.source_stencils.iter().map(Vec::len).max().unwrap_or(0);
     let support_mean = if plan.source_stencils.is_empty() {
