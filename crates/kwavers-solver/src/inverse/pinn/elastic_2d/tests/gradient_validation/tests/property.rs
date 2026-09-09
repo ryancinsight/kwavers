@@ -1,4 +1,4 @@
-use super::helpers::{autodiff_gradient_x, autodiff_gradient_y};
+use super::helpers::autodiff_gradient_x;
 use crate::inverse::elastic_2d::Config;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
 use coeus_autograd::Var;

@@ -1,5 +1,26 @@
 # Backlog / Strategy
 
+<a id="kw-pinn-gradient-helper-dead-2026-09-09"></a>
+
+## KW-PINN-GRADIENT-HELPER-DEAD-2026-09-09 — Route the y-gradient check through its helper [patch] [fix] — done 2026-09-09
+
+- **Red on main:** `PINN Feature Validation` fails `cargo clippy -p
+  kwavers-solver --features pinn --all-targets -- -D unused` with two errors:
+  `autodiff_gradient_y` imported but unused in
+  `gradient_validation/tests/property.rs`, and dead in `helpers.rs`.
+- **Root cause:** `93e88e24d` replaced property.rs's existence-only tests with
+  falsifiable ones, and the only two callers of `autodiff_gradient_y` went with
+  them. The class is feature-gated, so no default-feature gate — local or
+  hosted — compiles the file that carries it.
+- **Fix:** the helper is not dead, it is bypassed:
+  `first_deriv.rs::test_first_derivative_y_vs_finite_difference` hand-inlines
+  the same leaf construction, forward, backward and grad read. That block calls
+  `autodiff_gradient_y` instead, which is what the x-sibling already does, and
+  property.rs narrows its import. Both errors close and the y-autodiff path
+  keeps its finite-difference oracle.
+- **Verified:** both PINN clippy gates exit 0 against this revision; the five
+  `gradient_validation` tests pass.
+
 <a id="kw-dimensioned-accepts-non-finite-2026-09-09"></a>
 
 ## KW-DIMENSIONED-ACCEPTS-NON-FINITE-2026-09-09 — Non-finite magnitudes reached the physics [patch] — done 2026-09-09
