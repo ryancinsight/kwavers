@@ -110,28 +110,14 @@
 
 <a id="kw-local-gate-is-one-third-built-2026-09-08"></a>
 
-## KW-LOCAL-GATE-IS-ONE-THIRD-BUILT-2026-09-08 — The pre-push hook gates only the lockfile [patch] [ci] — todo
+## KW-LOCAL-GATE-IS-ONE-THIRD-BUILT-2026-09-08 — The pre-push hook gates only the lockfile [patch] [ci] — review
 
-- **Outcome:** `.githooks/pre-push` runs the fast local gate -- fmt, clippy,
-  affected tests -- so a push that CI would reject does not reach a runner.
-- **Two escaped defects from one merge, 2026-09-08.** #747 landed on `main`
-  and broke it twice, each for a different missing gate:
-  - `Cargo.lock` was not regenerated after a dev-dependency was added, so
-    `cargo metadata --locked` exited 101 -- every `--locked` CI step, on main
-    and on every PR merging it (cured by #749). The hook does cover lockfiles,
-    but measures the working tree
-    ([[kw-prepush-checks-the-wrong-tree-2026-09-08]]).
-  - Two `clippy::implicit-clone` denials failed `Validate Clean Architecture`
-    (cured by #750). The hook does not run clippy at all.
-- **Current scope:** 118 lines, entirely the lockfile guard. No `cargo fmt`,
-  no `cargo clippy`, no test invocation.
-- **Design constraint:** a workspace clippy takes minutes here, so the gate
-  must be scoped to what the push changes. The hook already reads the pushed
-  range to decide whether to run the lockfile check -- the same range maps to
-  the affected packages, which is what fmt, clippy, and nextest should take.
-- **Acceptance:** a push carrying a formatting, clippy-denial, or failing-test
-  change in a package is refused; a push touching neither code nor manifests
-  still passes quickly; the hook's added wall-clock is measured and recorded.
+- **Outcome:** `.githooks/pre-push` maps the pushed range to its packages and
+  runs fmt, clippy, and their tests, so what #747 escaped past (#749, #750)
+  is refused locally. In #754.
+- **Measured added wall clock**, warm shared cache, one leaf package: 0s when
+  no package owns the change, 9s clean, 6-11s to refuse fmt, clippy, and test
+  failures. `Cargo.lock` byte-identical across every probe.
 
 <a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>
 
