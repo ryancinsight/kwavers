@@ -147,8 +147,21 @@
   100-minute pipeline would institutionalize the starvation instead of curing
   it, so job and queue speed comes first, then the ruleset.
 - **Decomposition:** (1) move beta/nightly toolchains, heavy validation, and
-  coverage to schedule; (2) re-measure round-trip; (3) wire the remaining
-  affected-scope checks as required status checks and let auto-merge enqueue.
+  coverage to schedule -- **done in #755**, 5 checks and about 51 min of job
+  time off the pull-request path, nothing deleted; (1b) the feature matrix,
+  below; (2) re-measure round-trip; (3) wire the remaining affected-scope
+  checks as required status checks and let auto-merge enqueue.
+- **(1b) found while delivering (1):** `Architecture Validation` is a second
+  always-on workflow, measured at 75 min, contributing 12 of the pull request's
+  checks -- five of them `Build with Feature Combinations` (minimal, gpu,
+  plotting, pinn, full). Policy puts the feature matrix on the scheduled
+  backstop with the rest of the full matrix, so the same move applies. It was
+  not folded into #755 because *which* legs gate a pull request is a coverage
+  decision, not a mechanical move: `full` alone misses the
+  feature-gated-code-referenced-unconditionally class that `minimal` catches,
+  and each single-feature leg can fail on its own `cfg` combination.
+  **Recommendation:** `minimal` and `full` on pull requests -- the two
+  endpoints -- all five on schedule.
 - **Acceptance:** a pull request's verification round-trip is measured after
   (1), the moved jobs still run on schedule with unchanged commands and
   budgets, and no check is deleted.
