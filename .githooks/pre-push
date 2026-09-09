@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 #
-# Atlas member-side lockfile pre-push guard.
+# Atlas member-side pre-push gate.
+#
+# Two guards, in order: the lockfile must resolve under `--locked`, and the
+# packages the push changes must pass fmt, clippy, and their tests. CI confirms
+# what this found; it should not be where a defect is discovered.
 #
 # Refuse a push whose Cargo.lock cannot resolve under `--locked`.
 #
@@ -25,11 +29,6 @@
 #     SKIP_LOCKFILE_CHECK=1 git push
 set -euo pipefail
 
-if [ "${SKIP_LOCKFILE_CHECK:-0}" = "1" ]; then
-  echo "pre-push: lockfile check skipped by SKIP_LOCKFILE_CHECK" >&2
-  exit 0
-fi
-
 # A managed worktree may be owned by a different filesystem account than the
 # process pushing from it, and git does not propagate command-line config into
 # hooks. Re-inject the checkout path so child git calls stay valid.
@@ -37,6 +36,16 @@ repo_root="$(git -c safe.directory="$PWD" rev-parse --show-toplevel)"
 export GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0=safe.directory
 export GIT_CONFIG_VALUE_0="$repo_root"
+
+# The lockfile guard. Its "not needed" paths return rather than exit, so a
+# push that changes no manifest still reaches the gate below -- which is the
+# common case, and the one that has escaped.
+check_lockfile() {
+
+if [ "${SKIP_LOCKFILE_CHECK:-0}" = "1" ]; then
+  echo "pre-push: lockfile check skipped by SKIP_LOCKFILE_CHECK" >&2
+  return 0
+fi
 
 # The check measures the *working tree*, but the push carries a revision range.
 # Those differ whenever the pushed commits were not checked out -- a plumbing
@@ -76,7 +85,7 @@ fi
 
 if [ "$touches_dependency_state" = "no" ]; then
   echo "pre-push: no Cargo.lock or Cargo.toml in the pushed range; lockfile check not needed" >&2
-  exit 0
+  return 0
 fi
 
 # `--check` measures the working tree, so its verdict is evidence about the
@@ -96,7 +105,7 @@ being pushed, so a check of this tree says nothing about that push.
 Commit the dependency state you verified, or check out the pushed revision and
 push from there. To push anyway: SKIP_LOCKFILE_CHECK=1 git push
 MESSAGE
-  exit 1
+  return 1
 fi
 
 checker="$repo_root/scripts/lockfile.py"
@@ -105,7 +114,7 @@ if [ ! -f "$checker" ]; then
   # Nothing to enforce on a checkout that predates the tool; say so rather than
   # passing silently, so a missing guard is visible instead of assumed.
   echo "pre-push: scripts/lockfile.py not present; lockfile not verified" >&2
-  exit 0
+  return 0
 fi
 
 python_bin="${PYTHON:-}"
@@ -120,7 +129,7 @@ fi
 
 if [ -z "$python_bin" ]; then
   echo "pre-push: no python interpreter found; lockfile not verified" >&2
-  exit 0
+  return 0
 fi
 
 if ! "$python_bin" "$checker" --check; then
@@ -136,5 +145,179 @@ strips the lock's git sources. Repair it with:
 
 then stage the result. To push anyway: SKIP_LOCKFILE_CHECK=1 git push
 MESSAGE
+  return 1
+fi
+
+}
+
+check_lockfile || exit 1
+
+# ---------------------------------------------------------------------------
+# Fast local gate, scoped to the pushed range.
+#
+# The lockfile guard above is one third of what CI runs, and the other two
+# thirds are where defects have actually escaped: kwavers#747 landed two
+# `clippy::implicit-clone` denials that turned `Validate Clean Architecture`
+# red on main and on every pull request that merged it, because nothing local
+# ran clippy. CI should confirm, not discover.
+#
+# Scope is the push, not the workspace: a workspace clippy takes minutes here,
+# and a gate that slow is a gate people bypass. The changed files map to their
+# packages and only those are linted and tested.
+#
+# `cargo fmt` needs no dependency resolution; clippy and nextest do, and how
+# they resolve decides whether this gate is usable at all. Cargo finds the
+# stack's `[patch]` overlay by walking up from the working directory, so running
+# from a neutral directory with `--manifest-path` escapes it -- and with it the
+# shared target directory and every first-party dependency, which then resolve
+# to their git sources instead of the local trees. Nothing in the cache matches
+# and the gate rebuilds the world: measured at over ten minutes for a single
+# leaf crate, which is not a pre-push gate.
+#
+# So these run from the repository, inside the overlay, on the warm cache. The
+# cost is that cargo rewrites `Cargo.lock` as it goes -- stripping the git
+# sources CI needs -- which is the very corruption the guard above exists to
+# catch. The lock is therefore restored byte-for-byte afterwards, whatever it
+# held, so the gate cannot damage what it just verified.
+#
+# For the same reason nothing here passes `--locked`: under the overlay the lock
+# *must* change, so `--locked` would fail on resolution before reaching a line
+# of code. Lock correctness is the guard's job, checked from outside the
+# overlay; this gate's job is the code.
+#
+# Bypass deliberately:
+#
+#     SKIP_LOCAL_GATE=1 git push
+
+if [ "${SKIP_LOCAL_GATE:-0}" = "1" ]; then
+  echo "pre-push: local gate skipped by SKIP_LOCAL_GATE" >&2
+  exit 0
+fi
+
+gate_base=""
+if upstream="$(git rev-parse --verify --quiet '@{upstream}' 2>/dev/null)"; then
+  gate_base="$upstream"
+elif origin_main="$(git rev-parse --verify --quiet origin/main 2>/dev/null)"; then
+  # A branch pushed for the first time has no upstream yet; its own commits are
+  # what the default branch does not have.
+  gate_base="$(git merge-base "$origin_main" HEAD 2>/dev/null || true)"
+fi
+
+if [ -z "$gate_base" ]; then
+  echo "pre-push: no upstream or origin/main to diff against; local gate skipped" >&2
+  exit 0
+fi
+
+gate_changed="$(git diff --name-only "$gate_base" HEAD 2>/dev/null || true)"
+
+if ! printf '%s\n' "$gate_changed" | grep -qE '\.rs$|(^|/)Cargo\.toml$'; then
+  echo "pre-push: no Rust source or manifest in the pushed range; local gate not needed" >&2
+  exit 0
+fi
+
+# Changed paths -> the packages that own them. A path under `crates/<dir>/` or
+# `xtask/` belongs to that manifest; anything else (docs, workflows, the board)
+# has no package and contributes nothing to lint or test.
+gate_packages=""
+while IFS= read -r changed_path; do
+  [ -n "$changed_path" ] || continue
+  case "$changed_path" in
+    crates/*/*) package_dir="crates/$(printf '%s' "$changed_path" | cut -d/ -f2)" ;;
+    xtask/*) package_dir="xtask" ;;
+    *) continue ;;
+  esac
+  manifest="$repo_root/$package_dir/Cargo.toml"
+  [ -f "$manifest" ] || continue
+  package_name="$(sed -n 's/^name[[:space:]]*=[[:space:]]*"\(.*\)".*/\1/p' "$manifest" | head -1)"
+  [ -n "$package_name" ] || continue
+  case " $gate_packages " in
+    *" $package_name "*) ;;
+    *) gate_packages="$gate_packages $package_name" ;;
+  esac
+done <<GATE_PATHS
+$gate_changed
+GATE_PATHS
+
+if [ -z "${gate_packages// /}" ]; then
+  echo "pre-push: no package owns the changed files; local gate not needed" >&2
+  exit 0
+fi
+
+gate_specs=""
+for package_name in $gate_packages; do
+  gate_specs="$gate_specs -p $package_name"
+done
+
+echo "pre-push: gating${gate_packages}" >&2
+
+# Restore whatever the lock held before this gate ran -- the committed content,
+# or a developer's own uncommitted edit to it. Copying the bytes rather than
+# checking out the committed file is what makes the second case safe: this hook
+# must not decide that someone's in-progress lock work was a side effect of its
+# own.
+gate_lock="$repo_root/Cargo.lock"
+gate_lock_backup=""
+if [ -f "$gate_lock" ]; then
+  gate_lock_backup="$(mktemp)"
+  cp -p "$gate_lock" "$gate_lock_backup"
+fi
+
+restore_gate_lock() {
+  if [ -n "$gate_lock_backup" ] && [ -f "$gate_lock_backup" ]; then
+    if ! cmp -s "$gate_lock_backup" "$gate_lock" 2>/dev/null; then
+      cp -p "$gate_lock_backup" "$gate_lock" || true
+    fi
+    rm -f "$gate_lock_backup" || true
+  fi
+}
+trap restore_gate_lock EXIT INT TERM
+
+# Formatting is workspace-wide and near-instant, and its failure is the
+# cheapest one to find here rather than on a runner.
+if ! (cd "$repo_root" && cargo fmt -- --check >/dev/null); then
+  cat >&2 <<'MESSAGE'
+
+pre-push: `cargo fmt --check` fails, so `Validate Clean Architecture` would.
+
+Run `cargo fmt` and stage the result. To push anyway: SKIP_LOCAL_GATE=1 git push
+MESSAGE
   exit 1
 fi
+
+# No `-D warnings`: the workspace lint table already denies what matters, so
+# this is CI's ratchet step scoped to the push. Adding `-D warnings` here would
+# fail on the pre-existing per-crate debt the ratchet exists to burn down, and
+# a gate that fails on debt you did not write is a gate that gets bypassed.
+if ! (cd "$repo_root" && cargo clippy $gate_specs --all-targets >/dev/null 2>&1); then
+  cat >&2 <<MESSAGE
+
+pre-push: clippy fails for$gate_packages, so the CI ratchet would.
+
+Reproduce:
+
+    cargo clippy$gate_specs --all-targets
+
+To push anyway: SKIP_LOCAL_GATE=1 git push
+MESSAGE
+  exit 1
+fi
+
+if command -v cargo-nextest >/dev/null 2>&1; then
+  if ! (cd "$repo_root" && cargo nextest run $gate_specs >/dev/null 2>&1); then
+    cat >&2 <<MESSAGE
+
+pre-push: tests fail for$gate_packages.
+
+Reproduce:
+
+    cargo nextest run$gate_specs
+
+To push anyway: SKIP_LOCAL_GATE=1 git push
+MESSAGE
+    exit 1
+  fi
+else
+  echo "pre-push: cargo-nextest not installed; tests not run" >&2
+fi
+
+echo "pre-push: local gate passed" >&2
