@@ -4962,6 +4962,22 @@ markers without changing the numerical contract.
   `avx512f=true` -- a self-hosted runner, or an emulator (SDE-class) invoked by
   a scheduled job -- and the run is recorded; until then the kernels carry no
   behavioral evidence and the item stays open.
+- **Emulator route attempted 2026-09-09, both paths unavailable from this host**
+  (the user authorised the SDE download; the obstacle is not permission):
+  - Intel SDE: `downloadmirror.intel.com` resolves to IPv6-only CloudFront and
+    resets over IPv6; over IPv4 it answers, but every Intel page describing the
+    package returns an Akamai `Access Denied` to this client, so the current
+    package URL cannot be discovered. Guessing a version path or taking the
+    binary from an unofficial mirror is not an acceptable substitute for a
+    tool that will execute test binaries.
+  - WSL + `qemu-user` (`-cpu` reporting AVX-512, from Ubuntu's own repositories,
+    needing no third-party binary): the registered Ubuntu distro fails to start
+    -- `Failed to attach disk ... ext4.vhdx: The system cannot find the path
+    specified`. The distro is registered but its virtual disk is gone.
+  - **Smallest unblocking action:** place an `sde`/`sde64` on `PATH` (a manual
+    download through Intel's click-through licence), or repair the WSL distro,
+    or register the self-hosted AVX-512 runner. Any one of the three closes
+    this.
 
 ## KW-CI-053 — Update GPU PSTD parity contract [patch] — review
 
