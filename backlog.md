@@ -1,5 +1,27 @@
 # Backlog / Strategy
 
+<a id="kw-dimensioned-accepts-non-finite-2026-09-09"></a>
+
+## KW-DIMENSIONED-ACCEPTS-NON-FINITE-2026-09-09 — Non-finite magnitudes reached the physics [patch] — done 2026-09-09
+
+- **Found by review on #726 after it merged:** `Dimensioned::extract` checked
+  neither arm for finiteness, so `pmut_self_heating` multiplied a `NaN` drive
+  voltage and returned a `NaN` power from a call that reported success.
+- **Fixed upstream** in aequitas#61 (ADR 0016, revised): both arms reject `NaN`,
+  and infinity extracts only under `MayBeInfinite`.
+- **Consumer migration here:** the aequitas pin advances, and the two sites that
+  publish infinity as a sentinel -- `set_focus_distance` and
+  `set_elevation_focus_distance` -- take the new `PyFocusDistance` alias. Their
+  `!is_finite()` arm is removed: the extractor now owns `NaN`, so that branch
+  was unreachable.
+- **The tightening is source-compatible but behavioural**, so the compiler
+  flagged nothing; the two sites needed deliberate migration or `inf` would have
+  started raising instead of clearing focus.
+- **Verified:** the boundary suite is 26 tests against a wheel built from this
+  revision -- `NaN` and `inf` drive voltages now raise, a finite one still
+  returns a finite positive power, the `inf` focus sentinel still clears, and a
+  `NaN` focus distance still raises.
+
 ## KW-VALUE-ASSERTIONS-SWEEP-2026-09-08 — Close the existence-only assertion class [patch] — done 2026-09-08 <a id="kw-value-assertions-sweep-2026-09-08"></a>
 
 - **Outcome:** the remaining 73 sites across twelve crates now assert the
