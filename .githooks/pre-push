@@ -46,6 +46,7 @@ export GIT_CONFIG_VALUE_0="$repo_root"
 # resolution: a push that changes no manifest and no lock cannot make the lock
 # worse than the base already found acceptable.
 touches_dependency_state=unknown
+pushed_tip=
 if [ ! -t 0 ]; then
   touches_dependency_state=no
   zero="$(printf '0%.0s' $(seq 40))"
@@ -67,6 +68,7 @@ if [ ! -t 0 ]; then
     fi
     if printf '%s\n' "$changed" | grep -qE '(^|/)Cargo\.(lock|toml)$'; then
       touches_dependency_state=yes
+      pushed_tip="$local_sha"
       break
     fi
   done
@@ -75,6 +77,26 @@ fi
 if [ "$touches_dependency_state" = "no" ]; then
   echo "pre-push: no Cargo.lock or Cargo.toml in the pushed range; lockfile check not needed" >&2
   exit 0
+fi
+
+# `--check` measures the working tree, so its verdict is evidence about the
+# pushed commits only while the two agree on dependency state. They diverge
+# exactly when it matters: any cargo command rewrites `Cargo.lock`, so a tree
+# whose lock a test run already repaired passes this check while the commits
+# being pushed still carry the stale one. That is how kwavers#747 put a lock
+# on `main` that failed every `--locked` job (#749).
+if [ -n "$pushed_tip" ] && ! git diff --quiet "$pushed_tip" -- Cargo.lock '*Cargo.toml' 2>/dev/null; then
+  cat >&2 <<MESSAGE
+
+pre-push: the working tree's Cargo.lock or manifests differ from the revision
+being pushed, so a check of this tree says nothing about that push.
+
+  pushed revision: $pushed_tip
+
+Commit the dependency state you verified, or check out the pushed revision and
+push from there. To push anyway: SKIP_LOCKFILE_CHECK=1 git push
+MESSAGE
+  exit 1
 fi
 
 checker="$repo_root/scripts/lockfile.py"
