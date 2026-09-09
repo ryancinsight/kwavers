@@ -129,6 +129,10 @@
   gate cannot stand in for -- its only real gate is CI itself -- so it is held
   rather than admin-merged on evidence that does not exist. Check count is
   already visible though: 19 at push against about 24 before.
+- **User decision 2026-09-09:** proceed on local evidence rather than wait.
+  Code items are verified locally and merged on that evidence (#756, #757, #758
+  landed this way while the queue was stopped). #755 alone stays held, because
+  a workflow change's only real gate is CI itself.
 - **Re-open trigger:** hosted runners assign jobs again.
 - **Outcome:** the pull-request path runs the affected-scope checks; the full
   matrix (extra toolchains, heavy validation, coverage) moves to the scheduled
