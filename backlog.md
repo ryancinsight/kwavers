@@ -124,7 +124,16 @@
 ## KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08 — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — in-progress
 
 - **Integrator:** claude-opus-5 (lane `kwavers-local-gate`, branch
-  `ci/kw-per-pr-matrix-starvation`); claimed 2026-09-09. Step (1) first.
+  `ci/kw-per-pr-matrix-starvation`); claimed 2026-09-09.
+- **Held at step (2), 2026-09-09:** #755 is written and pushed but not merged.
+  The queue is stopped, not slow -- nine consecutive runs queued with zero jobs
+  started, the oldest waiting 64 minutes, no self-hosted runners registered
+  (atlas `ATLAS-RUNNER-STARVATION-2026-09-02`). Two consequences: the step-(2)
+  round-trip cannot be measured, and #755 is the one change class the local
+  gate cannot stand in for -- its only real gate is CI itself -- so it is held
+  rather than admin-merged on evidence that does not exist. Check count is
+  already visible though: 19 at push against about 24 before.
+- **Re-open trigger:** hosted runners assign jobs again.
 - **Outcome:** the pull-request path runs the affected-scope checks; the full
   matrix (extra toolchains, heavy validation, coverage) moves to the scheduled
   selection-drift backstop, bringing verification round-trip toward the
