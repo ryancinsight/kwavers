@@ -2367,7 +2367,7 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
 - Blocked on: dropping a stash destroys parked work that is not otherwise on `origin`, so
   the discards need explicit authorization even where the assessment is unambiguous. Re-open
   trigger: owner confirms which entries may be dropped.
-## KW-CI-115 — Enforce the merge gate on main [minor] — in-progress
+## KW-CI-115 — Enforce the merge gate on main [minor] — done
 
 | ID | Outcome | Class | Owner | Scope |
 |----|---------|-------|-------|-------|
@@ -2397,6 +2397,30 @@ passes 681/681 tests in 285.361 s with 27 configured skips.
   the curated fast set, chosen and recorded deliberately rather than "all of them"; a PR
   with a failing required check cannot be merged; and the heavy suites still run on merge
   and on schedule.
+- **Applied 2026-09-09**, after #755 removed the constraint this item worried about --
+  the heavy suites are no longer on the pull-request path at all, so the required set can
+  be the whole of what a pull request now runs that is fast and discriminating. Nine
+  contexts, all GitHub Actions (app 15368), longest 4m55s, so the gate matches the
+  five-minute job target: `Lockfile integrity`, `Code Quality`, `Build & Test (stable)`,
+  `Solver Validation Suite`, `Memory Safety (Miri)`, `Security Audit`,
+  `Python Typed Surface`, `Validate Clean Architecture`, `Layer Boundary Enforcement`.
+- **Deliberately excluded** as slower than the work they gate, and still running on merge
+  and schedule: `Integration Suite` 17m54s, `Test Suite Coverage` 17m53s,
+  `PINN Feature Validation` 13m26s, `Documentation Build` 12m31s, `CUDA Runtime Build`
+  9m53s, `book / Build book` 9m30s, the five `Build with Feature Combinations` legs, and
+  `complete benchmark smoke`.
+- **`enforce_admins: false`, and that is load-bearing, not laxity.** Every kwavers workflow
+  is path-filtered, so a docs-, board-, or CHANGELOG-only commit starts no run and its
+  required checks never report -- which a strict gate reads as "waiting" forever. The
+  owner bypass is the escape hatch for exactly that case, and it is the shape `coeus`
+  already runs (5 contexts, `enforce_admins: false`, no review requirement).
+- **`strict: false`:** requiring branches be up to date forces a full re-run every time
+  `main` moves, which is the starvation this repository is climbing out of. Revisit once
+  round-trip is measured on a normally-serviced queue.
+- **Side effect that was the point:** `gh pr merge --auto` now enqueues instead of merging
+  immediately, so the #742 class -- merging on its decisive check while twenty others were
+  still queued -- can no longer happen. Repository mechanics were already correct:
+  auto-merge on, squash off, merge and rebase allowed.
 - Needs repository-admin rights, so this is an owner action rather than a code change. Also
   worth deciding at the same time: whether to enable "Allow auto-merge", which would make
   merge-when-green available and remove the failure mode that produced the #433 merge.
