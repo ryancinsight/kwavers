@@ -5,8 +5,6 @@
 //! breast ring-array protocol onto those solver contracts.
 
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-#[cfg(feature = "gpu")]
-use kwavers_core::error::SystemError;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64;
@@ -295,7 +293,7 @@ where
     Cpu: FnOnce() -> KwaversResult<Array2<f64>>,
 {
     match gpu {
-        Err(KwaversError::System(SystemError::GpuNotAvailable)) => {
+        Err(error) if error.is_gpu_absent() => {
             tracing::info!(
                 backend = "cpu",
                 reason = "no compatible accelerator adapter",

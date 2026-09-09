@@ -6,12 +6,13 @@
 //! CUDA provider can implement [`GpuDeviceProvider`] without changing generic
 //! callers.
 
+use crate::backend::provider::map_hephaestus_error;
 use hephaestus_core::{ComputeDevice, ComputeDeviceAcquisition};
 pub use hephaestus_core::{DeviceFeature, DeviceLimits, DevicePreference};
 #[cfg(feature = "cuda-provider")]
 use hephaestus_cuda::CudaDevice;
 use hephaestus_wgpu::WgpuDevice;
-use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_solver::backend::traits::GpuProvider;
 
 /// Information about a GPU device.
@@ -229,13 +230,7 @@ where
             optional_features,
             required_limits,
         )
-        .map_err(|e| {
-            KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "gpu_device".to_string(),
-                value: format!("{e}"),
-                constraint: "Failed to acquire Hephaestus GPU device".to_string(),
-            })
-        })?;
+        .map_err(|error| map_hephaestus_error("GPU device", error))?;
 
         Ok(Self::from_provider(provider))
     }

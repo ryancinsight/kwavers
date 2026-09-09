@@ -12,6 +12,8 @@ use kwavers_gpu::gpu::compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
 use kwavers_grid::Grid;
 use leto::Array3 as LetoArray3;
 
+mod common;
+
 /// Create a test grid for acoustic simulations
 fn create_test_grid() -> Grid {
     Grid::new(
@@ -27,26 +29,16 @@ fn create_test_grid() -> Grid {
 
 #[test]
 fn test_acoustic_field_kernel_creation() {
-    match AcousticFieldKernel::try_new() {
-        Ok(kernel) => {
-            // Kernel created successfully
-            assert!(format!("{:?}", kernel).contains("AcousticFieldKernel"));
-        }
-        Err(e) => {
-            // GPU not available is acceptable
-            eprintln!("GPU not available: {}", e);
-        }
+    if let Some(kernel) = common::or_skip("acoustic field kernel", AcousticFieldKernel::try_new()) {
+        assert!(format!("{kernel:?}").contains("AcousticFieldKernel"));
     }
 }
 
 #[test]
 fn test_compute_propagation_gaussian() {
-    let kernel: AcousticFieldKernel = match AcousticFieldKernel::try_new() {
-        Ok(k) => k,
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-            return;
-        }
+    let Some(kernel) = common::or_skip("acoustic field kernel", AcousticFieldKernel::try_new())
+    else {
+        return;
     };
 
     let grid = create_test_grid();
@@ -83,19 +75,16 @@ fn test_compute_propagation_gaussian() {
             );
         }
         Err(e) => {
-            eprintln!("Compute propagation failed: {}", e);
+            panic!("compute propagation failed on an acquired kernel: {e}");
         }
     }
 }
 
 #[test]
 fn test_compute_propagation_zero_field() {
-    let kernel: AcousticFieldKernel = match AcousticFieldKernel::try_new() {
-        Ok(k) => k,
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-            return;
-        }
+    let Some(kernel) = common::or_skip("acoustic field kernel", AcousticFieldKernel::try_new())
+    else {
+        return;
     };
 
     let grid = create_test_grid();
@@ -112,31 +101,22 @@ fn test_compute_propagation_zero_field() {
             );
         }
         Err(e) => {
-            eprintln!("Test failed (acceptable if GPU unavailable): {}", e);
+            panic!("zero-field propagation failed on an acquired kernel: {e}");
         }
     }
 }
 
 #[test]
 fn test_wave_equation_gpu_creation() {
-    match WaveEquationGpu::try_new() {
-        Ok(solver) => {
-            assert!(format!("{:?}", solver).contains("WaveEquationGpu"));
-        }
-        Err(e) => {
-            eprintln!("GPU not available: {}", e);
-        }
+    if let Some(solver) = common::or_skip("wave equation solver", WaveEquationGpu::try_new()) {
+        assert!(format!("{solver:?}").contains("WaveEquationGpu"));
     }
 }
 
 #[test]
 fn test_wave_equation_step() {
-    let solver: WaveEquationGpu = match WaveEquationGpu::try_new() {
-        Ok(s) => s,
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-            return;
-        }
+    let Some(solver) = common::or_skip("wave equation solver", WaveEquationGpu::try_new()) else {
+        return;
     };
 
     let grid = create_test_grid();
@@ -169,19 +149,15 @@ fn test_wave_equation_step() {
             );
         }
         Err(e) => {
-            eprintln!("Wave equation step failed: {}", e);
+            panic!("wave equation step failed on an acquired solver: {e}");
         }
     }
 }
 
 #[test]
 fn test_wave_equation_step_rejects_small_grid() {
-    let solver: WaveEquationGpu = match WaveEquationGpu::try_new() {
-        Ok(s) => s,
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-            return;
-        }
+    let Some(solver) = common::or_skip("wave equation solver", WaveEquationGpu::try_new()) else {
+        return;
     };
 
     let grid = Grid::new(2, 2, 2, 0.001, 0.001, 0.001).expect("Failed to create grid");
@@ -200,12 +176,8 @@ fn test_wave_equation_step_rejects_small_grid() {
 
 #[test]
 fn test_wave_equation_step_rejects_shape_mismatch() {
-    let solver: WaveEquationGpu = match WaveEquationGpu::try_new() {
-        Ok(s) => s,
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-            return;
-        }
+    let Some(solver) = common::or_skip("wave equation solver", WaveEquationGpu::try_new()) else {
+        return;
     };
 
     let grid = create_test_grid();
@@ -223,12 +195,9 @@ fn test_wave_equation_step_rejects_shape_mismatch() {
 
 #[test]
 fn test_compute_propagation_different_sizes() {
-    let kernel: AcousticFieldKernel = match AcousticFieldKernel::try_new() {
-        Ok(k) => k,
-        Err(_) => {
-            eprintln!("GPU not available, skipping test");
-            return;
-        }
+    let Some(kernel) = common::or_skip("acoustic field kernel", AcousticFieldKernel::try_new())
+    else {
+        return;
     };
 
     // Test with different grid sizes
@@ -244,7 +213,7 @@ fn test_compute_propagation_different_sizes() {
                 assert_eq!(result.shape(), [nx, ny, nz]);
             }
             Err(e) => {
-                eprintln!("Test with size ({}, {}, {}) failed: {}", nx, ny, nz, e);
+                panic!("propagation failed at ({nx}, {ny}, {nz}) on an acquired kernel: {e}");
             }
         }
     }

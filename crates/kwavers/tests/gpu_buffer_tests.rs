@@ -6,15 +6,37 @@
 
 #![cfg(feature = "gpu")]
 
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_gpu::gpu::{BufferUsage, CoreGpuContext, GpuBufferData};
 
+mod common;
+
+/// The oracle for this suite's admission rule.
+///
+/// A host with no adapter skips, which is why the hosted runners never saw the
+/// old defect. A host whose adapter is present and broken must fail, and that
+/// is a property of the helper rather than of the hardware -- so it is proven
+/// here, on every runner, GPU or not.
+#[test]
+#[should_panic(expected = "a GPU adapter is present but acquisition failed")]
+fn a_present_but_failing_adapter_fails_instead_of_skipping() {
+    let fault: KwaversResult<()> = Err(KwaversError::GpuError("forced device fault".into()));
+    common::or_skip("forced fault", fault);
+}
+
+#[test]
+fn genuine_absence_is_the_only_skip() {
+    use kwavers_core::error::SystemError;
+
+    let absent: KwaversResult<()> = Err(SystemError::GpuNotAvailable.into());
+    assert!(
+        common::or_skip("absent adapter", absent).is_none(),
+        "a host with no adapter must skip rather than fail"
+    );
+}
+
 fn test_context() -> Option<CoreGpuContext> {
-    CoreGpuContext::try_new()
-        .map_err(|error| {
-            eprintln!("GPU not available, skipping test: {error}");
-            error
-        })
-        .ok()
+    common::or_skip("GPU buffer context", CoreGpuContext::try_new())
 }
 
 #[test]
