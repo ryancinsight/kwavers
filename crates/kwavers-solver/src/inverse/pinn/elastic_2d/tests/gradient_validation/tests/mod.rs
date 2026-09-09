@@ -1,4 +1,3 @@
-mod analytic;
 mod first_deriv;
 mod helpers;
 mod property;
