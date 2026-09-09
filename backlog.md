@@ -121,8 +121,10 @@
 
 <a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>
 
-## KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08 — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — todo
+## KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08 — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — in-progress
 
+- **Integrator:** claude-opus-5 (lane `kwavers-local-gate`, branch
+  `ci/kw-per-pr-matrix-starvation`); claimed 2026-09-09. Step (1) first.
 - **Outcome:** the pull-request path runs the affected-scope checks; the full
   matrix (extra toolchains, heavy validation, coverage) moves to the scheduled
   selection-drift backstop, bringing verification round-trip toward the
