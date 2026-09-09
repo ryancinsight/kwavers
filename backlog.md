@@ -133,7 +133,16 @@
   Code items are verified locally and merged on that evidence (#756, #757, #758
   landed this way while the queue was stopped). #755 alone stays held, because
   a workflow change's only real gate is CI itself.
-- **Re-open trigger:** hosted runners assign jobs again.
+- **Step (1) merged in #755, and step (2) measured 2026-09-09 20:55** once the
+  queue resumed. Job count is the clean number: a `main` run without the change
+  carries 15 job entries (14 executed), the pull-request run carrying it
+  executes **9** -- `Code Coverage`, both `Heavy Validation` suites, and the
+  `beta`/`nightly` matrix legs are gone from the pull-request path, exactly as
+  designed, and all four still exist for the nightly schedule. Wall clock is
+  *not* a usable comparison for this run: it spans the 90-minute outage
+  (17:30 created, 19:25 finished), so a clean round-trip re-measure is owed on
+  a normally-serviced queue.
+- **Remaining:** step (3), required status checks, tracked as KW-CI-115.
 - **Outcome:** the pull-request path runs the affected-scope checks; the full
   matrix (extra toolchains, heavy validation, coverage) moves to the scheduled
   selection-drift backstop, bringing verification round-trip toward the
@@ -5395,6 +5404,21 @@ smaller levers now that the dominant fetch is gone.
   is how a real failure gets waved through.
 - Acceptance: the check either reports real findings, or is removed. Not left
   erroring.
+- **Re-measured 2026-09-09.** `recurseml/analysis` is a *commit status* (not a
+  check run) posted by the recurseml GitHub App, `state=error`,
+  `description="Error occurred during analysis"`. It errored on five of the
+  last six pull requests -- #753, #755, #756, #757, #758 -- which is every one
+  merged today. It is the only red on those pull requests; every GitHub Actions
+  check passed.
+- **Not fixable from inside the repository.** There is no recurseml config
+  file, and this session's token cannot enumerate or modify app installations
+  (`user/installations` returns 403: the endpoint needs App-authorized auth).
+  The `gh` merge-mechanics grant does not reach a third-party app installation.
+- **Exact action, and it is the owner's:** GitHub Settings -> Applications ->
+  Installed GitHub Apps -> recurseml -> either uninstall, or set repository
+  access to exclude the members it errors on. Until then every pull request
+  carries a red check that is not a finding, which is how a real failure gets
+  waved through.
 
 ## KW-DOC-038 — Resolve Physics Rustdoc links [patch] — done 2026-08-17 (three configurations measured)
 
