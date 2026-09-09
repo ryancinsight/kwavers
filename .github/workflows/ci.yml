@@ -18,6 +18,13 @@ on:
       - 'README.md'
       - 'gap_audit.md'
       - 'docs/**'
+  # The selection-drift backstop. Jobs whose signal is about drift rather than
+  # about this change -- toolchain rolls, coverage, the heavy solver suites --
+  # run here instead of on every pull request. Staggered from the Atlas GPU
+  # jobs at 02:17.
+  schedule:
+    - cron: "37 3 * * *"
+  workflow_dispatch:
 
 # A superseded run is cancelled rather than left queued. Without this a
 # branch that is pushed to repeatedly accumulates one full matrix per
@@ -252,7 +259,14 @@ jobs:
     timeout-minutes: 30
     strategy:
       matrix:
-        rust: [stable, beta, nightly]
+        # Beta and nightly catch toolchain breakage ahead of the 6-week roll.
+        # A roll is not a property of the change under review, and the nightly
+        # backstop catches it within a day either way, so they run there and
+        # stable alone gates a pull request -- 9 minutes off every one.
+        rust: >-
+          ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+              && fromJSON('["stable", "beta", "nightly"]')
+              || fromJSON('["stable"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -341,6 +355,10 @@ jobs:
   coverage:
     name: Code Coverage
     needs: lockfile
+    # 57 minutes observed, the largest job in this file, and its output is a
+    # non-decreasing ratchet rather than a merge gate -- a pull request never
+    # needed to wait behind it.
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     # Exact-head observation: 57 minutes; retain about 20% hosted-runner variance.
     timeout-minutes: 70
@@ -490,6 +508,9 @@ jobs:
   heavy-validation-kuznetsov:
     name: Heavy Validation (kuznetsov)
     needs: lockfile
+    # A heavy suite on the scheduled backstop, per the runtime-budget policy.
+    # `Solver Validation Suite` remains the per-pull-request solver gate.
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -527,6 +548,9 @@ jobs:
   heavy-validation-absorption-decay:
     name: Heavy Validation (absorption decay)
     needs: lockfile
+    # A heavy suite on the scheduled backstop, per the runtime-budget policy.
+    # `Solver Validation Suite` remains the per-pull-request solver gate.
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
