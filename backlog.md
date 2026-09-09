@@ -110,11 +110,11 @@
 
 <a id="kw-local-gate-is-one-third-built-2026-09-08"></a>
 
-## KW-LOCAL-GATE-IS-ONE-THIRD-BUILT-2026-09-08 — The pre-push hook gates only the lockfile [patch] [ci] — review
+## KW-LOCAL-GATE-IS-ONE-THIRD-BUILT-2026-09-08 — The pre-push hook gates only the lockfile [patch] [ci] — done
 
 - **Outcome:** `.githooks/pre-push` maps the pushed range to its packages and
   runs fmt, clippy, and their tests, so what #747 escaped past (#749, #750)
-  is refused locally. In #754.
+  is refused locally. Merged in #754.
 - **Measured added wall clock**, warm shared cache, one leaf package: 0s when
   no package owns the change, 9s clean, 6-11s to refuse fmt, clippy, and test
   failures. `Cargo.lock` byte-identical across every probe.
