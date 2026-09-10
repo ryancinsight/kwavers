@@ -1,5 +1,40 @@
 # Backlog / Strategy
 
+<a id="kw-manifest-implementation-2026-09-09"></a>
+
+## KW-MANIFEST-IMPLEMENTATION-2026-09-09 — Reduce the implementation-bearing manifests [patch] [arch] — in-progress
+
+- **Integrator:** claude-opus-5; **lease:** none held between increments --
+  each file is independent, so contributors take disjoint ones.
+- **The class.** `lib.rs` and `mod.rs` are module manifests: the tree, its
+  curated re-exports, and the crate or module docs. The fleet scan counts a
+  manifest carrying more than twenty lines of body, and this repository held
+  290 of them, the largest at 463 body lines -- a whole FWI engine behind a
+  `mod` declaration, invisible to anyone reading the tree.
+- **Delivered:** the largest, `inverse/fwi/time_domain/self_adjoint/mod.rs`,
+  split into `types`, `operators`, `forward` and `gradient`; its manifest is
+  39 lines and zero body. 281 remain.
+- **Where they are, measured 2026-09-09:** kwavers-solver 92, kwavers-analysis
+  49, kwavers-physics 31, kwavers-diagnostics 16, kwavers-therapy 15,
+  kwavers-gpu 11, kwavers-boundary 11, kwavers-transducer 10, kwavers-medium
+  9, kwavers-python 6, the rest in single digits. The next four by size are
+  `fwi/time_domain/mofi` (428), `analytical/transducer` (342),
+  `phantom/scatterers` (297) and `theranostic_guidance/.../forward` (267).
+- **Method that worked, and the trap in it.** Split at the seams the code
+  already has, not at line counts, and compute each section's start by walking
+  back over the item's doc comments and attributes -- a boundary taken one
+  line late orphans a `///` onto the previous section and the compiler reports
+  it as "a doc comment that documents nothing". Cross-module items take
+  `pub(super)`, never `pub(crate)`: the split must not widen the crate
+  surface. `mofi` needs a different tool -- its types are interleaved with its
+  functions, so contiguous spans do not separate them.
+- **Do not run `cargo fix` from inside the stack overlay.** It rewrote 365
+  lines of this repository's `Cargo.lock` during this increment. Narrow the
+  imports by reading what clippy reports instead.
+- **Acceptance:** each increment leaves its manifest at zero body lines with
+  the crate's public surface unchanged, the package's tests passing, and
+  clippy `--locked --all-targets -D warnings` clean.
+
 <a id="kw-errors-docs-are-template-output-2026-09-09"></a>
 
 ## KW-ERRORS-DOCS-ARE-TEMPLATE-OUTPUT-2026-09-09 — 300 functions document an error they cannot return [patch] — todo
