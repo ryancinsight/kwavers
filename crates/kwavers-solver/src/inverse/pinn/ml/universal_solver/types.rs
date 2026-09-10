@@ -198,12 +198,14 @@ impl UniversalSolverGeometry2D {
         }
     }
 
+    #[must_use]
     pub fn with_circle_obstacle(mut self, center: (f64, f64), radius: f64) -> Self {
         self.features
             .push(GeometricFeature::Circle { center, radius });
         self
     }
 
+    #[must_use]
     pub fn with_rectangle_obstacle(
         mut self,
         x_min: f64,

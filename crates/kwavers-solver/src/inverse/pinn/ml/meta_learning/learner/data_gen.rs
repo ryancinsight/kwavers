@@ -11,7 +11,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearne
     pub(super) fn generate_task_data(&self, task: &PhysicsTask) -> KwaversResult<TaskData> {
         let collocation_points = self.generate_collocation_points(task.geometry.as_ref());
         let boundary_data =
-            self.generate_boundary_data(task.geometry.as_ref(), &task.boundary_conditions);
+            Self::generate_boundary_data(task.geometry.as_ref(), &task.boundary_conditions);
         let initial_data = self.generate_initial_conditions(task);
 
         Ok(TaskData {
@@ -42,7 +42,6 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearne
     }
 
     fn generate_boundary_data(
-        &self,
         geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
     ) -> Vec<(f64, f64, f64, f64)> {
@@ -188,11 +187,14 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearne
                 }
             }
             crate::inverse::pinn::ml::WaveGeometry2D::AdaptiveMesh { base_geometry, .. } => {
-                data.extend(self.generate_boundary_data(base_geometry.as_ref(), conditions));
+                data.extend(Self::generate_boundary_data(
+                    base_geometry.as_ref(),
+                    conditions,
+                ));
             }
             crate::inverse::pinn::ml::WaveGeometry2D::MultiRegion { regions, .. } => {
                 for (region, _) in regions {
-                    data.extend(self.generate_boundary_data(region, conditions));
+                    data.extend(Self::generate_boundary_data(region, conditions));
                 }
             }
         }
