@@ -73,9 +73,6 @@ pub struct DomainHIFUTreatmentPlan {
 
 impl DomainHIFUTreatmentPlan {
     /// Create a new treatment plan
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(target: TreatmentTarget, protocol: HifuTreatmentProtocol) -> Self {
         Self {

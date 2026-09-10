@@ -45,9 +45,6 @@ impl InterlockSystem {
     }
 
     /// Register an interlock condition.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_interlock(&mut self, name: String, interlock: Interlock) {
         self.interlocks.insert(name, interlock);
     }
@@ -106,9 +103,6 @@ impl InterlockSystem {
     }
 
     /// Check if system is enabled for operation.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn is_system_enabled(&self) -> bool {
         self.system_enabled && !self.emergency_stop_active
@@ -141,9 +135,6 @@ impl std::fmt::Debug for Interlock {
 
 impl Interlock {
     /// Create new interlock with a condition check function.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new<F>(description: String, check_function: F) -> Self
     where
         F: Fn() -> KwaversResult<bool> + Send + Sync + 'static,

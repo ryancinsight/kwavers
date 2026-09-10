@@ -9,9 +9,6 @@ use leto::Array2;
 
 impl ShockCapture {
     /// Create new shock capture instance
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(config: super::ShockCapturingConfig) -> Self {
         Self {

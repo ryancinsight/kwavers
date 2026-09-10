@@ -53,9 +53,6 @@ impl WavePropagationCalculator {
     }
 
     /// Check if frequency is appropriate for the wavelength assumption
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn validate_frequency_wavelength_consistency(&self) -> bool {
         let expected_wavelength = self.interface.medium1.wave_speed / self.frequency;

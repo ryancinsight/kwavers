@@ -96,9 +96,6 @@ impl SafetyAuditLogger {
     }
 
     /// Get a clone of all audit log entries.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn get_entries(&self) -> Vec<AuditEntry> {
         self.log_entries

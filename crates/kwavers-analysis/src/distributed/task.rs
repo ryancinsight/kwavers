@@ -16,9 +16,6 @@ pub enum TaskPriority {
 
 impl TaskPriority {
     /// Get string representation
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -60,9 +57,6 @@ impl std::fmt::Debug for WorkItem {
 
 impl WorkItem {
     /// Create a new work item
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new(
         task_id: u64,
         priority: TaskPriority,

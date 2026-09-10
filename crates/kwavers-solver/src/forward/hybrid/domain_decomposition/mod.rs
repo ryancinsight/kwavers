@@ -49,9 +49,6 @@ pub struct DomainDecomposer {
 
 impl DomainDecomposer {
     /// Create a new domain decomposer with default parameters
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {

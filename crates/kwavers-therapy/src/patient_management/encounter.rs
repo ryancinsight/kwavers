@@ -140,9 +140,6 @@ impl ClinicalEncounter {
     }
 
     /// Add an assessment
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_assessment(&mut self, assessment: impl Into<String>) {
         self.assessments.push(assessment.into());
     }

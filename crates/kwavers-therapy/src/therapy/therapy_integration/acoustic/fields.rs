@@ -12,17 +12,11 @@ impl AcousticWaveSolver {
     /// ```text
     /// (x, y, z) = (i*dx, j*dy, k*dz)
     /// ```
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn pressure_field(&self) -> &Array3<f64> {
         self.backend.get_pressure_field()
     }
 
     /// Get current particle velocity fields (m/s) as `(vx, vy, vz)`.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         self.backend.get_velocity_fields()
     }
@@ -36,9 +30,6 @@ impl AcousticWaveSolver {
     }
 
     /// Get maximum pressure magnitude (MPa).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn max_pressure(&self) -> f64 {
         let p = self.pressure_field();
         let p_max = p.iter().cloned().fold(0.0_f64, |a, b| a.max(b.abs()));

@@ -239,9 +239,6 @@ impl SoAFieldStorage {
     ///
     /// This method allows parallel initialization without borrow checker issues
     /// by operating on individual fields.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn first_touch_field_parallel(&mut self, field_idx: usize) {
         if let Some(field) = self.field_mut(field_idx) {
             const CHUNK_SIZE: usize = 512;

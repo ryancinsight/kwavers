@@ -48,9 +48,6 @@ impl ShearWaveInversionConfig {
     /// # Arguments
     ///
     /// * `frequency` - Frequency in Hz
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_frequency(mut self, frequency: f64) -> Self {
         self.frequency = frequency;
@@ -179,9 +176,6 @@ impl NonlinearInversionConfig {
     ///
     /// * `max_iterations` - Maximum number of iterations
     /// * `tolerance` - Convergence tolerance
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_convergence(mut self, max_iterations: usize, tolerance: f64) -> Self {
         self.max_iterations = max_iterations;

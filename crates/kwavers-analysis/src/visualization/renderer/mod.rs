@@ -76,9 +76,6 @@ impl Renderer3D {
     }
 
     /// Get memory usage
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn memory_usage(&self) -> usize {
         self.volume.memory_usage() + self.isosurface.memory_usage()
     }

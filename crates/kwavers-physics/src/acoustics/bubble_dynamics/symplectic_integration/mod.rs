@@ -170,9 +170,6 @@ impl BubbleSymplecticIntegrator {
     }
 
     /// Create integrator with explicit config.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(model: Arc<KellerMiksisModel>, config: SymplecticConfig) -> Self {
         Self { model, config }

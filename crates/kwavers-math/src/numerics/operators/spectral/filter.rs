@@ -56,9 +56,6 @@ impl SpectralFilter {
     ///
     /// * `cutoff` - Cutoff as fraction of Nyquist (typically 0.67 for 2/3 rule)
     /// * `filter_type` - Type of filter window
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(cutoff: f64, filter_type: SpectralFilterType) -> Self {
         Self {

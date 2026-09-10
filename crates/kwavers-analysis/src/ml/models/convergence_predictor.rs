@@ -34,18 +34,12 @@ impl ConvergencePredictorModel {
     /// **Implementation Status**: Template mode - weights not used
     /// Provides functional interface for testing and development workflow.
     /// Production implementation deferred pending ML framework selection.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn from_weights(_weights: Array2<f32>, _bias: Option<Array1<f32>>) -> Self {
         Self::new()
     }
 
     /// Get metadata
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn metadata(&self) -> &MlModelMetadata {
         &self.metadata
@@ -63,9 +57,6 @@ impl ConvergencePredictorModel {
     ///
     /// Predicts solver convergence probability from a 10-element feature vector.
     /// Uses sigmoid mapping of the mean feature value as a baseline estimator.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {

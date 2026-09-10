@@ -152,9 +152,6 @@ impl SpectralDerivativeOperator {
     }
 
     /// Compute 2/3-rule dealiasing filter (sets |k| > 2π/(3Δx) to zero).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn compute_dealiasing_filter(n: usize, dx: f64) -> Array1<f64> {
         let mut filter = Array1::ones(n);
         let cutoff = TWO_PI / (3.0 * dx);

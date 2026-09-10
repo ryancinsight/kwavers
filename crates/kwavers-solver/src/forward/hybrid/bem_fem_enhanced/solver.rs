@@ -186,9 +186,6 @@ impl EnhancedBemFemSolver {
     }
 
     /// Get refinement history.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn refinement_history(&self) -> &[RefinementStep] {
         &self.refinement_history

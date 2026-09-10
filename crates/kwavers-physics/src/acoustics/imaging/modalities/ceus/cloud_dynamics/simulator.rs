@@ -85,9 +85,6 @@ impl CloudDynamics {
     }
 
     /// Set incident acoustic field
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn set_incident_field(&mut self, field: IncidentField) {
         self.incident_field = Some(field);
     }

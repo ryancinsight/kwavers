@@ -14,9 +14,6 @@ pub struct DoseController {
 
 impl DoseController {
     /// Create new dose controller.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(safety_limits: ClinicalSafetyLimits) -> Self {
         Self {

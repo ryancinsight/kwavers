@@ -43,9 +43,6 @@ impl MCResult {
     }
 
     /// Get dimensions
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn dimensions(&self) -> GridDimensions {
         self.dimensions
@@ -55,9 +52,6 @@ impl MCResult {
     ///
     /// Fraction of incident photon weight that exits the domain from the
     /// source surface.  Matches MCML definition (Wang et al. 1995 §2.7).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn diffuse_reflectance(&self) -> f64 {
         self.diffuse_reflectance

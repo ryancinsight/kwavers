@@ -179,9 +179,6 @@ impl IntensityTracker {
     }
 
     /// Trim history to window duration
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn trim_history(&mut self) {
         let cutoff = self.current_time - self.max_window_duration * 2.0; // Keep 2x window for safety
         self.intensity_history.retain(|m| m.timestamp > cutoff);

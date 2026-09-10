@@ -66,9 +66,6 @@ impl AcousticLocalizationConfig {
     }
 
     /// Set grid resolution
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_grid_resolution(mut self, resolution: usize) -> Self {
         self.grid_resolution = resolution;
@@ -76,9 +73,6 @@ impl AcousticLocalizationConfig {
     }
 
     /// Set confidence threshold
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_confidence_threshold(mut self, threshold: f64) -> Self {
         self.confidence_threshold = threshold.clamp(0.0, 1.0);

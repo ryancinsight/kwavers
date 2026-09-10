@@ -24,9 +24,6 @@ pub struct LinearInterpolator {
 
 impl LinearInterpolator {
     /// Create a new linear interpolator with grid spacing `dx` (meters).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(dx: f64) -> Self {
         Self { dx }

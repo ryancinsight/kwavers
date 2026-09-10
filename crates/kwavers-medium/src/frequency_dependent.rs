@@ -38,9 +38,6 @@ pub struct FrequencyDependentProperties {
 
 impl FrequencyDependentProperties {
     /// Create new frequency-dependent properties
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(c0: f64, nonlinearity_parameter: f64) -> Self {
         Self {
@@ -200,9 +197,6 @@ pub struct FreqDispersionCorrection {
 
 impl FreqDispersionCorrection {
     /// Create new dispersion correction
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(properties: FrequencyDependentProperties, reference_frequency: f64) -> Self {
         Self {

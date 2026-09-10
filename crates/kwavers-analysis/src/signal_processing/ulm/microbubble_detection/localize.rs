@@ -29,9 +29,6 @@ pub struct GaussianLocalizer {
 
 impl GaussianLocalizer {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(config: GaussianLocalizationConfig) -> Self {
         Self { config }

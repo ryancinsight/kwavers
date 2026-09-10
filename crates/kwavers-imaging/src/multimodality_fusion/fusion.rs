@@ -11,9 +11,6 @@ pub struct FusionEngine {
 
 impl FusionEngine {
     /// Create new fusion engine
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(params: FusionParameters) -> Self {
         Self { params }

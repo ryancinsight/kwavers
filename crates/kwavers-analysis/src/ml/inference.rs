@@ -42,9 +42,6 @@ impl InferenceEngine {
     /// - `bias` — optional `(output_dim,)` additive term.
     /// - `batch_size` — preferred mini-batch size (informational).
     /// - `normalize_output` — if `true`, output rows are L2-normalised.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn from_weights(
         weights: Array2<f32>,

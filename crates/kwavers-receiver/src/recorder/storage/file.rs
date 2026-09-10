@@ -16,9 +16,6 @@ pub struct FileStorage {
 
 impl FileStorage {
     /// Create file storage
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn create(base_path: PathBuf) -> Self {
         Self {

@@ -50,9 +50,6 @@ impl ControlPanel {
     }
 
     /// Get the underlying controls system
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn controls(&self) -> &InteractiveControls {
         &self.controls
     }

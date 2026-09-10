@@ -80,9 +80,6 @@ impl FdtdBackend {
     /// Compute a CFL-stable FDTD time step.
     ///
     /// `dt = CFL_safety * dx / (c_max * √3)` with `CFL_safety = 0.5`.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub(crate) fn compute_stable_timestep(dx: f64, c_max: f64) -> f64 {
         const CFL_SAFETY_FACTOR: f64 = 0.5;
         const SQRT_3: f64 = 1.732050807568877;

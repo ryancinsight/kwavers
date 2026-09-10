@@ -52,9 +52,6 @@ fn pressure_second_derivative_views_into(
 
 impl FwiProcessor {
     /// Apply physical constraints to velocity model.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub(super) fn apply_model_constraints(model: &mut Array3<f64>) {
         use kwavers_core::constants::SOUND_SPEED_WATER;
         let min_velocity = SOUND_SPEED_WATER * 0.5; // 750 m/s

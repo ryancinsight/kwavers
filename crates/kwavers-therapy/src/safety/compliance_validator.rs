@@ -19,9 +19,6 @@ pub struct ComplianceValidator {
 
 impl ComplianceValidator {
     /// Create new compliance validator for IEC 60601-2-37.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {

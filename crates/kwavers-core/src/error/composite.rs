@@ -37,18 +37,12 @@ impl MultiError {
     }
 
     /// Check if there are any errors
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.errors.is_empty()
     }
 
     /// Get the number of errors
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn len(&self) -> usize {
         self.errors.len()

@@ -23,9 +23,6 @@ pub struct AblationField {
 
 impl AblationField {
     /// Create new ablation field
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(shape: [usize; 3], kinetics: AblationKinetics) -> Self {
         Self {

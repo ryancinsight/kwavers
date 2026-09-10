@@ -257,9 +257,6 @@ impl FemAssembly {
     }
 
     /// Find maximum node index in mesh
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn find_max_node_index(elements: &[Tetrahedron]) -> usize {
         elements
             .iter()

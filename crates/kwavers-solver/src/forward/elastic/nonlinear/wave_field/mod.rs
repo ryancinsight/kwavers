@@ -155,9 +155,6 @@ impl NonlinearElasticWaveField {
     ///
     /// # Panics
     /// Panics if harmonic_index is 0 or exceeds the number of tracked harmonics
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn get_harmonic_mut(&mut self, harmonic_index: usize) -> &mut Array3<f64> {
         match harmonic_index {
             1 => &mut self.u_fundamental,

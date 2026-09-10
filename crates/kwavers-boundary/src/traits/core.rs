@@ -24,9 +24,6 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     fn name(&self) -> &str;
 
     /// Return the directions where this boundary is active.
-    /// # Errors
-    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
-    ///
     fn active_directions(&self) -> BoundaryDirections;
 
     /// Apply the boundary to a scalar field in the spatial domain.
@@ -126,23 +123,14 @@ pub trait BoundaryCondition: Debug + Send + Sync {
 /// at the boundary.
 pub trait AbsorbingBoundary: BoundaryCondition {
     /// Return the thickness of the absorbing layer in grid points.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn thickness(&self) -> usize;
 
     /// Return the absorption coefficient σ at the given grid indices.
     ///
     /// The field decays as `exp(-σ * Δt)`.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn absorption_profile(&self, indices: [usize; 3], grid: &dyn GridTopology) -> f64;
 
     /// Return the design target reflection coefficient R₀.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn target_reflection(&self) -> f64;
 
     /// Validate that the layer is thick enough for the given maximum frequency.
@@ -185,9 +173,6 @@ pub trait ReflectiveBoundary: BoundaryCondition {
     }
 
     /// Return `true` if the boundary is perfectly soft (zero pressure).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn is_soft(&self) -> bool {
         false
     }

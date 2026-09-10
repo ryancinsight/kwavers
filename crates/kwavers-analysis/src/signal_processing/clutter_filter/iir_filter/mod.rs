@@ -96,9 +96,6 @@ impl IirFilterConfig {
     }
 
     /// Enable zero-phase filtering
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_zero_phase(mut self) -> Self {
         self.zero_phase = true;
@@ -106,9 +103,6 @@ impl IirFilterConfig {
     }
 
     /// Set filter order
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_order(mut self, order: usize) -> Self {
         self.order = order;

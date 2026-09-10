@@ -31,9 +31,6 @@ pub struct BeamSteering {
 
 impl BeamSteering {
     /// Create a new beam steering controller
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(element_positions: Array2<f64>, frequency: f64) -> Self {
         let num_elements = element_positions.shape()[0];

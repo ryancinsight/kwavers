@@ -17,9 +17,6 @@ pub struct PatientManagementSystem {
 
 impl PatientManagementSystem {
     /// Create a new patient management system
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {

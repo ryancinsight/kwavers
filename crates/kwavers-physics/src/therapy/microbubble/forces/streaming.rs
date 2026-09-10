@@ -35,9 +35,6 @@ impl StreamingVelocity {
     }
 
     /// Speed.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn speed(&self) -> Velocity<f64> {
         let vx = self.vx.into_base();

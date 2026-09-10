@@ -59,18 +59,12 @@ impl PerformanceTest {
     }
 
     /// Record test result
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn record_result(&mut self, passed: bool) {
         self.result = Some(passed);
         self.date_conducted = Some(iso8601_now());
     }
 
     /// Add test finding
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_finding(&mut self, finding: impl Into<String>) {
         self.findings.push(finding.into());
     }

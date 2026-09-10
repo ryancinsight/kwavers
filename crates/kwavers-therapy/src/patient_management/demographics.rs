@@ -54,9 +54,6 @@ pub struct PatientDemographics {
 
 impl PatientDemographics {
     /// Calculate BMI from weight and height
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn calculate_bmi(&self) -> f64 {
         let height_m = self.height_cm / 100.0;

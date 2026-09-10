@@ -28,18 +28,12 @@ impl BeamformingProcessor {
         }
     }
     /// Get number of sensors
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn num_sensors(&self) -> usize {
         self.num_sensors
     }
 
     /// Get sensor positions
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn sensor_positions(&self) -> &[[f64; 3]] {
         &self.sensor_positions

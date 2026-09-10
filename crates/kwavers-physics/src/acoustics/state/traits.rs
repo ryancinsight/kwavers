@@ -13,15 +13,9 @@ pub type FieldViewMut<'a> = ArrayViewMut3<'a, f64>;
 /// Trait for types that provide access to physics state
 pub trait HasPhysicsState {
     /// Get reference to the physics state
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn physics_state(&self) -> &PhysicsState;
 
     /// Get mutable reference to the physics state
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn physics_state_mut(&mut self) -> &mut PhysicsState;
 
     /// Get a specific field by index

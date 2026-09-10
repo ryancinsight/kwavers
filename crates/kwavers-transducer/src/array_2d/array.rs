@@ -221,9 +221,6 @@ impl TransducerArray2D {
     }
 
     /// Set receive apodization type
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn set_receive_apodization(&mut self, apodization: ApodizationType) {
         self.receive_apodization = apodization;
         self.update_apodization_weights();

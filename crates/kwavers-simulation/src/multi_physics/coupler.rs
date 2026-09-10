@@ -27,9 +27,6 @@ pub struct MultiPhysicsFieldCoupler {
 
 impl MultiPhysicsFieldCoupler {
     /// Create a new field coupler
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {

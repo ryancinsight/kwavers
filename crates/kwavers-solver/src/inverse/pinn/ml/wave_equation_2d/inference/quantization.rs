@@ -22,9 +22,6 @@ impl WaveQuantizer2D {
     }
 
     /// Extract activation functions
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn extract_activations<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         _pinn: &PinnWave2D<B>,
     ) -> Vec<ActivationType> {

@@ -56,9 +56,6 @@ impl MultiGpuManager {
     }
 
     /// Get a consolidated performance summary.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn get_performance_summary(&self) -> PerformanceSummary {
         PerformanceSummary {
             num_gpus: (self.devices.len()),

@@ -77,9 +77,6 @@ impl SvdClutterFilterConfig {
     }
 
     /// Create configuration with automatic rank selection
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_auto_rank(energy_threshold: f64) -> Self {
         Self {
@@ -324,9 +321,6 @@ impl SignalSvdClutterFilter {
     }
 
     /// Get current configuration
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn config(&self) -> &SvdClutterFilterConfig {
         &self.config

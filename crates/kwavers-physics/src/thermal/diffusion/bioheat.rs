@@ -48,9 +48,6 @@ pub struct PennesBioheat {
 
 impl PennesBioheat {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(params: BioheatParameters) -> Self {
         Self { params }

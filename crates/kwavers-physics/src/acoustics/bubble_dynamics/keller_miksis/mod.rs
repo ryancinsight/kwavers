@@ -245,9 +245,6 @@ impl KellerMiksisModel {
 
     /// Return `true` if any surface shape mode amplitude currently exceeds the
     /// Plesset (1954) 30%-radius breakup criterion.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn is_shape_unstable(&self, r: f64) -> bool {
         self.shape_modes.is_unstable(r)
@@ -298,9 +295,6 @@ impl KellerMiksisModel {
     }
 
     /// Calculate molar heat capacity at constant volume (Cv)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn molar_heat_capacity_cv(&self, state: &BubbleState) -> f64 {
         state.gas_species.molar_heat_capacity_cv()

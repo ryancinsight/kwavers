@@ -84,9 +84,6 @@ impl AbsorptionCalculator {
     }
 
     /// Calculate absorption coefficient at a given frequency
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn absorption_coefficient(&self, frequency: f64) -> f64 {
         match &self.model {

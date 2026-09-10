@@ -46,9 +46,6 @@ pub struct SteeringController {
 
 impl SteeringController {
     /// Create new steering controller
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(frequency: Frequency<f64>) -> Self {
         Self {

@@ -166,7 +166,6 @@ impl BeamformingCalculator {
     /// Vector of phase delays (rad), one per element. Delays are normalized
     /// such that all values are non-negative (relative to maximum distance).
     ///
-    /// # Errors
     ///
     /// Returns error if positions are invalid, target is non-finite, or medium
     /// properties are invalid.
@@ -266,7 +265,6 @@ impl BeamformingCalculator {
     ///
     /// Vector of phase delays (rad), one per element.
     ///
-    /// # Errors (via panic in current implementation)
     ///
     /// If direction is not normalized, the canonical utility will return an error.
     /// Current implementation unwraps for API compatibility.

@@ -21,9 +21,6 @@ impl Default for ArrayValidator {
 
 impl ArrayValidator {
     /// Create new validator
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {

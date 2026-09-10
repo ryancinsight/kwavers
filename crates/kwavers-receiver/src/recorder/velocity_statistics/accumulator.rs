@@ -163,9 +163,6 @@ impl VelocityComponentStats {
     // ── Sensor-position sampling ─────────────────────────────────────────────
 
     /// Sample the per-component max at sensor positions.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn sample_max(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros([positions.len()]);
@@ -190,9 +187,6 @@ impl VelocityComponentStats {
     }
 
     /// Sample the per-component min at sensor positions.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn sample_min(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros([positions.len()]);
@@ -217,9 +211,6 @@ impl VelocityComponentStats {
     }
 
     /// Sample the per-component RMS at sensor positions.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn sample_rms(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros([positions.len()]);

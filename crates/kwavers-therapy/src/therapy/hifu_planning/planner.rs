@@ -14,9 +14,6 @@ pub struct HIFUPlanner {
 
 impl HIFUPlanner {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(transducer: ClinicalHIFUTransducer) -> Self {
         Self { transducer }

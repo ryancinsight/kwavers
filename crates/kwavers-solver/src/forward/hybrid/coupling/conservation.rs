@@ -13,9 +13,6 @@ pub struct HybridCouplingConservationEnforcer {
 
 impl HybridCouplingConservationEnforcer {
     /// Create a new conservation enforcer
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(_geometry: &InterfaceGeometry) -> Self {
         Self { tolerance: 1e-10 }

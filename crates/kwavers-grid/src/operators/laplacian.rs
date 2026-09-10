@@ -58,17 +58,11 @@ impl LaplacianOperator {
     }
 
     /// Create with default second-order accuracy
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn second_order(grid: &Grid) -> Self {
         Self::new(grid, LaplacianConfig::default())
     }
 
     /// Create with specified order
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn with_order(grid: &Grid, order: FdAccuracyOrder) -> Self {
         Self::new(
             grid,

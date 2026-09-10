@@ -92,18 +92,12 @@ impl PipelineCoordinator {
     }
 
     /// Get aggregate metrics across all stages
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn aggregate_metrics(&self) -> Vec<PoolMetrics> {
         self.stages.iter().map(|stage| stage.metrics()).collect()
     }
 
     /// Get number of stages
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn num_stages(&self) -> usize {
         self.stages.len()

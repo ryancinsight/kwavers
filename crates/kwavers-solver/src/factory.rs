@@ -15,9 +15,6 @@ pub struct SolverFactoryRegistry;
 
 impl SolverFactoryRegistry {
     /// Resolve `Auto` to a concrete solver type using the canonical policy.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn resolve_solver_type(
         solver_type: SolverType,
         grid: &dyn FactoryGridParameters,

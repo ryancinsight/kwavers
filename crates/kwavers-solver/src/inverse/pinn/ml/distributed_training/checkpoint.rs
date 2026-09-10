@@ -10,9 +10,6 @@ pub(crate) fn checkpoint_filename(epoch: usize) -> String {
 
 impl CheckpointManager {
     /// From config.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub(super) fn from_config(config: &DistributedTrainingConfig) -> Self {
         Self {
             checkpoint_dir: std::path::PathBuf::from(&config.checkpoint_config.directory),

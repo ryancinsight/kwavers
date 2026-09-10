@@ -254,9 +254,6 @@ impl AIEnhancedBeamformingProcessor {
     }
 
     /// Get current configuration.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn config(&self) -> &AIBeamformingConfig {
         &self.config

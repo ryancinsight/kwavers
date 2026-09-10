@@ -82,21 +82,12 @@ pub trait Plugin: Debug + Send + Sync {
     fn state(&self) -> PluginState;
 
     /// Set plugin state
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn set_state(&mut self, state: PluginState);
 
     /// Get required fields for this plugin
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn required_fields(&self) -> Vec<UnifiedFieldType>;
 
     /// Get fields provided by this plugin
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn provided_fields(&self) -> Vec<UnifiedFieldType>;
 
     /// Update the plugin with current fields

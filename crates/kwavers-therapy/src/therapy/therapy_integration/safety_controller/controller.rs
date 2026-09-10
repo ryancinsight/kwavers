@@ -61,9 +61,6 @@ impl SafetyController {
     }
 
     /// Start monitoring (reset treatment timer).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn start_monitoring(&mut self, current_time: f64) {
         self.treatment_start_time = current_time;
         self.violation_detected = false;

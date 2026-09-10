@@ -236,9 +236,6 @@ pub struct PhysicsDomainRegistry<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuB
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> PhysicsDomainRegistry<B> {
     /// Create a new empty registry
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new() -> Self {
         Self {
             domains: HashMap::new(),
@@ -268,17 +265,11 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> PhysicsDom
     }
 
     /// List all registered domains
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn list_domains(&self) -> Vec<String> {
         self.domains.keys().cloned().collect()
     }
 
     /// Check if a domain is registered
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn has_domain(&self, name: &str) -> bool {
         self.domains.contains_key(name)
     }

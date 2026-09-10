@@ -119,9 +119,6 @@ impl StrengthPropertyData {
     }
 
     /// Bone properties (cortical bone)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn bone() -> Self {
         Self {

@@ -48,9 +48,6 @@ impl NarrowbandSteeringVector {
     }
 
     /// Consume and return the underlying phasor vector.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn into_array(self) -> Array1<Complex64> {
         self.0
@@ -98,18 +95,12 @@ impl NarrowbandSteering {
     }
 
     /// Number of sensors / elements.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn num_sensors(&self) -> usize {
         self.sensor_positions_m.len()
     }
 
     /// Speed of sound used for TOF calculations (m/s).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn sound_speed_m_per_s(&self) -> f64 {
         self.sound_speed_m_per_s
@@ -164,9 +155,6 @@ impl NarrowbandSteering {
 /// - The output has unit magnitude phasors.
 /// - This applies a *negative* sign convention consistent with most array processing texts for
 ///   steering to compensate propagation delay.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
 #[must_use]
 pub fn steering_from_delays_s(delays_s: &[f64], frequency_hz: f64) -> NarrowbandSteeringVector {
     // Caller is expected to validate `frequency_hz` and `delays_s` finiteness where needed.

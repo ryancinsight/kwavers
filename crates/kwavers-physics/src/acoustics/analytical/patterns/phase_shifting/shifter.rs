@@ -47,9 +47,6 @@ impl PhaseShifter {
     }
 
     /// Enable phase quantization
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn enable_quantization(&mut self, enable: bool) {
         self.quantization_enabled = enable;
     }
@@ -238,9 +235,6 @@ impl PhaseShifter {
     }
 
     /// Get current phase offsets
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn get_phase_offsets(&self) -> &Array1<f64> {
         &self.phase_offsets

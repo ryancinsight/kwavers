@@ -24,15 +24,9 @@ pub trait SpectralOperatorTrait: Send + Sync {
     fn apply_kspace(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>>;
 
     /// Get wavenumber grids — returns (k_x, k_y, k_z)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn wavenumber_grid(&self) -> (Array1<f64>, Array1<f64>, Array1<f64>);
 
     /// Get the Nyquist wavenumber: k_max = π/Δx
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn nyquist_wavenumber(&self) -> (f64, f64, f64);
 
     /// Apply anti-aliasing filter — removes components above 2/3 Nyquist

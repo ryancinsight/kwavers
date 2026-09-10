@@ -35,9 +35,6 @@ pub fn window_value(window: SignalWindowType, normalized_time: f64) -> f64 {
 }
 
 /// Get win.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
 #[must_use]
 pub fn get_win(window: SignalWindowType, n: usize, symmetric: bool) -> Vec<f64> {
     if n <= 1 {

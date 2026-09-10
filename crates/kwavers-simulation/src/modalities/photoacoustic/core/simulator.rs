@@ -124,17 +124,11 @@ impl PhotoacousticSimulator {
     }
 
     /// Get optical properties reference
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn optical_properties(&self) -> &Array3<OpticalPropertyData> {
         &self.optical_properties
     }
 
     /// Get parameters reference
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn parameters(&self) -> &PhotoacousticParameters {
         &self.parameters
     }

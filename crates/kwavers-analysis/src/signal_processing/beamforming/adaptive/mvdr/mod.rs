@@ -70,9 +70,6 @@ impl MinimumVariance {
     /// Create MVDR beamformer with no diagonal loading.
     ///
     /// **Warning**: May fail for ill-conditioned covariance matrices.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -81,9 +78,6 @@ impl MinimumVariance {
     }
 
     /// Create MVDR beamformer with custom diagonal loading δ.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_diagonal_loading(diagonal_loading: f64) -> Self {
         Self { diagonal_loading }

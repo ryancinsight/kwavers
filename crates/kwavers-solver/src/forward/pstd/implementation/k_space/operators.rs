@@ -119,8 +119,6 @@ pub struct PSTDKSOperators {
 
 impl PSTDKSOperators {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
     ///
     ///
     /// # Panics

@@ -14,6 +14,7 @@ use walkdir::WalkDir;
 mod architecture;
 use architecture::validate_architecture;
 
+mod errors_doc_audit;
 mod fixes;
 mod migration_audit;
 mod readme_audit;
@@ -113,6 +114,8 @@ enum Command {
     RefreshBurnAllowlist,
     /// Audit per-crate READMEs, descriptions, and single-sourced crate docs.
     CheckReadmes,
+    /// Audit `# Errors` sections against the signatures they document
+    AuditErrorsDocs,
 }
 
 fn main() -> Result<()> {
@@ -151,6 +154,7 @@ fn main() -> Result<()> {
         }
         Command::RefreshBurnAllowlist => migration_audit::refresh_burn_allowlist(&workspace_root()),
         Command::CheckReadmes => readme_audit::check_readmes(&workspace_root()),
+        Command::AuditErrorsDocs => errors_doc_audit::audit_errors_docs(&workspace_root()),
     }
 }
 

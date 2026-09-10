@@ -38,21 +38,12 @@ pub trait CoreMedium: Debug + Send + Sync {
     fn nonlinearity(&self, i: usize, j: usize, k: usize) -> f64;
 
     /// Get maximum sound speed in the medium
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn max_sound_speed(&self) -> f64;
 
     /// Check if the medium is homogeneous
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn is_homogeneous(&self) -> bool;
 
     /// Get reference frequency for the medium (used for absorption calculations)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn reference_frequency(&self) -> f64 {
         REFERENCE_FREQUENCY_HZ
     }

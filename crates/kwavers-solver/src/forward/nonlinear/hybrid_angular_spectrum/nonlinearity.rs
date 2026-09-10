@@ -16,9 +16,6 @@ pub struct HybridAsNonlinearOperator {
 
 impl HybridAsNonlinearOperator {
     /// Create new nonlinear operator
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(config: &HASConfig) -> Self {
         // Convert B/A to β = 1 + B/(2A) (Hamilton & Blackstock 1998 §2.3.2 eq. 2.3.10)

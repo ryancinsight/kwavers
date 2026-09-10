@@ -10,9 +10,6 @@ pub struct SpatialSmoothing {
 
 impl SpatialSmoothing {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(subarray_size: usize) -> Self {
         Self { subarray_size }
@@ -74,9 +71,6 @@ pub struct SpatialSmoothingComplex {
 
 impl SpatialSmoothingComplex {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(subarray_size: usize) -> Self {
         Self { subarray_size }

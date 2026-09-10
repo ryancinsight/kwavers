@@ -42,17 +42,11 @@ impl CoreMedium for HeterogeneousMedium {
     }
 
     /// Get reference frequency for absorption calculations
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
 
     /// Check if medium properties are spatially varying
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[inline]
     fn is_homogeneous(&self) -> bool {
         false

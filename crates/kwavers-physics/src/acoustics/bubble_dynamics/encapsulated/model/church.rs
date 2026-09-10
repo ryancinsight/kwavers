@@ -15,9 +15,6 @@ pub struct ChurchModel {
 
 impl ChurchModel {
     /// Create new Church model with shell properties
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(params: BubbleParameters, mut shell: ShellProperties) -> Self {
         // Compute critical radii for the shell

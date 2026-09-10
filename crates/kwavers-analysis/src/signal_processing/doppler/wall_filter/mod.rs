@@ -42,9 +42,6 @@ pub struct WallFilter {
 
 impl WallFilter {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(config: WallFilterConfig) -> Self {
         Self { config }

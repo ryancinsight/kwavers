@@ -44,9 +44,6 @@ impl BasisFunction {
     }
 
     /// Get number of basis functions
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn num_functions(&self) -> usize {
         self.num_functions

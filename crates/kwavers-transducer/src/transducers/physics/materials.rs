@@ -317,9 +317,6 @@ impl AcousticLens {
     }
 
     /// Calculate focal length in the medium
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn focal_length(&self, medium_sound_speed: f64) -> f64 {
         let _speed_ratio = medium_sound_speed / self.sound_speed;
@@ -327,9 +324,6 @@ impl AcousticLens {
     }
 
     /// Calculate f-number (focal length / aperture)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn f_number(&self, aperture: f64, medium_sound_speed: f64) -> f64 {
         self.focal_length(medium_sound_speed) / aperture

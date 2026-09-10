@@ -17,9 +17,6 @@ pub struct StabilityAnalyzer {
 
 impl StabilityAnalyzer {
     /// Create a new stability analyzer
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(safety_factor: f64) -> Self {
         Self { safety_factor }

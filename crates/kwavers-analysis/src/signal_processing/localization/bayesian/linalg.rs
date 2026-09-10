@@ -1,9 +1,6 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Compute `det(A)` for a 3×3 row-major matrix.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
 #[inline]
 fn det3(a: &[f64; 9]) -> f64 {
     a[2].mul_add(

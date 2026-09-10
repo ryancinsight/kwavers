@@ -8,9 +8,6 @@ impl NumericalValidator {
     /// # Panics
     /// - Panics if `Failed to create test grid`.
     ///
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).expect("Failed to create test grid");
@@ -20,9 +17,6 @@ impl NumericalValidator {
     }
 
     /// Create validator with custom grid and medium
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn with_config(grid: Grid, medium: HomogeneousMedium) -> Self {
         Self { grid, medium }
     }

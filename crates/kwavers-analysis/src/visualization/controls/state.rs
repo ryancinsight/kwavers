@@ -19,9 +19,6 @@ pub struct ControlState {
 
 impl ControlState {
     /// Create a control state from definition
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn from_definition(definition: ParameterDefinition) -> Self {
         Self {
             current_value: definition.default_value.clone(),
@@ -63,9 +60,6 @@ pub struct StateSnapshot {
 
 impl StateSnapshot {
     /// Create a snapshot from current states
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn from_states(states: &HashMap<String, ControlState>) -> Self {
         let parameters = states
             .iter()
@@ -116,9 +110,6 @@ impl std::fmt::Debug for InteractiveControls {
 
 impl InteractiveControls {
     /// Create a control system
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new() -> Self {
         Self {
             states: Arc::new(RwLock::new(HashMap::new())),

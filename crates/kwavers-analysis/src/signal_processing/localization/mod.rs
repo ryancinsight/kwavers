@@ -87,9 +87,6 @@ pub trait LocalizationProcessor: Send + Sync {
     ) -> KwaversResult<SourceLocation>;
 
     /// Get processor name
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn name(&self) -> &str;
 }
 

@@ -47,9 +47,6 @@ impl TaskSampler {
     }
 
     /// Add a task to the pool
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_task(&mut self, task: PhysicsTask) {
         self.task_pool.push(task);
     }

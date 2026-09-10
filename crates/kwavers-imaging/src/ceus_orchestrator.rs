@@ -39,9 +39,6 @@ pub trait CEUSOrchestrator: Send + Sync + std::fmt::Debug {
     fn get_concentration_map(&self) -> KwaversResult<Array3<f64>>;
 
     /// Get name for diagnostics
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn name(&self) -> &str;
 }
 
@@ -67,9 +64,6 @@ impl std::fmt::Debug for CEUSOrchestrators {
 
 impl CEUSOrchestrators {
     /// Create new factory
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -78,9 +72,6 @@ impl CEUSOrchestrators {
     }
 
     /// Register default CEUS orchestrator factory
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn set_default<F>(&mut self, factory: F)
     where
         F: Fn(&Grid, &dyn Medium, f64, f64) -> KwaversResult<Box<dyn CEUSOrchestrator>> + 'static,

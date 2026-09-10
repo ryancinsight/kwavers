@@ -91,9 +91,6 @@ impl ModelOrderConfig {
     }
 
     /// Set eigenvalue threshold
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_eigenvalue_threshold(mut self, threshold: f64) -> Self {
         self.eigenvalue_threshold = threshold;
@@ -101,9 +98,6 @@ impl ModelOrderConfig {
     }
 
     /// Set maximum allowed sources
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_max_sources(mut self, max_sources: usize) -> Self {
         self.max_sources = Some(max_sources);

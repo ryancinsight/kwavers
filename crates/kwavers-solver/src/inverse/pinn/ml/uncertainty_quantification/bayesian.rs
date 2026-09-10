@@ -255,17 +255,11 @@ where
     }
 
     /// Compute predictive entropy.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn compute_predictive_entropy(&self, mean_variance: f32) -> f32 {
         0.5 * (1.0 + (2.0 * std::f32::consts::PI * mean_variance).ln())
     }
 
     /// Compute reliability score.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn compute_reliability_score(&self, mean_variance: f32) -> f32 {
         1.0 / (1.0 + mean_variance / self.config.variance_threshold)
     }

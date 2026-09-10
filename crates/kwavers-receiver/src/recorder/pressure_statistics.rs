@@ -178,9 +178,6 @@ impl PressureFieldStatistics {
     }
 
     /// Sample statistics at sensor positions
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn sample_p_max(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros([positions.len()]);
@@ -201,9 +198,6 @@ impl PressureFieldStatistics {
     }
 
     /// Sample minimum pressure at sensor positions.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn sample_p_min(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros([positions.len()]);
@@ -227,9 +221,6 @@ impl PressureFieldStatistics {
     ///
     /// With no accumulated time steps the RMS is the neutral zero field, matching
     /// [`p_rms`](Self::p_rms) and avoiding undefined `0/0` sampling.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn sample_p_rms(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros([positions.len()]);
@@ -261,9 +252,6 @@ impl PressureFieldStatistics {
     }
 
     /// Sample final pressure at sensor positions.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn sample_p_final(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
         let mut out = Array1::zeros([positions.len()]);

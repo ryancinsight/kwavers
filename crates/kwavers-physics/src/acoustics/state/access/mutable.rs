@@ -44,18 +44,12 @@ impl<'a> PluginFieldAccessMut<'a> {
     }
 
     /// Check if plugin can read a field
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn can_read(&self, field: UnifiedFieldType) -> bool {
         self.readable_fields.contains(&field)
     }
 
     /// Check if plugin can write a field
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn can_write(&self, field: UnifiedFieldType) -> bool {
         self.writable_fields.contains(&field)

@@ -108,9 +108,6 @@ pub struct PoolStats {
 
 impl PoolStats {
     /// Current utilization ratio [0.0, 1.0].
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn utilization(&self) -> f64 {
         if self.capacity == 0 {

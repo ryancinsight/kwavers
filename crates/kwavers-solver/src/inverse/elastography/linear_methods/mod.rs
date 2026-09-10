@@ -86,18 +86,12 @@ impl ShearWaveInversion {
     }
 
     /// Get current inversion method
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn method(&self) -> kwavers_imaging::ultrasound::elastography::InversionMethod {
         self.config.method
     }
 
     /// Get configuration reference
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn config(&self) -> &ShearWaveInversionConfig {
         &self.config

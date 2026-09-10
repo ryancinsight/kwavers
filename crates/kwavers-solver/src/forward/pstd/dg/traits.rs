@@ -17,9 +17,6 @@ pub trait DiscontinuityDetection: Send + Sync {
     fn detect(&self, field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<bool>>;
 
     /// Update detection threshold
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn update_threshold(&mut self, threshold: f64);
 }
 
@@ -62,9 +59,6 @@ pub trait SolutionCoupling: Send + Sync {
 /// Trait for DG-specific operations
 pub trait DGOperations: Send + Sync {
     /// Compute numerical flux at element interfaces
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn compute_flux(&self, left_state: f64, right_state: f64, normal: f64) -> f64;
 
     /// Project field onto DG basis functions

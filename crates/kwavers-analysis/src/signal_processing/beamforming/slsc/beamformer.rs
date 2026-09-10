@@ -26,9 +26,6 @@ impl SlscBeamformer {
     }
 
     /// Get the current configuration
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn config(&self) -> &SlscConfig {
         &self.config
