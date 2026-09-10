@@ -120,7 +120,7 @@ fn test_optimizer_multiple_steps() {
         assert!(loss.is_finite());
     }
 
-    assert!((losses.len()) == 5);
+    assert_eq!(losses.len(), 5);
 }
 
 #[test]

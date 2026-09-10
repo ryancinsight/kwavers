@@ -80,7 +80,7 @@ fn test_config_presets() {
 
     // Prototyping config
     let config = PinnConfig::for_prototyping();
-    assert!((config.hidden_layers.len()) == 3);
+    assert_eq!(config.hidden_layers.len(), 3);
     assert!(config.num_collocation_points <= 1000);
 }
 
@@ -96,7 +96,7 @@ fn test_loss_weights_presets() {
 
     // Balanced
     let weights = LossWeights::balanced();
-    assert!(weights.data == weights.pde);
+    assert_eq!(weights.data, weights.pde);
 }
 
 #[test]

@@ -244,7 +244,7 @@ mod tests {
     fn test_pde_complexity_ordering() {
         assert!(PdeType::Wave.complexity() < PdeType::Diffusion.complexity());
         assert!(PdeType::Diffusion.complexity() < PdeType::NavierStokes.complexity());
-        assert!(PdeType::NavierStokes.complexity() == 1.0);
+        assert_eq!(PdeType::NavierStokes.complexity(), 1.0);
     }
 
     #[test]

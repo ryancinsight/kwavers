@@ -92,12 +92,14 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Electromag
     }
 
     /// Add a current source (adapted from domain layer)
+    #[must_use]
     pub fn add_current_source(mut self, source: PinnEMSource) -> Self {
         self.current_sources.push(source);
         self
     }
 
     /// Add a perfect electric conductor boundary
+    #[must_use]
     pub fn add_pec_boundary(mut self, position: BoundaryPosition) -> Self {
         self.boundary_specs
             .push(ElectromagneticBoundarySpec::PerfectElectricConductor { position });
@@ -105,6 +107,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Electromag
     }
 
     /// Add a perfect magnetic conductor boundary
+    #[must_use]
     pub fn add_pmc_boundary(mut self, position: BoundaryPosition) -> Self {
         self.boundary_specs
             .push(ElectromagneticBoundarySpec::PerfectMagneticConductor { position });
@@ -112,6 +115,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Electromag
     }
 
     /// Set problem type
+    #[must_use]
     pub fn with_problem_type(mut self, problem_type: EMProblemType) -> Self {
         self.problem_type = problem_type;
         self
