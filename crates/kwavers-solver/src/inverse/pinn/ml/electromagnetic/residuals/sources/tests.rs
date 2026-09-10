@@ -39,7 +39,7 @@ fn test_charge_density_zero_for_source_free_medium() {
 
 /// Uniform impressed charge density: all output elements = rho_0.
 ///
-/// Proof: domain_params["charge_density"] = ρ₀ → return tensor filled with ρ₀.
+/// Proof: `domain_params["charge_density"]` = ρ₀ → return tensor filled with ρ₀.
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
