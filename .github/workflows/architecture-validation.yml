@@ -92,6 +92,12 @@ jobs:
     - name: Audit per-crate READMEs
       run: cargo run --locked -p xtask -- check-readmes
 
+    # A file walk, so it costs a second and rides the job that already built
+    # xtask. It fails only when the count of `# Errors` sections on infallible
+    # functions rises above its baseline.
+    - name: Audit `# Errors` sections against their signatures
+      run: cargo run --locked -p xtask -- audit-errors-docs
+
     - name: Run clippy (strict mode)
       # Library targets hold the full deny floor. Program targets
       # (examples/tests/benches) are separately scoped below: their stdout
