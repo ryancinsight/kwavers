@@ -35,6 +35,34 @@
   the crate's public surface unchanged, the package's tests passing, and
   clippy `--locked --all-targets -D warnings` clean.
 
+<a id="kw-edition-2021-behind-current-2026-09-09"></a>
+
+## KW-EDITION-2021-BEHIND-CURRENT-2026-09-09 — 25 crates on edition 2021, resolver 2 [patch] — todo
+
+- **Outcome:** the workspace builds on the current stable edition and resolver,
+  with the package fields that should be inherited actually inherited.
+- **Measured 2026-09-09:** all **25** crates plus `xtask` declare
+  `edition = "2021"` individually; the root declares `resolver = "2"`. The
+  toolchain pin is `rustc 1.97.0`, which supports edition 2024 and resolver 3,
+  so nothing external is holding this back.
+- **Found by trying to use the language.** A let-chain
+  (`if let Some(x) = f() && p(x)`) in a new `xtask` audit failed to compile:
+  "let chains are only allowed in Rust 2024 or later". The audit was written
+  the long way instead, which is the cost showing up as worse code rather than
+  as a build error.
+- **The lint floor counts this** -- "edition or resolver behind current" and
+  "members re-declaring package fields the workspace should own" are both
+  measured debt classes, and 25 separate `edition` declarations are the second
+  one as well as the first.
+- **Shape:** `cargo fix --edition` per crate, then flip the root to
+  `edition = "2024"` / `resolver = "3"` with members inheriting via
+  `edition.workspace = true`, in one change so the crates cannot drift apart
+  again. Resolver 3 changes feature unification, so the feature-combination
+  matrix is the check that matters, not just a build.
+- **Acceptance:** the root declares edition 2024 and resolver 3, no member
+  declares its own `edition`, the full feature matrix passes, and a let-chain
+  compiles.
+
 <a id="kw-errors-docs-are-template-output-2026-09-09"></a>
 
 ## KW-ERRORS-DOCS-ARE-TEMPLATE-OUTPUT-2026-09-09 — 300 functions document an error they cannot return [patch] — todo
