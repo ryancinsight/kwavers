@@ -36,6 +36,15 @@
   `Result` nor `Option`, enforced by a check in the conformance scan so the
   template cannot return; and the remaining sections name a condition rather
   than a category.
+- **Guard landed in #762:** `cargo run -p xtask -- audit-errors-docs`, running
+  inside `Validate Clean Architecture`. It ratchets at **350** and fails on any
+  rise. The count is 350 rather than the 300 first reported: the audit
+  accumulates a signature to its arrow, so it sees the wrapped signatures a
+  line-at-a-time estimate skipped. Its unit tests pin the cases that make a
+  naive matcher wrong -- a wrapped signature, a `where` bound mentioning
+  `Result`, a unit return with no arrow.
+- **Next:** burn the 350 down per crate, lowering `BASELINE` with each, then
+  replace the ~840 contentless sections on genuinely fallible functions.
 
 <a id="kw-pinn-gradient-helper-dead-2026-09-09"></a>
 
@@ -5213,9 +5222,18 @@ markers without changing the numerical contract.
   so disagreement scales with the fourth derivative and `REL_TOL_SECOND` is
   empirical, not derived -- the added point measured rel_err 2.59e-2 against
   the 1e-2 bound. Extending that test needs a derived per-point bound first.
-- **Remaining 75:** 28 `unused_self` (a design finding, not a mechanical fix),
-  26 missing `# Errors`, 7 missing `# Panics`, 6 `#[must_use]`, 4 `assert!`
-  with an equality comparison, 2 doc-link/recursion.
+- **Second increment #761, 73 -> 61.** Twelve diagnostics with a determinate
+  fix: 6 `#[must_use]` on `mut self -> Self` builders, 4 `assert!(a == b)` ->
+  `assert_eq!`, 1 unquoted intra-doc link, and `generate_boundary_data`, which
+  took `&self` and never touched it -- the receiver survived only through its
+  own recursive calls -- made an associated function with its three call sites
+  updated. 1375 solver tests pass.
+- **Remaining 61, and why it stops there:** 28 `unused_self` is a design
+  finding, not a mechanical fix. The 26 missing `# Errors` and 7 missing
+  `# Panics` must not be closed by extending the template that produced
+  [KW-ERRORS-DOCS-ARE-TEMPLATE-OUTPUT-2026-09-09](#kw-errors-docs-are-template-output-2026-09-09)
+  -- doing so would move this number without improving anything, which is
+  gaming the measure.
 - **Not met. Measured 2026-09-08**, `cargo clippy -p kwavers-solver --features
   pinn --all-targets`: 84 diagnostics -- 28 `unused_self`, 26 missing
   `# Errors`, 11 `println!`, 7 missing `# Panics`, 6 missing `#[must_use]`, 4
