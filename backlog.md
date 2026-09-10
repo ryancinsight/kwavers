@@ -43,8 +43,21 @@
   line-at-a-time estimate skipped. Its unit tests pin the cases that make a
   naive matcher wrong -- a wrapped signature, a `where` bound mentioning
   `Result`, a unit return with no arrow.
-- **Next:** burn the 350 down per crate, lowering `BASELINE` with each, then
-  replace the ~840 contentless sections on genuinely fallible functions.
+- **All 350 removed in the same pull request, enqueued as #762.** 1040 lines
+  across 226 files; every removed line is a `///` doc line and none is added,
+  so the diff carries only its declared transform. Only the template's shape
+  goes -- heading, bullets, and the bare `///` separator -- and a section
+  followed by prose or another heading keeps everything after the bullets. The
+  946 `# Panics` headings are untouched. The audit re-reads the tree with an
+  independent implementation and reports zero, so `BASELINE` closes to 0;
+  reintroducing one section makes it exit 1 and name the site.
+- **The local gate caught a defect in the guard itself:** with `BASELINE = 0`,
+  `total < BASELINE` is `usize < 0`, always false, which clippy denies as
+  `absurd_extreme_comparisons`. Refused the push; the dead branch is gone.
+- **Next:** the ~840 contentless sections on genuinely fallible functions,
+  where "an internal constraint is violated" names no invariant, no input
+  range, and no caller remedy. Per crate, replacing the category with the
+  condition.
 
 <a id="kw-pinn-gradient-helper-dead-2026-09-09"></a>
 
