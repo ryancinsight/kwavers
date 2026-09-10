@@ -137,9 +137,6 @@ pub struct PhysicsKernelRegistry {
 
 impl PhysicsKernelRegistry {
     /// Create new kernel registry
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new() -> Self {
         Self {
             kernels: HashMap::new(),

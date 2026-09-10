@@ -14,9 +14,6 @@ pub struct MemoryStorage {
 
 impl MemoryStorage {
     /// Create memory storage
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn create() -> Self {
         Self {

@@ -8,9 +8,6 @@ use kwavers_signal::window::{window_value, SignalWindowType};
 use leto::Array3;
 
 /// Tukey window function (tapered cosine window)
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
 #[must_use]
 pub fn tukey_window(i: usize, n: usize, alpha: f64) -> f64 {
     if n <= 1 {

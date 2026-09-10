@@ -30,7 +30,6 @@ pub struct ChargeRecyclingReport {
 /// Examines pulser IC footprints and estimates the power savings if
 /// N-level + charge-recycling drivers are used vs conventional 3-level.
 ///
-/// # Errors
 ///
 /// This function is infallible; it returns a report with zero savings when no
 /// N-level ICs are found or when the input power parameters are zero.
@@ -91,7 +90,6 @@ pub struct PulseSkipInterferenceReport {
 /// across channels and time, so grating-lobe and tonal spur artifacts
 /// are negligible. This function checks those assumptions.
 ///
-/// # Errors
 ///
 /// This function is infallible; `tolerable` in the returned report indicates
 /// whether the computed interference level is within acceptable bounds.

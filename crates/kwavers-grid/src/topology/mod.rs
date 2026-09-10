@@ -75,21 +75,12 @@ pub trait GridTopology: Send + Sync {
     fn metric_coefficient(&self, indices: [usize; 3]) -> f64;
 
     /// Check if grid has uniform spacing in all active dimensions
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn is_uniform(&self) -> bool;
 
     /// Maximum wavenumber supported (Nyquist limit)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn k_max(&self) -> f64;
 
     /// Create a zero-initialized field matching this grid topology
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn create_field(&self) -> Array3<f64> {
         let [n0, n1, n2] = self.dimensions();
         Array3::zeros([n0, n1, n2])

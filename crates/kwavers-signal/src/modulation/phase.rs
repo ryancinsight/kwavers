@@ -12,9 +12,6 @@ pub struct PhaseModulation {
 
 impl PhaseModulation {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(params: ModulationParams) -> Self {
         Self { params }

@@ -259,17 +259,11 @@ impl PSTDSolver {
     }
 
     /// Pressure field.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn pressure_field(&self) -> &leto::Array3<f64> {
         &self.fields.p
     }
     /// Velocity fields.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn velocity_fields(&self) -> (&leto::Array3<f64>, &leto::Array3<f64>, &leto::Array3<f64>) {
         (&self.fields.ux, &self.fields.uy, &self.fields.uz)
@@ -295,9 +289,6 @@ impl PSTDSolver {
 }
 
 /// Pstd source time shift samples.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
 pub(super) fn pstd_source_time_shift_samples() -> isize {
     match env::var("KWAVERS_PSTD_SOURCE_TIME_SHIFT") {
         Ok(value) => value.trim().parse::<isize>().unwrap_or(0),
@@ -306,9 +297,6 @@ pub(super) fn pstd_source_time_shift_samples() -> isize {
 }
 
 /// Pstd source gain.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
 pub(super) fn pstd_source_gain() -> f64 {
     match env::var("KWAVERS_PSTD_SOURCE_GAIN") {
         Ok(value) => value.trim().parse::<f64>().unwrap_or(1.0),

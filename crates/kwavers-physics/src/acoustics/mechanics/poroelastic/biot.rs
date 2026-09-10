@@ -76,9 +76,6 @@ pub struct BiotTheory {
 
 impl BiotTheory {
     /// Create new Biot theory calculator
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(material: &PoroelasticMaterial) -> Self {
         Self {

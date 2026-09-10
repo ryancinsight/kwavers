@@ -31,18 +31,12 @@ impl GridConfig {
     }
 
     /// Calculate total grid points
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn total_points(&self) -> usize {
         self.nx * self.ny * self.nz
     }
 
     /// Calculate memory footprint estimate in bytes
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn memory_estimate(&self) -> usize {
         // Estimate: 8 fields * 8 bytes (f64) per point

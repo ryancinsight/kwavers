@@ -216,9 +216,6 @@ impl DrugPayload {
     }
 
     /// Check if payload is depleted
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn is_depleted(&self) -> bool {
         self.concentration < 1e-10

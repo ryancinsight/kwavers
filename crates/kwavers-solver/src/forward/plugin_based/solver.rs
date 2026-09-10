@@ -137,9 +137,6 @@ impl PluginBasedSolver {
     }
 
     /// Set the recorder
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn set_recorder(&mut self, recorder: Box<dyn RecorderTrait>) {
         self.recorder = Some(recorder);
     }

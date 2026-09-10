@@ -38,9 +38,6 @@ impl MicrobubblePopulation {
     }
 
     /// Global concentration (simplified)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn get_concentration(&self) -> f64 {
         self.concentration

@@ -16,9 +16,6 @@ pub struct BufferBatch {
 
 impl BufferBatch {
     /// Create an empty batch.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {

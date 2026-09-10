@@ -85,9 +85,6 @@ impl SlscConfig {
     }
 
     /// Create a new config with triangular weighting
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_triangular_weighting() -> Self {
         Self {

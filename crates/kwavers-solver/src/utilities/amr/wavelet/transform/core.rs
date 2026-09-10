@@ -15,9 +15,6 @@ pub struct WaveletTransform {
 
 impl WaveletTransform {
     /// Create a new wavelet transform
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(basis: WaveletBasis, levels: usize) -> Self {
         Self { basis, levels }

@@ -57,9 +57,6 @@ pub struct MultiModalFusion {
 
 impl MultiModalFusion {
     /// Create a new multi-modal fusion processor
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(config: FusionConfig) -> Self {
         Self {
@@ -183,9 +180,6 @@ impl MultiModalFusion {
     }
 
     /// Check if a modality is registered
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn is_modality_registered(&self, modality_name: &str) -> bool {
         self.registered_data.contains_key(modality_name)

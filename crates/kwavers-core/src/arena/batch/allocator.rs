@@ -19,9 +19,6 @@ impl BatchFieldAllocator {
     }
 
     /// Set NUMA node preference.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_numa_node(mut self, node: u32) -> Self {
         self.preferred_numa = Some(node);
@@ -45,9 +42,6 @@ impl BatchFieldAllocator {
     }
 
     /// Return buffer to pool for reuse.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn release(&mut self, buffer: SoAFieldBuffer<f64>) {
         let key = (buffer.field_elements, buffer.num_fields);
         self.pools.entry(key).or_default().push(buffer);

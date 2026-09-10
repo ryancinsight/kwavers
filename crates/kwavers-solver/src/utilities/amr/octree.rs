@@ -39,9 +39,6 @@ impl OctreeNode {
     }
 
     /// Check if node is a leaf
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn is_leaf(&self) -> bool {
         self.children.is_none()
@@ -139,18 +136,12 @@ impl Octree {
     }
 
     /// Get the bounds of the octree
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn bounds(&self) -> &Bounds {
         &self.root.bounds
     }
 
     /// Get a reference to the root node
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn root(&self) -> &OctreeNode {
         &self.root

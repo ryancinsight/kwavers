@@ -35,9 +35,6 @@ impl EMFields {
     }
 
     /// Create fields with auxiliary components
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_auxiliary(
         electric: ArrayD<f64, VecStorage<f64>>,

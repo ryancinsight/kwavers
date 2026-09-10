@@ -122,15 +122,9 @@ impl Default for MultiPhysicsConfig {
 /// Interface for physics solvers that can participate in coupling
 pub trait CoupledPhysicsSolver: Send + Sync {
     /// Get the physics domain type
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn domain_type(&self) -> SimulationPhysicsDomain;
 
     /// Get the computational grid
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn grid(&self) -> &Grid;
 
     /// Get current field values

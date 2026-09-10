@@ -27,9 +27,6 @@ pub struct MicrobubbleDynamicsService {
 
 impl MicrobubbleDynamicsService {
     /// Create new microbubble dynamics service
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(bubble_params: BubbleParameters) -> Self {
         let keller_miksis = KellerMiksisModel::new(bubble_params);

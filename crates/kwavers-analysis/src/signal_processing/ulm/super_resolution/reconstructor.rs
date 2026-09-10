@@ -71,9 +71,6 @@ impl SuperResReconstructor {
     }
 
     /// Return the accumulated SR image (raw counts or kernel-density values).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn image(&self) -> &Array2<f64> {
         &self.image

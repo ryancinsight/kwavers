@@ -145,9 +145,6 @@ impl DistributedNeuralBeamformingProcessor {
     }
 
     /// Get fault tolerance configuration.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn fault_tolerance_config(&self) -> &FaultToleranceState {
         &self.fault_tolerance
     }

@@ -67,9 +67,6 @@ impl SeismicImagingPlugin {
     }
 
     /// Configure FWI parameters
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn configure_fwi(&mut self, parameters: FwiParameters) {
         self.fwi_processor = Some(FwiProcessor::new(parameters));
         self.state = PluginState::Configured;

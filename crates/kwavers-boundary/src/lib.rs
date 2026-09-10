@@ -66,9 +66,6 @@ pub struct PmlExpFactors {
 /// therefore includes `apply_light(...)` for fluence/fluence-rate boundary handling.
 pub trait Boundary: Debug + Send + Sync {
     /// Downcast support for boundary-specific logic in solver internals.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn as_any_mut(&mut self) -> &mut dyn Any;
 
     /// Applies boundary conditions to the acoustic field in spatial domain.

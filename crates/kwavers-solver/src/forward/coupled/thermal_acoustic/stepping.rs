@@ -8,9 +8,6 @@ impl ThermalAcousticCoupler {
     /// # Panics
     /// - Panics if `default config is valid`.
     ///
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new_default() -> Self {
         Self::new(ThermalAcousticConfig::default()).expect("default config is valid")

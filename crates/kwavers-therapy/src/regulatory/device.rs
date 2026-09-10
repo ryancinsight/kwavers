@@ -85,17 +85,11 @@ impl DeviceDescription {
     }
 
     /// Add feature
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_feature(&mut self, feature: impl Into<String>) {
         self.features.push(feature.into());
     }
 
     /// Add contraindication
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_contraindication(&mut self, contraindication: impl Into<String>) {
         self.contraindications.push(contraindication.into());
     }
@@ -162,17 +156,11 @@ impl PredicateDevice {
     }
 
     /// Add similarity to predicate
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_similarity(&mut self, similarity: impl Into<String>) {
         self.similarities.push(similarity.into());
     }
 
     /// Add difference with justification
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_difference(
         &mut self,
         difference: impl Into<String>,

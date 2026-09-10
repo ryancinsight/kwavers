@@ -17,9 +17,6 @@ pub struct AcousticOpticalSolver {
 
 impl AcousticOpticalSolver {
     /// Create a new acoustic-optical solver
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new(grid: Grid, photoelastic_coefficient: f64) -> Self {
         Self {
             photoelastic_coefficient,

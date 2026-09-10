@@ -25,9 +25,6 @@ impl PhysicsConfig {
     }
 
     /// Add physics model
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn add_model(mut self, model: PhysicsModelConfig) -> Self {
         self.models.push(model);
@@ -35,9 +32,6 @@ impl PhysicsConfig {
     }
 
     /// Set global parameter
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn set_parameter(mut self, key: String, value: f64) -> Self {
         self.global_parameters.insert(key, value);

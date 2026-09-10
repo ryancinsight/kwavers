@@ -50,17 +50,11 @@ impl GridAdapter {
     }
 
     /// Get a reference to the underlying `Grid`
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn inner(&self) -> &Grid {
         &self.grid
     }
 
     /// Consume the adapter and return the underlying `Grid`
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn into_inner(self) -> Grid {
         self.grid
     }
@@ -164,9 +158,6 @@ impl GridTopology for GridAdapter {
 /// Extension trait to easily convert `Grid` to topology adapters
 pub trait GridTopologyExt {
     /// Convert this grid into a topology adapter
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn as_topology(&self) -> GridAdapter;
 
     /// Convert this grid into a proper `CartesianTopology`

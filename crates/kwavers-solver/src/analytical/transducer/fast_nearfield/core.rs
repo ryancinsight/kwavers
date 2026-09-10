@@ -75,9 +75,6 @@ impl FastNearfieldSolver {
     }
 
     /// Set transducer geometry
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn set_transducer(&mut self, transducer: RectangularTransducer) {
         self.transducer = Some(transducer);
         self.cached_factors.clear(); // Clear cache when transducer changes

@@ -17,9 +17,6 @@ pub struct FallbackRenderer {
 
 impl FallbackRenderer {
     /// Create a new fallback renderer
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new() -> Self {
         Self { active: true }
     }

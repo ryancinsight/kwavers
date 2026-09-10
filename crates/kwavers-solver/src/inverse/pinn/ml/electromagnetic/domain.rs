@@ -112,9 +112,6 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Electromag
     }
 
     /// Set problem type
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn with_problem_type(mut self, problem_type: EMProblemType) -> Self {
         self.problem_type = problem_type;
         self

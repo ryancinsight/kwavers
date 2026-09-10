@@ -81,9 +81,6 @@ impl BubbleIMEXIntegrator {
     }
 
     /// Get solver
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn solver(&self) -> &Arc<KellerMiksisModel> {
         &self.solver
@@ -209,9 +206,6 @@ impl BubbleIMEXIntegrator {
     }
 
     /// Convert bubble state to vector form
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub(crate) fn state_to_vector(state: &BubbleState) -> Array1<f64> {
         let mut y = Array1::zeros([4usize]);
         y[0] = state.radius;

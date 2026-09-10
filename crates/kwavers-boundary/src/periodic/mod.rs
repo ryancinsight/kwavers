@@ -74,9 +74,6 @@ impl PeriodicConfig {
         }
     }
     /// With bloch phase.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_bloch_phase(mut self, bloch_phase: [f64; 3]) -> Self {
         self.bloch_phase = bloch_phase;

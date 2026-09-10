@@ -54,9 +54,6 @@ impl NeuralBeamformingProcessor {
     }
 
     /// Set the PINN provider for this processor (dependency injection).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[cfg(feature = "pinn")]
     pub fn set_provider(&mut self, provider: Box<dyn PinnBeamformingProvider>) {
         self.pinn_provider = Some(provider);

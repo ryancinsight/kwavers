@@ -8,21 +8,20 @@
 //! `Option`. `pub fn num_sensors(&self) -> usize` promised an `Err`.
 //!
 //! A reader told that a call can fail writes a match arm that can never run.
-//! This audit keeps the template from coming back: the count ratchets down and
-//! never rises.
+//! All 350 are gone; this audit is what keeps the template from coming back.
 
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
 use walkdir::WalkDir;
 
-/// Sites remaining, from the burn-down. This only ever decreases.
+/// Sites remaining. Zero, and it stays there.
 ///
-/// 350 at the measurement that opened the item. An earlier line-at-a-time
-/// estimate said 300 because it could not follow a signature that wraps across
-/// lines; this audit accumulates the signature to its arrow, so the higher
-/// number is the accurate one.
-const BASELINE: usize = 350;
+/// The class opened at 350 -- an earlier line-at-a-time estimate said 300
+/// because it could not follow a signature wrapping across lines, which this
+/// audit does. All 350 were removed in the same change that closed this to
+/// zero, so any rise is a new one.
+const BASELINE: usize = 0;
 
 /// One documented function that cannot return the error it documents.
 struct FalseSection {
@@ -164,10 +163,6 @@ pub fn audit_errors_docs(workspace_root: &Path) -> Result<()> {
              baseline of {BASELINE}. An `# Errors` section names the condition that \
              produces the error, or it does not exist."
         );
-    }
-
-    if total < BASELINE {
-        println!("  below the baseline of {BASELINE}; lower BASELINE to {total} to hold the gain.");
     }
 
     Ok(())

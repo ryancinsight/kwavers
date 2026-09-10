@@ -195,9 +195,6 @@ impl TissuePropertyMap {
     }
 
     /// Get the shape of the tissue property map
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[inline]
     pub fn shape(&self) -> (usize, usize, usize) {
         let s = self.speed_of_sound.shape();
@@ -205,9 +202,6 @@ impl TissuePropertyMap {
     }
 
     /// Get the number of dimensions (always 3 for tissue maps)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[inline]
     pub fn ndim(&self) -> usize {
         3

@@ -53,9 +53,6 @@ pub struct PointSensorConfig {
 
 impl PointSensorConfig {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(locations: Vec<[f64; 3]>) -> Self {
         Self { locations }

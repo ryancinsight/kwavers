@@ -34,9 +34,6 @@ pub struct FieldRegistry {
 
 impl FieldRegistry {
     /// Create a new field registry with deferred allocation
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new(grid: &Grid) -> Self {
         Self {
             fields: vec![None; UnifiedFieldType::COUNT],

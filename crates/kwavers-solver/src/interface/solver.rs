@@ -15,9 +15,6 @@ use std::fmt::Debug;
 /// Fundamental solver trait
 pub trait Solver: Debug + Send + Sync {
     /// Get the solver name
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn name(&self) -> &str;
 
     /// Initialize the solver with grid and medium
@@ -86,15 +83,9 @@ pub trait Solver: Debug + Send + Sync {
     fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>);
 
     /// Get solver statistics
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn statistics(&self) -> SolverStatistics;
 
     /// Check if solver supports a specific feature
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn supports_feature(&self, feature: SolverFeature) -> bool;
 
     /// Enable a solver feature

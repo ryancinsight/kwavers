@@ -18,9 +18,6 @@ pub struct RtmProcessor {
 
 impl RtmProcessor {
     /// Create new RTM processor with specified settings
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(settings: RtmSettings) -> Self {
         Self { settings }

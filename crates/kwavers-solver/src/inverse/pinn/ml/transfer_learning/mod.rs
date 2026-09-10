@@ -145,9 +145,6 @@ impl Default for TransferLearningStats {
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DomainAdapter<B> {
     /// Create a new domain adapter
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new(strength: f64) -> Self {
         Self {
             _layers: Vec::new(),

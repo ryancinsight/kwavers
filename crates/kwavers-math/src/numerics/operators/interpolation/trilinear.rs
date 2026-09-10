@@ -28,9 +28,6 @@ pub struct NumericsTrilinearInterpolator {
 
 impl NumericsTrilinearInterpolator {
     /// Create a new trilinear interpolator with grid spacings `dx`, `dy`, `dz` (meters).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(dx: f64, dy: f64, dz: f64) -> Self {
         Self { dx, dy, dz }

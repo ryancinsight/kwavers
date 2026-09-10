@@ -83,9 +83,6 @@ impl MicrobubbleState {
     }
 
     /// Drug remaining fraction.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn drug_remaining_fraction(&self) -> Dimensionless<f64> {
         let initial_mass = self.drug_concentration.into_base()

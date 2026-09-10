@@ -220,9 +220,6 @@ impl NeuralNetworkShader {
         Ok(output)
     }
     /// Has gpu acceleration.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub(super) fn has_gpu_acceleration() -> bool {
         true
     }

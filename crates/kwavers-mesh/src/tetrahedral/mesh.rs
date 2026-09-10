@@ -51,9 +51,6 @@ impl TetrahedralMesh {
     }
 
     /// Add node to mesh
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_node(&mut self, coordinates: [f64; 3], boundary_type: MeshBoundaryType) -> usize {
         let index = self.nodes.len();
         self.nodes.push(MeshNode {

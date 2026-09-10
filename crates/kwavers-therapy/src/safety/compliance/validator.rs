@@ -189,9 +189,6 @@ impl EnhancedComplianceValidator {
         delta_t.min(self.config.max_temp_rise * 2.0)
     }
     /// Start session.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn start_session(&mut self) {
         self.session_start = Some(Instant::now());
         self.accumulated_time = 0.0;

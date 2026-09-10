@@ -40,9 +40,6 @@ pub struct ColorFlowImaging {
 
 impl ColorFlowImaging {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(config: ColorFlowConfig) -> Self {
         let estimator = AutocorrelationEstimator::new(config.autocorrelation.clone());

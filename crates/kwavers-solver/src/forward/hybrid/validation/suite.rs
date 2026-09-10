@@ -32,9 +32,6 @@ pub struct HybridValidationSuite {
 
 impl HybridValidationSuite {
     /// Create new validation suite
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(config: super::HybridValidationSuiteConfig) -> Self {
         Self { config }

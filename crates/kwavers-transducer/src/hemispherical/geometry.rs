@@ -50,9 +50,6 @@ impl HemisphereGeometry {
     }
 
     /// Get geometric focus point
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn focal_point(&self) -> [Length<f64>; 3] {
         [

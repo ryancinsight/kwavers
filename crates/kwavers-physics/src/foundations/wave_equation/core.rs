@@ -35,15 +35,9 @@ pub trait WaveEquation: Send + Sync {
     ///
     /// Returns the right-hand side of the wave equation:
     /// ∂²u/∂t² = spatial_operator(u) + source
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn spatial_operator(&self, field: &Array3<f64>) -> Array3<f64>;
 
     /// Apply boundary conditions to field
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn apply_boundary_conditions(&mut self, field: &mut Array3<f64>);
 
     /// Check if the current state satisfies physics constraints
@@ -101,15 +95,9 @@ pub trait AutodiffWaveEquation: Send {
     ///
     /// Returns the right-hand side of the wave equation:
     /// ∂²u/∂t² = spatial_operator(u) + source
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn spatial_operator(&self, field: &Array3<f64>) -> Array3<f64>;
 
     /// Apply boundary conditions to field
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn apply_boundary_conditions(&mut self, field: &mut Array3<f64>);
 
     /// Check if the current state satisfies physics constraints

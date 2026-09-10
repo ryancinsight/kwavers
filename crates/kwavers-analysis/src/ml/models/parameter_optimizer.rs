@@ -40,9 +40,6 @@ impl ParameterOptimizerModel {
     }
 
     /// Get metadata
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn metadata(&self) -> &MlModelMetadata {
         &self.metadata

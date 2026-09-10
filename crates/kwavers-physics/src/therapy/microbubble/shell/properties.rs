@@ -252,18 +252,12 @@ impl MarmottantShellProperties {
     }
 
     /// Calculate shell strain (R/R₀ − 1).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn strain(&self, radius: Length<f64>) -> Dimensionless<f64> {
         Dimensionless::from_base(radius.into_base() / self.radius_equilibrium.into_base() - 1.0)
     }
 
     /// Calculate shell stress (approximately χ(R)).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn stress(&self, radius: Length<f64>) -> SurfaceTension<f64> {
         self.surface_tension(radius)

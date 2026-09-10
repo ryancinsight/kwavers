@@ -104,17 +104,11 @@ impl PatientTreatmentPlan {
     }
 
     /// Add an objective
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_objective(&mut self, objective: impl Into<String>) {
         self.objectives.push(objective.into());
     }
 
     /// Add success criteria
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_success_criteria(&mut self, criteria: impl Into<String>) {
         self.success_criteria.push(criteria.into());
     }

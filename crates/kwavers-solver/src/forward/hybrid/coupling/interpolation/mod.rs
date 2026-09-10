@@ -32,9 +32,6 @@ pub struct InterpolationManager {
 
 impl InterpolationManager {
     /// Create a new interpolation manager
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(scheme: HybridInterpolationScheme) -> Self {
         Self { scheme }

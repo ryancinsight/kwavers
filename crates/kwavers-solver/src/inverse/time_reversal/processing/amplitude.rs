@@ -19,9 +19,6 @@ pub struct AmplitudeCorrector {
 
 impl AmplitudeCorrector {
     /// Create a new amplitude corrector
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(max_amplification: f64) -> Self {
         Self { max_amplification }

@@ -22,18 +22,12 @@ impl NonlinearInversion {
     }
 
     /// Method.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn method(&self) -> kwavers_imaging::ultrasound::elastography::NonlinearInversionMethod {
         self.config.method
     }
 
     /// Config.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn config(&self) -> &NonlinearInversionConfig {
         &self.config

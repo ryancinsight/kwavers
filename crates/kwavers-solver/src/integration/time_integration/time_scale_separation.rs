@@ -47,9 +47,6 @@ pub struct TimeScaleSeparator {
 
 impl TimeScaleSeparator {
     /// Create a new time scale separator
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new(grid: &Grid) -> Self {
         Self {
             grid: grid.clone(),
@@ -100,9 +97,6 @@ impl TimeScaleSeparator {
     }
 
     /// Determine if the system is stiff based on time scale separation
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn is_stiff(&self) -> bool {
         if let Some(last_scales) = self.time_scale_history.last() {
             if last_scales.len() >= 2 {

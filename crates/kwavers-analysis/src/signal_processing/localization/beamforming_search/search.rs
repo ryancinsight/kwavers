@@ -79,18 +79,12 @@ impl BeamformSearch {
     }
 
     /// Access the underlying shared beamforming processor (SSOT).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn processor(&self) -> &BeamformingProcessor {
         &self.processor
     }
 
     /// Access the search configuration (policy layer).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn config(&self) -> &LocalizationBeamformSearchConfig {
         &self.cfg

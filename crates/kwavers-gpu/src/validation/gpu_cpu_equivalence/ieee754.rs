@@ -40,9 +40,6 @@ pub fn ulps_diff(a: f64, b: f64) -> u64 {
 }
 
 /// Check if two values are within N ULPs of each other
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
 pub fn within_ulps(a: f64, b: f64, max_ulps: u64) -> bool {
     ulps_diff(a, b) <= max_ulps
 }

@@ -35,9 +35,6 @@ impl PinnConfig {
     }
 
     /// For prototyping.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn for_prototyping() -> Self {
         Self {
             hidden_layers: vec![20, 20, 20],

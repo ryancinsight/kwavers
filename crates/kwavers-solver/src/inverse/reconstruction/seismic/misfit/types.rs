@@ -37,9 +37,6 @@ impl MisfitFunction {
     ///
     /// For envelope and phase misfits, use `compute_adjoint_source` instead
     /// for proper Hilbert transform-based adjoint computation per Fichtner et al. (2008).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn adjoint_source(&self, residual: &Array2<f64>) -> Array2<f64> {
         match self.misfit_type {

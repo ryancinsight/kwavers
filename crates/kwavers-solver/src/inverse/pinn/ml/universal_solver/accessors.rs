@@ -51,17 +51,11 @@ where
     }
 
     /// Get available physics domains
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn available_domains(&self) -> Vec<String> {
         self.physics_registry.list_domains()
     }
 
     /// List all registered physics domains
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn list_registered_domains(&self) -> Vec<String> {
         self.available_domains()
     }

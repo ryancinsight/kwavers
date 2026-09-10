@@ -15,9 +15,6 @@ pub struct HarmonicTracker {
 
 impl HarmonicTracker {
     /// Create new harmonic tracker.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(config: HarmonicConfig) -> Self {
         Self {
@@ -68,17 +65,11 @@ impl HarmonicTracker {
     }
 
     /// Clear history.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn clear_history(&mut self) {
         self.history.clear();
     }
 
     /// Get configuration.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn config(&self) -> HarmonicConfig {
         self.config

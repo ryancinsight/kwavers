@@ -39,9 +39,6 @@ pub struct FresnelCalculator {
 
 impl FresnelCalculator {
     /// Create a new Fresnel calculator
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(n1: f64, n2: f64) -> Self {
         Self { n1, n2 }

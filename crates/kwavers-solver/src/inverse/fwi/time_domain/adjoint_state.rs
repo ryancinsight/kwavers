@@ -66,8 +66,6 @@ pub fn l2_objective(
 ///
 /// The input is interpreted as `(receiver, time)`. The output is an exact
 /// reversal of the time axis.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
 ///
 #[must_use]
 ///

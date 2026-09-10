@@ -99,9 +99,6 @@ impl RadiationForce {
     }
 
     /// Scale.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn scale(&self, factor: Dimensionless<f64>) -> Self {
         Self {

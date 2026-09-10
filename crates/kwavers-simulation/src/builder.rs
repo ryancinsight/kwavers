@@ -112,9 +112,6 @@ impl ConfigurationBuilder {
     }
 
     /// Set simulation frequency
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn frequency(mut self, freq: f64) -> Self {
         self.config.simulation.frequency = freq;
@@ -122,9 +119,6 @@ impl ConfigurationBuilder {
     }
 
     /// Set CFL number
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn cfl(mut self, cfl: f64) -> Self {
         self.config.simulation.cfl = cfl;

@@ -24,9 +24,6 @@ pub struct SnellLawCalculator<'a> {
 
 impl<'a> SnellLawCalculator<'a> {
     /// Create a new Snell's law calculator
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(interface: &'a Interface) -> Self {
         Self { interface }

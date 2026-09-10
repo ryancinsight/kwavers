@@ -52,9 +52,6 @@ impl Microbubble {
     }
 
     /// Create Definity-like microbubble
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn definit_y() -> Self {
         Self::new(2.0, 2.5, 1.0) // 2.0 μm radius, 2.5 kPa elasticity, 1.0 Pa·s viscosity

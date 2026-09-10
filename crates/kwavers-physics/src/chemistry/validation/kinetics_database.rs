@@ -25,9 +25,6 @@ impl ValidatedKinetics {
     /// Create kinetics database with literature values
     ///
     /// All values at 25°C unless otherwise noted
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {

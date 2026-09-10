@@ -354,9 +354,6 @@ impl WesterveltFdtd {
     /// Check if solution satisfies conservation constraints
     ///
     /// Returns `true` if all conservation violations are within acceptable limits.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn is_solution_valid(&self) -> bool {
         self.conservation_tracker
             .as_ref()
@@ -364,9 +361,6 @@ impl WesterveltFdtd {
     }
 
     /// Get the current pressure field
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn pressure(&self) -> &Array3<f64> {
         &self.pressure

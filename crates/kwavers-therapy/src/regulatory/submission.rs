@@ -71,9 +71,6 @@ impl SubmissionDocument {
     }
 
     /// Set contact information
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn set_contact(&mut self, contact: impl Into<String>) {
         self.contact_info = contact.into();
     }
@@ -89,9 +86,6 @@ impl SubmissionDocument {
     }
 
     /// Add risk record
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_risk(&mut self, risk: RiskRecord) {
         self.risk_management.push(risk);
     }

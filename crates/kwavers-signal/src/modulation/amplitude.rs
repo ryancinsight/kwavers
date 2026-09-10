@@ -27,9 +27,6 @@ impl AmplitudeModulation {
     }
 
     /// Get modulation depth
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn modulation_depth(&self) -> f64 {
         self.params.modulation_index

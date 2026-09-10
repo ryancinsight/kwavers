@@ -10,9 +10,6 @@ impl Default for JitMemoryPool {
 
 impl JitMemoryPool {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new() -> Self {
         Self {
             buffers: Vec::new(),

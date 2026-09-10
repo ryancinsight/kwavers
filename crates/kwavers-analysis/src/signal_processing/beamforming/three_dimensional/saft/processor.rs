@@ -27,9 +27,6 @@ pub struct SaftProcessor {
 
 impl SaftProcessor {
     /// Create new SAFT processor.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(saft_config: SaftConfig, beamforming_config: BeamformingConfig3D) -> Self {
         Self {

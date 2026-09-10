@@ -122,9 +122,6 @@ impl SensorRecorder {
     /// Divide a running intensity sum by the number of recorded steps.
     ///
     /// Returns a zero vector before any step has been recorded.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub(super) fn average_intensity(&self, sum: &Array1<f64>) -> Array1<f64> {
         let mut out = Array1::zeros([sum.len()]);
         let _ = self.fill_average_intensity(sum, &mut out);

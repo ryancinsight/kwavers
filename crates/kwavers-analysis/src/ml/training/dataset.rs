@@ -48,18 +48,12 @@ impl TrainingDataset {
     }
 
     /// Get number of samples
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn len(&self) -> usize {
         self.inputs.shape()[0]
     }
 
     /// Check if dataset is empty
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0

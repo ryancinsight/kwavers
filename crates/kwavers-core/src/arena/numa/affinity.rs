@@ -31,9 +31,6 @@ impl ThreadAffinity {
     }
 
     /// Unrestricted.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn unrestricted() -> Self {
         Self {

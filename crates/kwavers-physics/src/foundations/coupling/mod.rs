@@ -82,21 +82,12 @@ pub enum CouplingInterfaceCondition {
 /// Multi-physics coupling trait
 pub trait MultiPhysicsCoupling: Send + Sync {
     /// Get coupling strength between domains
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn coupling_strength(&self) -> CouplingStrength;
 
     /// Get interface conditions for this coupling
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn interface_conditions(&self) -> Vec<CouplingInterfaceCondition>;
 
     /// Compute energy transfer rate between domains (W/m³)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn energy_transfer_rate(&self, interface_position: &[f64]) -> f64;
 
     /// Check stability criteria for coupled time stepping

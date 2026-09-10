@@ -9,9 +9,6 @@ use super::{RealtimeImagingPipeline, StreamingConfig, StreamingDataSource};
 
 impl StreamingDataSource {
     /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new(config: StreamingConfig) -> Self {
         Self {
             config,

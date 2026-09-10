@@ -184,9 +184,6 @@ impl BayesianFilter {
     }
 
     /// Get current position estimate [x, y, z] \[m\].
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn get_state(&self) -> [f64; 3] {
         [self.state[0], self.state[1], self.state[2]]

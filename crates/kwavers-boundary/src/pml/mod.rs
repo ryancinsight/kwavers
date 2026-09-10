@@ -49,18 +49,12 @@ impl Default for DomainPmlConfig {
 
 impl DomainPmlConfig {
     /// With thickness.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_thickness(mut self, thickness: usize) -> Self {
         self.thickness = thickness;
         self
     }
     /// With reflection coefficient.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_reflection_coefficient(mut self, reflection: f64) -> Self {
         self.target_reflection = Some(reflection);

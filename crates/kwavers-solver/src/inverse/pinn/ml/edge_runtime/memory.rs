@@ -3,9 +3,6 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 
 impl MemoryAllocator {
     /// Create a new memory allocator
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new(total_memory: usize) -> Self {
         Self {
             total_memory,

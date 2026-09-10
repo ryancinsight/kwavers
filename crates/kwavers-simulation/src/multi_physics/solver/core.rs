@@ -36,9 +36,6 @@ impl std::fmt::Debug for SimulationMultiPhysicsSolver {
 
 impl SimulationMultiPhysicsSolver {
     /// Create new multi-physics solver
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(config: MultiPhysicsConfig) -> Self {
         Self {

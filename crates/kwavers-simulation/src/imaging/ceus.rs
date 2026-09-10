@@ -56,9 +56,6 @@ impl ContrastEnhancedUltrasound {
     }
 
     /// Get microbubble concentration
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn get_concentration(&self) -> f64 {
         self.microbubbles.get_concentration()
     }

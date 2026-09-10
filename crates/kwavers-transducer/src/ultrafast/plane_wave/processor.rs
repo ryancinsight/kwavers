@@ -31,18 +31,12 @@ pub struct UltrafastPlaneWave {
 
 impl UltrafastPlaneWave {
     /// Create a new plane wave processor.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(config: UltrafastPlaneWaveConfig) -> Self {
         Self { config }
     }
 
     /// Create with standard functional ultrasound settings (11 angles, −10° to +10°).
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn functional_ultrasound(element_positions: Vec<Length<f64>>) -> Self {
         Self::new(UltrafastPlaneWaveConfig {
@@ -204,18 +198,12 @@ impl UltrafastPlaneWave {
     }
 
     /// Tilt angles converted to degrees.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn angles(&self) -> &[Angle<f64>] {
         &self.config.tilt_angles
     }
 
     /// Compounded frame rate: `PRF / N_angles`.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn compounded_frame_rate(&self, prf: Frequency<f64>) -> Frequency<f64> {
         Frequency::from_base(prf.into_base() / self.num_angles() as f64)

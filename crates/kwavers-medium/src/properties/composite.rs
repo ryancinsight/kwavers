@@ -114,9 +114,6 @@ impl CompositeMaterialProperties {
     }
 
     /// Steel (acoustic + elastic + strength)
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn steel() -> Self {
         Self::builder()

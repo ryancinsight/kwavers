@@ -33,9 +33,6 @@ impl Filters {
     ///
     /// # Note
     /// This method is exposed for testing. Prefer setting filter type through configuration.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[doc(hidden)]
     pub fn set_filter_type(&mut self, filter_type: ReconstructionFilterType) {
         self.filter_type = filter_type;
@@ -248,9 +245,6 @@ impl Filters {
     /// where ram_lak = |f|/f_Nyquist ∈ [0,1] is the absolute normalised frequency.
     /// Uses `ram_lak` (not raw `freq`) so negative-frequency DFT bins (i > n/2)
     /// receive the same gain as the symmetric positive-frequency bins.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     fn create_cosine_filter(n: usize) -> Array1<f64> {
         let mut filter = Array1::zeros(n);
         for i in 0..n {

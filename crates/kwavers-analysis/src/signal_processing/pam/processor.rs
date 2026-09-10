@@ -147,9 +147,6 @@ impl PAMProcessor {
             .map_or(0, |(idx, _)| idx)
     }
     /// Config.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn config(&self) -> &PAMConfig {
         &self.config

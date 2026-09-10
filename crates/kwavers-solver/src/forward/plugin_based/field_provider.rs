@@ -17,9 +17,6 @@ pub struct FieldProvider<'a> {
 
 impl<'a> FieldProvider<'a> {
     /// Create a new field provider with restricted access
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new(registry: &'a mut FieldRegistry, allowed_fields: Vec<UnifiedFieldType>) -> Self {
         Self {
             registry,
@@ -52,18 +49,12 @@ impl<'a> FieldProvider<'a> {
     }
 
     /// Check if a field is available to this provider
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn has_field(&self, field_type: UnifiedFieldType) -> bool {
         self.allowed_fields.contains(&field_type) && self.registry.has_field(field_type)
     }
 
     /// Get list of fields available to this provider
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn available_fields(&self) -> Vec<UnifiedFieldType> {
         self.allowed_fields

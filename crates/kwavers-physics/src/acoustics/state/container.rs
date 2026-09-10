@@ -22,9 +22,6 @@ pub struct PhysicsState {
 
 impl PhysicsState {
     /// Create a new physics state with the given grid
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new(grid: Grid) -> Self {
         let (nx, ny, nz) = grid.dimensions();
         let fields = Array4::<f64>::zeros([field_indices::TOTAL_FIELDS, nx, ny, nz]);
@@ -159,17 +156,11 @@ impl PhysicsState {
     }
 
     /// Get field metadata name
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn get_field_name(&self, field_index: usize) -> &'static str {
         field_indices::field_name(field_index)
     }
 
     /// Get field metadata unit
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn get_field_unit(&self, field_index: usize) -> &'static str {
         field_indices::field_unit(field_index)
     }

@@ -40,9 +40,6 @@ impl ThermalAcousticCoupling {
     }
 
     /// Establish execution domain matching wave geometry
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn initialize(&mut self, shape: (usize, usize, usize)) {
         self.acoustic_heat = Array3::zeros(shape);
     }

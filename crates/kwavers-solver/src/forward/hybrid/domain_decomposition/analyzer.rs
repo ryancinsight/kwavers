@@ -11,9 +11,6 @@ pub struct DomainAnalyzer {}
 
 impl DomainAnalyzer {
     /// Create a new domain analyzer
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {}

@@ -176,25 +176,16 @@ impl UtilConservativeInterpolator {
     }
 
     /// Reference to the source grid.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn source_grid(&self) -> &Grid {
         &self.source_grid
     }
 
     /// Reference to the target grid.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn target_grid(&self) -> &Grid {
         &self.target_grid
     }
 
     /// Number of non-zero entries in the sparse transfer matrix.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn nnz(&self) -> usize {
         self.entries.len()
     }

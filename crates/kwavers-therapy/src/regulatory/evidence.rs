@@ -44,17 +44,11 @@ impl ClinicalEvidence {
     }
 
     /// Add key finding
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_finding(&mut self, finding: impl Into<String>) {
         self.key_findings.push(finding.into());
     }
 
     /// Add adverse event
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn add_adverse_event(&mut self, event: impl Into<String>) {
         self.adverse_events.push(event.into());
     }

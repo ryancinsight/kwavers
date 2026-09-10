@@ -56,9 +56,6 @@ impl CovarianceEstimator {
     }
 
     /// Create a new covariance estimator with an explicit post-processing policy.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_post_process(
         forward_backward_averaging: bool,
@@ -182,9 +179,6 @@ impl CovarianceEstimator {
     }
 
     /// Apply forward-backward averaging (complex-valued): `R_fb = 0.5 * (R + J R* J)`.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn apply_forward_backward_averaging_complex(
         &self,

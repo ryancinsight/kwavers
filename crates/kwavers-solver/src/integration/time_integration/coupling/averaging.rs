@@ -16,9 +16,6 @@ pub struct AveragingStrategy {
 
 impl AveragingStrategy {
     /// Create a new averaging strategy
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new(interpolation_order: usize) -> Self {
         Self {

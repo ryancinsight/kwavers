@@ -12,9 +12,6 @@ pub struct MultiLagSlsc {
 
 impl MultiLagSlsc {
     /// Create multi-lag SLSC with multiple configurations
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_configs(configs: Vec<SlscConfig>) -> Self {
         let n = configs.len();
