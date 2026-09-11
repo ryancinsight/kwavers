@@ -1,5 +1,28 @@
 # Backlog / Strategy
 
+<a id="kw-native-r2c"></a>
+
+## KW-NATIVE-R2C-2026-09-11 — The PSTD spectral path costs twice the FFT it wraps [patch] [perf] — blocked
+
+- **Finding.** `Fft3dInOutExt::forward_r2c_into` / `inverse_c2r_into` emulate a
+  half-spectrum transform on apollo's full complex plan: fill a full-volume
+  complex scratch, transform it, copy the non-redundant half out; and on the
+  way back rebuild the Hermitian half with gathered mirror reads, transform,
+  and extract the real part. `fft3d_baseline` with an r2c arm (same process,
+  two rounds at 30% and 14% host load) reads the PSTD pair at **2.63 / 3.29 ms**
+  against **1.45 / 1.66 ms** for the complex pair at 64³ — 1.8–2.0x — and
+  1.2–1.3x at 32³, 1.7x at 16³. The emulation's passes cost as much as the
+  transform they surround.
+- **Change, once apollo lands its half-spectrum pair.** Route both methods to
+  apollo's native real 3-D transform and delete the emulation, its
+  thread-local full-spectrum scratch, and the unused `scratch` argument's
+  compatibility note. The `(nx, ny, nz/2+1)` layout the PSTD core uses is the
+  pair's native output, so no call site changes.
+- **Blocked on:** [`apollo #apollo-native-real-3d`](../apollo/backlog.md#apollo-native-real-3d)
+  (re-open when it merges). **Acceptance oracle:** the r2c arm of
+  `fft3d_baseline` falls below the complex arm at every extent; the PSTD
+  validation suite passes unchanged. **Risk / change class:** [patch] [perf].
+
 <a id="kw-manifest-implementation-2026-09-09"></a>
 
 ## KW-MANIFEST-IMPLEMENTATION-2026-09-09 — Reduce the implementation-bearing manifests [patch] [arch] — in-progress
