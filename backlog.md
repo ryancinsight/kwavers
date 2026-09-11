@@ -34,7 +34,7 @@
   kwavers-math and kwavers-solver, 676 hook tests, the four validation suites, PSTD 166. **Open:** the 16³
   wall-clock confirmation. Three pinned alternating rounds at 49–100% host load disagree: r2c 20.2 against
   22.5 µs at the lightest load, then 28.3 against 24.9 and 29.1 against 26.0 as load rose to 100%.
-  **Re-open:** a pinned run with host load under 10% before and after each arm.
+  **Re-open:** a pinned run with host load under 10% before and after each arm. Decision: [ADR 131](docs/adr/131-c2r-inverse-consumes-its-input.md).
 
 <a id="kw-sir-array-transmit-2026-09-11"></a>
 
