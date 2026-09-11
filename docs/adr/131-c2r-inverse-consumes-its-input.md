@@ -1,4 +1,4 @@
-# 131. The complex-to-real inverse consumes its input spectrum
+# ADR 131: The complex-to-real inverse consumes its input spectrum
 
 Status: Accepted
 

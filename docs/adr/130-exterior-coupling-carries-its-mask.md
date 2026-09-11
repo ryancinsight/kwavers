@@ -1,4 +1,4 @@
-# 130. Exterior coupling carries its body mask
+# ADR 130: Exterior coupling carries its body mask
 
 Status: Accepted
 
