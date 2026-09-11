@@ -4,6 +4,17 @@
 
 ### Changed
 
+- **[major] The PSTD real-to-complex pair runs on the apollo half-spectrum
+  transform, and `inverse_c2r_into` consumes its input.** `kwavers-math`:
+  `Fft3dInOutExt::forward_r2c_into` and `inverse_c2r_into` call apollo
+  `RealFftData::forward_3d_half_into` / `inverse_3d_half_into` (the z lanes by
+  the real split, x and y on the `(nx, ny, nz/2+1)` half volume) instead of
+  emulating a half spectrum on the full complex plan, and the per-thread
+  full-volume scratch is gone. `inverse_c2r_into(&mut half, &mut out)`
+  transforms `half` in place and overwrites it; the `scratch` argument is
+  removed. `fft3d_baseline` gains the r2c round trip beside the complex one.
+  Migration: pass the spectrum by `&mut` and drop the scratch; a caller that
+  still needs the spectrum copies it before the call.
 - **[major] Finite-aperture RF for a delayed, apodized array transmit; the
   kernel seam takes one-way responses.** `kwavers-phantom`:
   `ScattererCloud::synthesize_rf_with_array_transmit(elements, transmit, pulse,

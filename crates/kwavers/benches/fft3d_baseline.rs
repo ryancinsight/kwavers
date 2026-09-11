@@ -78,7 +78,7 @@ fn fft3d_round_trip(c: &mut Criterion) {
     group.finish();
 
     // The path a PSTD step takes: a real field through the half-spectrum pair
-    // and back, with the `(n, n, n/2 + 1)` workspace the solver passes. Beside
+    // and back, the inverse consuming the spectrum as the solver lets it. Beside
     // the complex pair above, the difference is what the real field saves by
     // never being widened to complex.
     let mut group = c.benchmark_group("fft3d_r2c_round_trip");
@@ -90,14 +90,13 @@ fn fft3d_round_trip(c: &mut Criterion) {
         let real = volume(n).mapv(|c| c.re);
         let mut half = Array3::from_elem([n, n, n / 2 + 1], Complex64::default());
         let mut back = Array3::from_elem([n, n, n], 0.0_f64);
-        let mut scratch = Array3::from_elem([n, n, n / 2 + 1], Complex64::default());
         plan.forward_r2c_into(&real, &mut half);
-        plan.inverse_c2r_into(&half, &mut back, &mut scratch);
+        plan.inverse_c2r_into(&mut half, &mut back);
         group.throughput(criterion::Throughput::Elements((n * n * n) as u64));
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, _| {
             b.iter(|| {
                 plan.forward_r2c_into(black_box(&real), &mut half);
-                plan.inverse_c2r_into(black_box(&half), &mut back, &mut scratch);
+                plan.inverse_c2r_into(black_box(&mut half), &mut back);
                 black_box(back[[0, 0, 0]])
             });
         });

@@ -294,7 +294,7 @@ impl PSTDSolver {
         );
         // Write IFFT result directly to div_ux; dpx is not used for density.
         self.fft
-            .inverse_c2r_into(&self.grad_k, &mut self.div_ux, &mut self.ux_k);
+            .inverse_c2r_into(&mut self.grad_k, &mut self.div_ux);
 
         // duy/dy with negative shift + kappa (matches k-Wave Eq. 17).
         if has_y {
@@ -307,7 +307,7 @@ impl PSTDSolver {
                 SpectralAxis::Y,
             );
             self.fft
-                .inverse_c2r_into(&self.grad_k, &mut self.div_uy, &mut self.ux_k);
+                .inverse_c2r_into(&mut self.grad_k, &mut self.div_uy);
         } else {
             self.div_uy.fill(0.0);
         }
@@ -323,7 +323,7 @@ impl PSTDSolver {
                 SpectralAxis::Z,
             );
             self.fft
-                .inverse_c2r_into(&self.grad_k, &mut self.div_uz, &mut self.ux_k);
+                .inverse_c2r_into(&mut self.grad_k, &mut self.div_uz);
         } else {
             self.div_uz.fill(0.0);
         }

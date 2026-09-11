@@ -325,7 +325,7 @@ impl PSTDSolver {
             );
         }
         self.fft
-            .inverse_c2r_into(&self.grad_k, &mut self.fields.ux, &mut self.ux_k);
+            .inverse_c2r_into(&mut self.grad_k, &mut self.fields.ux);
         scale_velocity_by_density(&mut self.fields.ux, &self.materials.rho0, half_dt);
 
         if has_y {
@@ -337,7 +337,7 @@ impl PSTDSolver {
                 GradientAxis::Y,
             );
             self.fft
-                .inverse_c2r_into(&self.grad_k, &mut self.fields.uy, &mut self.ux_k);
+                .inverse_c2r_into(&mut self.grad_k, &mut self.fields.uy);
             scale_velocity_by_density(&mut self.fields.uy, &self.materials.rho0, half_dt);
         } else {
             self.fields.uy.fill(0.0);
@@ -353,7 +353,7 @@ impl PSTDSolver {
                 GradientAxis::Z,
             );
             self.fft
-                .inverse_c2r_into(&self.grad_k, &mut self.fields.uz, &mut self.ux_k);
+                .inverse_c2r_into(&mut self.grad_k, &mut self.fields.uz);
             scale_velocity_by_density(&mut self.fields.uz, &self.materials.rho0, half_dt);
         } else {
             self.fields.uz.fill(0.0);

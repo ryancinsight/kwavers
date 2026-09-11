@@ -327,8 +327,7 @@ impl PSTDSolver {
                 );
                 self.fft.forward_r2c_into(&self.dpy, &mut self.grad_k);
                 multiply_spectral_operator(&mut self.grad_k, strata.nabla1[m].view());
-                self.fft
-                    .inverse_c2r_into(&self.grad_k, &mut self.dpy, &mut self.ux_k);
+                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpy);
                 accumulate_stratum(
                     &mut self.dpx,
                     &self.dpy,
@@ -346,7 +345,7 @@ impl PSTDSolver {
                 self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
                 multiply_spectral_operator(&mut self.grad_k, strata.nabla2[m].view());
                 self.fft
-                    .inverse_c2r_into(&self.grad_k, &mut self.div_ux, &mut self.ux_k);
+                    .inverse_c2r_into(&mut self.grad_k, &mut self.div_ux);
                 accumulate_stratum(
                     &mut self.dpy,
                     &self.div_ux,
@@ -380,8 +379,7 @@ impl PSTDSolver {
                     .expect("invariant: nz_c <= nz half-spectrum length");
                 multiply_spectral_operator(&mut self.grad_k, n1);
             }
-            self.fft
-                .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+            self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
             // dpx now holds L1.
 
             // Step 4: L2 = IFFT( |k|^(y−1) · FFT(ρ_total) ) → dpy (clobbered).
@@ -394,8 +392,7 @@ impl PSTDSolver {
                     .expect("invariant: nz_c <= nz half-spectrum length");
                 multiply_spectral_operator(&mut self.grad_k, n2);
             }
-            self.fft
-                .inverse_c2r_into(&self.grad_k, &mut self.dpy, &mut self.ux_k);
+            self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpy);
             // dpy now holds L2.
         }
 
