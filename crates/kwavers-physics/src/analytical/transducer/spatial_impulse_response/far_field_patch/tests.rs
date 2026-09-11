@@ -410,6 +410,40 @@ fn a_field_point_at_a_patch_centre_yields_a_non_finite_sample() {
     assert!(two_way.samples.iter().all(|v| v.is_nan()));
 }
 
+/// A trapezoid that holds no node is deposited as its area in the bin of its
+/// centre, so a far scatterer never sees an empty element. With every patch
+/// between two nodes the sampled area is the sum of the patch areas exactly.
+#[test]
+fn nodeless_trapezoids_keep_their_area() {
+    let s = sir(1, 4);
+    // Nearly on axis at 300 mm each patch spans a few ns around 194.805 µs;
+    // on a 100 ns grid the neighbouring nodes sit at 194.75 and 194.85 µs, so
+    // every patch falls between them.
+    let field = [0.2e-3, 0.5e-3, 300.0e-3];
+    let dt = 1.0e-7;
+    let first = s.first_arrival_time(field[0], field[1], field[2]);
+    let last = s.last_arrival_time(field[0], field[1], field[2]);
+    let first_node = (first / dt - 0.5).ceil();
+    let end_node = (last / dt - 0.5).ceil();
+    assert!(
+        end_node <= first_node,
+        "the case must hold no node: {first:.6e}..{last:.6e}"
+    );
+    let response = s.response(field[0], field[1], field[2], dt);
+    assert!(!response.is_empty(), "far patches must not vanish");
+    let [wx, wy] = s.patch_widths();
+    let mut expected = 0.0;
+    for iy in 0..4 {
+        let cy = -WY + (iy as f64 + 0.5) * wy;
+        expected += trapezoid(wx, wy, [0.0, cy], field).area;
+    }
+    let area = response.area(dt);
+    assert!(
+        (area - expected).abs() <= 1.0e-12 * expected,
+        "sampled area {area:.6e} against Σ A_m = {expected:.6e}"
+    );
+}
+
 #[test]
 fn far_field_number_is_the_sagitta_over_the_half_wavelength() {
     let s = sir(1, 16);

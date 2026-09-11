@@ -60,10 +60,15 @@
 //! collapses the trapezoid to a rectangle, and `Δt₂ = 0` (on the patch axis)
 //! to `A·δ(t − l/c)`; neither has a finite `s`. These are deposited directly
 //! as bin averages — the rectangle's overlap with each bin, the delta as `A/dt`
-//! in its bin — so their area at `t ≥ 0` is preserved exactly. Between those
-//! exact cases
-//! a small `Δt₁` costs nothing at the nodes; its rounding is bounded by
-//! `ε·dt/Δt₁` relative to `h_max`.
+//! in its bin — so their area at `t ≥ 0` is preserved exactly. A trapezoid
+//! that contains no node (a patch seen from far enough that its whole support
+//! falls between two nodes) would vanish under node sampling, so it is
+//! deposited the same way: a delta of its area in the bin of its centre
+//! `(t₁ + t₄)/2`. A trapezoid that does contain a node is sampled there; its
+//! area is then the midpoint rule's, exact to the kink bound only once the
+//! support spans bins, so the grid step is chosen against the narrowest
+//! support the scene produces. Between those cases a small `Δt₁` costs nothing
+//! at the nodes; its rounding is bounded by `ε·dt/Δt₁` relative to `h_max`.
 //!
 //! # Sampling convention
 //!
@@ -78,8 +83,8 @@
 //!   from arbitrarily shaped, apodized, and excited ultrasound transducers."
 //!   *IEEE Trans. UFFC* 39(2), 262–267 — the far-field rectangle in Field II.
 
-use super::{auto_convolve, SampledResponse};
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::numerics::convolution::SupportSamples;
 use std::f64::consts::PI;
 use std::num::NonZeroUsize;
 
@@ -191,8 +196,8 @@ impl FarFieldRectangleSir {
     /// `(x, y)` is the field point's projection onto the aperture plane, `z`
     /// its distance from the plane (the sign is immaterial). The result is the
     /// sum of the patch trapezoids sampled at every node `n ≥ 0` — exact to
-    /// rounding — with the degenerate patches deposited as bin averages
-    /// (module docs). A support that begins before `t = 0` has no node to
+    /// rounding — with the degenerate and sub-bin patches deposited as bin
+    /// averages (module docs), so it is never empty for a finite element. A support that begins before `t = 0` has no node to
     /// carry its early part: the values at the nodes that exist are still the
     /// trapezoid's, and a degenerate rectangle keeps the area it has at
     /// `t ≥ 0`. Such a field point lies within a patch width of the face and
@@ -205,7 +210,7 @@ impl FarFieldRectangleSir {
     /// # Panics
     /// Panics if `dt ≤ 0` (a non-positive sample step is a caller bug).
     #[must_use]
-    pub fn response(&self, x: f64, y: f64, z: f64, dt: f64) -> SampledResponse {
+    pub fn response(&self, x: f64, y: f64, z: f64, dt: f64) -> SupportSamples {
         assert!(dt > 0.0, "response requires dt > 0, got {dt}");
         let node = |t: f64| t / dt - 0.5;
 
@@ -214,7 +219,7 @@ impl FarFieldRectangleSir {
         // `l = 0` makes a patch's corner times NaN, which the min/max folds
         // discard; the support is then unbounded and the model void.
         if !t_first.is_finite() || !t_last.is_finite() {
-            return SampledResponse {
+            return SupportSamples {
                 first_sample: 0,
                 samples: vec![f64::NAN],
             };
@@ -235,9 +240,11 @@ impl FarFieldRectangleSir {
         // First node past every patch's support: analytically zero from here.
         let mut support_end = first_bin;
         for trap in self.trapezoids(x, y, z) {
-            if trap.span <= 0.0 {
-                // On the patch axis: `A·δ(t − l/c)` as `A/dt` in its bin.
-                let bin = (trap.onset / dt).floor() as isize;
+            let holds_a_node = node(trap.end()).ceil() > node(trap.onset).ceil();
+            if trap.span <= 0.0 || !holds_a_node {
+                // On the patch axis, or between two nodes: `A·δ` as `A/dt` in
+                // the bin of the trapezoid's centre.
+                let bin = (0.5 * (trap.onset + trap.end()) / dt).floor() as isize;
                 direct[local(bin)] += trap.area / dt;
                 support_end = support_end.max(bin + 1);
             } else if trap.ramp <= 0.0 {
@@ -298,7 +305,7 @@ impl FarFieldRectangleSir {
             .position(|v| *v != 0.0)
             .map(|i| i + representable)
         else {
-            return SampledResponse {
+            return SupportSamples {
                 first_sample: 0,
                 samples: Vec::new(),
             };
@@ -309,7 +316,7 @@ impl FarFieldRectangleSir {
             .expect("invariant: a non-zero sample exists, so a last one does");
         samples.truncate(last + 1);
         samples.drain(..first);
-        SampledResponse {
+        SupportSamples {
             first_sample: (first_bin + first as isize) as usize,
             samples,
         }
@@ -323,12 +330,8 @@ impl FarFieldRectangleSir {
     /// # Panics
     /// Panics if `dt ≤ 0` (a non-positive sample step is a caller bug).
     #[must_use]
-    pub fn round_trip_response(&self, x: f64, y: f64, z: f64, dt: f64) -> SampledResponse {
-        let one_way = self.response(x, y, z, dt);
-        SampledResponse {
-            first_sample: 2 * one_way.first_sample,
-            samples: auto_convolve(&one_way.samples, dt),
-        }
+    pub fn round_trip_response(&self, x: f64, y: f64, z: f64, dt: f64) -> SupportSamples {
+        self.response(x, y, z, dt).auto_convolve(dt)
     }
 
     /// The far-field trapezoid of every patch at `(x, y, z)`, row-major over

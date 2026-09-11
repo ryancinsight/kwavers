@@ -236,6 +236,69 @@ fn rect_rejects_invalid_parameters() {
     assert!(RectangularPistonSir::new(WX, WY, f64::NAN).is_err());
 }
 
+// --- One-way response over its support ---
+
+#[test]
+fn one_way_response_samples_the_closed_form_over_its_support() {
+    let s = sir();
+    let dt = 2e-9;
+    let (r, z) = (2.0e-3, Z);
+    let response = s.response(r, z, dt);
+    let first = (s.first_arrival_time(r, z) / dt - 0.5).ceil() as usize;
+    let end = (s.last_arrival_time(r, z) / dt - 0.5).ceil() as usize;
+    assert_eq!(
+        response.first_sample, first,
+        "onset is the first bin whose midpoint is inside"
+    );
+    assert_eq!(
+        response.samples.len(),
+        end - first,
+        "one sample per bin of the support"
+    );
+    for (i, &sample) in response.samples.iter().enumerate() {
+        let t = ((first + i) as f64 + 0.5) * dt;
+        assert_eq!(
+            sample,
+            s.evaluate(r, z, t),
+            "sample {i} is the closed form at its node"
+        );
+    }
+    assert!(response.samples.first().is_some_and(|&v| v > 0.0));
+    assert!(response.samples.last().is_some_and(|&v| v > 0.0));
+}
+
+/// ## Theorem
+/// A support with no node inside is the impulse of the aperture's area: one
+/// sample `A/dt` with `A = a²/(2·d̄)`, which on axis is `√(z²+a²) − z` to
+/// relative order `c·dt/d̄`.
+#[test]
+fn sub_sample_support_is_the_impulse_of_the_area() {
+    let s = sir();
+    // At 20 mm the 5 mm piston's on-axis support runs 13.333–13.744 µs; on a
+    // 0.5 µs grid the neighbouring nodes sit at 13.25 and 13.75 µs, so no node
+    // is inside and the response is the impulse equivalent.
+    let dt = 0.5e-6;
+    let first_node = (s.first_arrival_time(0.0, Z) / dt - 0.5).ceil();
+    let end_node = (s.last_arrival_time(0.0, Z) / dt - 0.5).ceil();
+    assert!(end_node <= first_node, "the case must hold no node");
+    let response = s.response(0.0, Z, dt);
+    assert_eq!(
+        response.samples.len(),
+        1,
+        "one bin carries the whole aperture"
+    );
+    let exact = (Z * Z + A * A).sqrt() - Z;
+    let mean_distance = 0.5 * (Z + (Z * Z + A * A).sqrt());
+    let bound = C * dt / mean_distance;
+    let area = response.samples[0] * dt;
+    assert!(
+        (area - exact).abs() <= bound * exact,
+        "impulse area {area:.6e} against √(z²+a²)−z = {exact:.6e}, bound {bound:.2e} relative"
+    );
+    let centre = 0.5 * (s.first_arrival_time(0.0, Z) + s.last_arrival_time(0.0, Z));
+    assert_eq!(response.first_sample, (centre / dt).floor() as usize);
+}
+
 // --- Two-way (pulse-echo) diffraction kernel h⊛h (COV-4 finite-aperture) ---
 
 #[test]

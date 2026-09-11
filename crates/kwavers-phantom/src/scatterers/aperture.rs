@@ -9,21 +9,23 @@
 //!
 //! This crate does not depend on `kwavers-physics`, which owns the SIR closed
 //! forms, and deliberately does not gain that edge (ADR 113). Instead the
-//! kernel is injected: a caller supplies a [`RoundTripKernel`] — any
-//! `Fn(f64, f64, f64, f64) -> Vec<f64>` implements it — and a physics closed
-//! form supplies it through a one-line adapter, for a circular piston
-//! `|x, y, z, dt| piston.round_trip_response(x.hypot(y), z, dt).samples` and
-//! for a far-field rectangle `rect.round_trip_response(x, y, z, dt).samples`,
-//! the onset index discarded because synthesis applies the round-trip delay
-//! itself. The field point reaches the provider in the element's own frame —
-//! `x` along the element's width axis, `y` along its height, `z` along its
+//! kernel is injected: a caller supplies an [`ApertureKernel`] — any
+//! `Fn(f64, f64, f64, f64) -> SupportSamples` implements it — and a physics
+//! closed form satisfies it directly: for a circular piston
+//! `|x, y, z, dt| piston.response(x.hypot(y), z, dt)` and for a far-field
+//! rectangle `|x, y, z, dt| rect.response(x, y, z, dt)`. The one-way response
+//! is the required method; the round trip defaults to its auto-convolution.
+//! The field point reaches the provider in the element's own frame — `x`
+//! along the element's width axis, `y` along its height, `z` along its
 //! outward normal — so an anisotropic aperture sees its orientation.
 //!
 //! # How the kernel enters
 //!
-//! The kernel is applied as a **unit-area** filter: the echo is convolved with
-//! `k / Σk·dt`, and the existing amplitude law (`1/r²` spreading, power-law
-//! attenuation) is untouched.
+//! On the monostatic path the kernel is applied as a **unit-area** filter: the
+//! echo is convolved with `k / Σk·dt`, and the existing amplitude law (`1/r²`
+//! spreading, power-law attenuation) is untouched. The array-transmit path
+//! keeps the responses' own areas instead — there they are the amplitude
+//! (see `synthesize_rf_with_array_transmit`).
 //!
 //! Convolution distributes over the sum of echoes, so synthesis accumulates
 //! every scatterer's scaled, delayed kernel into one trace per element and
@@ -56,6 +58,7 @@
 //!   planar baffle." *J. Acoust. Soc. Am.* 49(5B), 1629–1638.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::numerics::convolution::SupportSamples;
 use std::ops::RangeInclusive;
 
 /// A transducer element with an aperture frame.
@@ -153,36 +156,43 @@ impl ApertureElement {
     }
 }
 
-/// Supplies the round-trip (two-way) spatial impulse response of an aperture.
+/// Supplies an aperture's spatial impulse response at a field point.
 ///
-/// A provider samples the kernel over **its own support only** — from the
-/// round-trip onset `2·d_min/c` to `2·d_max/c` — so the cost of one call is the
-/// kernel's width in samples and nothing else. The `samples` of
-/// `CircularPistonSir::round_trip_response` and
-/// `FarFieldRectangleSir::round_trip_response` are exactly that; the onset
-/// index is dropped at the seam, because synthesis applies the round-trip
-/// delay itself. Implementations are free to cache: the kernel depends only
-/// on the field point in the element frame, while synthesis evaluates it once
-/// per element–scatterer pair.
-pub trait RoundTripKernel {
-    /// Two-way kernel samples for a field point at `[x_m, y_m, z_m]` in the
+/// A provider samples the response over **its own support only** — from the
+/// onset `d_min/c` to `d_max/c` — with the onset's grid index carried in
+/// [`SupportSamples::first_sample`], so the cost of one call is the kernel's
+/// width in samples and nothing else, and an assembly of several elements can
+/// place each response at its own time. `CircularPistonSir::response` and
+/// `FarFieldRectangleSir::response` return exactly that. Implementations are
+/// free to cache: the response depends only on the field point in the
+/// element frame, while synthesis evaluates it once per element–scatterer
+/// pair.
+pub trait ApertureKernel {
+    /// One-way response for a field point at `[x_m, y_m, z_m]` in the
     /// element's frame (width, height, outward normal — see
-    /// [`ApertureElement::field_point`]), on a `dt_s` grid, starting at the
-    /// kernel's onset.
+    /// [`ApertureElement::field_point`]), on a `dt_s` grid, from its onset.
     ///
-    /// An empty return means the support is narrower than one sample; synthesis
-    /// then treats the aperture as a point element. Leading or trailing zeros
-    /// are tolerated and stripped, but they are wasted work, not delay: the
-    /// delay is synthesis's own. A non-finite sample is a provider defect and
-    /// is reported by synthesis rather than absorbed.
-    fn round_trip(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> Vec<f64>;
+    /// The response of a finite aperture is never empty: a support narrower
+    /// than one sample is returned as its impulse equivalent, one sample of
+    /// `A/dt` carrying the response's area `A`, as the physics providers do.
+    /// An empty or zero-area return and a non-finite sample are provider
+    /// defects that synthesis reports rather than absorbs — on the array path
+    /// the area is the amplitude, so dropping it would be silence.
+    fn response(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> SupportSamples;
+
+    /// Two-way (monostatic pulse-echo) kernel `(h ⊛ h)·dt`, the
+    /// auto-convolution of [`Self::response`]; its onset is twice the one-way
+    /// onset. Override only when a provider has a cheaper closed form.
+    fn round_trip(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> SupportSamples {
+        self.response(x_m, y_m, z_m, dt_s).auto_convolve(dt_s)
+    }
 }
 
-impl<F> RoundTripKernel for F
+impl<F> ApertureKernel for F
 where
-    F: Fn(f64, f64, f64, f64) -> Vec<f64>,
+    F: Fn(f64, f64, f64, f64) -> SupportSamples,
 {
-    fn round_trip(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> Vec<f64> {
+    fn response(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> SupportSamples {
         self(x_m, y_m, z_m, dt_s)
     }
 }
@@ -202,27 +212,6 @@ pub(super) fn support_and_area(kernel: &[f64], dt: f64) -> Option<(RangeInclusiv
         return None;
     }
     Some((first..=last, area))
-}
-
-/// Accumulate the discrete convolution `(trace ⊛ pulse)·dt` into `out`,
-/// truncated to `out.len()`; trace samples past `out.len()` cannot reach the
-/// output and are ignored.
-///
-/// Runs once per element over the non-zero trace samples only — most of a
-/// sparse scatterer field is zero — so it costs `O(N_nz·L)` per element for
-/// `N_nz` occupied samples and an `L`-tap pulse. Whether an FFT convolution
-/// beats that at some pulse length is a measurement, not taken here.
-pub(super) fn convolve_into(out: &mut [f64], trace: &[f64], pulse: &[f64], dt: f64) {
-    for (start, &value) in trace.iter().take(out.len()).enumerate() {
-        if value == 0.0 {
-            continue;
-        }
-        let scaled = value * dt;
-        let span = out.len().saturating_sub(start).min(pulse.len());
-        for (slot, &tap) in out[start..start + span].iter_mut().zip(pulse) {
-            *slot += scaled * tap;
-        }
-    }
 }
 
 fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {

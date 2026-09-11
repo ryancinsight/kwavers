@@ -3173,6 +3173,7 @@ dependencies = [
  "hyperion",
  "kwavers-core",
  "kwavers-grid",
+ "kwavers-math",
  "kwavers-medium",
  "leto",
 ]
