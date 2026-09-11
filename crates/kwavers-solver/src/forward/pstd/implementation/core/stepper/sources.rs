@@ -110,8 +110,7 @@ impl PSTDSolver {
                 // R2C: dpx (nx,ny,nz) → p_k (nx,ny,nz_c); source_kappa pre-truncated to nz_c.
                 self.fft.forward_r2c_into(&self.dpx, &mut self.p_k);
                 multiply_complex_by_real_field(&mut self.p_k, &self.source_kappa);
-                self.fft
-                    .inverse_c2r_into(&self.p_k, &mut self.dpx, &mut self.ux_k);
+                self.fft.inverse_c2r_into(&mut self.p_k, &mut self.dpx);
 
                 if is_axisymmetric {
                     add_density_source_components(

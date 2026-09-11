@@ -42,15 +42,10 @@ pub trait Fft3dInOutExt {
 
     /// Inverse complex-to-real 3-D FFT from a **half-spectrum** `(nx, ny,
     /// nz/2+1)` into a real field: the real part of the full inverse of the
-    /// half spectrum's Hermitian completion. `half_in` is copied into
-    /// `scratch`, which must also be `(nx, ny, nz/2+1)` and is overwritten by
-    /// the transform.
-    fn inverse_c2r_into(
-        &self,
-        half_in: &Array3<Complex64>,
-        out: &mut Array3<f64>,
-        scratch: &mut Array3<Complex64>,
-    );
+    /// half spectrum's Hermitian completion. The transform runs in `half_in`
+    /// and overwrites it; a caller that still needs the spectrum copies it
+    /// first.
+    fn inverse_c2r_into(&self, half_in: &mut Array3<Complex64>, out: &mut Array3<f64>);
 
     /// Forward full-spectrum 3-D FFT of a real field, allocating the output.
     fn forward(&self, real: &Array3<f64>) -> Array3<Complex64>;
@@ -156,18 +151,22 @@ impl Fft3dInOutExt for Fft3d {
     }
 
     #[inline]
-    fn inverse_c2r_into(
-        &self,
-        half_in: &Array3<Complex64>,
-        out: &mut Array3<f64>,
-        scratch: &mut Array3<Complex64>,
-    ) {
-        scratch.assign(half_in);
+    fn inverse_c2r_into(&self, half_in: &mut Array3<Complex64>, out: &mut Array3<f64>) {
+        // Apollo transforms a C-contiguous spectrum in place; a strided one is
+        // staged once, and so is a strided output.
+        let mut staged_spectrum;
+        let spectrum = if half_in.as_slice().is_some() {
+            half_in
+        } else {
+            staged_spectrum = Array3::from_elem(half_in.shape(), Complex64::default());
+            staged_spectrum.assign(&*half_in);
+            &mut staged_spectrum
+        };
         if out.as_slice().is_some() {
-            <f64 as RealFftData>::inverse_3d_half_into(self, scratch, out);
+            <f64 as RealFftData>::inverse_3d_half_into(self, spectrum, out);
         } else {
             let mut staged = Array3::from_elem(out.shape(), 0.0_f64);
-            <f64 as RealFftData>::inverse_3d_half_into(self, scratch, &mut staged);
+            <f64 as RealFftData>::inverse_3d_half_into(self, spectrum, &mut staged);
             out.assign(&staged);
         }
     }

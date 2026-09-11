@@ -378,8 +378,7 @@ impl PSTDSolver {
                 &self.ddx_k_shift_pos,
                 VelocityAxis::X,
             );
-            self.fft
-                .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+            self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
             // Fused: u = pml * (pml * u - (dt/rho) * dp)
             // pml_vel_x[i] = exp(-sigma_x_sgx[i] * dt/2)
             let pml_exp = self.pml_exp.as_ref().ok_or_else(|| {
@@ -410,8 +409,7 @@ impl PSTDSolver {
                 );
                 // Reuse dpx for y-gradient IFFT (Opt-12): x-axis update has completed;
                 // dpx is free to overwrite before y-axis update reads it.
-                self.fft
-                    .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
                 let pml_vy = pml_exp.vel_y.as_slice().ok_or_else(|| {
                     KwaversError::InternalError("pml_vel_y must be contiguous".into())
                 })?;
@@ -436,8 +434,7 @@ impl PSTDSolver {
                     VelocityAxis::Z,
                 );
                 // Reuse dpx for z-gradient IFFT (Opt-12): y-axis update has completed.
-                self.fft
-                    .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
                 let pml_vz = pml_exp.vel_z.as_slice().ok_or_else(|| {
                     KwaversError::InternalError("pml_vel_z must be contiguous".into())
                 })?;
@@ -463,8 +460,7 @@ impl PSTDSolver {
                 &self.ddx_k_shift_pos,
                 VelocityAxis::X,
             );
-            self.fft
-                .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+            self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
             update_velocity_unfused(
                 &mut self.fields.ux,
                 &self.dpx,
@@ -482,8 +478,7 @@ impl PSTDSolver {
                     VelocityAxis::Y,
                 );
                 // Reuse dpx for y-gradient IFFT (Opt-12): x-axis update has completed.
-                self.fft
-                    .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
                 update_velocity_unfused(
                     &mut self.fields.uy,
                     &self.dpx,
@@ -502,8 +497,7 @@ impl PSTDSolver {
                     VelocityAxis::Z,
                 );
                 // Reuse dpx for z-gradient IFFT (Opt-12): y-axis update has completed.
-                self.fft
-                    .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
                 update_velocity_unfused(
                     &mut self.fields.uz,
                     &self.dpx,

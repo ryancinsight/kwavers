@@ -409,8 +409,7 @@ impl PSTDSolver {
         // ── Attenuation: grad_k ← FFT(p); grad_k *= ĝ(|k|); dpx ← IFFT(grad_k).
         self.fft.forward_r2c_into(&self.fields.p, &mut self.grad_k);
         multiply_spectral_shape(&mut self.grad_k, &op.shape_k);
-        self.fft
-            .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+        self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
         // p -= dt · c₀ · m(x) · IFFT(ĝ·FFT(p)).
         apply_residual_gas_loss(
             &mut self.fields.p,
@@ -425,8 +424,7 @@ impl PSTDSolver {
         // dispersion term reads).
         self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
         multiply_spectral_shape(&mut self.grad_k, &op.disp_shape_k);
-        self.fft
-            .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
+        self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
         // p += c₀² · s(x) · IFFT(ĥ·FFT(ρ_total))  ⇒  effective p = c_p(ω)²·ρ_total.
         apply_residual_gas_dispersion(
             &mut self.fields.p,

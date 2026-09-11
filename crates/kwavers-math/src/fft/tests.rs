@@ -30,8 +30,7 @@ fn check_shape(nx: usize, ny: usize, nz: usize) {
 
     // (2) inverse_c2r recovers the real field (round-trip).
     let mut out = Array3::zeros([nx, ny, nz]);
-    let mut scratch = Array3::zeros([nx, ny, nz_c]);
-    fft.inverse_c2r_into(&half_new, &mut out, &mut scratch);
+    fft.inverse_c2r_into(&mut half_new, &mut out);
     let rt_err = out
         .iter()
         .zip(real.iter())
@@ -84,15 +83,9 @@ fn strided_half_spectrum_matches_contiguous_paths() {
     }
 
     let mut contiguous_real = Array3::zeros([NX, NY, NZ]);
-    let mut contiguous_scratch = Array3::zeros([NX, NY, NZ_C]);
-    fft.inverse_c2r_into(
-        &contiguous_half,
-        &mut contiguous_real,
-        &mut contiguous_scratch,
-    );
+    fft.inverse_c2r_into(&mut contiguous_half, &mut contiguous_real);
     let mut strided_real = Array3::zeros([NX, NY, NZ]);
-    let mut strided_scratch = Array3::zeros([NX, NY, NZ_C]);
-    fft.inverse_c2r_into(&strided_half, &mut strided_real, &mut strided_scratch);
+    fft.inverse_c2r_into(&mut strided_half, &mut strided_real);
     for (actual, expected) in strided_real.iter().zip(contiguous_real.iter()) {
         assert_eq!(actual, expected);
     }

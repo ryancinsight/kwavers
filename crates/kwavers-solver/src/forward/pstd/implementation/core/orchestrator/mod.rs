@@ -124,9 +124,8 @@ pub struct PSTDSolver {
     pub(crate) p_k: LetoArray3<Complex64>,
     /// Shared velocity k-space scratch — reused for all three spatial axes sequentially.
     ///
-    /// Used as: (a) FFT output for u_x / u_y / u_z in the density update; (b) IFFT
-    /// workspace (3rd arg of `inverse_c2r_into`) in the velocity update, absorption, and
-    /// filter passes.  Because all axes are processed sequentially (never concurrently),
+    /// The FFT output for u_x / u_y / u_z in the density update and the filter; the
+    /// inverse transforms consume their input spectrum and need no workspace. Because all axes are processed sequentially (never concurrently),
     /// a single buffer is sufficient — eliminating the former `uy_k` and `uz_k` fields
     /// (Opt-8: saves 2 × N_complex × 16 B of solver memory).
     pub(crate) ux_k: LetoArray3<Complex64>,

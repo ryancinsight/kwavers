@@ -97,3 +97,4 @@
 | [128](128-first-derivative-stencils-belong-to-leto.md) | First-derivative stencils belong to Leto | Accepted |
 | [129](129-viscoacoustic-finite-domain.md) | The viscoacoustic domain is finite-and-positive, and the absorbing layer is fallible | Accepted |
 | [130](130-exterior-coupling-carries-its-mask.md) | Exterior coupling carries its body mask | Accepted |
+| [131](131-c2r-inverse-consumes-its-input.md) | The complex-to-real inverse consumes its input spectrum | Accepted |
