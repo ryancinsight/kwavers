@@ -27,7 +27,7 @@
 //! quantity the solver actually pays.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use kwavers_math::fft::{get_fft_for_grid, Complex64};
+use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3dInOutExt};
 use leto::Array3;
 use std::time::Duration;
 
@@ -75,6 +75,33 @@ fn fft3d_round_trip(c: &mut Criterion) {
         });
     }
 
+    group.finish();
+
+    // The path a PSTD step takes: a real field through the half-spectrum pair
+    // and back, with the `(n, n, n/2 + 1)` workspace the solver passes. Beside
+    // the complex pair above, the difference is what the real field saves by
+    // never being widened to complex.
+    let mut group = c.benchmark_group("fft3d_r2c_round_trip");
+    group.warm_up_time(Duration::from_millis(300));
+    group.measurement_time(Duration::from_secs(2));
+    group.sample_size(20);
+    for n in EXTENTS {
+        let plan = get_fft_for_grid(n, n, n);
+        let real = volume(n).mapv(|c| c.re);
+        let mut half = Array3::from_elem([n, n, n / 2 + 1], Complex64::default());
+        let mut back = Array3::from_elem([n, n, n], 0.0_f64);
+        let mut scratch = Array3::from_elem([n, n, n / 2 + 1], Complex64::default());
+        plan.forward_r2c_into(&real, &mut half);
+        plan.inverse_c2r_into(&half, &mut back, &mut scratch);
+        group.throughput(criterion::Throughput::Elements((n * n * n) as u64));
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, _| {
+            b.iter(|| {
+                plan.forward_r2c_into(black_box(&real), &mut half);
+                plan.inverse_c2r_into(black_box(&half), &mut back, &mut scratch);
+                black_box(back[[0, 0, 0]])
+            });
+        });
+    }
     group.finish();
 }
 

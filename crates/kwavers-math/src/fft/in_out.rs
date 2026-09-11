@@ -1,26 +1,14 @@
 //! Caller-owned-storage transforms: the `Fft{2,3}dInOutExt` extension traits
 //! and the real/complex assignment kernels they run on.
 
-use std::cell::RefCell;
-
 use leto::{Array2, Array3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 use super::plan::{Fft2d, Fft3d};
 use super::Complex64;
+use apollo::RealFftData;
 
 const FFT_ASSIGN_CHUNK_LEN: usize = 4096;
-
-thread_local! {
-    /// Per-thread full-spectrum `(nx, ny, nz)` complex scratch used by the
-    /// half-spectrum r2c/c2r emulation in [`Fft3dInOutExt`]. Apollo dropped its
-    /// public half-spectrum transforms; this scratch lets the ACL run apollo's
-    /// full-spectrum complex plan and truncate/expand to the `nz_c = nz/2 + 1`
-    /// layout the PSTD core still uses. Resized on grid-shape change, then reused
-    /// across timesteps (zero steady-state allocation for a fixed grid).
-    static R2C_FULL_SCRATCH: RefCell<Array3<Complex64>> =
-        RefCell::new(Array3::from_elem([0, 0, 0], Complex64::default()));
-}
 
 /// Full-spectrum (nx, ny, nz) complex-to-complex 3-D transforms with caller-owned
 /// real and complex storage.
@@ -46,16 +34,17 @@ pub trait Fft3dInOutExt {
     );
 
     /// Forward real-to-complex 3-D FFT writing the **half-spectrum** `(nx, ny,
-    /// nz/2+1)` of a real field. The facade computes the full complex
-    /// transform through Apollo's Leto path and stores the non-redundant
-    /// z-spectrum. `half_out` must have shape `(nx, ny, nz/2+1)`.
+    /// nz/2+1)` of a real field through Apollo's half-spectrum pair: the z
+    /// lanes by the real split, then x and y on the half volume. `half_out`
+    /// must have shape `(nx, ny, nz/2+1)`; a strided `half_out` is filled
+    /// through a contiguous staging copy.
     fn forward_r2c_into(&self, real: &Array3<f64>, half_out: &mut Array3<Complex64>);
 
     /// Inverse complex-to-real 3-D FFT from a **half-spectrum** `(nx, ny,
-    /// nz/2+1)` into a real field. The facade reconstructs the full Hermitian
-    /// spectrum and calls Apollo's full complex inverse path. The `scratch`
-    /// argument is retained for call-site compatibility and is unused.
-    /// `half_in` must have shape `(nx, ny, nz/2+1)`.
+    /// nz/2+1)` into a real field: the real part of the full inverse of the
+    /// half spectrum's Hermitian completion. `half_in` is copied into
+    /// `scratch`, which must also be `(nx, ny, nz/2+1)` and is overwritten by
+    /// the transform.
     fn inverse_c2r_into(
         &self,
         half_in: &Array3<Complex64>,
@@ -157,39 +146,13 @@ impl Fft3dInOutExt for Fft3d {
 
     #[inline]
     fn forward_r2c_into(&self, real: &Array3<f64>, half_out: &mut Array3<Complex64>) {
-        let [nx, ny, nz] = real.shape();
-        let nz_c = nz / 2 + 1;
-        debug_assert_eq!(
-            half_out.shape(),
-            [nx, ny, nz_c],
-            "forward_r2c_into: half_out must be (nx, ny, nz/2+1)"
-        );
-        R2C_FULL_SCRATCH.with(|cell| {
-            let mut borrow = cell.borrow_mut();
-            if borrow.shape() != [nx, ny, nz] {
-                *borrow = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
-            }
-            let full: &mut Array3<Complex64> = &mut borrow;
-            assign_real_to_complex_3d(real, full);
-            self.forward_complex_inplace(full);
-            if let Some(half_values) = half_out.as_slice_mut() {
-                let full_values = full
-                    .as_slice()
-                    .expect("invariant: thread-local FFT scratch is contiguous");
-                for (full_row, half_row) in full_values
-                    .chunks_exact(nz)
-                    .zip(half_values.chunks_exact_mut(nz_c))
-                {
-                    half_row.copy_from_slice(&full_row[..nz_c]);
-                }
-            } else {
-                half_out.assign(
-                    &full
-                        .slice(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)])
-                        .expect("invariant: validated FFT half-spectrum slice"),
-                );
-            }
-        });
+        if half_out.as_slice().is_some() {
+            <f64 as RealFftData>::forward_3d_half_into(self, real, half_out);
+        } else {
+            let mut staged = Array3::from_elem(half_out.shape(), Complex64::default());
+            <f64 as RealFftData>::forward_3d_half_into(self, real, &mut staged);
+            half_out.assign(&staged);
+        }
     }
 
     #[inline]
@@ -197,59 +160,16 @@ impl Fft3dInOutExt for Fft3d {
         &self,
         half_in: &Array3<Complex64>,
         out: &mut Array3<f64>,
-        _scratch: &mut Array3<Complex64>,
+        scratch: &mut Array3<Complex64>,
     ) {
-        let [nx, ny, nz] = out.shape();
-        let nz_c = nz / 2 + 1;
-        debug_assert_eq!(
-            half_in.shape(),
-            [nx, ny, nz_c],
-            "inverse_c2r_into: half_in must be (nx, ny, nz/2+1)"
-        );
-        R2C_FULL_SCRATCH.with(|cell| {
-            let mut borrow = cell.borrow_mut();
-            if borrow.shape() != [nx, ny, nz] {
-                *borrow = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
-            }
-            let full: &mut Array3<Complex64> = &mut borrow;
-            if let Some(half_values) = half_in.as_slice() {
-                let full_values = full
-                    .as_slice_mut()
-                    .expect("invariant: thread-local FFT scratch is contiguous");
-                for i in 0..nx {
-                    let ii = if i == 0 { 0 } else { nx - i };
-                    for j in 0..ny {
-                        let jj = if j == 0 { 0 } else { ny - j };
-                        let full_row_start = (i * ny + j) * nz;
-                        let half_row_start = (i * ny + j) * nz_c;
-                        full_values[full_row_start..full_row_start + nz_c]
-                            .copy_from_slice(&half_values[half_row_start..half_row_start + nz_c]);
-
-                        let mirror_row_start = (ii * ny + jj) * nz_c;
-                        for k in nz_c..nz {
-                            full_values[full_row_start + k] =
-                                half_values[mirror_row_start + nz - k].conj();
-                        }
-                    }
-                }
-            } else {
-                full.slice_mut(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)])
-                    .expect("invariant: validated FFT half-spectrum slice")
-                    .assign(half_in);
-                for k in nz_c..nz {
-                    let kk = nz - k;
-                    for i in 0..nx {
-                        let ii = if i == 0 { 0 } else { nx - i };
-                        for j in 0..ny {
-                            let jj = if j == 0 { 0 } else { ny - j };
-                            full[[i, j, k]] = half_in[[ii, jj, kk]].conj();
-                        }
-                    }
-                }
-            }
-            self.inverse_complex_inplace(full);
-            assign_complex_real_3d(full, out);
-        });
+        scratch.assign(half_in);
+        if out.as_slice().is_some() {
+            <f64 as RealFftData>::inverse_3d_half_into(self, scratch, out);
+        } else {
+            let mut staged = Array3::from_elem(out.shape(), 0.0_f64);
+            <f64 as RealFftData>::inverse_3d_half_into(self, scratch, &mut staged);
+            out.assign(&staged);
+        }
     }
 
     #[inline]

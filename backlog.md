@@ -1,5 +1,35 @@
 # Backlog / Strategy
 
+<a id="kw-native-r2c"></a>
+
+## KW-NATIVE-R2C-2026-09-11 — The PSTD spectral path costs twice the FFT it wraps [patch] [perf] — in-progress
+
+- **Finding.** `Fft3dInOutExt::forward_r2c_into` / `inverse_c2r_into` emulate a
+  half-spectrum transform on apollo's full complex plan: fill a full-volume
+  complex scratch, transform it, copy the non-redundant half out; and on the
+  way back rebuild the Hermitian half with gathered mirror reads, transform,
+  and extract the real part. `fft3d_baseline` with an r2c arm (same process,
+  two rounds at 30% and 14% host load) reads the PSTD pair at **2.63 / 3.29 ms**
+  against **1.45 / 1.66 ms** for the complex pair at 64³ — 1.8–2.0x — and
+  1.2–1.3x at 32³, 1.7x at 16³. The emulation's passes cost as much as the
+  transform they surround.
+- **Change, once apollo lands its half-spectrum pair.** Route both methods to
+  apollo's native real 3-D transform and delete the emulation, its
+  thread-local full-spectrum scratch, and the unused `scratch` argument's
+  compatibility note. The `(nx, ny, nz/2+1)` layout the PSTD core uses is the
+  pair's native output, so no call site changes.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-native-r2c`; **last-update:** 2026-09-11.
+  **Dependency:** [`apollo #apollo-native-real-3d`](../apollo/backlog.md#apollo-native-real-3d),
+  merged in apollo #436. **Acceptance oracle:** the r2c arm of
+  `fft3d_baseline` falls below the complex arm at every extent; the PSTD
+  validation suite passes unchanged. **Risk / change class:** [patch] [perf].
+- **Slice 1** (#770): both methods call apollo's pair. `fft3d_baseline`, two rounds at 2–15% host load:
+  r2c 213–226 µs against 253–277 µs complex at 32³ and 0.96–1.09 ms against 1.11–1.19 ms at 64³ (the
+  emulation read 1.8–2.0x the complex pair), but 21.3–22.1 µs against 20.6 µs at 16³. Apollo's own pair
+  reads 19.8 µs per 16³ round trip, so the gap is the inverse's copy of `half_in` into `scratch`.
+  **Slice 2:** an inverse that consumes its input half spectrum, dropping the copy and the `scratch`
+  argument at every call site whose input is dead after the inverse.
+
 <a id="kw-sir-array-transmit-2026-09-11"></a>
 
 ## KW-SIR-ARRAY-TRANSMIT-2026-09-11 — Finite-aperture RF for a delayed, apodized array transmit [major] — review
