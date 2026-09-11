@@ -23,6 +23,12 @@
   merged in apollo #436. **Acceptance oracle:** the r2c arm of
   `fft3d_baseline` falls below the complex arm at every extent; the PSTD
   validation suite passes unchanged. **Risk / change class:** [patch] [perf].
+- **Slice 1** (#770): both methods call apollo's pair. `fft3d_baseline`, two rounds at 2–15% host load:
+  r2c 213–226 µs against 253–277 µs complex at 32³ and 0.96–1.09 ms against 1.11–1.19 ms at 64³ (the
+  emulation read 1.8–2.0x the complex pair), but 21.3–22.1 µs against 20.6 µs at 16³. Apollo's own pair
+  reads 19.8 µs per 16³ round trip, so the gap is the inverse's copy of `half_in` into `scratch`.
+  **Slice 2:** an inverse that consumes its input half spectrum, dropping the copy and the `scratch`
+  argument at every call site whose input is dead after the inverse.
 
 <a id="kw-manifest-implementation-2026-09-09"></a>
 
