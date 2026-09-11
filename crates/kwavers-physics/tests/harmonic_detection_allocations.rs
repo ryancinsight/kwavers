@@ -24,11 +24,21 @@ fn harmonic_workspace_allocation_count_is_independent_of_spatial_extent() {
 
     let single_change = measure(&detector, &single_point);
     let many_change = measure(&detector, &many_points);
-    assert_eq!(single_change, many_change);
-    // 14 result-field allocations plus the Hann, FFT-input, and FFT-output
-    // workspaces; none depend on the number of spatial points.
+    // The counts are the oracle: 14 result-field allocations plus the Hann,
+    // FFT-input, and FFT-output workspaces, none of which depend on the number
+    // of spatial points. The bytes do — every result field holds one value per
+    // point — so the whole `Change` cannot be compared once the probe reports
+    // byte volumes.
+    assert_eq!(single_change.allocations, many_change.allocations);
+    assert_eq!(single_change.reallocations, many_change.reallocations);
     assert_eq!(single_change.allocations, 17);
     assert_eq!(single_change.reallocations, 0);
+    assert!(
+        many_change.bytes_allocated > single_change.bytes_allocated,
+        "64 points must request more result bytes than one: {} against {}",
+        many_change.bytes_allocated,
+        single_change.bytes_allocated
+    );
 }
 
 fn measure(detector: &HarmonicDetector, samples: &Array4<f64>) -> kwavers_alloc_probe::Change {
