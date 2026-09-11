@@ -1,5 +1,42 @@
 # Backlog / Strategy
 
+<a id="kw-sir-array-transmit-2026-09-11"></a>
+
+## KW-SIR-ARRAY-TRANSMIT-2026-09-11 — Finite-aperture RF for a delayed, apodized array transmit [major] — in-progress
+
+- **Integrator:** claude-fable-5-1; **branch:** `feat/kwavers-sir-array-transmit`
+  (main tree); regions: `kwavers-math::numerics::convolution` (new),
+  `kwavers-physics::analytical::transducer::spatial_impulse_response`,
+  `kwavers-phantom::scatterers::{aperture,mod}`, `crates/kwavers/benches/aperture_rf_synthesis.rs`.
+- **Driver:** the paper's central capability — an arbitrary transducer with
+  electronic delays and apodization, its transmit SIR assembled as
+  `I²[Σ_m a_m Δδ_m(t − τ_m)]` (Eq. 24) — is absent: `synthesize_rf_with_transmit`
+  models the transmit as an ideal wavefront and carries no aperture at all.
+- **Outcome:** `synthesize_rf_with_array_transmit(elements, transmit, pulse, config, kernel)`
+  in `kwavers-phantom`: per scatterer the transmit SIR is the apodized,
+  delayed sum of the elements' one-way responses (attenuated per element
+  path), per receiver the echo is its cross-convolution with the receive
+  element's response placed at the kernels' own onsets, and the pulse is
+  convolved once per trace — the full Field II amplitude model (the SIR areas
+  carry `1/l`; no separate spreading law), distinct from the unit-area
+  temporal-shape refinement of the monostatic path (ADR 113, revised).
+- **Seam:** `RoundTripKernel` becomes `ApertureKernel` with the one-way
+  `response` required and `round_trip` a default (auto-convolution); the
+  sampled-support type moves to `kwavers-math::numerics::convolution::SupportSamples`
+  (onset + samples) with `auto_convolve`, `convolve`, and `superpose`, replacing
+  the physics `SampledResponse` and the phantom-local convolutions; the circular
+  piston gains a support-local `response`.
+- **Acceptance:** single element, zero delay ⇒ the trace equals `a_s·(h⊛h)` at
+  twice the onset (differential); linearity in apodization; focusing delays
+  align every element onset at the focus (assembled onset and area `Σ a_m A_m`);
+  attenuation scales a single-element echo by `exp(−α·2l)`; non-finite kernels
+  and mismatched delay/apodization lengths are errors; math convolution values
+  against hand-computed sequences; bench group `aperture_rf_synthesis_array_transmit`.
+- **Non-goals:** the spectral (frequency-domain) form (rejected for these
+  scales in KW-SIR-FAR-FIELD-PATCH-2026-09-08); fractional-sample electronic
+  delays (delays round to the grid as the point model does; noted as a
+  follow-up if a caller needs sub-sample steering).
+
 <a id="kw-manifest-implementation-2026-09-09"></a>
 
 ## KW-MANIFEST-IMPLEMENTATION-2026-09-09 — Reduce the implementation-bearing manifests [patch] [arch] — in-progress
