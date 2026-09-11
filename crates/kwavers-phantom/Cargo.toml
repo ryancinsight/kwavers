@@ -13,6 +13,7 @@ aequitas = { workspace = true }
 hyperion = { workspace = true }
 kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
 kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
 kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
 leto = { workspace = true }
 

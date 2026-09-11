@@ -57,6 +57,7 @@ pub mod far_field_patch;
 pub use far_field_patch::FarFieldRectangleSir;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::numerics::convolution::SupportSamples;
 use std::f64::consts::PI;
 
 /// A flat circular piston in an infinite rigid baffle.
@@ -148,77 +149,65 @@ impl CircularPistonSir {
         (c / PI) * arg.acos()
     }
 
-    /// Two-way (monostatic pulse-echo) diffraction kernel `(h ⊛ h)(t)` at field
-    /// point `(r, z)`, sampled at step `dt` over its own support.
+    /// One-way spatial impulse response `h(r, z, t)` sampled at the bin
+    /// midpoints `(k + ½)·dt` inside its support `[d_min/c, d_max/c)`.
     ///
-    /// For an element that both transmits and receives, the pulse-echo spatial
-    /// response is the convolution of the transmit and receive SIRs; with a single
-    /// aperture `h_tx = h_rx = h`, so the diffraction part is `h ⊛ h` (Jensen 1991).
-    /// Convolving this with the electrical excitation gives the Field II echo — the
-    /// finite-aperture refinement of the point-element `1/r²` model.
-    ///
-    /// The one-way SIR is sampled at the bin midpoints `(k + ½)·dt` that fall
-    /// inside `[d_min/c, d_max/c)` — its support, `Δk` bins wide — and discretely
-    /// auto-convolved, so the cost is `O(Δk²)` and independent of where the
-    /// support sits on the grid. The result starts at grid index
-    /// `2·⌈d_min/(c·dt) − ½⌉` and is `2·Δk − 1` samples long; sampling from
-    /// `t = 0` instead would spend `O(t_max/dt)` evaluations on zeros per field
-    /// point (Rivera, Demené & Tanter 2026 make this the cost model for SIR
-    /// kernels). An aperture whose support is narrower than one bin yields no
-    /// samples.
-    ///
-    /// The convolution integral factorizes, `∫(h⊛h)dt = (∫h dt)²`, and on-axis
-    /// `∫h dt = √(z²+a²) − z`, so `Σ_k samples[k]·dt = (√(z²+a²) − z)²` — the
-    /// exact normalization.
+    /// The result starts at grid index `⌈d_min/(c·dt) − ½⌉` and is `Δk`
+    /// samples long, so the cost is the support width and independent of where
+    /// it sits on the grid. A support that contains no node — the aperture
+    /// seen from far enough that all its arrivals fall inside one bin — is
+    /// returned as its impulse equivalent: one sample of `A/dt` in the bin of
+    /// its centre, with `A = πa²/(2π·d̄) = a²/(2·d̄)` the Rayleigh integral at
+    /// the mean distance `d̄ = (d_min + d_max)/2`. The distance varies by less
+    /// than `c·dt` across such an aperture, so that area is exact to
+    /// `c·dt/d̄` relative; on axis it is `√(z²+a²) − z` to the same order. The
+    /// response is therefore never empty for a finite aperture.
     ///
     /// # Panics
     /// Panics if `dt ≤ 0` (a non-positive sample step is a caller bug).
     #[must_use]
-    pub fn round_trip_response(&self, r: f64, z: f64, dt: f64) -> SampledResponse {
-        assert!(dt > 0.0, "round_trip_response requires dt > 0, got {dt}");
-        // Bins whose midpoint (k + ½)·dt lies in [first, last): the one-way support.
-        let first_bin = (self.first_arrival_time(r, z) / dt - 0.5).ceil().max(0.0) as usize;
-        let end_bin = (self.last_arrival_time(r, z) / dt - 0.5).ceil().max(0.0) as usize;
-        let h: Vec<f64> = (first_bin..end_bin)
-            .map(|k| self.evaluate(r, z, (k as f64 + 0.5) * dt))
-            .collect();
-        SampledResponse {
-            first_sample: 2 * first_bin,
-            samples: auto_convolve(&h, dt),
+    pub fn response(&self, r: f64, z: f64, dt: f64) -> SupportSamples {
+        assert!(dt > 0.0, "response requires dt > 0, got {dt}");
+        let first = self.first_arrival_time(r, z);
+        let last = self.last_arrival_time(r, z);
+        // Bins whose midpoint (k + ½)·dt lies in [first, last): the support.
+        let first_bin = (first / dt - 0.5).ceil().max(0.0) as usize;
+        let end_bin = (last / dt - 0.5).ceil().max(0.0) as usize;
+        if end_bin <= first_bin {
+            let mean_distance = 0.5 * (first + last) * self.sound_speed;
+            let area = self.radius * self.radius / (2.0 * mean_distance);
+            return SupportSamples {
+                first_sample: (0.5 * (first + last) / dt).floor().max(0.0) as usize,
+                samples: vec![area / dt],
+            };
+        }
+        SupportSamples {
+            first_sample: first_bin,
+            samples: (first_bin..end_bin)
+                .map(|k| self.evaluate(r, z, (k as f64 + 0.5) * dt))
+                .collect(),
         }
     }
-}
 
-/// Discrete auto-convolution `(h ⊛ h)(k·dt) ≈ Σ_i h[i]·h[k−i]·dt` of a
-/// support-local kernel; grid index of `out[i + j]` is twice the input onset
-/// plus `i + j`, and the result is `2·len − 1` long.
-fn auto_convolve(h: &[f64], dt: f64) -> Vec<f64> {
-    let mut out = vec![0.0_f64; (2 * h.len()).saturating_sub(1)];
-    for (i, &hi) in h.iter().enumerate() {
-        if hi == 0.0 {
-            continue;
-        }
-        for (j, &hj) in h.iter().enumerate() {
-            out[i + j] += hi * hj * dt;
-        }
+    /// Two-way (monostatic pulse-echo) diffraction kernel `(h ⊛ h)(t)` at field
+    /// point `(r, z)`: the auto-convolution of [`Self::response`] over its
+    /// support, so the cost is `O(Δk²)`.
+    ///
+    /// For an element that both transmits and receives, the pulse-echo spatial
+    /// response is the convolution of the transmit and receive SIRs; with a
+    /// single aperture `h_tx = h_rx = h`, so the diffraction part is `h ⊛ h`
+    /// (Jensen 1991). Convolving this with the electrical excitation gives the
+    /// Field II echo — the finite-aperture refinement of the point-element
+    /// `1/r²` model. The convolution integral factorizes,
+    /// `∫(h⊛h)dt = (∫h dt)²`, and on-axis `∫h dt = √(z²+a²) − z`, so
+    /// `Σ_k samples[k]·dt = (√(z²+a²) − z)²` — the exact normalization.
+    ///
+    /// # Panics
+    /// Panics if `dt ≤ 0` (a non-positive sample step is a caller bug).
+    #[must_use]
+    pub fn round_trip_response(&self, r: f64, z: f64, dt: f64) -> SupportSamples {
+        self.response(r, z, dt).auto_convolve(dt)
     }
-    out
-}
-
-/// A kernel sampled over its own support on a uniform `dt` grid.
-///
-/// Sample `i` sits at grid index `first_sample + i`. For the round-trip kernel
-/// that is time `(first_sample + i + 1)·dt`: it is the discrete convolution of
-/// two midpoint-sampled one-way responses, and the two half-bin offsets add.
-/// Everything before `first_sample` and after the last sample is zero by
-/// construction.
-#[derive(Debug, Clone, PartialEq)]
-pub struct SampledResponse {
-    /// Grid index of `samples[0]`.
-    pub first_sample: usize,
-    /// Kernel samples from the onset; empty when the support is narrower than
-    /// one bin.
-    pub samples: Vec<f64>,
 }
 
 /// A flat rectangular piston in an infinite rigid baffle, centered on the axis

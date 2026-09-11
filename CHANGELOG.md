@@ -4,6 +4,25 @@
 
 ### Changed
 
+- **[major] Finite-aperture RF for a delayed, apodized array transmit; the
+  kernel seam takes one-way responses.** `kwavers-phantom`:
+  `ScattererCloud::synthesize_rf_with_array_transmit(elements, transmit, pulse,
+  config, kernel)` with `ArrayTransmit` (`new`, `plane`, `focused`) — the
+  Field II model in full, amplitude from the spatial impulse responses,
+  attenuation per element path, echoes at the kernels' own onsets, delays on
+  the sample grid. The seam `RoundTripKernel` is renamed `ApertureKernel`:
+  `response(x, y, z, dt) -> SupportSamples` is required and `round_trip` is a
+  default (auto-convolution); closures over four coordinates returning
+  `SupportSamples` implement it. `kwavers-math`: new
+  `numerics::convolution` — `SupportSamples` (onset + samples), `convolve`,
+  `auto_convolve`, `superpose`, `scale`, `area`, and `convolve_into`.
+  `kwavers-physics`: `SampledResponse` is replaced by
+  `kwavers_math::numerics::convolution::SupportSamples`, and
+  `CircularPistonSir::response(r, z, dt)` returns the one-way response over
+  its support (`round_trip_response` is its auto-convolution). Migration:
+  rename the trait, implement `response` instead of `round_trip` (returning
+  the physics `response` directly), and read `SupportSamples` where
+  `SampledResponse` was named.
 - **[patch] The console log sink writes to stderr.** `CombinedLogger`'s
   console stream was stdout, so log records interleaved with whatever a run
   actually produced and corrupted piped or redirected output. Buffering settles

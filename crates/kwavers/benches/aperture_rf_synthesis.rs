@@ -7,27 +7,34 @@
 //! and the two scatterer counts show whether anything outside the pair loop
 //! (per-element work, allocation) is visible at this scale.
 //!
-//! Two kernel providers run over the same scene, a deterministic scatterer
-//! cloud spanning 10–40 mm at 100 MHz sampling: circular pistons of 0.5 mm
-//! radius (the exact Stepanishen form, `O(Δk²)` per pair with a two-way kernel
-//! a median 10 samples wide and up to about 54 across the cloud), and
-//! 0.3 × 5 mm far-field rectangles tiled 1 × 16 (the sparse-delta form of
-//! Rivera, Demené & Tanter 2026, `O(4M + Δk²)` per pair, with the 5 mm height
-//! seen at up to ±1 mm elevation giving two-way kernels of a median 24 and
-//! up to about 79 samples). A per-pair cost proportional to the trace length
-//! (6000 samples) shows against either.
+//! Two kernel providers run the monostatic path over the same scene, a
+//! deterministic scatterer cloud spanning 10–40 mm at 100 MHz sampling:
+//! circular pistons of 0.5 mm radius (the exact Stepanishen form, `O(Δk²)`
+//! per pair with a two-way kernel a median 10 samples wide and up to about 54
+//! across the cloud), and 0.3 × 5 mm far-field rectangles tiled 1 × 16 (the
+//! sparse-delta form of Rivera, Demené & Tanter 2026, `O(4M + Δk²)` per pair,
+//! with the 5 mm height seen at up to ±1 mm elevation giving two-way kernels
+//! of a median 24 and up to about 79 samples). A per-pair cost proportional
+//! to the trace length (6000 samples) shows against either. A third group
+//! runs the rectangles as a plane-wave array transmit received on every
+//! element (`synthesize_rf_with_array_transmit`): per scatterer, one one-way
+//! response per element, one superposition, and one cross-convolution per
+//! receiver with a transmit kernel as wide as the array's arrival spread.
 //!
 //! # Reading the numbers
 //!
-//! Throughput is element–scatterer pairs per second. Halving the scatterer
-//! count should halve the time; a residual that does not scale is the
-//! per-element cost.
+//! Throughput is element–scatterer pairs per second. For the monostatic
+//! groups halving the scatterer count should halve the time, and a residual
+//! that does not scale is the per-element cost. The array group is linear in
+//! scatterers too, but its per-pair cost grows with the element count through
+//! the transmit kernel's width, so it is read against the element count it
+//! fixes, not across array sizes.
 
 use criterion::{
     black_box, criterion_group, criterion_main, BenchmarkId, Criterion, SamplingMode, Throughput,
 };
 use kwavers_phantom::scatterers::{
-    ApertureElement, RfSynthesisConfig, RoundTripKernel, ScattererCloud,
+    ApertureElement, ApertureKernel, ArrayTransmit, RfSynthesisConfig, ScattererCloud,
 };
 use kwavers_physics::analytical::transducer::spatial_impulse_response::{
     CircularPistonSir, FarFieldRectangleSir,
@@ -109,8 +116,8 @@ fn config() -> RfSynthesisConfig {
     }
 }
 
-/// One provider over the scene at each scatterer count.
-fn synthesis_group(c: &mut Criterion, name: &str, kernel: &impl RoundTripKernel) {
+/// One provider over the scene at each scatterer count, monostatic.
+fn synthesis_group(c: &mut Criterion, name: &str, kernel: &impl ApertureKernel) {
     let mut group = c.benchmark_group(name);
     // Budgeted rather than left at criterion's defaults: an iteration was
     // hundreds of milliseconds on the code this instrument was built against,
@@ -145,19 +152,54 @@ fn synthesis_group(c: &mut Criterion, name: &str, kernel: &impl RoundTripKernel)
     group.finish();
 }
 
+/// The far-field rectangles as a plane-wave array transmit received on
+/// every element: per scatterer eight one-way responses, one superposition,
+/// and eight cross-convolutions.
+fn array_transmit_group(c: &mut Criterion, kernel: &impl ApertureKernel) {
+    let mut group = c.benchmark_group("aperture_rf_synthesis_array_transmit");
+    group.sampling_mode(SamplingMode::Flat);
+    group.warm_up_time(Duration::from_millis(300));
+    group.measurement_time(Duration::from_secs(2));
+    group.sample_size(10);
+
+    let config = config();
+    let pulse = pulse();
+    let elements = elements();
+    let transmit = ArrayTransmit::plane(ELEMENT_COUNT);
+
+    for count in SCATTERER_COUNTS {
+        let cloud = cloud(count);
+        group.throughput(Throughput::Elements((ELEMENT_COUNT * count) as u64));
+        group.bench_with_input(BenchmarkId::from_parameter(count), &count, |b, _| {
+            b.iter(|| {
+                cloud
+                    .synthesize_rf_with_array_transmit(
+                        black_box(&elements),
+                        black_box(&transmit),
+                        black_box(&pulse),
+                        &config,
+                        kernel,
+                    )
+                    .expect("synthesis succeeds on a valid scene")
+            });
+        });
+    }
+
+    group.finish();
+}
+
 fn aperture_rf_synthesis(c: &mut Criterion) {
     let piston = CircularPistonSir::new(ELEMENT_RADIUS, SOUND_SPEED).expect("valid piston");
-    let circular =
-        |x: f64, y: f64, z: f64, dt: f64| piston.round_trip_response(x.hypot(y), z, dt).samples;
+    let circular = |x: f64, y: f64, z: f64, dt: f64| piston.response(x.hypot(y), z, dt);
     synthesis_group(c, "aperture_rf_synthesis", &circular);
 
     let patches = RECT_PATCHES.map(|n| NonZeroUsize::new(n).expect("non-zero tiling"));
     let rectangle =
         FarFieldRectangleSir::new(RECT_HALF_WIDTH, RECT_HALF_HEIGHT, patches, SOUND_SPEED)
             .expect("valid rectangle");
-    let far_field =
-        |x: f64, y: f64, z: f64, dt: f64| rectangle.round_trip_response(x, y, z, dt).samples;
+    let far_field = |x: f64, y: f64, z: f64, dt: f64| rectangle.response(x, y, z, dt);
     synthesis_group(c, "aperture_rf_synthesis_rectangle", &far_field);
+    array_transmit_group(c, &far_field);
 }
 
 criterion_group!(benches, aperture_rf_synthesis);
