@@ -2,7 +2,7 @@
 
 <a id="kw-native-r2c"></a>
 
-## KW-NATIVE-R2C-2026-09-11 — The PSTD spectral path costs twice the FFT it wraps [patch] [perf] — blocked
+## KW-NATIVE-R2C-2026-09-11 — The PSTD spectral path costs twice the FFT it wraps [patch] [perf] — in-progress
 
 - **Finding.** `Fft3dInOutExt::forward_r2c_into` / `inverse_c2r_into` emulate a
   half-spectrum transform on apollo's full complex plan: fill a full-volume
@@ -18,8 +18,9 @@
   thread-local full-spectrum scratch, and the unused `scratch` argument's
   compatibility note. The `(nx, ny, nz/2+1)` layout the PSTD core uses is the
   pair's native output, so no call site changes.
-- **Blocked on:** [`apollo #apollo-native-real-3d`](../apollo/backlog.md#apollo-native-real-3d)
-  (re-open when it merges). **Acceptance oracle:** the r2c arm of
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-native-r2c`; **last-update:** 2026-09-11.
+  **Dependency:** [`apollo #apollo-native-real-3d`](../apollo/backlog.md#apollo-native-real-3d),
+  merged in apollo #436. **Acceptance oracle:** the r2c arm of
   `fft3d_baseline` falls below the complex arm at every extent; the PSTD
   validation suite passes unchanged. **Risk / change class:** [patch] [perf].
 
