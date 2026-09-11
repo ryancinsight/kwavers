@@ -143,3 +143,26 @@ on its support for the round trip, with `RectangularPistonSir` as its
 differential oracle. A rigid-rotation invariance test guards the frame plumbing, and a
 non-finite kernel sample is now an error rather than a silent point-element
 fallback (`backlog.md#kw-sir-far-field-patch-2026-09-08`).
+
+**2026-09-11 — one-way responses, a shared sampled-support type, and the
+array transmit.** The seam is now `ApertureKernel`: the one-way `response`
+is required and `round_trip` defaults to its auto-convolution, so a provider
+writes one closed form and an assembly can place each element's response at
+its own onset. The onset-plus-samples type and the discrete convolutions
+that both crates needed moved to `kwavers-math::numerics::convolution`
+(`SupportSamples`, `convolve`, `auto_convolve`, `superpose`, `convolve_into`),
+replacing the physics `SampledResponse` and the phantom-local copies; the
+circular piston gained a support-local `response`.
+`synthesize_rf_with_array_transmit` is the Field II model in full: a delayed,
+apodized array's transmit response is the superposition of its elements'
+responses, each receive echo is its cross-convolution with the receive
+element's response at the kernels' own onsets, and the amplitude comes from
+the responses (each carries `1/l`) with no spreading law and no unit-area
+normalization — normalizing would erase the apodization and the array's
+directivity, which are the point of the event. That leaves two amplitude
+conventions in one module, deliberately: the monostatic refinement keeps
+ADR 113's unit-area shape so it reduces to the point-element model it
+refines, and the array path keeps the SIR amplitudes so it models what a
+wavefront cannot. Delays round to the sample grid as the point-element times
+of flight do; sub-sample steering is a recorded follow-up
+(`backlog.md#kw-sir-array-transmit-2026-09-11`).

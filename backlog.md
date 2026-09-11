@@ -2,7 +2,7 @@
 
 <a id="kw-sir-array-transmit-2026-09-11"></a>
 
-## KW-SIR-ARRAY-TRANSMIT-2026-09-11 — Finite-aperture RF for a delayed, apodized array transmit [major] — in-progress
+## KW-SIR-ARRAY-TRANSMIT-2026-09-11 — Finite-aperture RF for a delayed, apodized array transmit [major] — review
 
 - **Integrator:** claude-fable-5-1; **branch:** `feat/kwavers-sir-array-transmit`
   (main tree); regions: `kwavers-math::numerics::convolution` (new),
@@ -36,6 +36,15 @@
   scales in KW-SIR-FAR-FIELD-PATCH-2026-09-08); fractional-sample electronic
   delays (delays round to the grid as the point model does; noted as a
   follow-up if a caller needs sub-sample steering).
+- **Evidence:** phantom 43/43, physics SIR and math convolution filters green
+  (76 in the combined run); fmt, clippy (phantom all targets, physics and math
+  lib, the bench), `cargo doc` under `-D warnings`, doctests green. Bench
+  `aperture_rf_synthesis` (this host, unpinned, same run): circular 106.7 µs /
+  264.0 µs, rectangle 231.3 µs / 784.8 µs, array transmit 355.6 µs / 1.097 ms
+  at 16 / 64 scatterers over 8 elements — the array path costs about 1.9 µs
+  per element–scatterer pair (8 one-way responses, one superposition, 8
+  cross-convolutions per scatterer). The lockfile gains the phantom → math
+  edge.
 
 <a id="kw-manifest-implementation-2026-09-09"></a>
 

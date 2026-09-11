@@ -1,13 +1,15 @@
 //! Value-semantic tests for the finite-aperture seam (ADR 113).
 
-use super::super::{RfSynthesisConfig, ScattererCloud};
+use super::super::{ArrayTransmit, RfSynthesisConfig, ScattererCloud};
 use super::*;
+use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
+use kwavers_math::numerics::convolution::convolve_into;
 
-/// A circular-piston round-trip kernel, reimplemented here as a test double so
-/// this crate's tests do not reach into `kwavers-physics` — the dependency the
-/// seam exists to avoid. Mirrors `CircularPistonSir::round_trip_response`:
-/// the one-way Tupholme–Stepanishen SIR sampled at the bin midpoints inside
-/// its support and discretely auto-convolved, returned from its onset.
+/// A circular-piston kernel, reimplemented here as a test double so this
+/// crate's tests do not reach into `kwavers-physics` — the dependency the seam
+/// exists to avoid. Mirrors `CircularPistonSir::response`: the one-way
+/// Tupholme–Stepanishen SIR sampled at the bin midpoints inside its support,
+/// returned from its onset; the round trip is the seam's default.
 struct CircularPiston {
     radius: f64,
     sound_speed: f64,
@@ -53,23 +55,32 @@ impl CircularPiston {
     }
 }
 
-impl RoundTripKernel for CircularPiston {
-    fn round_trip(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> Vec<f64> {
+impl ApertureKernel for CircularPiston {
+    fn response(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> SupportSamples {
         let r_m = x_m.hypot(y_m);
-        let h: Vec<f64> = self
-            .support_bins(r_m, z_m, dt_s)
-            .map(|k| self.evaluate(r_m, z_m, (k as f64 + 0.5) * dt_s))
-            .collect();
-        let mut out = vec![0.0_f64; (2 * h.len()).saturating_sub(1)];
-        for (i, &hi) in h.iter().enumerate() {
-            if hi == 0.0 {
-                continue;
-            }
-            for (j, &hj) in h.iter().enumerate() {
-                out[i + j] += hi * hj * dt_s;
-            }
+        let bins = self.support_bins(r_m, z_m, dt_s);
+        if bins.is_empty() {
+            // No node inside the support: the impulse of the area a²/(2·d̄), as
+            // the physics provider returns it.
+            let (a, c) = (self.radius, self.sound_speed);
+            let d_min = if r_m <= a {
+                z_m
+            } else {
+                (z_m * z_m + (r_m - a).powi(2)).sqrt()
+            };
+            let d_max = (z_m * z_m + (r_m + a).powi(2)).sqrt();
+            let mean = 0.5 * (d_min + d_max);
+            return SupportSamples {
+                first_sample: (mean / c / dt_s).floor() as usize,
+                samples: vec![a * a / (2.0 * mean) / dt_s],
+            };
         }
-        out
+        SupportSamples {
+            first_sample: bins.start,
+            samples: bins
+                .map(|k| self.evaluate(r_m, z_m, (k as f64 + 0.5) * dt_s))
+                .collect(),
+        }
     }
 }
 
@@ -102,7 +113,7 @@ fn round_trip_kernel_area_matches_the_closed_form() {
     let dt = 1.0 / 200.0e6;
 
     let kernel = piston.round_trip(0.0, 0.0, z, dt);
-    let area: f64 = kernel.iter().sum::<f64>() * dt;
+    let area = kernel.area(dt);
     let expected = ((z * z + a * a).sqrt() - z).powi(2);
 
     assert!(
@@ -259,12 +270,15 @@ struct AnisotropicBox {
     sound_speed: f64,
 }
 
-impl RoundTripKernel for AnisotropicBox {
-    fn round_trip(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> Vec<f64> {
+impl ApertureKernel for AnisotropicBox {
+    fn response(&self, x_m: f64, y_m: f64, z_m: f64, dt_s: f64) -> SupportSamples {
         let l = x_m.hypot(y_m).hypot(z_m);
         let span = (self.width_x * x_m.abs() + self.width_y * y_m.abs()) / (l * self.sound_speed);
         let bins = (span / dt_s).ceil().max(1.0) as usize;
-        vec![1.0; bins]
+        SupportSamples {
+            first_sample: (l / self.sound_speed / dt_s) as usize,
+            samples: vec![1.0; bins],
+        }
     }
 }
 
@@ -406,7 +420,7 @@ fn trace_accumulation_matches_the_per_pair_association() {
             let p = scatterer.position;
             let distance = (d[0] - p[0]).hypot(d[1] - p[1]).hypot(d[2] - p[2]);
             let [x, y, z] = element.field_point(p).expect("in front");
-            let kernel = piston.round_trip(x, y, z, dt);
+            let kernel = piston.round_trip(x, y, z, dt).samples;
             let area: f64 = kernel.iter().sum::<f64>() * dt;
             let shape: Vec<f64> = kernel.iter().map(|k| k / area).collect();
             let mut echo = vec![0.0_f64; pulse.len() + shape.len() - 1];
@@ -440,4 +454,348 @@ fn trace_accumulation_matches_the_per_pair_association() {
         worst <= 1.0e-12 * peak,
         "trace accumulation must match the per-pair association to reassociation rounding: worst {worst:.3e} against peak {peak:.3e}"
     );
+}
+
+fn element_at(x: f64) -> ApertureElement {
+    ApertureElement::new([x, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]).expect("element")
+}
+
+fn worst_difference(a: &leto::Array2<f64>, b: &leto::Array2<f64>) -> (f64, f64) {
+    let peak = a.iter().fold(0.0_f64, |m, v| m.max(v.abs()));
+    let worst = a
+        .iter()
+        .zip(b.iter())
+        .fold(0.0_f64, |m, (p, q)| m.max((p - q).abs()));
+    (worst, peak)
+}
+
+/// ## Theorem
+/// One element firing with zero delay and receiving is the monostatic round
+/// trip: the trace is `a_s·(h ⊛ h)·dt` at twice the one-way onset, then the
+/// pulse. The Field II amplitude model applies no spreading law, so the
+/// comparison is against the raw auto-convolution, not a unit-area shape.
+///
+/// The two sides differ only by floating-point association (`ε`-level per
+/// term, a handful of terms per sample), so `1e-12` of the peak bounds them.
+#[test]
+fn single_element_array_transmit_is_the_round_trip_at_twice_the_onset() {
+    let cloud = ScattererCloud::from_points(&[[0.3e-3, 0.0, 7.0e-3]], &[0.8]).expect("cloud");
+    let cfg = config(100.0e6, 1400);
+    let dt = 1.0 / cfg.sampling_frequency;
+    let pulse = [1.0, -0.5, 0.2];
+    let elements = [element_at(0.0)];
+    let piston = CircularPiston {
+        radius: 2.0e-3,
+        sound_speed: cfg.sound_speed,
+    };
+
+    let rf = cloud
+        .synthesize_rf_with_array_transmit(
+            &elements,
+            &ArrayTransmit::plane(1),
+            &pulse,
+            &cfg,
+            &piston,
+        )
+        .expect("array transmit");
+
+    let [x, y, z] = elements[0]
+        .field_point(cloud.scatterers()[0].position)
+        .expect("in front");
+    let two_way = piston.response(x, y, z, dt).auto_convolve(dt);
+    let mut trace = vec![0.0_f64; cfg.num_samples];
+    for (offset, &sample) in two_way.samples.iter().enumerate() {
+        trace[two_way.first_sample + offset] = 0.8 * sample;
+    }
+    let mut expected = vec![0.0_f64; cfg.num_samples];
+    convolve_into(&mut expected, &trace, &pulse, dt);
+
+    let peak = expected.iter().fold(0.0_f64, |m, v| m.max(v.abs()));
+    assert!(peak > 0.0, "the echo must land inside the window");
+    let worst = expected
+        .iter()
+        .enumerate()
+        .fold(0.0_f64, |m, (k, &e)| m.max((rf[[0, k]] - e).abs()));
+    assert!(
+        worst <= 1.0e-12 * peak,
+        "single-element array transmit must equal the round trip: worst {worst:.3e} against peak {peak:.3e}"
+    );
+}
+
+/// ## Theorem
+/// The transmit response is linear in the apodization, so the RF of a
+/// weighted event is the sum of the RFs of its parts.
+#[test]
+fn array_transmit_is_linear_in_the_apodization() {
+    let cloud = ScattererCloud::from_points(
+        &[[0.5e-3, 0.2e-3, 6.0e-3], [-0.8e-3, 0.0, 9.0e-3]],
+        &[1.0, -0.6],
+    )
+    .expect("cloud");
+    let cfg = config(100.0e6, 1600);
+    let pulse = [0.4, 1.0, -0.7];
+    let elements = [element_at(-0.5e-3), element_at(0.5e-3)];
+    let piston = CircularPiston {
+        radius: 0.4e-3,
+        sound_speed: cfg.sound_speed,
+    };
+    let delays = vec![0.0, 20.0e-9];
+    let run = |weights: Vec<f64>| {
+        cloud
+            .synthesize_rf_with_array_transmit(
+                &elements,
+                &ArrayTransmit::new(delays.clone(), weights).expect("event"),
+                &pulse,
+                &cfg,
+                &piston,
+            )
+            .expect("array transmit")
+    };
+    let both = run(vec![1.0, 0.5]);
+    let first = run(vec![1.0, 0.0]);
+    let second = run(vec![0.0, 0.5]);
+    let sum = leto::Array2::from_shape_fn([elements.len(), cfg.num_samples], |index| {
+        first[index] + second[index]
+    });
+    let (worst, peak) = worst_difference(&both, &sum);
+    assert!(peak > 0.0);
+    assert!(
+        worst <= 1.0e-12 * peak,
+        "apodization must enter linearly: worst {worst:.3e} against peak {peak:.3e}"
+    );
+}
+
+/// ## Theorem
+/// Focusing delays make every element's arrival at the focus coincide:
+/// `l_m/c + τ_m` is one value, the farthest element fires at `t = 0`, and no
+/// delay is negative.
+#[test]
+fn focusing_delays_align_the_arrivals_at_the_focus() {
+    let c = 1540.0;
+    let elements = [element_at(-1.0e-3), element_at(0.0), element_at(1.0e-3)];
+    let focus = [0.5e-3, 0.0, 6.0e-3];
+    let event = ArrayTransmit::focused(&elements, focus, c).expect("focused");
+    let arrivals: Vec<f64> = elements
+        .iter()
+        .zip(event.delays_s())
+        .map(|(e, &tau)| {
+            let d = [
+                focus[0] - e.position[0],
+                focus[1] - e.position[1],
+                focus[2] - e.position[2],
+            ];
+            d[0].hypot(d[1]).hypot(d[2]) / c + tau
+        })
+        .collect();
+    for &tau in event.delays_s() {
+        assert!(tau >= 0.0);
+    }
+    assert!(
+        event.delays_s().contains(&0.0),
+        "the farthest element fires at t = 0"
+    );
+    for &arrival in &arrivals {
+        assert!(
+            (arrival - arrivals[0]).abs() <= 1.0e-15 * arrivals[0],
+            "arrivals must coincide: {arrivals:?}"
+        );
+    }
+    assert_eq!(event.apodization(), &[1.0, 1.0, 1.0]);
+}
+
+/// ## Theorem
+/// Attenuation enters once per leg, so a single-element echo scales by the
+/// round-trip factor `exp(−α·2l)` at the configured centre frequency.
+#[test]
+fn attenuation_scales_a_single_element_echo_by_the_round_trip_factor() {
+    let scatterer = [0.4e-3, 0.0, 8.0e-3];
+    let cloud = ScattererCloud::from_points(&[scatterer], &[1.0]).expect("cloud");
+    let lossless = config(100.0e6, 1600);
+    let lossy = RfSynthesisConfig {
+        attenuation_db_cm_mhz: 0.5,
+        ..lossless
+    };
+    let pulse = [1.0, -1.0];
+    let elements = [element_at(0.0)];
+    let piston = CircularPiston {
+        radius: 1.0e-3,
+        sound_speed: lossless.sound_speed,
+    };
+    let event = ArrayTransmit::plane(1);
+    let reference = cloud
+        .synthesize_rf_with_array_transmit(&elements, &event, &pulse, &lossless, &piston)
+        .expect("lossless");
+    let attenuated = cloud
+        .synthesize_rf_with_array_transmit(&elements, &event, &pulse, &lossy, &piston)
+        .expect("lossy");
+
+    let l = scatterer[0].hypot(scatterer[2]);
+    let alpha_np_m =
+        lossy.attenuation_db_cm_mhz * (lossy.center_frequency_hz / 1.0e6) * 100.0 / NP_TO_DB;
+    let factor = (-alpha_np_m * 2.0 * l).exp();
+    assert!(
+        factor < 0.99,
+        "the case must attenuate measurably, got {factor}"
+    );
+    let scaled =
+        leto::Array2::from_shape_fn([1, lossless.num_samples], |index| reference[index] * factor);
+    let (worst, peak) = worst_difference(&attenuated, &scaled);
+    assert!(peak > 0.0);
+    assert!(
+        worst <= 1.0e-12 * peak,
+        "attenuation must scale the echo by exp(-2αl): worst {worst:.3e} against peak {peak:.3e}"
+    );
+}
+
+#[test]
+fn array_transmit_rejects_mismatched_lengths_and_non_finite_kernels() {
+    assert!(ArrayTransmit::new(vec![0.0], vec![1.0, 1.0]).is_err());
+    assert!(ArrayTransmit::new(vec![-1.0e-9], vec![1.0]).is_err());
+    assert!(ArrayTransmit::new(vec![f64::NAN], vec![1.0]).is_err());
+    assert!(ArrayTransmit::new(vec![0.0], vec![f64::INFINITY]).is_err());
+
+    let cloud = ScattererCloud::from_points(&[[0.0, 0.0, 5.0e-3]], &[1.0]).expect("cloud");
+    let cfg = config(100.0e6, 1000);
+    let elements = [element_at(0.0)];
+    let piston = CircularPiston {
+        radius: 1.0e-3,
+        sound_speed: cfg.sound_speed,
+    };
+    let err = cloud
+        .synthesize_rf_with_array_transmit(
+            &elements,
+            &ArrayTransmit::plane(2),
+            &[1.0],
+            &cfg,
+            &piston,
+        )
+        .expect_err("two delays for one element");
+    assert!(format!("{err}").contains("one delay and apodization per element"));
+
+    let poisoned = |_x: f64, _y: f64, _z: f64, _dt: f64| SupportSamples {
+        first_sample: 10,
+        samples: vec![1.0, f64::NAN],
+    };
+    let err = cloud
+        .synthesize_rf_with_array_transmit(
+            &elements,
+            &ArrayTransmit::plane(1),
+            &[1.0],
+            &cfg,
+            &poisoned,
+        )
+        .expect_err("a NaN sample is a provider defect");
+    assert!(format!("{err}").contains("non-finite sample"));
+}
+
+/// ## Theorem
+/// Two elements with distinct non-zero delays produce, on each receiver, the
+/// cross-convolution of the delayed, weighted transmit superposition with
+/// that receiver's own response, at the kernels' summed onsets.
+///
+/// The expected rows are assembled from the math primitives and the test
+/// double alone — `superpose` with `round(τ_m·fs)`, `convolve` with the
+/// receive response, `convolve_into` with the pulse — so a zeroed delay, a
+/// delay in the wrong unit, or a receive leg reading the wrong element all
+/// move a row. Rounding: a few terms per sample, so `1e-12` of the peak.
+#[test]
+fn delayed_two_element_transmit_matches_the_primitive_assembly_per_receiver() {
+    let scatterers = [[0.4e-3, 0.1e-3, 6.0e-3], [-0.6e-3, 0.0, 8.5e-3]];
+    let amplitudes = [1.0, -0.7];
+    let cloud = ScattererCloud::from_points(&scatterers, &amplitudes).expect("cloud");
+    let cfg = config(100.0e6, 1600);
+    let fs = cfg.sampling_frequency;
+    let dt = 1.0 / fs;
+    let pulse = [0.3, 1.0, -0.6];
+    let elements = [element_at(-0.5e-3), element_at(0.5e-3)];
+    let piston = CircularPiston {
+        radius: 0.4e-3,
+        sound_speed: cfg.sound_speed,
+    };
+    let delays = [35.0e-9, 120.0e-9];
+    let weights = [1.0, 0.6];
+    let event = ArrayTransmit::new(delays.to_vec(), weights.to_vec()).expect("event");
+
+    let rf = cloud
+        .synthesize_rf_with_array_transmit(&elements, &event, &pulse, &cfg, &piston)
+        .expect("array transmit");
+
+    let mut traces = vec![vec![0.0_f64; cfg.num_samples]; elements.len()];
+    for (scatterer, &amplitude) in scatterers.iter().zip(&amplitudes) {
+        let responses: Vec<SupportSamples> = elements
+            .iter()
+            .map(|e| {
+                let [x, y, z] = e.field_point(*scatterer).expect("in front");
+                piston.response(x, y, z, dt)
+            })
+            .collect();
+        let mut transmit = SupportSamples::zero();
+        for ((response, &tau), &weight) in responses.iter().zip(&delays).zip(&weights) {
+            transmit.superpose(response, (tau * fs).round() as usize, weight);
+        }
+        for (trace, response) in traces.iter_mut().zip(&responses) {
+            let echo = transmit.convolve(response, dt);
+            for (offset, &sample) in echo.samples.iter().enumerate() {
+                if let Some(slot) = trace.get_mut(echo.first_sample + offset) {
+                    *slot += amplitude * sample;
+                }
+            }
+        }
+    }
+    let mut peak = 0.0_f64;
+    let mut worst = 0.0_f64;
+    for (e, trace) in traces.iter().enumerate() {
+        let mut expected = vec![0.0_f64; cfg.num_samples];
+        convolve_into(&mut expected, trace, &pulse, dt);
+        for (k, &value) in expected.iter().enumerate() {
+            peak = peak.max(value.abs());
+            worst = worst.max((rf[[e, k]] - value).abs());
+        }
+    }
+    assert!(peak > 0.0, "both receivers must see both echoes");
+    // The delays are load-bearing: the shifts differ by 8.5 samples, so an
+    // assembly with zero delays lands elsewhere.
+    assert!((delays[1] - delays[0]) * fs > 8.0);
+    assert!(
+        worst <= 1.0e-12 * peak,
+        "per-receiver rows must match the primitive assembly: worst {worst:.3e} against peak {peak:.3e}"
+    );
+}
+
+/// An empty response is a provider defect on either path — on the array path
+/// its area is the amplitude, so silence would be the wrong answer.
+#[test]
+fn an_empty_response_is_an_error_on_both_paths() {
+    let cloud = ScattererCloud::from_points(&[[0.0, 0.0, 5.0e-3]], &[1.0]).expect("cloud");
+    let cfg = config(100.0e6, 1000);
+    let elements = [element_at(0.0)];
+    let empty = |_x: f64, _y: f64, _z: f64, _dt: f64| SupportSamples::zero();
+    let err = cloud
+        .synthesize_rf_with_array_transmit(
+            &elements,
+            &ArrayTransmit::plane(1),
+            &[1.0],
+            &cfg,
+            &empty,
+        )
+        .expect_err("empty response on the array path");
+    assert!(format!("{err}").contains("empty"));
+    let err = cloud
+        .synthesize_rf_with_aperture(&elements, &[1.0], &cfg, &empty)
+        .expect_err("empty response on the monostatic path");
+    assert!(format!("{err}").contains("empty"));
+
+    // A non-empty response with no area is the same defect in another form.
+    let dead = |_x: f64, _y: f64, _z: f64, _dt: f64| SupportSamples {
+        first_sample: 100,
+        samples: vec![0.0],
+    };
+    let err = cloud
+        .synthesize_rf_with_array_transmit(&elements, &ArrayTransmit::plane(1), &[1.0], &cfg, &dead)
+        .expect_err("zero-area response on the array path");
+    assert!(format!("{err}").contains("no area"));
+    let err = cloud
+        .synthesize_rf_with_aperture(&elements, &[1.0], &cfg, &dead)
+        .expect_err("zero-area response on the monostatic path");
+    assert!(format!("{err}").contains("no area"));
 }
