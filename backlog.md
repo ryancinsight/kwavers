@@ -29,6 +29,12 @@
   reads 19.8 µs per 16³ round trip, so the gap is the inverse's copy of `half_in` into `scratch`.
   **Slice 2:** an inverse that consumes its input half spectrum, dropping the copy and the `scratch`
   argument at every call site whose input is dead after the inverse.
+- **Slice 2** (e59e1baa, stacked on #770): `inverse_c2r_into` consumes its input, so the copy and the
+  `scratch` argument are gone at all 31 call sites, each checked input-dead first. Gated: fmt, clippy on
+  kwavers-math and kwavers-solver, 676 hook tests, the four validation suites, PSTD 166. **Open:** the 16³
+  wall-clock confirmation. Three pinned alternating rounds at 49–100% host load disagree: r2c 20.2 against
+  22.5 µs at the lightest load, then 28.3 against 24.9 and 29.1 against 26.0 as load rose to 100%.
+  **Re-open:** a pinned run with host load under 10% before and after each arm.
 
 <a id="kw-sir-array-transmit-2026-09-11"></a>
 
