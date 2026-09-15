@@ -83,6 +83,7 @@ pub mod derivatives; // Spectral derivatives (NEW)
 pub mod dg;
 pub mod extensions;
 pub mod implementation;
+mod lanes;
 pub mod numerics;
 pub mod physics;
 pub mod plugin;
