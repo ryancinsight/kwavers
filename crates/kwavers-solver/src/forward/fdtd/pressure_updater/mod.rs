@@ -7,7 +7,8 @@
 
 use leto::Array3 as LetoArray3;
 use leto::{Array3, ArrayView3};
-use moirai_parallel::{enumerate_mut_with, Adaptive};
+
+use crate::forward::lanes::for_each_z_lane;
 
 pub mod divergence;
 pub mod nonlinear;
@@ -27,12 +28,23 @@ pub(super) fn accumulate_two_fields(target: &mut Array3<f64>, x: &Array3<f64>, y
         "invariant: FDTD divergence y-gradient shape matches target"
     );
 
+    let [_, ny, nz] = target.shape();
     if let (Some(target_values), Some(x_values), Some(y_values)) =
         (target.as_slice_mut(), x.as_slice(), y.as_slice())
     {
-        enumerate_mut_with::<Adaptive, _, _>(target_values, |idx, target_value| {
-            *target_value += x_values[idx] + y_values[idx];
-        });
+        for_each_z_lane(
+            target_values,
+            [ny, nz],
+            3 * size_of::<f64>(),
+            |start, _, _, lane| {
+                let inputs = x_values[start..start + nz]
+                    .iter()
+                    .zip(&y_values[start..start + nz]);
+                for (target_value, (&x_value, &y_value)) in lane.iter_mut().zip(inputs) {
+                    *target_value += x_value + y_value;
+                }
+            },
+        );
     } else {
         leto_ops::zip_mut_with(
             target.view_mut(),
@@ -60,14 +72,26 @@ pub(super) fn apply_pressure_update(
         "invariant: FDTD rho*c^2 shape matches pressure field"
     );
 
+    let [_, ny, nz] = pressure.shape();
     if let (Some(pressure_values), Some(divergence_values), Some(rho_values)) = (
         pressure.as_slice_mut(),
         divergence.as_slice(),
         rho_c_squared.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
-            *pressure_value -= dt * rho_values[idx] * divergence_values[idx];
-        });
+        for_each_z_lane(
+            pressure_values,
+            [ny, nz],
+            3 * size_of::<f64>(),
+            |start, _, _, lane| {
+                let inputs = rho_values[start..start + nz]
+                    .iter()
+                    .zip(&divergence_values[start..start + nz]);
+                for (pressure_value, (&rho_value, &divergence_value)) in lane.iter_mut().zip(inputs)
+                {
+                    *pressure_value -= dt * rho_value * divergence_value;
+                }
+            },
+        );
     } else {
         for ((pressure_value, &divergence_value), &rho_value) in pressure
             .iter_mut()
@@ -111,6 +135,7 @@ pub(super) fn apply_absorbing_pressure_update(
         "invariant: FDTD relaxation term shape matches pressure field"
     );
 
+    let [_, ny, nz] = pressure.shape();
     if let (
         Some(pressure_values),
         Some(divergence_values),
@@ -122,10 +147,22 @@ pub(super) fn apply_absorbing_pressure_update(
         unrelaxed_modulus.as_slice(),
         relaxation.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
-            *pressure_value -=
-                dt * modulus_values[idx].mul_add(divergence_values[idx], relax_values[idx]);
-        });
+        for_each_z_lane(
+            pressure_values,
+            [ny, nz],
+            4 * size_of::<f64>(),
+            |start, _, _, lane| {
+                let inputs = modulus_values[start..start + nz]
+                    .iter()
+                    .zip(&divergence_values[start..start + nz])
+                    .zip(&relax_values[start..start + nz]);
+                for (pressure_value, ((&modulus_value, &divergence_value), &relax_value)) in
+                    lane.iter_mut().zip(inputs)
+                {
+                    *pressure_value -= dt * modulus_value.mul_add(divergence_value, relax_value);
+                }
+            },
+        );
     } else {
         for (((pressure_value, &divergence_value), &modulus_value), &relax_value) in pressure
             .iter_mut()
@@ -145,11 +182,21 @@ pub(super) fn add_nonlinear_pressure_delta(pressure: &mut LetoArray3<f64>, delta
         "invariant: FDTD nonlinear pressure delta shape matches pressure field"
     );
 
+    let [_, ny, nz] = pressure.shape();
     if let (Some(pressure_values), Some(delta_values)) = (pressure.as_slice_mut(), delta.as_slice())
     {
-        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
-            *pressure_value += delta_values[idx];
-        });
+        for_each_z_lane(
+            pressure_values,
+            [ny, nz],
+            2 * size_of::<f64>(),
+            |start, _, _, lane| {
+                for (pressure_value, &delta_value) in
+                    lane.iter_mut().zip(&delta_values[start..start + nz])
+                {
+                    *pressure_value += delta_value;
+                }
+            },
+        );
     } else {
         for (pressure_value, delta_value) in pressure
             .as_slice_mut()

@@ -57,6 +57,7 @@ use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_source::GridSource;
 use leto_ops::Axis;
 
+mod phase_split;
 mod stepping;
 
 /// Helper: create a minimal FdtdSolver for unit tests.

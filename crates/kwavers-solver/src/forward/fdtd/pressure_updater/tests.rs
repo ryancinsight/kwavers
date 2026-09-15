@@ -226,3 +226,92 @@ fn test_staggered_divergence_uses_scratch_buffer() {
 
     assert_eq!(solver.divergence_scratch, expected);
 }
+
+/// One volume below the lane walker's parallel floor and one above it.
+const KERNEL_SHAPES: [[usize; 3]; 2] = [[5, 3, 7], [37, 29, 31]];
+
+fn kernel_field(shape: [usize; 3], seed: f64) -> leto::Array3<f64> {
+    let values = (0..shape.iter().product::<usize>())
+        .map(|index| (index as f64).mul_add(0.754_8, seed).sin())
+        .collect();
+    leto::Array3::from_shape_vec(shape, values).expect("values match the shape")
+}
+
+fn kernel_at(field: &leto::Array3<f64>, index: usize) -> f64 {
+    field.as_slice().expect("owned arrays are contiguous")[index]
+}
+
+// Each lane kernel computes the expression of the per-element loop it
+// replaced, in the same order, so the results agree to the bit.
+
+#[test]
+fn two_field_accumulation_is_the_per_element_sum_to_the_bit() {
+    for shape in KERNEL_SHAPES {
+        let (x, y) = (kernel_field(shape, 1.0), kernel_field(shape, 2.0));
+        let initial = kernel_field(shape, 3.0);
+        let mut target = initial.clone();
+        super::accumulate_two_fields(&mut target, &x, &y);
+        let same = (0..target.len()).all(|i| {
+            let expected = kernel_at(&initial, i) + (kernel_at(&x, i) + kernel_at(&y, i));
+            kernel_at(&target, i).to_bits() == expected.to_bits()
+        });
+        assert!(same, "two-field accumulation diverges at {shape:?}");
+    }
+}
+
+#[test]
+fn pressure_update_is_the_per_element_formula_to_the_bit() {
+    const DT: f64 = 3.1e-8;
+    for shape in KERNEL_SHAPES {
+        let (divergence, rho_c_squared) = (kernel_field(shape, 1.0), kernel_field(shape, 2.0));
+        let initial = kernel_field(shape, 3.0);
+        let mut pressure = initial.clone();
+        super::apply_pressure_update(&mut pressure, divergence.view(), &rho_c_squared, DT);
+        let same = (0..pressure.len()).all(|i| {
+            let expected = kernel_at(&initial, i)
+                - DT * kernel_at(&rho_c_squared, i) * kernel_at(&divergence, i);
+            kernel_at(&pressure, i).to_bits() == expected.to_bits()
+        });
+        assert!(same, "pressure update diverges at {shape:?}");
+    }
+}
+
+#[test]
+fn absorbing_pressure_update_is_the_per_element_formula_to_the_bit() {
+    const DT: f64 = 3.1e-8;
+    for shape in KERNEL_SHAPES {
+        let divergence = kernel_field(shape, 1.0);
+        let (modulus, relaxation) = (kernel_field(shape, 2.0), kernel_field(shape, 4.0));
+        let initial = kernel_field(shape, 3.0);
+        let mut pressure = initial.clone();
+        super::apply_absorbing_pressure_update(
+            &mut pressure,
+            divergence.view(),
+            &modulus,
+            &relaxation,
+            DT,
+        );
+        let same = (0..pressure.len()).all(|i| {
+            let expected = kernel_at(&initial, i)
+                - DT * kernel_at(&modulus, i)
+                    .mul_add(kernel_at(&divergence, i), kernel_at(&relaxation, i));
+            kernel_at(&pressure, i).to_bits() == expected.to_bits()
+        });
+        assert!(same, "absorbing pressure update diverges at {shape:?}");
+    }
+}
+
+#[test]
+fn nonlinear_pressure_delta_is_the_per_element_sum_to_the_bit() {
+    for shape in KERNEL_SHAPES {
+        let delta = kernel_field(shape, 1.0);
+        let initial = kernel_field(shape, 3.0);
+        let mut pressure = initial.clone();
+        super::add_nonlinear_pressure_delta(&mut pressure, &delta);
+        let same = (0..pressure.len()).all(|i| {
+            let expected = kernel_at(&initial, i) + kernel_at(&delta, i);
+            kernel_at(&pressure, i).to_bits() == expected.to_bits()
+        });
+        assert!(same, "nonlinear pressure delta diverges at {shape:?}");
+    }
+}

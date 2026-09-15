@@ -20,6 +20,15 @@
 - **Open:** the timing comparison. The first pinned pair is interim, and the next two runs were discarded (a peer build held the host at 100% load).
 - **Integrator:** claude-opus-5; **branch:** `perf/kwavers-viscoacoustic-axis-lanes` (stacked on #780); **PR:** #781; **last-update:** 2026-09-15.
 
+<a id="kw-fdtd-pointwise-lanes"></a>
+
+## KW-FDTD-POINTWISE-LANES-2026-09-15 — FDTD step updates dispatch one closure call per element [patch] [perf] — in-progress
+
+- **Finding.** Every FDTD step runs its velocity update (`update_velocity_from_gradient`, three axes), divergence accumulation (`accumulate_two_fields`) and pressure update (`apply_pressure_update`, or `apply_absorbing_pressure_update` with relaxation) through `enumerate_mut_with::<Adaptive>`. Past 1024 elements moirai splits the pass into worker-count chunks and calls the closure once per element with bounds-checked reads, so the loops neither vectorize nor size their tasks by bytes. The nonlinear pressure delta and the two pressure source masks take the same path.
+- **Change.** These kernels walk z lanes on moirai unit tasks through `forward::lanes`, zipping their inputs along each lane with expressions unchanged, including the density floor in the velocity update.
+- **Acceptance:** each kernel is the per-element formula to the bit, serially and across tasks; FDTD suites and allocation contracts clean; `fdtd_step_64_cubed` before and after, unpinned and alternating.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fdtd-pointwise-lanes` (stacked on #781); **last-update:** 2026-09-15.
+
 <a id="kw-spectral-solvers-half-spectrum"></a>
 
 ## KW-SPECTRAL-SOLVERS-HALF-SPECTRUM-2026-09-15 — The Kuznetsov and DG spectral Laplacians allocate full grids every call [patch] [perf] — in-progress
