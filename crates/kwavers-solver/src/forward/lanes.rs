@@ -6,7 +6,10 @@
 //! `(i, j, k)` from a flat index cost two divisions and two remainders per
 //! element and kept the loop from vectorizing.
 
-use moirai_parallel::{for_each_unit_task_mut_with, for_each_unit_task_pair_mut_with, WorkBytes};
+use moirai_parallel::{
+    for_each_unit_task_mut_with, for_each_unit_task_pair_mut_with,
+    for_each_unit_task_triple_mut_with, WorkBytes,
+};
 
 /// Bytes an element-wise pass moves before it spreads over workers.
 ///
@@ -96,6 +99,43 @@ pub(super) fn for_each_z_lane_pair<A, B, F>(
     );
 }
 
+/// Runs `lane(start, i, j, first, second, third)` over the aligned z lanes of
+/// three C-order outputs with trailing extents `[ny, nz]`, for a pass that
+/// writes three fields per element; `element_bytes` counts the three outputs
+/// and every input.
+pub(super) fn for_each_z_lane_triple<A, B, C, F>(
+    first: &mut [A],
+    second: &mut [B],
+    third: &mut [C],
+    [ny, nz]: [usize; 2],
+    element_bytes: usize,
+    lane: F,
+) where
+    A: Send,
+    B: Send,
+    C: Send,
+    F: Fn(usize, usize, usize, &mut [A], &mut [B], &mut [C]) + Send + Sync,
+{
+    for_each_unit_task_triple_mut_with::<WorkBytes<LANE_PARALLEL_BYTES>, _, _, _, _, _, _>(
+        first,
+        second,
+        third,
+        nz,
+        nz * element_bytes,
+        || (),
+        |(), first_lane, firsts, seconds, thirds| {
+            let lanes = firsts
+                .chunks_exact_mut(nz)
+                .zip(seconds.chunks_exact_mut(nz))
+                .zip(thirds.chunks_exact_mut(nz));
+            for (offset, ((a, b), c)) in lanes.enumerate() {
+                let index = first_lane + offset;
+                lane(index * nz, index / ny, index % ny, a, b, c);
+            }
+        },
+    );
+}
+
 /// Runs `plane(i, values)` over every x plane of a C-order output whose planes
 /// hold `plane_len = ny·nz` elements: `i` is the plane's x index and `values`
 /// its elements in storage order.
@@ -127,7 +167,7 @@ pub(super) fn for_each_x_plane<T, F>(
 
 #[cfg(test)]
 mod tests {
-    use super::{for_each_x_plane, for_each_z_lane, LANE_PARALLEL_BYTES};
+    use super::{for_each_x_plane, for_each_z_lane, for_each_z_lane_triple, LANE_PARALLEL_BYTES};
 
     /// Every element of a `[nx, ny, nz]` volume receives the lane coordinates
     /// its flat index implies, whether the pass runs on one thread or spreads
@@ -198,5 +238,45 @@ mod tests {
         let shape = [37, 29, 31];
         assert!(shape.iter().product::<usize>() * 24 >= LANE_PARALLEL_BYTES);
         assert_plane_indices(shape, 24);
+    }
+
+    /// Each of three aligned outputs receives the lane's flat index, `i` and
+    /// `j` respectively, exactly once, serially and across tasks.
+    #[test]
+    fn triple_lanes_carry_aligned_coordinates() {
+        for (shape, element_bytes) in [([5, 3, 7], 8), ([37, 29, 31], 24)] {
+            let [nx, ny, nz] = shape;
+            let n = nx * ny * nz;
+            assert_eq!(n * element_bytes >= LANE_PARALLEL_BYTES, nx == 37);
+            let (mut flat, mut is, mut js) = (
+                vec![usize::MAX; n],
+                vec![usize::MAX; n],
+                vec![usize::MAX; n],
+            );
+            for_each_z_lane_triple(
+                &mut flat,
+                &mut is,
+                &mut js,
+                [ny, nz],
+                element_bytes,
+                |start, i, j, flat, is, js| {
+                    let aligned = flat.iter_mut().zip(is.iter_mut()).zip(js.iter_mut());
+                    for (k, ((f, x), y)) in aligned.enumerate() {
+                        assert_eq!(
+                            (*f, *x, *y),
+                            (usize::MAX, usize::MAX, usize::MAX),
+                            "an element is visited once"
+                        );
+                        (*f, *x, *y) = (start + k, i, j);
+                    }
+                },
+            );
+            for index in 0..n {
+                assert_eq!(
+                    (flat[index], is[index], js[index]),
+                    (index, index / (ny * nz), (index / nz) % ny)
+                );
+            }
+        }
     }
 }

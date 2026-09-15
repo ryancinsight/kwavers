@@ -1,5 +1,15 @@
 # Backlog / Strategy
 
+<a id="kw-pstd-density-source-lanes"></a>
+
+## KW-PSTD-DENSITY-SOURCE-LANES-2026-09-15 — The PSTD density source is the last step kernel on a hand-sized chunk [patch] [perf] — in-progress
+
+- **Finding.** `add_density_source_components` adds the density source to up to three split densities per element in one fused pass over `DENSE_SOURCE_CHUNK = 4096`-element chunks, through moirai chunk walkers for one, two and three buffers. The lane walkers cover one and two outputs only.
+- **Change.** A three-output z-lane walker on moirai's triple unit-task operator; all four branches walk lanes with the sum unchanged; the chunk constant and the chunk walkers go; the lock advances moirai.
+- **Acceptance:** each branch is the per-element sum to the bit, serially and across tasks; PSTD source suites, allocation contracts and clippy clean.
+- **Unblocked:** moirai #350 merged (`906feb65`); the lock advances to it.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-density-source-lanes` (stacked on #781); **last-update:** 2026-09-15.
+
 <a id="kw-viscoacoustic-axis-lanes"></a>
 
 ## KW-VISCOACOUSTIC-AXIS-LANES-2026-09-15 — The viscoacoustic derivative walks its spectrum against the storage order [patch] [perf] — in-progress
@@ -8,7 +18,7 @@
 - **Change.** The symbol pass walks z lanes on moirai unit tasks with the axis resolved per lane (the wavenumber zipped along the lane for z), and the copy passes take the same walker; expressions stay unchanged so the existing FFT reference oracle holds to the bit.
 - **Acceptance:** `axis_derivative` matches `reference_axis_derivative` to the bit on every axis and shape; viscoacoustic suites and clippy clean; a `viscoacoustic_step` comparison against the parent revision, pinned for the serial cases and unpinned at 64^3 (the passes fork-join there, and one-core pinning measures worker spin).
 - **Open:** the timing comparison. The first pinned pair is interim, and the next two runs were discarded (a peer build held the host at 100% load).
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-viscoacoustic-axis-lanes` (stacked on #780); **last-update:** 2026-09-15.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-viscoacoustic-axis-lanes` (stacked on #780); **PR:** #781; **last-update:** 2026-09-15.
 
 <a id="kw-fdtd-pointwise-lanes"></a>
 
