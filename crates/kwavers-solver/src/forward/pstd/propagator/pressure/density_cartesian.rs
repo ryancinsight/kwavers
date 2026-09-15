@@ -1,5 +1,5 @@
+use crate::forward::lanes::{axis_index, for_each_z_lane, LaneAxis};
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
-use crate::forward::pstd::lanes::{axis_index, for_each_z_lane, LaneAxis};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use leto::Array1;

@@ -55,7 +55,7 @@
 //! - Commander & Prosperetti (1989). J. Acoust. Soc. Am. 85(2), 732–746.
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314, Eqs. 9–10, 19–21.
 
-use crate::forward::pstd::lanes::for_each_z_lane;
+use crate::forward::lanes::for_each_z_lane;
 use crate::multiphysics::residual_gas_coupling::BubblyMediumProps;
 use crate::pstd::PSTDSolver;
 use kwavers_core::error::KwaversResult;

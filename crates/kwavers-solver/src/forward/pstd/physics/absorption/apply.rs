@@ -39,7 +39,7 @@
 //! - k-wave-python: `kspace_solver.py:613` — the canonical reference run by
 //!   the parity scripts.
 
-use crate::forward::pstd::lanes::for_each_z_lane;
+use crate::forward::lanes::for_each_z_lane;
 use crate::pstd::PSTDSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};

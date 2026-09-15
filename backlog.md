@@ -1,5 +1,14 @@
 # Backlog / Strategy
 
+<a id="kw-fdtd-kspace-half-spectrum"></a>
+
+## KW-FDTD-KSPACE-HALF-SPECTRUM-2026-09-15 — A k-space corrected FDTD step allocates full grids for every transform [patch] [perf] — in-progress
+
+- **Finding.** `KSpaceFdtdOperators::compute_grad_pos` (every velocity update) and `compute_divergence_neg` (every pressure update) call the allocating full-spectrum `forward`/`inverse`: about seven complex and six real full-grid allocations per step. The gradient kernel recovers its axis index by division per element, and the operators hold four full-shape complex buffers (64 B per grid point).
+- **Change.** Real fields and odd shift operators take the half-spectrum pair, as PSTD does: persistent half-shape spectra and a private `kappa_half`; the gradient kernel and accumulation walk lanes with expressions unchanged; the lane walker moves to `forward/` so FDTD and PSTD share it. The initial-value path keeps full-spectrum arithmetic on its own arrays.
+- **Acceptance:** the analytic sine-to-cosine gradient, constant-field and zero-divergence tests pass; a spectral FDTD step allocates nothing after setup; PSTD suites and clippy clean.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fdtd-kspace-half-spectrum` (stacked on #778); **last-update:** 2026-09-15.
+
 <a id="kw-pstd-linear-eos-lanes"></a>
 
 ## KW-PSTD-LINEAR-EOS-LANES-2026-09-15 — The linear EOS is the last step kernel on a hand-sized chunk [patch] [perf] — in-progress
