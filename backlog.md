@@ -4,7 +4,7 @@
 
 ## KW-SPECTRAL-SOLVERS-HALF-SPECTRUM-2026-09-15 — The Kuznetsov and DG spectral Laplacians allocate full grids every call [patch] [perf] — in-progress
 
-- **Finding.** `KuznetsovSpectralOperator::compute_laplacian_workspace` (every Kuznetsov right-hand side) and `RegionPSTDSolver::spectral_wave_step_into` (every hybrid DG step) copy the field into a fresh array, transform the full complex spectrum and invert into a fresh real array: two full-grid allocations per call. Each holds 80 B per grid point of complex spectra and symbol tables; the Kuznetsov gradient path and its three spectra have no callers.
+- **Finding.** `KuznetsovSpectralOperator::compute_laplacian_workspace` (every Kuznetsov right-hand side) and `RegionPSTDSolver::spectral_wave_step_into` (every hybrid DG step) copy the field into a fresh array, transform the full complex spectrum and invert into a fresh real array: two full-grid allocations per call. The Kuznetsov operator holds 80 B per grid point of complex spectra and the DG solver 64 B of spectra and symbol tables; the Kuznetsov gradient path and its three spectra have no callers.
 - **Change.** Both take the half-spectrum pair with the symbol applied in place on z lanes; the DG solver folds `-|k|^2 filter` into one half-shape table; the dead gradient path goes.
 - **Acceptance:** analytic Fourier-mode Laplacian tests for both operators at even and odd `nz`; repeated evaluations allocate nothing after setup; Kuznetsov, DG and PSTD suites and clippy clean.
 - **Integrator:** claude-opus-5; **branch:** `perf/kwavers-spectral-solvers-half-spectrum` (stacked on #779); **last-update:** 2026-09-15.

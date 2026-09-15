@@ -1,193 +1,110 @@
-//! Spectral operator for efficient FFT-based derivative computations
+//! Spectral Laplacian for the Kuznetsov right-hand side.
 //!
-//! This module provides a stateful `KuznetsovSpectralOperator` that pre-allocates
-//! workspaces and pre-computes wavenumber vectors for efficient spectral
-//! derivative calculations.
+//! `KuznetsovSpectralOperator` holds the grid's wavenumber tables and one
+//! half-spectrum buffer, so an evaluation allocates nothing.
 
+use crate::forward::lanes::for_each_z_lane;
 use kwavers_grid::Grid;
-use kwavers_math::fft::Complex64;
-use kwavers_math::fft::{get_fft_for_grid, Fft3d, Fft3dInOutExt};
-use leto::Array3;
-use leto::{Array1 as LetoArray1, Array3 as LetoArray3};
+use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d, Fft3dInOutExt};
+use leto::{Array1, Array3};
 use std::f64::consts::PI;
 use std::sync::Arc;
 
-/// Spectral operator for computing derivatives in Fourier space
+/// Spectral Laplacian of a real field on a periodic grid.
 #[derive(Debug)]
 pub struct KuznetsovSpectralOperator {
-    /// Pre-computed wavenumber vectors
-    kx_vec: LetoArray1<f64>,
-    ky_vec: LetoArray1<f64>,
-    kz_vec: LetoArray1<f64>,
-
-    /// FFT and IFFT operators
+    kx_vec: Array1<f64>,
+    ky_vec: Array1<f64>,
+    /// The z wavenumbers of the half spectrum's `nz/2+1` bins, all
+    /// non-negative.
+    kz_vec: Array1<f64>,
     fft: Arc<Fft3d>,
+    /// Half spectrum `(nx, ny, nz/2+1)` of the field: the transform writes it,
+    /// the symbol scales it in place and the inverse consumes it.
+    field_hat: Array3<Complex64>,
+}
 
-    /// Workspace arrays for complex fields
-    field_hat: LetoArray3<Complex64>,
-    scratch_hat: LetoArray3<Complex64>,
-
-    /// Workspace arrays for gradient computation
-    grad_x_hat: LetoArray3<Complex64>,
-    grad_y_hat: LetoArray3<Complex64>,
-    grad_z_hat: LetoArray3<Complex64>,
+/// The first `len` discrete wavenumbers of an `n`-point DFT:
+/// `k[i] = 2·k_Nyquist·i/n` for `i ≤ n/2` and `2·k_Nyquist·(i−n)/n` above.
+///
+/// The factor is 2, not 2π: `k_Nyquist = π/d` already carries π, and an extra
+/// π would make the spectral Laplacian, and so the effective wave speed,
+/// π² ≈ 9.87× too large.
+fn wavenumbers(n: usize, nyquist: f64, len: usize) -> Array1<f64> {
+    (0..len)
+        .map(|i| {
+            let bin = if i <= n / 2 {
+                i as f64
+            } else {
+                i as f64 - n as f64
+            };
+            2.0 * nyquist * bin / n as f64
+        })
+        .collect()
 }
 
 impl KuznetsovSpectralOperator {
     /// Create a new spectral operator for the given grid
     pub fn new(grid: &Grid) -> Self {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-
-        // Discrete wavenumbers for an N-point DFT with physical spacing d:
-        //   k[i] = 2π·i / (N·d)   for i = 0, …, N/2
-        //   k[i] = 2π·(i−N) / (N·d)  for i = N/2+1, …, N−1
-        // Equivalently, k[i] = 2·k_Nyquist·i / N  where k_Nyquist = π/d.
-        // Note: the factor is 2, not 2π.  Using 2π here inflates each wavenumber
-        // by an extra factor of π, causing the spectral Laplacian — and therefore
-        // the effective wave speed — to be π² ≈ 9.87× too large.
-        let kx_nyquist = PI / grid.dx;
-        let ky_nyquist = PI / grid.dy;
-        let kz_nyquist = PI / grid.dz;
-
-        let kx_vec: LetoArray1<f64> = (0..nx)
-            .map(|i| {
-                if i <= nx / 2 {
-                    2.0 * kx_nyquist * i as f64 / nx as f64
-                } else {
-                    2.0 * kx_nyquist * (i as f64 - nx as f64) / nx as f64
-                }
-            })
-            .collect();
-
-        let ky_vec: LetoArray1<f64> = (0..ny)
-            .map(|j| {
-                if j <= ny / 2 {
-                    2.0 * ky_nyquist * j as f64 / ny as f64
-                } else {
-                    2.0 * ky_nyquist * (j as f64 - ny as f64) / ny as f64
-                }
-            })
-            .collect();
-
-        let kz_vec: LetoArray1<f64> = (0..nz)
-            .map(|k| {
-                if k <= nz / 2 {
-                    2.0 * kz_nyquist * k as f64 / nz as f64
-                } else {
-                    2.0 * kz_nyquist * (k as f64 - nz as f64) / nz as f64
-                }
-            })
-            .collect();
-
-        let fft = get_fft_for_grid(nx, ny, nz);
-
-        // Pre-allocate workspace arrays
-        let field_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
-        let scratch_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
-        let grad_x_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
-        let grad_y_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
-        let grad_z_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
-
+        let nz_half = nz / 2 + 1;
         Self {
-            kx_vec,
-            ky_vec,
-            kz_vec,
-            fft,
-            field_hat,
-            scratch_hat,
-            grad_x_hat,
-            grad_y_hat,
-            grad_z_hat,
+            kx_vec: wavenumbers(nx, PI / grid.dx, nx),
+            ky_vec: wavenumbers(ny, PI / grid.dy, ny),
+            kz_vec: wavenumbers(nz, PI / grid.dz, nz_half),
+            fft: get_fft_for_grid(nx, ny, nz),
+            field_hat: Array3::from_elem([nx, ny, nz_half], Complex64::default()),
         }
     }
 
-    /// Compute Laplacian using spectral methods with pre-allocated workspace
-    /// # Panics
-    /// - Panics if `kx_vec contiguous`.
-    /// - Panics if `ky_vec contiguous`.
-    /// - Panics if `kz_vec contiguous`.
+    /// Writes the spectral Laplacian `∇²f = F⁻¹[−(kx² + ky² + kz²)·F[f]]` of
+    /// `field` into `laplacian_out`.
     ///
+    /// A real field's spectrum is Hermitian and `−|k|²` is even in `k`, so the
+    /// symbol scales the half spectrum and the inverse completes it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `field` or `laplacian_out` does not have the grid shape the
+    /// operator was built for.
     pub fn compute_laplacian_workspace(
         &mut self,
         field: &Array3<f64>,
         laplacian_out: &mut Array3<f64>,
-        _grid: &Grid,
     ) {
-        let [nx, ny, nz] = self.field_hat.shape();
-        let field_leto = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
-            .expect("Kuznetsov field shape must match its Leto FFT shape");
-        self.fft.forward_into(&field_leto, &mut self.field_hat);
+        self.fft.forward_r2c_into(field, &mut self.field_hat);
 
-        // Apply Laplacian operator in k-space: ∇²f = -(kx² + ky² + kz²) * f_hat
-        let kx_s = self.kx_vec.as_slice().expect("kx_vec contiguous");
-        let ky_s = self.ky_vec.as_slice().expect("ky_vec contiguous");
-        let kz_s = self.kz_vec.as_slice().expect("kz_vec contiguous");
-        for (i, &kx) in kx_s.iter().enumerate().take(nx) {
-            for (j, &ky) in ky_s.iter().enumerate().take(ny) {
-                for (k, &kz) in kz_s.iter().enumerate().take(nz) {
+        let [_, ny, nz_half] = self.field_hat.shape();
+        let kx_values = self
+            .kx_vec
+            .as_slice()
+            .expect("invariant: wavenumber tables are collected contiguous");
+        let ky_values = self
+            .ky_vec
+            .as_slice()
+            .expect("invariant: wavenumber tables are collected contiguous");
+        let kz_values = self
+            .kz_vec
+            .as_slice()
+            .expect("invariant: wavenumber tables are collected contiguous");
+        let spectrum = self
+            .field_hat
+            .as_slice_mut()
+            .expect("invariant: the half spectrum is allocated contiguous");
+        for_each_z_lane(
+            spectrum,
+            [ny, nz_half],
+            size_of::<Complex64>(),
+            |_, i, j, lane| {
+                let (kx, ky) = (kx_values[i], ky_values[j]);
+                for (value, &kz) in lane.iter_mut().zip(kz_values) {
                     let k_sq = kz.mul_add(kz, kx.mul_add(kx, ky * ky));
-                    self.field_hat[[i, j, k]] *= -k_sq;
+                    *value *= -k_sq;
                 }
-            }
-        }
+            },
+        );
 
-        let mut laplacian = LetoArray3::<f64>::zeros([nx, ny, nz]);
         self.fft
-            .inverse_into(&self.field_hat, &mut laplacian, &mut self.scratch_hat);
-        copy_real_field(&laplacian, laplacian_out);
-    }
-
-    /// Compute gradient using spectral methods with pre-allocated workspace
-    /// # Panics
-    /// - Panics if `kx_vec contiguous`.
-    /// - Panics if `ky_vec contiguous`.
-    /// - Panics if `kz_vec contiguous`.
-    ///
-    pub fn compute_gradient_workspace(
-        &mut self,
-        field: &Array3<f64>,
-        grad_x_out: &mut Array3<f64>,
-        grad_y_out: &mut Array3<f64>,
-        grad_z_out: &mut Array3<f64>,
-        _grid: &Grid,
-    ) {
-        let [nx, ny, nz] = self.field_hat.shape();
-        let field_leto = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
-            .expect("Kuznetsov field shape must match its Leto FFT shape");
-        self.fft.forward_into(&field_leto, &mut self.field_hat);
-
-        // Apply gradient operators in k-space: ∂f/∂x = i*kx*f_hat
-        let kx_s = self.kx_vec.as_slice().expect("kx_vec contiguous");
-        let ky_s = self.ky_vec.as_slice().expect("ky_vec contiguous");
-        let kz_s = self.kz_vec.as_slice().expect("kz_vec contiguous");
-        for (i, &kx) in kx_s.iter().enumerate().take(nx) {
-            for (j, &ky) in ky_s.iter().enumerate().take(ny) {
-                for (k, &kz) in kz_s.iter().enumerate().take(nz) {
-                    let f = self.field_hat[[i, j, k]];
-                    self.grad_x_hat[[i, j, k]] = Complex64::new(0.0, kx) * f;
-                    self.grad_y_hat[[i, j, k]] = Complex64::new(0.0, ky) * f;
-                    self.grad_z_hat[[i, j, k]] = Complex64::new(0.0, kz) * f;
-                }
-            }
-        }
-
-        let grad_x = self.fft.inverse(&self.grad_x_hat);
-        let grad_y = self.fft.inverse(&self.grad_y_hat);
-        let grad_z = self.fft.inverse(&self.grad_z_hat);
-        copy_real_field(&grad_x, grad_x_out);
-        copy_real_field(&grad_y, grad_y_out);
-        copy_real_field(&grad_z, grad_z_out);
-    }
-}
-
-fn copy_real_field(source: &LetoArray3<f64>, out: &mut Array3<f64>) {
-    let [nx, ny, nz] = source.shape();
-    debug_assert_eq!(out.shape(), [nx, ny, nz]);
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 0..nz {
-                out[[i, j, k]] = source[[i, j, k]];
-            }
-        }
+            .inverse_c2r_into(&mut self.field_hat, laplacian_out);
     }
 }

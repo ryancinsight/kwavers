@@ -62,11 +62,9 @@ impl KuznetsovWave {
             };
 
         // 1. Compute linear term: c₀²∇²p using spectral methods
-        self.workspace.spectral_op.compute_laplacian_workspace(
-            pressure,
-            &mut self.workspace.laplacian,
-            &self.grid,
-        );
+        self.workspace
+            .spectral_op
+            .compute_laplacian_workspace(pressure, &mut self.workspace.laplacian);
 
         let rhs = &mut self.workspace.k1;
 

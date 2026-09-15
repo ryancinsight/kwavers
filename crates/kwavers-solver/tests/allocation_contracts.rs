@@ -669,3 +669,65 @@ fn fdtd_spectral_steps_after_setup_do_not_allocate() {
         "the window must cover steps that advance the field"
     );
 }
+
+/// Every Kuznetsov right-hand side and every hybrid DG step evaluates a
+/// spectral Laplacian. After the first evaluations have built their plans,
+/// further evaluations transform through the operator's persistent half
+/// spectrum and allocate nothing on the calling thread.
+#[test]
+fn spectral_laplacians_after_setup_do_not_allocate() {
+    use kwavers_solver::forward::nonlinear::kuznetsov::spectral::KuznetsovSpectralOperator;
+    use kwavers_solver::forward::pstd::dg::spectral_solver::RegionPSTDSolver;
+    use std::sync::Arc;
+
+    const N: usize = 16;
+    let grid = Grid::new(N, N, N, 1.0e-4, 1.0e-4, 1.0e-4).expect("valid grid");
+    let field = Array3::from_shape_fn([N, N, N], |[i, j, k]| {
+        (i as f64 + 0.25 * j as f64 - 0.5 * k as f64).sin()
+    });
+
+    let mut kuznetsov = KuznetsovSpectralOperator::new(&grid);
+    let mut laplacian = Array3::zeros([N, N, N]);
+    for _ in 0..2 {
+        kuznetsov.compute_laplacian_workspace(&field, &mut laplacian);
+    }
+    laplacian.fill(0.0);
+    let window = Window::open();
+    for _ in 0..8 {
+        kuznetsov.compute_laplacian_workspace(&field, &mut laplacian);
+    }
+    let change = window.change();
+    drop(window);
+    assert_eq!(change.allocations, 0, "Kuznetsov Laplacian");
+    assert_eq!(change.reallocations, 0, "Kuznetsov Laplacian");
+    assert!(
+        laplacian.iter().any(|value| *value != 0.0),
+        "the window must cover evaluations that write the Laplacian"
+    );
+
+    let mask = Array3::from_elem([N, N, N], true);
+    let mut dg = RegionPSTDSolver::new(4, Arc::new(grid));
+    let mut current = field;
+    let mut next = Array3::zeros([N, N, N]);
+    for _ in 0..2 {
+        dg.spectral_wave_step_into(&current, 1.0e-8, 1_500.0, &mask, &mut next)
+            .expect("setup step");
+        std::mem::swap(&mut current, &mut next);
+    }
+    let before = current.clone();
+    let window = Window::open();
+    for _ in 0..8 {
+        dg.spectral_wave_step_into(&current, 1.0e-8, 1_500.0, &mask, &mut next)
+            .expect("stable step");
+        std::mem::swap(&mut current, &mut next);
+    }
+    let change = window.change();
+    drop(window);
+    assert_eq!(change.allocations, 0, "DG spectral step");
+    assert_eq!(change.reallocations, 0, "DG spectral step");
+    assert_ne!(
+        current.as_slice(),
+        before.as_slice(),
+        "the window must cover steps that advance the field"
+    );
+}
