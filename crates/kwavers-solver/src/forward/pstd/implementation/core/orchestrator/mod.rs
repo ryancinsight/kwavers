@@ -132,12 +132,6 @@ pub struct PSTDSolver {
     /// Single k-space gradient scratch, reused for all three spatial axes sequentially.
     pub(crate) grad_k: LetoArray3<Complex64>,
     pub(crate) materials: MaterialFields,
-    /// Nonlinearity parameter B/(2A) per voxel.
-    ///
-    /// `Some` iff `config.nonlinearity == true`; `None` for linear simulations,
-    /// saving N×8 bytes per solver instance (2 MB at 64³, 16 MB at 128³).
-    /// Invariant: `self.bon.is_some() ↔ self.config.nonlinearity`.
-    pub(crate) bon: Option<Array3<f64>>,
     /// Precomputed absorption kernel — `None` for lossless simulations.
     pub(crate) absorption: Option<AbsorptionKernel>,
     /// Raw spectral wavenumber magnitude `|k|` in r2c half-spectrum order
@@ -336,7 +330,6 @@ impl std::fmt::Debug for PSTDSolver {
             .field("ux_k", &self.ux_k.shape())
             .field("grad_k", &self.grad_k.shape())
             .field("materials", &self.materials)
-            .field("bon", &self.bon.as_ref().map(|v| v.shape()))
             .field("absorption", &self.absorption.is_some())
             .field("k_mag_half", &self.k_mag_half.shape())
             .field(

@@ -1,13 +1,23 @@
 # Backlog / Strategy
 
+<a id="kw-pstd-eos-lanes"></a>
+
+## KW-PSTD-EOS-LANES-2026-09-15 — The EOS dispatches per element and nonlinear runs hold the nonlinearity field twice [patch] [perf] — in-progress
+
+- **Finding.** `accumulate_split_density` and `apply_nonlinear_eos` (`propagator/pressure/mod.rs`) index four and five slices per element through `enumerate_mut_with::<Adaptive>` every step. Construction clones `materials.nonlinearity` into `bon` on nonlinear runs; nothing writes either afterwards, so it is a second full grid (8 B per point).
+- **Change.** Both kernels zip contiguous z lanes on moirai unit tasks with expressions unchanged; `bon` is deleted and the EOS reads `materials.nonlinearity`. The linear EOS writes two outputs per element and stays on its fixed chunks until a two-output lane walker exists.
+- **Acceptance:** bitwise differentials against the per-element formulas; allocation contract and PSTD suites unchanged.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-eos-lanes` (stacked on the absorption PR); **last-update:** 2026-09-15.
+
 <a id="kw-pstd-absorption-lanes"></a>
 
-## KW-PSTD-ABSORPTION-LANES-2026-09-15 — Power-law absorption adds 80% to a step through per-element dispatch [patch] [perf] — in-progress
+## KW-PSTD-ABSORPTION-LANES-2026-09-15 — Power-law absorption adds 80% to a step through per-element dispatch [patch] [perf] — review
 
 - **Finding.** `pstd_long_run` at 64³: power-law 7.17 ms against lossless 4.00 ms. Beyond its four transforms, `multiply_spectral_operator` recovers `(i, j, k)` by division per element and reads `operator[[i, j, k]]` though both arrays are contiguous half spectra (`apply.rs:112`), and `build_weighted_divergence`, `accumulate_stratum` and `apply_pressure_absorption` index several slices per element through `enumerate_mut_with::<Adaptive>`.
 - **Change.** The four kernels walk z lanes as contiguous zips on moirai unit tasks with unchanged arithmetic order; the identity `slice_with(..nz_c)` on the already-truncated operators goes; `lanes.rs` moves to `pstd/` so propagator and absorption share one walker.
 - **Acceptance:** bitwise differentials against the per-element formulas; the power-law arm of `pstd_long_run` falls with the FullKSpace arm as control; PSTD suites unchanged.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-absorption-lanes` (stacked on #774); **last-update:** 2026-09-15.
+- **PR:** #775 (`a325ddc07`). Bitwise differentials for all four kernels; `pstd_long_run` power-law 32³ 7–14% faster multi-threaded (FullKSpace control within 2%) and 6–10% pinned; 64³ within its controls' band, no regression.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-absorption-lanes`; **last-update:** 2026-09-15.
 
 <a id="kw-pstd-long-run"></a>
 
