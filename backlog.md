@@ -1,5 +1,14 @@
 # Backlog / Strategy
 
+<a id="kw-pstd-linear-eos-lanes"></a>
+
+## KW-PSTD-LINEAR-EOS-LANES-2026-09-15 — The linear EOS is the last step kernel on a hand-sized chunk [patch] [perf] — in-progress
+
+- **Finding.** `apply_linear_eos` runs every step of every linear run and writes `div_u` and `p` in one pass over `PRESSURE_UPDATE_CHUNK = 4096`-element chunks, reading four slices by bounds-checked index per element; the one-output lane walker could not take it.
+- **Change.** `pstd::lanes::for_each_z_lane_pair` on moirai's `for_each_unit_task_pair_mut_with` (moirai #348); the EOS zips each lane pair against its inputs with the expression unchanged and stays one fused pass; the chunk constant goes. The lock advances moirai to the revision carrying #348.
+- **Acceptance:** a bitwise differential against the per-element formula for both outputs; allocation contract and PSTD suites unchanged; clippy clean.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-linear-eos-lanes` (stacked on #777); **last-update:** 2026-09-15.
+
 <a id="kw-pstd-source-lanes"></a>
 
 ## KW-PSTD-SOURCE-LANES-2026-09-15 — Source, filter and residual-gas kernels dispatch per element behind a one-type dyn trait [patch] [perf] — in-progress
