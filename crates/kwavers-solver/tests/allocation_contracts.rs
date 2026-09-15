@@ -1,4 +1,5 @@
 use kwavers_alloc_probe::{Change, ThreadScopedAllocator, Window};
+use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_core::error::{KwaversError, SystemError};
 #[cfg(feature = "pinn")]
 use kwavers_grid::geometry::RectangularDomain;
@@ -8,9 +9,12 @@ use kwavers_solver::forward::elastic::swe::{
     ArrivalDetection, ElasticBodyForceConfig, ElasticDisplacementSnapshot, ElasticWaveConfig,
     ElasticWaveField, ElasticWaveSolver, VolumetricWaveConfig, WaveFrontTracker,
 };
+use kwavers_solver::forward::pstd::config::{BoundaryConfig, PSTDConfig};
+use kwavers_solver::forward::pstd::PSTDSolver;
 use kwavers_solver::forward::viscoacoustic::ViscoacousticMemorySolver;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::{CollocationSampler, CollocationSamplingStrategy};
+use kwavers_source::GridSource;
 use leto::Array3;
 #[cfg(feature = "pinn")]
 use tyche_core::Seed;
@@ -567,5 +571,51 @@ fn viscoacoustic_rejected_construction_allocates_no_solver_state() {
         change.bytes_retained() < 1_024,
         "rejection must not retain solver state, got {} bytes",
         change.bytes_retained()
+    );
+}
+
+fn pstd_solver_with_initial_pressure(n: usize) -> PSTDSolver {
+    let grid = Grid::new(n, n, n, 1.0e-4, 1.0e-4, 1.0e-4).expect("valid grid");
+    let medium = HomogeneousMedium::new(1_000.0, 1_500.0, 0.0, 0.0, &grid);
+    let mut p0 = Array3::zeros((n, n, n));
+    p0[[n / 2, n / 2, n / 2]] = 1.0;
+    let source = GridSource {
+        p0: Some(p0),
+        ..GridSource::new_empty()
+    };
+    let config = PSTDConfig {
+        dt: 0.3 * 1.0e-4 / 1_500.0,
+        nt: 16,
+        boundary: BoundaryConfig::CPML(CPMLConfig::with_thickness(n / 4)),
+        smooth_sources: false,
+        ..PSTDConfig::default()
+    };
+    PSTDSolver::new(config, grid, &medium, source).expect("valid solver")
+}
+
+/// A long run is the step repeated, so any allocation a step makes is paid
+/// once per step for the whole run. After the first steps have built their
+/// plans and thread-local scratch, further steps on the calling thread
+/// allocate nothing. The window is thread-scoped: allocations on moirai
+/// workers are outside it.
+#[test]
+fn pstd_steps_after_setup_do_not_allocate() {
+    let mut solver = pstd_solver_with_initial_pressure(16);
+    for _ in 0..4 {
+        solver.step_forward().expect("setup step");
+    }
+    let before = solver.fields.p.clone();
+    let window = Window::open();
+    for _ in 0..8 {
+        solver.step_forward().expect("stable step");
+    }
+    let change = window.change();
+    drop(window);
+    assert_eq!(change.allocations, 0);
+    assert_eq!(change.reallocations, 0);
+    assert_ne!(
+        solver.fields.p.as_slice(),
+        before.as_slice(),
+        "the window must cover steps that advance the field"
     );
 }

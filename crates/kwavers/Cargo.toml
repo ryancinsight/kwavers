@@ -320,6 +320,10 @@ name = "fft3d_baseline"
 harness = false
 
 [[bench]]
+name = "pstd_long_run"
+harness = false
+
+[[bench]]
 name = "aperture_rf_synthesis"
 harness = false
 
