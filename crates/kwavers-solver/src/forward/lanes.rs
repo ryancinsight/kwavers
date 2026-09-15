@@ -96,9 +96,38 @@ pub(super) fn for_each_z_lane_pair<A, B, F>(
     );
 }
 
+/// Runs `plane(i, values)` over every x plane of a C-order output whose planes
+/// hold `plane_len = ny·nz` elements: `i` is the plane's x index and `values`
+/// its elements in storage order.
+///
+/// A pass whose factor varies with x reads it once per plane; one that varies
+/// with y or z resolves it inside the plane. `element_bytes` counts one output
+/// element and every input element the closure reads beside it.
+pub(super) fn for_each_x_plane<T, F>(
+    output: &mut [T],
+    plane_len: usize,
+    element_bytes: usize,
+    plane: F,
+) where
+    T: Send,
+    F: Fn(usize, &mut [T]) + Send + Sync,
+{
+    for_each_unit_task_mut_with::<WorkBytes<LANE_PARALLEL_BYTES>, _, _, _, _>(
+        output,
+        plane_len,
+        plane_len * element_bytes,
+        || (),
+        |(), first_plane, planes| {
+            for (offset, values) in planes.chunks_exact_mut(plane_len).enumerate() {
+                plane(first_plane + offset, values);
+            }
+        },
+    );
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{for_each_z_lane, LANE_PARALLEL_BYTES};
+    use super::{for_each_x_plane, for_each_z_lane, LANE_PARALLEL_BYTES};
 
     /// Every element of a `[nx, ny, nz]` volume receives the lane coordinates
     /// its flat index implies, whether the pass runs on one thread or spreads
@@ -138,5 +167,36 @@ mod tests {
         let shape = [37, 29, 31];
         assert!(shape.iter().product::<usize>() * 24 >= LANE_PARALLEL_BYTES);
         assert_lane_coordinates(shape, 24);
+    }
+
+    /// Every element of a `[nx, ny, nz]` volume receives the x index of the
+    /// plane its flat index lies in, exactly once.
+    fn assert_plane_indices(shape: [usize; 3], element_bytes: usize) {
+        let [nx, ny, nz] = shape;
+        let plane_len = ny * nz;
+        let mut planes = vec![usize::MAX; nx * plane_len];
+        for_each_x_plane(&mut planes, plane_len, element_bytes, |i, plane| {
+            for value in plane {
+                assert_eq!(*value, usize::MAX, "an element is visited once");
+                *value = i;
+            }
+        });
+        for (index, &i) in planes.iter().enumerate() {
+            assert_eq!(i, index / plane_len);
+        }
+    }
+
+    #[test]
+    fn planes_carry_their_index_serially() {
+        let shape = [5, 3, 7];
+        assert!(shape.iter().product::<usize>() * 8 < LANE_PARALLEL_BYTES);
+        assert_plane_indices(shape, 8);
+    }
+
+    #[test]
+    fn planes_carry_their_index_across_tasks() {
+        let shape = [37, 29, 31];
+        assert!(shape.iter().product::<usize>() * 24 >= LANE_PARALLEL_BYTES);
+        assert_plane_indices(shape, 24);
     }
 }

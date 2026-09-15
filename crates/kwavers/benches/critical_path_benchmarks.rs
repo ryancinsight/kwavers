@@ -235,6 +235,9 @@ fn bench_viscoacoustic_step(c: &mut Criterion) {
         ("1d", [CELL_COUNT, 1, 1]),
         ("2d", [64, 64, 1]),
         ("3d", [16, 16, 16]),
+        // 64³ holds 4 MB of complex scratch, past a private L2: the regime
+        // where the derivative's traversal order meets memory bandwidth.
+        ("3d_64", [64, 64, 64]),
     ] {
         let [nx, ny, nz] = shape;
         let mut solver =

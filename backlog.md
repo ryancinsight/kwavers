@@ -1,5 +1,15 @@
 # Backlog / Strategy
 
+<a id="kw-viscoacoustic-axis-lanes"></a>
+
+## KW-VISCOACOUSTIC-AXIS-LANES-2026-09-15 — The viscoacoustic derivative walks its spectrum against the storage order [patch] [perf] — in-progress
+
+- **Finding.** `ViscoacousticMemorySolver::axis_derivative` runs six times per 3-D step. Its symbol pass loops `z`, `y`, `x` over a C-order `(nx, ny, nz)` buffer, so the innermost step strides `ny*nz` elements, and it matches on the axis for every element; the copy-in and copy-out passes run on one thread.
+- **Change.** The symbol pass walks z lanes on moirai unit tasks with the axis resolved per lane (the wavenumber zipped along the lane for z), and the copy passes take the same walker; expressions stay unchanged so the existing FFT reference oracle holds to the bit.
+- **Acceptance:** `axis_derivative` matches `reference_axis_derivative` to the bit on every axis and shape; viscoacoustic suites and clippy clean; a `viscoacoustic_step` comparison against the parent revision, pinned for the serial cases and unpinned at 64^3 (the passes fork-join there, and one-core pinning measures worker spin).
+- **Open:** the timing comparison. The first pinned pair is interim, and the next two runs were discarded (a peer build held the host at 100% load).
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-viscoacoustic-axis-lanes` (stacked on #780); **last-update:** 2026-09-15.
+
 <a id="kw-spectral-solvers-half-spectrum"></a>
 
 ## KW-SPECTRAL-SOLVERS-HALF-SPECTRUM-2026-09-15 — The Kuznetsov and DG spectral Laplacians allocate full grids every call [patch] [perf] — in-progress
@@ -7,7 +17,7 @@
 - **Finding.** `KuznetsovSpectralOperator::compute_laplacian_workspace` (every Kuznetsov right-hand side) and `RegionPSTDSolver::spectral_wave_step_into` (every hybrid DG step) copy the field into a fresh array, transform the full complex spectrum and invert into a fresh real array: two full-grid allocations per call. The Kuznetsov operator holds 80 B per grid point of complex spectra and the DG solver 64 B of spectra and symbol tables; the Kuznetsov gradient path and its three spectra have no callers.
 - **Change.** Both take the half-spectrum pair with the symbol applied in place on z lanes; the DG solver folds `-|k|^2 filter` into one half-shape table; the dead gradient path goes.
 - **Acceptance:** analytic Fourier-mode Laplacian tests for both operators at even and odd `nz`; repeated evaluations allocate nothing after setup; Kuznetsov, DG and PSTD suites and clippy clean.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-spectral-solvers-half-spectrum` (stacked on #779); **last-update:** 2026-09-15.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-spectral-solvers-half-spectrum` (stacked on #779); **PR:** #780; **last-update:** 2026-09-15.
 
 <a id="kw-fdtd-kspace-half-spectrum"></a>
 

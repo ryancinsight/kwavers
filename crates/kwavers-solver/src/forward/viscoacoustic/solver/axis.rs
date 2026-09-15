@@ -1,6 +1,7 @@
 //! Allocation-free pseudospectral derivatives for viscoacoustic stepping.
 
 use super::ViscoacousticMemorySolver;
+use crate::forward::lanes::for_each_x_plane;
 use kwavers_math::fft::{
     fft_3d_axis_complex_inplace, ifft_3d_axis_complex_inplace, Complex64, Fft3d,
 };
@@ -99,47 +100,89 @@ impl ViscoacousticMemorySolver {
             return;
         }
 
+        // Every pass walks the C-order volume in storage order, x plane by x
+        // plane: a plane of `ny·nz` elements is contiguous, so no step strides
+        // across the buffer, and the axis is resolved once per pass.
+        let plane_len = ny * nz;
+        let copy_bytes = size_of::<Complex64>() + size_of::<f64>();
         if let (Some(dst), Some(src)) = (cbuf.as_slice_mut(), field.as_slice()) {
-            for (dst, &src) in dst.iter_mut().zip(src) {
-                *dst = Complex64::new(src, 0.0);
-            }
+            for_each_x_plane(dst, plane_len, copy_bytes, |x, plane| {
+                let start = x * plane_len;
+                for (dst, &src) in plane.iter_mut().zip(&src[start..start + plane_len]) {
+                    *dst = Complex64::new(src, 0.0);
+                }
+            });
         } else {
-            for z in 0..nz {
+            for x in 0..nx {
                 for y in 0..ny {
-                    for x in 0..nx {
+                    for z in 0..nz {
                         cbuf[[x, y, z]] = Complex64::new(field[[x, y, z]], 0.0);
                     }
                 }
             }
         }
         fft_3d_axis_complex_inplace(fft, cbuf, axis);
-        for z in 0..nz {
-            for y in 0..ny {
-                for x in 0..nx {
-                    let mode = match axis {
-                        0 => x,
-                        1 => y,
-                        2 => z,
-                        _ => unreachable!("invariant: derivative axis is 0, 1, or 2"),
-                    };
-                    cbuf[[x, y, z]] *= Complex64::new(0.0, k[mode]);
-                }
-            }
-        }
+        apply_axis_wavenumbers(cbuf, k, axis);
         ifft_3d_axis_complex_inplace(fft, cbuf, axis);
         if let (Some(dst), Some(src)) = (out.as_slice_mut(), cbuf.as_slice()) {
-            for (dst, src) in dst.iter_mut().zip(src) {
-                *dst = src.re;
-            }
+            for_each_x_plane(dst, plane_len, copy_bytes, |x, plane| {
+                let start = x * plane_len;
+                for (dst, src) in plane.iter_mut().zip(&src[start..start + plane_len]) {
+                    *dst = src.re;
+                }
+            });
         } else {
-            for z in 0..nz {
+            for x in 0..nx {
                 for y in 0..ny {
-                    for x in 0..nx {
+                    for z in 0..nz {
                         out[[x, y, z]] = cbuf[[x, y, z]].re;
                     }
                 }
             }
         }
+    }
+}
+
+/// Multiplies each element of an axis-transformed spectrum by `i·k[mode]`,
+/// `mode` its index along `axis`: once per x plane for x, once per z lane for
+/// y, and zipped along each z lane for z.
+fn apply_axis_wavenumbers(spectrum: &mut Array3<Complex64>, k: &[f64], axis: usize) {
+    let [nx, ny, nz] = spectrum.shape();
+    let Some(values) = spectrum.as_slice_mut() else {
+        for x in 0..nx {
+            for y in 0..ny {
+                for z in 0..nz {
+                    spectrum[[x, y, z]] *= Complex64::new(0.0, k[[x, y, z][axis]]);
+                }
+            }
+        }
+        return;
+    };
+    let plane_len = ny * nz;
+    let element_bytes = size_of::<Complex64>();
+    match axis {
+        0 => for_each_x_plane(values, plane_len, element_bytes, |x, plane| {
+            let factor = Complex64::new(0.0, k[x]);
+            for value in plane {
+                *value *= factor;
+            }
+        }),
+        1 => for_each_x_plane(values, plane_len, element_bytes, |_, plane| {
+            for (lane, &ky) in plane.chunks_exact_mut(nz).zip(k) {
+                let factor = Complex64::new(0.0, ky);
+                for value in lane {
+                    *value *= factor;
+                }
+            }
+        }),
+        2 => for_each_x_plane(values, plane_len, element_bytes, |_, plane| {
+            for lane in plane.chunks_exact_mut(nz) {
+                for (value, &kz) in lane.iter_mut().zip(k) {
+                    *value *= Complex64::new(0.0, kz);
+                }
+            }
+        }),
+        _ => unreachable!("invariant: derivative axis is 0, 1, or 2"),
     }
 }
 
@@ -245,6 +288,71 @@ mod tests {
                 assert_eq!(actual.to_bits(), 0.0_f64.to_bits());
             }
             assert_complex_bits_eq(&solver.cbuf, &scratch_before);
+        }
+    }
+
+    /// On an active axis each element is scaled by the same `i·k[mode]` the
+    /// per-element reference applies, so the derivative and the spectrum left
+    /// in the scratch match it to the bit on every axis, for even and odd
+    /// extents, and for a volume large enough that the passes spread over
+    /// tasks.
+    #[test]
+    fn active_axes_match_fft_reference_to_the_bit() {
+        for shape in [[8, 6, 5], [7, 4, 3], [37, 29, 31]] {
+            let [nx, ny, nz] = shape;
+            let mut solver = ViscoacousticMemorySolver::new(
+                nx,
+                ny,
+                nz,
+                1.0e-4,
+                1.0e-4,
+                1.0e-4,
+                1.0e-8,
+                1_000.0,
+                2.25e9,
+                &[],
+            )
+            .expect("test solver parameters are valid");
+            let fft = solver.fft.clone();
+            for axis in 0..3 {
+                let k = super::super::fft_wavenumbers(shape[axis], 1.0e-4);
+                let field = Array3::from_shape_fn((nx, ny, nz), |[x, y, z]| {
+                    ((17 * x + 11 * y + 5 * z + axis) as f64 * 0.37).sin()
+                });
+                let mut reference_scratch = Array3::zeros((nx, ny, nz));
+                let mut expected = Array3::from_elem((nx, ny, nz), f64::NAN);
+                reference_axis_derivative(
+                    &fft,
+                    &k,
+                    axis,
+                    &field,
+                    &mut reference_scratch,
+                    &mut expected,
+                );
+
+                let mut actual = Array3::from_elem((nx, ny, nz), f64::NAN);
+                ViscoacousticMemorySolver::axis_derivative(
+                    &fft,
+                    &k,
+                    axis,
+                    &field,
+                    &mut solver.cbuf,
+                    &mut actual,
+                );
+
+                assert!(
+                    expected.iter().any(|value| *value != 0.0),
+                    "shape {shape:?} axis {axis}: the reference derivative is non-trivial"
+                );
+                for (actual, expected) in actual.iter().zip(expected.iter()) {
+                    assert_eq!(
+                        actual.to_bits(),
+                        expected.to_bits(),
+                        "shape {shape:?} axis {axis}"
+                    );
+                }
+                assert_complex_bits_eq(&solver.cbuf, &reference_scratch);
+            }
         }
     }
 
