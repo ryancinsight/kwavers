@@ -6,7 +6,8 @@
 
 - **Finding.** `ViscoacousticMemorySolver::axis_derivative` runs six times per 3-D step. Its symbol pass loops `z`, `y`, `x` over a C-order `(nx, ny, nz)` buffer, so the innermost step strides `ny*nz` elements, and it matches on the axis for every element; the copy-in and copy-out passes run on one thread.
 - **Change.** The symbol pass walks z lanes on moirai unit tasks with the axis resolved per lane (the wavenumber zipped along the lane for z), and the copy passes take the same walker; expressions stay unchanged so the existing FFT reference oracle holds to the bit.
-- **Acceptance:** `axis_derivative` matches `reference_axis_derivative` to the bit on every axis and shape; viscoacoustic suites and clippy clean; a pinned `viscoacoustic_step` comparison against the parent revision.
+- **Acceptance:** `axis_derivative` matches `reference_axis_derivative` to the bit on every axis and shape; viscoacoustic suites and clippy clean; a `viscoacoustic_step` comparison against the parent revision, pinned for the serial cases and unpinned at 64^3 (the passes fork-join there, and one-core pinning measures worker spin).
+- **Open:** the timing comparison. The first pinned pair is interim, and the next two runs were discarded (a peer build held the host at 100% load).
 - **Integrator:** claude-opus-5; **branch:** `perf/kwavers-viscoacoustic-axis-lanes` (stacked on #780); **last-update:** 2026-09-15.
 
 <a id="kw-spectral-solvers-half-spectrum"></a>
