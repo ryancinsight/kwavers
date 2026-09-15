@@ -1,5 +1,14 @@
 # Backlog / Strategy
 
+<a id="kw-pstd-eos-lanes"></a>
+
+## KW-PSTD-EOS-LANES-2026-09-15 — The EOS dispatches per element and nonlinear runs hold the nonlinearity field twice [patch] [perf] — in-progress
+
+- **Finding.** `accumulate_split_density` and `apply_nonlinear_eos` (`propagator/pressure/mod.rs`) index four and five slices per element through `enumerate_mut_with::<Adaptive>` every step. Construction clones `materials.nonlinearity` into `bon` on nonlinear runs; nothing writes either afterwards, so it is a second full grid (8 B per point).
+- **Change.** Both kernels zip contiguous z lanes on moirai unit tasks with expressions unchanged; `bon` is deleted and the EOS reads `materials.nonlinearity`. The linear EOS writes two outputs per element and stays on its fixed chunks until a two-output lane walker exists.
+- **Acceptance:** bitwise differentials against the per-element formulas; allocation contract and PSTD suites unchanged.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-eos-lanes` (stacked on the absorption PR); **last-update:** 2026-09-15.
+
 <a id="kw-pstd-absorption-lanes"></a>
 
 ## KW-PSTD-ABSORPTION-LANES-2026-09-15 — Power-law absorption adds 80% to a step through per-element dispatch [patch] [perf] — in-progress
