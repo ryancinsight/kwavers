@@ -2,39 +2,11 @@
 
 <a id="kw-native-r2c"></a>
 
-## KW-NATIVE-R2C-2026-09-11 — The PSTD spectral path costs twice the FFT it wraps [patch] [perf] — in-progress
+## KW-NATIVE-R2C-2026-09-11 — The PSTD spectral path costs twice the FFT it wraps [patch] [perf] — done 2026-09-15
 
-- **Finding.** `Fft3dInOutExt::forward_r2c_into` / `inverse_c2r_into` emulate a
-  half-spectrum transform on apollo's full complex plan: fill a full-volume
-  complex scratch, transform it, copy the non-redundant half out; and on the
-  way back rebuild the Hermitian half with gathered mirror reads, transform,
-  and extract the real part. `fft3d_baseline` with an r2c arm (same process,
-  two rounds at 30% and 14% host load) reads the PSTD pair at **2.63 / 3.29 ms**
-  against **1.45 / 1.66 ms** for the complex pair at 64³ — 1.8–2.0x — and
-  1.2–1.3x at 32³, 1.7x at 16³. The emulation's passes cost as much as the
-  transform they surround.
-- **Change, once apollo lands its half-spectrum pair.** Route both methods to
-  apollo's native real 3-D transform and delete the emulation, its
-  thread-local full-spectrum scratch, and the unused `scratch` argument's
-  compatibility note. The `(nx, ny, nz/2+1)` layout the PSTD core uses is the
-  pair's native output, so no call site changes.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-native-r2c`; **last-update:** 2026-09-11.
-  **Dependency:** [`apollo #apollo-native-real-3d`](../apollo/backlog.md#apollo-native-real-3d),
-  merged in apollo #436. **Acceptance oracle:** the r2c arm of
-  `fft3d_baseline` falls below the complex arm at every extent; the PSTD
-  validation suite passes unchanged. **Risk / change class:** [patch] [perf].
-- **Slice 1** (#770): both methods call apollo's pair. `fft3d_baseline`, two rounds at 2–15% host load:
-  r2c 213–226 µs against 253–277 µs complex at 32³ and 0.96–1.09 ms against 1.11–1.19 ms at 64³ (the
-  emulation read 1.8–2.0x the complex pair), but 21.3–22.1 µs against 20.6 µs at 16³. Apollo's own pair
-  reads 19.8 µs per 16³ round trip, so the gap is the inverse's copy of `half_in` into `scratch`.
-  **Slice 2:** an inverse that consumes its input half spectrum, dropping the copy and the `scratch`
-  argument at every call site whose input is dead after the inverse.
-- **Slice 2** (e59e1baa, stacked on #770): `inverse_c2r_into` consumes its input, so the copy and the
-  `scratch` argument are gone at all 31 call sites, each checked input-dead first. Gated: fmt, clippy on
-  kwavers-math and kwavers-solver, 676 hook tests, the four validation suites, PSTD 166. **Open:** the 16³
-  wall-clock confirmation. Three pinned alternating rounds at 49–100% host load disagree: r2c 20.2 against
-  22.5 µs at the lightest load, then 28.3 against 24.9 and 29.1 against 26.0 as load rose to 100%.
-  **Re-open:** a pinned run with host load under 10% before and after each arm. Decision: [ADR 131](docs/adr/131-c2r-inverse-consumes-its-input.md).
+- #770 routed `forward_r2c_into` / `inverse_c2r_into` onto the apollo half-spectrum pair and deleted the emulation with its full-volume scratch; #772 made the inverse consume its input ([ADR 131](docs/adr/131-c2r-inverse-consumes-its-input.md)).
+- `fft3d_baseline`: r2c round trip 213–226 µs vs 253–277 µs complex at 32³, 0.96–1.09 ms vs 1.11–1.19 ms at 64³ (the emulation read 1.8–2.0x complex); pinned 16³ 16.4–16.7 µs vs 20.5–20.7 µs.
+- The 16³ reading needs apollo #440 (split twiddle table), brought in by this lock advance. Provider: [`apollo-native-real-3d`](../apollo/backlog.md#apollo-native-real-3d).
 
 <a id="kw-sir-array-transmit-2026-09-11"></a>
 
