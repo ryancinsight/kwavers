@@ -1,4 +1,5 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use crate::forward::pstd::propagator::lanes::{axis_index, for_each_z_lane, LaneAxis};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use leto::Array1;
@@ -11,13 +12,6 @@ use moirai_parallel::{enumerate_mut_with, Adaptive};
 // `apply_absorption_to_pressure` fuses div_u* into `dpx` as a single Zip (Opt-7 + Opt-12),
 // then IFFTs to L1 in `dpx` and L2 in `dpy`.  The absorption read is unaffected because it
 // always reads from `div_u*`.  Saves 3 × N-element memcpy per step.
-
-#[derive(Clone, Copy)]
-enum SpectralAxis {
-    X,
-    Y,
-    Z,
-}
 
 trait DenseRealField {
     fn shape3(&self) -> [usize; 3];
@@ -39,31 +33,12 @@ impl DenseRealField for LetoArray3<f64> {
     }
 }
 
-#[inline]
-fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
-    let plane = ny * nz;
-    let i = index / plane;
-    let rem = index % plane;
-    let j = rem / nz;
-    let k = rem % nz;
-    (i, j, k)
-}
-
-#[inline]
-fn axis_index(axis: SpectralAxis, i: usize, j: usize, k: usize) -> usize {
-    match axis {
-        SpectralAxis::X => i,
-        SpectralAxis::Y => j,
-        SpectralAxis::Z => k,
-    }
-}
-
 fn apply_shifted_kappa(
     grad_k: &mut LetoArray3<Complex64>,
     spectrum: &LetoArray3<Complex64>,
     kappa: &LetoArray3<f64>,
     shift: &Array1<Complex64>,
-    axis: SpectralAxis,
+    axis: LaneAxis,
 ) {
     assert_eq!(
         grad_k.shape(),
@@ -83,10 +58,24 @@ fn apply_shifted_kappa(
         kappa.as_slice(),
         shift.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(grad_values, |index, grad| {
-            let (i, j, k) = dense_indices(index, ny, nz);
-            *grad = (shift_values[axis_index(axis, i, j, k)] * spectrum_values[index])
-                * kappa_values[index];
+        let element_bytes = 2 * size_of::<Complex64>() + size_of::<f64>();
+        for_each_z_lane(grad_values, [ny, nz], element_bytes, |start, i, j, grad| {
+            let spectrum = &spectrum_values[start..start + nz];
+            let kappa = &kappa_values[start..start + nz];
+            let lane = grad.iter_mut().zip(spectrum).zip(kappa);
+            match axis {
+                LaneAxis::X | LaneAxis::Y => {
+                    let shift = shift_values[axis_index(axis, i, j, 0)];
+                    for ((grad, &spectrum), &kappa) in lane {
+                        *grad = (shift * spectrum) * kappa;
+                    }
+                }
+                LaneAxis::Z => {
+                    for (((grad, &spectrum), &kappa), &shift) in lane.zip(&shift_values[..nz]) {
+                        *grad = (shift * spectrum) * kappa;
+                    }
+                }
+            }
         });
         return;
     }
@@ -170,7 +159,7 @@ fn update_density_fused(
     divergence: &LetoArray3<f64>,
     coefficient: &impl DenseRealField,
     pml: &[f64],
-    axis: SpectralAxis,
+    axis: LaneAxis,
     dt: f64,
 ) {
     assert_eq!(
@@ -190,11 +179,29 @@ fn update_density_fused(
         divergence.as_slice(),
         coefficient.as_dense_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(density_values, |index, density| {
-            let (i, j, k) = dense_indices(index, ny, nz);
-            let p = pml[axis_index(axis, i, j, k)];
-            *density = p * (p * *density - dt * coef_values[index] * div_values[index]);
-        });
+        for_each_z_lane(
+            density_values,
+            [ny, nz],
+            3 * size_of::<f64>(),
+            |start, i, j, density| {
+                let coefficient = &coef_values[start..start + nz];
+                let divergence = &div_values[start..start + nz];
+                let lane = density.iter_mut().zip(coefficient).zip(divergence);
+                match axis {
+                    LaneAxis::X | LaneAxis::Y => {
+                        let p = pml[axis_index(axis, i, j, 0)];
+                        for ((density, &coefficient), &divergence) in lane {
+                            *density = p * (p * *density - dt * coefficient * divergence);
+                        }
+                    }
+                    LaneAxis::Z => {
+                        for (((density, &coefficient), &divergence), &p) in lane.zip(&pml[..nz]) {
+                            *density = p * (p * *density - dt * coefficient * divergence);
+                        }
+                    }
+                }
+            },
+        );
         return;
     }
 
@@ -290,7 +297,7 @@ impl PSTDSolver {
             &self.ux_k,
             &self.kappa,
             &self.ddx_k_shift_neg,
-            SpectralAxis::X,
+            LaneAxis::X,
         );
         // Write IFFT result directly to div_ux; dpx is not used for density.
         self.fft
@@ -304,7 +311,7 @@ impl PSTDSolver {
                 &self.ux_k,
                 &self.kappa,
                 &self.ddy_k_shift_neg,
-                SpectralAxis::Y,
+                LaneAxis::Y,
             );
             self.fft
                 .inverse_c2r_into(&mut self.grad_k, &mut self.div_uy);
@@ -320,7 +327,7 @@ impl PSTDSolver {
                 &self.ux_k,
                 &self.kappa,
                 &self.ddz_k_shift_neg,
-                SpectralAxis::Z,
+                LaneAxis::Z,
             );
             self.fft
                 .inverse_c2r_into(&mut self.grad_k, &mut self.div_uz);
@@ -362,7 +369,7 @@ impl PSTDSolver {
                     &self.div_ux,
                     &self.div_u,
                     pml_dx,
-                    SpectralAxis::X,
+                    LaneAxis::X,
                     dt,
                 );
 
@@ -375,7 +382,7 @@ impl PSTDSolver {
                         &self.div_uy,
                         &self.div_u,
                         pml_dy,
-                        SpectralAxis::Y,
+                        LaneAxis::Y,
                         dt,
                     );
                 }
@@ -389,7 +396,7 @@ impl PSTDSolver {
                         &self.div_uz,
                         &self.div_u,
                         pml_dz,
-                        SpectralAxis::Z,
+                        LaneAxis::Z,
                         dt,
                     );
                 }
@@ -425,7 +432,7 @@ impl PSTDSolver {
                     &self.div_ux,
                     &self.materials.rho0,
                     pml_dx,
-                    SpectralAxis::X,
+                    LaneAxis::X,
                     dt,
                 );
 
@@ -438,7 +445,7 @@ impl PSTDSolver {
                         &self.div_uy,
                         &self.materials.rho0,
                         pml_dy,
-                        SpectralAxis::Y,
+                        LaneAxis::Y,
                         dt,
                     );
                 }
@@ -452,7 +459,7 @@ impl PSTDSolver {
                         &self.div_uz,
                         &self.materials.rho0,
                         pml_dz,
-                        SpectralAxis::Z,
+                        LaneAxis::Z,
                         dt,
                     );
                 }
@@ -475,5 +482,105 @@ impl PSTDSolver {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{apply_shifted_kappa, axis_index, update_density_fused, LaneAxis};
+    use kwavers_math::fft::Complex64;
+    use leto::{Array1, Array3 as LetoArray3};
+
+    /// One volume below the lane pass's parallel floor and one above it.
+    const SHAPES: [[usize; 3]; 2] = [[5, 3, 7], [37, 29, 31]];
+    const AXES: [LaneAxis; 3] = [LaneAxis::X, LaneAxis::Y, LaneAxis::Z];
+
+    fn real_field(shape: [usize; 3], seed: f64) -> LetoArray3<f64> {
+        let values = (0..shape.iter().product::<usize>())
+            .map(|index| (index as f64).mul_add(0.754_8, seed).sin())
+            .collect();
+        LetoArray3::from_shape_vec(shape, values).expect("values match the shape")
+    }
+
+    fn complex_field(shape: [usize; 3], seed: f64) -> LetoArray3<Complex64> {
+        let values = (0..shape.iter().product::<usize>())
+            .map(|index| {
+                let x = (index as f64).mul_add(0.618_0, seed);
+                Complex64::new(x.sin(), x.cos())
+            })
+            .collect();
+        LetoArray3::from_shape_vec(shape, values).expect("values match the shape")
+    }
+
+    fn table(shape: [usize; 3]) -> Vec<f64> {
+        (0..*shape.iter().max().expect("a volume has three extents"))
+            .map(|n| (n as f64).mul_add(-0.013, 1.0))
+            .collect()
+    }
+
+    /// The lane pass computes the same expression, in the same order, as the
+    /// per-element loop it replaced, so the fields agree to the bit.
+    #[test]
+    fn density_update_is_the_per_element_formula_to_the_bit() {
+        let dt = 1.0e-7;
+        for shape in SHAPES {
+            let [nx, ny, nz] = shape;
+            let pml = table(shape);
+            let divergence = real_field(shape, 1.0);
+            let coefficient = real_field(shape, 2.0);
+            for axis in AXES {
+                let mut density = real_field(shape, 3.0);
+                let mut expected = density.clone();
+                for i in 0..nx {
+                    for j in 0..ny {
+                        for k in 0..nz {
+                            let p = pml[axis_index(axis, i, j, k)];
+                            expected[[i, j, k]] = p
+                                * (p * expected[[i, j, k]]
+                                    - dt * coefficient[[i, j, k]] * divergence[[i, j, k]]);
+                        }
+                    }
+                }
+                update_density_fused(&mut density, &divergence, &coefficient, &pml, axis, dt);
+                let same = density
+                    .iter()
+                    .zip(expected.iter())
+                    .all(|(a, b)| a.to_bits() == b.to_bits());
+                assert!(same, "density update diverges at {shape:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn shifted_kappa_is_the_per_element_formula_to_the_bit() {
+        for shape in SHAPES {
+            let [nx, ny, nz] = shape;
+            let spectrum = complex_field(shape, 1.0);
+            let kappa = real_field(shape, 2.0);
+            let shift_values: Vec<Complex64> = table(shape)
+                .into_iter()
+                .map(|v| Complex64::new(v, -v))
+                .collect();
+            let shift = Array1::from_vec([shift_values.len()], shift_values)
+                .expect("values match the length");
+            for axis in AXES {
+                let mut gradient = complex_field(shape, 5.0);
+                let mut expected = gradient.clone();
+                for i in 0..nx {
+                    for j in 0..ny {
+                        for k in 0..nz {
+                            expected[[i, j, k]] = (shift[axis_index(axis, i, j, k)]
+                                * spectrum[[i, j, k]])
+                                * kappa[[i, j, k]];
+                        }
+                    }
+                }
+                apply_shifted_kappa(&mut gradient, &spectrum, &kappa, &shift, axis);
+                let same = gradient.iter().zip(expected.iter()).all(|(a, b)| {
+                    a.re.to_bits() == b.re.to_bits() && a.im.to_bits() == b.im.to_bits()
+                });
+                assert!(same, "shifted kappa diverges at {shape:?}");
+            }
+        }
     }
 }

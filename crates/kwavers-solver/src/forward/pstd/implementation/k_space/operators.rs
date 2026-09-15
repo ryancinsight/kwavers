@@ -108,13 +108,30 @@ fn clone_complex_field(field: LetoArray3<Complex64>) -> Array3<Complex64> {
 pub struct PSTDKSOperators {
     pub k_grid: PSTDKSGrid,
     pub fft_processor: std::sync::Arc<Fft3d>,
-    /// Previous-step pressure pⁿ⁻¹ for the exact second-order k-space leapfrog
-    /// `pⁿ⁺¹ = 2cos(c·|k|·Δt)·pⁿ − pⁿ⁻¹`. `None` before the first FullKSpace step;
-    /// the first step uses the zero-velocity IVP half-coefficient instead.
-    pub p_prev: Option<Array3<f64>>,
-    /// Exact homogeneous wave-propagation coefficient `2·cos(c_ref·|k|·Δt)` over the
-    /// full spectrum, lazily built on the first FullKSpace step (needs `c_ref·Δt`).
-    pub wave_coeff: Option<Array3<f64>>,
+    /// State of the exact second-order leapfrog, built on the first FullKSpace
+    /// step (its coefficient needs `c_ref·Δt`).
+    leapfrog: Option<KSpaceLeapfrog>,
+}
+
+/// Buffers of the exact second-order k-space leapfrog
+/// `pⁿ⁺¹ = 2cos(c·|k|·Δt)·pⁿ − pⁿ⁻¹ + sⁿ`.
+///
+/// Pressure is real and `|k|` is even in every axis, so the coefficient acts
+/// on the half spectrum `(nx, ny, nz/2+1)` exactly: the Hermitian completion
+/// of `coefficient · half` is `coefficient ·` the completion of `half`. The
+/// step therefore runs on the half-spectrum pair, and every buffer here is
+/// reused across steps — a step allocates nothing.
+#[derive(Debug, Clone)]
+pub(crate) struct KSpaceLeapfrog {
+    /// `2·cos(c_ref·|k|·Δt)` over the half spectrum.
+    pub(crate) coefficient: Array3<f64>,
+    /// Half spectrum of pⁿ; the inverse transform consumes it every step.
+    pub(crate) spectrum: Array3<Complex64>,
+    /// pⁿ⁻¹, absent before the first step, which takes the zero-velocity
+    /// initial-value half coefficient instead.
+    pub(crate) previous: Option<Array3<f64>>,
+    /// pⁿ⁺¹ under construction; it rotates with the pressure field.
+    pub(crate) next: Array3<f64>,
 }
 
 impl PSTDKSOperators {
@@ -133,28 +150,38 @@ impl PSTDKSOperators {
             fft_processor: std::sync::Arc::new(Fft3d::new(
                 Shape3D::new(nx, ny, nz).expect("invariant: k-space grid dimensions are non-zero"),
             )),
-            p_prev: None,
-            wave_coeff: None,
+            leapfrog: None,
         }
     }
 
-    /// Build (or return) the exact second-order propagation coefficient
-    /// `2·cos(c_ref·|k|·Δt)` for every spectral bin. Computed once and cached in
-    /// `wave_coeff`. Each bin depends only on its own `|k|` → race-free.
-    ///
-    /// # Panics
-    ///
-    /// Panics if a caller-supplied shape or an internal solver state violates
-    /// the precondition required by this operation.
-    pub fn ensure_wave_coeff(&mut self, c_ref: f64, dt: f64) -> &Array3<f64> {
-        if self.wave_coeff.is_none() {
+    /// The transform plan beside the leapfrog state, which is built on first use
+    /// from `c_ref·Δt`; later calls return the cached state unchanged.
+    pub(crate) fn leapfrog(&mut self, c_ref: f64, dt: f64) -> (&Fft3d, &mut KSpaceLeapfrog) {
+        let Self {
+            k_grid,
+            fft_processor,
+            leapfrog,
+        } = self;
+        let state = leapfrog.get_or_insert_with(|| {
+            let [nx, ny, nz] = k_grid.k_mag.shape();
+            let depth = nz / 2 + 1;
             let cdt = c_ref * dt;
-            let coeff = self.k_grid.k_mag.mapv(|k| 2.0 * (cdt * k).cos());
-            self.wave_coeff = Some(coeff);
-        }
-        self.wave_coeff
-            .as_ref()
-            .expect("invariant: wave_coeff populated immediately above")
+            let mut coefficient = Array3::zeros([nx, ny, depth]);
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..depth {
+                        coefficient[[i, j, k]] = 2.0 * (cdt * k_grid.k_mag[[i, j, k]]).cos();
+                    }
+                }
+            }
+            KSpaceLeapfrog {
+                coefficient,
+                spectrum: Array3::zeros([nx, ny, depth]),
+                previous: None,
+                next: Array3::zeros([nx, ny, nz]),
+            }
+        });
+        (fft_processor, state)
     }
 
     /// Apply Helmholtz operator: (∇² + k₀²)p in wavenumber domain

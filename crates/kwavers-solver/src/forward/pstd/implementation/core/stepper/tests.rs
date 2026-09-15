@@ -1,5 +1,5 @@
 use super::super::orchestrator::PSTDSolver;
-use crate::forward::pstd::config::{AntiAliasingConfig, BoundaryConfig, PSTDConfig};
+use crate::forward::pstd::config::{AntiAliasingConfig, BoundaryConfig, KSpaceMethod, PSTDConfig};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
@@ -403,4 +403,87 @@ fn pstd_sigma_factor_three_outperforms_the_kwave_default() {
         "sigma_factor 3 must beat 2 by >5x on the PSTD path: default {ratio_default:.4e}, \
          tuned {ratio_tuned:.4e} (measured 117x)"
     );
+}
+
+/// Steps the Fourier-mode oracle advances.
+const FOURIER_MODE_STEPS: usize = 24;
+
+/// Rounding allowance, in units of `f64::EPSILON` at unit amplitude, for one
+/// half-spectrum round trip at these volumes: apollo's half pair bounds its
+/// per-element round-trip error by `128u` (`real_fft` tests), and the
+/// coefficient multiply adds one more rounding.
+const ROUND_TRIP_ULPS: f64 = 129.0;
+
+/// The exact k-space leapfrog advances one Fourier mode without dispersion.
+///
+/// For a homogeneous, source-free medium the scheme is `pⁿ⁺¹ = 2cos θ·pⁿ − pⁿ⁻¹`
+/// per wavevector with `θ = c·|k|·Δt`, and the zero-velocity first step is
+/// `p¹ = cos θ·p⁰`. That is the Chebyshev recurrence, so `pⁿ = cos(nθ)·p⁰`
+/// exactly: a mode `cos(k·x)` must read `cos(k·x)·cos(n·c·|k|·Δt)` after `n`
+/// steps. Rounding enters once per step and the recurrence can amplify an
+/// error injected at step `m` by at most `n − m` (|sin(nθ)/sin θ| ≤ n), so the
+/// accumulated bound is `Σ (n − m) ≤ n²/2` round trips. Run on a depth that is a
+/// multiple of four (apollo's real split) and one that is not (its widening
+/// fallback).
+#[test]
+fn full_kspace_advances_a_fourier_mode_exactly() {
+    for (nx, ny, nz) in [(16, 12, 8), (12, 10, 10)] {
+        let dx = 1e-3_f64;
+        let c0 = SOUND_SPEED_WATER_SIM;
+        let dt = 0.3 * dx / c0;
+        let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
+        let medium = HomogeneousMedium::new(DENSITY_WATER_NOMINAL, c0, 0.0, 0.0, &grid);
+
+        let wavevector = [
+            core::f64::consts::TAU * 3.0 / (nx as f64 * dx),
+            core::f64::consts::TAU * 2.0 / (ny as f64 * dx),
+            core::f64::consts::TAU * 1.0 / (nz as f64 * dx),
+        ];
+        let k_norm = wavevector.iter().map(|k| k * k).sum::<f64>().sqrt();
+        let phase = |i: usize, j: usize, k: usize| {
+            (wavevector[0] * i as f64 + wavevector[1] * j as f64 + wavevector[2] * k as f64) * dx
+        };
+        let mut p0 = leto::Array3::<f64>::zeros((nx, ny, nz));
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    p0[[i, j, k]] = phase(i, j, k).cos();
+                }
+            }
+        }
+
+        let source = GridSource {
+            p0: Some(p0),
+            ..GridSource::new_empty()
+        };
+        let config = PSTDConfig {
+            dt,
+            nt: FOURIER_MODE_STEPS,
+            boundary: BoundaryConfig::None,
+            kspace_method: KSpaceMethod::FullKSpace,
+            smooth_sources: false,
+            ..Default::default()
+        };
+        let mut solver = PSTDSolver::new(config, grid, &medium, source).unwrap();
+
+        for step in 1..=FOURIER_MODE_STEPS {
+            solver.step_forward().unwrap();
+            let decay = (step as f64 * c0 * k_norm * dt).cos();
+            let bound = ROUND_TRIP_ULPS * f64::EPSILON * (step * step) as f64 / 2.0
+                + ROUND_TRIP_ULPS * f64::EPSILON;
+            let mut worst = 0.0_f64;
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        let expected = phase(i, j, k).cos() * decay;
+                        worst = worst.max((solver.fields.p[[i, j, k]] - expected).abs());
+                    }
+                }
+            }
+            assert!(
+                worst <= bound,
+                "{nx}x{ny}x{nz} step {step}: |p - cos(k.x) cos(n c |k| dt)| = {worst:e} exceeds {bound:e}"
+            );
+        }
+    }
 }

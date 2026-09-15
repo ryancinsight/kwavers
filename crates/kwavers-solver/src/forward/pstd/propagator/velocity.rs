@@ -46,6 +46,7 @@
 //! - Liu (1998). Geophysics 63(6), 2082–2089. (k-space PSTD method)
 //! - Berenger (1994). J. Comput. Phys. 114(2), 185–200. (split-field PML)
 
+use super::lanes::{axis_index, for_each_z_lane, LaneAxis};
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -55,26 +56,9 @@ use leto::{Array1, Array2, ArrayView2, ArrayView3, ArrayViewMut2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 #[derive(Clone, Copy)]
-enum VelocityAxis {
-    X,
-    Y,
-    Z,
-}
-
-#[derive(Clone, Copy)]
-enum AsVelocityAxis {
+enum AsLaneAxis {
     X,
     R,
-}
-
-#[inline]
-fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
-    let plane = ny * nz;
-    let i = index / plane;
-    let rem = index % plane;
-    let j = rem / nz;
-    let k = rem % nz;
-    (i, j, k)
 }
 
 #[inline]
@@ -83,19 +67,10 @@ fn dense_indices_2(index: usize, nr: usize) -> (usize, usize) {
 }
 
 #[inline]
-fn axis_index(axis: VelocityAxis, i: usize, j: usize, k: usize) -> usize {
+fn as_pml_index(axis: AsLaneAxis, i: usize, k: usize) -> usize {
     match axis {
-        VelocityAxis::X => i,
-        VelocityAxis::Y => j,
-        VelocityAxis::Z => k,
-    }
-}
-
-#[inline]
-fn as_pml_index(axis: AsVelocityAxis, i: usize, k: usize) -> usize {
-    match axis {
-        AsVelocityAxis::X => i,
-        AsVelocityAxis::R => k,
+        AsLaneAxis::X => i,
+        AsLaneAxis::R => k,
     }
 }
 
@@ -104,7 +79,7 @@ fn apply_shifted_kappa(
     spectrum: &Array3<Complex64>,
     kappa: &Array3<f64>,
     shift: &Array1<Complex64>,
-    axis: VelocityAxis,
+    axis: LaneAxis,
 ) {
     assert_eq!(
         grad_k.shape(),
@@ -124,10 +99,24 @@ fn apply_shifted_kappa(
         kappa.as_slice(),
         shift.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(grad_values, |index, grad| {
-            let (i, j, k) = dense_indices(index, ny, nz);
-            *grad = (shift_values[axis_index(axis, i, j, k)] * spectrum_values[index])
-                * kappa_values[index];
+        let element_bytes = 2 * size_of::<Complex64>() + size_of::<f64>();
+        for_each_z_lane(grad_values, [ny, nz], element_bytes, |start, i, j, grad| {
+            let spectrum = &spectrum_values[start..start + nz];
+            let kappa = &kappa_values[start..start + nz];
+            let lane = grad.iter_mut().zip(spectrum).zip(kappa);
+            match axis {
+                LaneAxis::X | LaneAxis::Y => {
+                    let shift = shift_values[axis_index(axis, i, j, 0)];
+                    for ((grad, &spectrum), &kappa) in lane {
+                        *grad = (shift * spectrum) * kappa;
+                    }
+                }
+                LaneAxis::Z => {
+                    for (((grad, &spectrum), &kappa), &shift) in lane.zip(&shift_values[..nz]) {
+                        *grad = (shift * spectrum) * kappa;
+                    }
+                }
+            }
         });
         return;
     }
@@ -148,7 +137,7 @@ fn update_velocity_fused(
     gradient: &Array3<f64>,
     rho0: ArrayView3<'_, f64>,
     pml: &[f64],
-    axis: VelocityAxis,
+    axis: LaneAxis,
     dt: f64,
 ) {
     assert_eq!(
@@ -170,11 +159,29 @@ fn update_velocity_fused(
         gradient.as_slice(),
         rho0.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
-            let (i, j, k) = dense_indices(index, ny, nz);
-            let p = pml[axis_index(axis, i, j, k)];
-            *velocity = p * (p * *velocity - (dt / rho_values[index]) * gradient_values[index]);
-        });
+        for_each_z_lane(
+            velocity_values,
+            [ny, nz],
+            3 * size_of::<f64>(),
+            |start, i, j, velocity| {
+                let gradient = &gradient_values[start..start + nz];
+                let rho = &rho_values[start..start + nz];
+                let lane = velocity.iter_mut().zip(gradient).zip(rho);
+                match axis {
+                    LaneAxis::X | LaneAxis::Y => {
+                        let p = pml[axis_index(axis, i, j, 0)];
+                        for ((velocity, &gradient), &rho) in lane {
+                            *velocity = p * (p * *velocity - (dt / rho) * gradient);
+                        }
+                    }
+                    LaneAxis::Z => {
+                        for (((velocity, &gradient), &rho), &p) in lane.zip(&pml[..nz]) {
+                            *velocity = p * (p * *velocity - (dt / rho) * gradient);
+                        }
+                    }
+                }
+            },
+        );
         return;
     }
 
@@ -235,7 +242,7 @@ fn update_axisymmetric_velocity_fused(
     gradient: &Array2<f64>,
     rho0: ArrayView2<'_, f64>,
     pml: &[f64],
-    axis: AsVelocityAxis,
+    axis: AsLaneAxis,
     dt: f64,
 ) {
     assert_eq!(
@@ -376,7 +383,7 @@ impl PSTDSolver {
                 &self.p_k,
                 &self.kappa,
                 &self.ddx_k_shift_pos,
-                VelocityAxis::X,
+                LaneAxis::X,
             );
             self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
             // Fused: u = pml * (pml * u - (dt/rho) * dp)
@@ -394,7 +401,7 @@ impl PSTDSolver {
                 &self.dpx,
                 rho0,
                 pml_vx,
-                VelocityAxis::X,
+                LaneAxis::X,
                 dt,
             );
 
@@ -405,7 +412,7 @@ impl PSTDSolver {
                     &self.p_k,
                     &self.kappa,
                     &self.ddy_k_shift_pos,
-                    VelocityAxis::Y,
+                    LaneAxis::Y,
                 );
                 // Reuse dpx for y-gradient IFFT (Opt-12): x-axis update has completed;
                 // dpx is free to overwrite before y-axis update reads it.
@@ -418,7 +425,7 @@ impl PSTDSolver {
                     &self.dpx,
                     rho0,
                     pml_vy,
-                    VelocityAxis::Y,
+                    LaneAxis::Y,
                     dt,
                 );
             }
@@ -431,7 +438,7 @@ impl PSTDSolver {
                     &self.p_k,
                     &self.kappa,
                     &self.ddz_k_shift_pos,
-                    VelocityAxis::Z,
+                    LaneAxis::Z,
                 );
                 // Reuse dpx for z-gradient IFFT (Opt-12): y-axis update has completed.
                 self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
@@ -443,7 +450,7 @@ impl PSTDSolver {
                     &self.dpx,
                     rho0,
                     pml_vz,
-                    VelocityAxis::Z,
+                    LaneAxis::Z,
                     dt,
                 );
             }
@@ -458,7 +465,7 @@ impl PSTDSolver {
                 &self.p_k,
                 &self.kappa,
                 &self.ddx_k_shift_pos,
-                VelocityAxis::X,
+                LaneAxis::X,
             );
             self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
             update_velocity_unfused(
@@ -475,7 +482,7 @@ impl PSTDSolver {
                     &self.p_k,
                     &self.kappa,
                     &self.ddy_k_shift_pos,
-                    VelocityAxis::Y,
+                    LaneAxis::Y,
                 );
                 // Reuse dpx for y-gradient IFFT (Opt-12): x-axis update has completed.
                 self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
@@ -494,7 +501,7 @@ impl PSTDSolver {
                     &self.p_k,
                     &self.kappa,
                     &self.ddz_k_shift_pos,
-                    VelocityAxis::Z,
+                    LaneAxis::Z,
                 );
                 // Reuse dpx for z-gradient IFFT (Opt-12): y-axis update has completed.
                 self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
@@ -587,7 +594,7 @@ impl PSTDSolver {
                 rho0.slice_with::<2>(&s![.., 0, ..])
                     .expect("invariant: axisymmetric r=0 plane within rho0 bounds"),
                 pml_vx,
-                AsVelocityAxis::X,
+                AsLaneAxis::X,
                 dt,
             );
 
@@ -599,7 +606,7 @@ impl PSTDSolver {
                 rho0.slice_with::<2>(&s![.., 0, ..])
                     .expect("invariant: axisymmetric r=0 plane within rho0 bounds"),
                 pml_vz,
-                AsVelocityAxis::R,
+                AsLaneAxis::R,
                 dt,
             );
         } else {
@@ -700,5 +707,95 @@ impl PSTDSolver {
 
         self.boundary = Some(boundary);
         result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{apply_shifted_kappa, axis_index, update_velocity_fused, LaneAxis};
+    use kwavers_math::fft::Complex64;
+    use leto::{Array1, Array3};
+
+    /// One volume below the lane pass's parallel floor and one above it.
+    const SHAPES: [[usize; 3]; 2] = [[5, 3, 7], [37, 29, 31]];
+    const AXES: [LaneAxis; 3] = [LaneAxis::X, LaneAxis::Y, LaneAxis::Z];
+
+    fn real_field(shape: [usize; 3], seed: f64) -> Array3<f64> {
+        let values = (0..shape.iter().product::<usize>())
+            .map(|index| (index as f64).mul_add(0.754_8, seed).sin())
+            .collect();
+        Array3::from_shape_vec(shape, values).expect("values match the shape")
+    }
+
+    fn table(shape: [usize; 3]) -> Vec<f64> {
+        (0..*shape.iter().max().expect("a volume has three extents"))
+            .map(|n| (n as f64).mul_add(-0.013, 1.0))
+            .collect()
+    }
+
+    /// The lane pass computes the same expression, in the same order, as the
+    /// per-element loop it replaced, so the fields agree to the bit.
+    #[test]
+    fn velocity_update_is_the_per_element_formula_to_the_bit() {
+        let dt = 1.0e-7;
+        for shape in SHAPES {
+            let [nx, ny, nz] = shape;
+            let pml = table(shape);
+            let gradient = real_field(shape, 1.0);
+            let rho = real_field(shape, 2.0).mapv(|v| v.mul_add(100.0, 1000.0));
+            for axis in AXES {
+                let mut velocity = real_field(shape, 3.0);
+                let mut expected = velocity.clone();
+                for i in 0..nx {
+                    for j in 0..ny {
+                        for k in 0..nz {
+                            let p = pml[axis_index(axis, i, j, k)];
+                            expected[[i, j, k]] = p
+                                * (p * expected[[i, j, k]]
+                                    - (dt / rho[[i, j, k]]) * gradient[[i, j, k]]);
+                        }
+                    }
+                }
+                update_velocity_fused(&mut velocity, &gradient, rho.view(), &pml, axis, dt);
+                let same = velocity
+                    .iter()
+                    .zip(expected.iter())
+                    .all(|(a, b)| a.to_bits() == b.to_bits());
+                assert!(same, "velocity update diverges at {shape:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn shifted_kappa_is_the_per_element_formula_to_the_bit() {
+        for shape in SHAPES {
+            let [nx, ny, nz] = shape;
+            let spectrum = real_field(shape, 1.0).mapv(|v| Complex64::new(v, -v * 0.5));
+            let kappa = real_field(shape, 2.0);
+            let shift_values: Vec<Complex64> = table(shape)
+                .into_iter()
+                .map(|v| Complex64::new(v, -v))
+                .collect();
+            let shift = Array1::from_vec([shift_values.len()], shift_values)
+                .expect("values match the length");
+            for axis in AXES {
+                let mut gradient = real_field(shape, 5.0).mapv(|v| Complex64::new(v, v));
+                let mut expected = gradient.clone();
+                for i in 0..nx {
+                    for j in 0..ny {
+                        for k in 0..nz {
+                            expected[[i, j, k]] = (shift[axis_index(axis, i, j, k)]
+                                * spectrum[[i, j, k]])
+                                * kappa[[i, j, k]];
+                        }
+                    }
+                }
+                apply_shifted_kappa(&mut gradient, &spectrum, &kappa, &shift, axis);
+                let same = gradient.iter().zip(expected.iter()).all(|(a, b)| {
+                    a.re.to_bits() == b.re.to_bits() && a.im.to_bits() == b.im.to_bits()
+                });
+                assert!(same, "shifted kappa diverges at {shape:?}");
+            }
+        }
     }
 }
