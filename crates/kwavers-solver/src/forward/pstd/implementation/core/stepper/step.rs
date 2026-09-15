@@ -5,6 +5,7 @@ use super::ops::{add_gradient_source_term, add_masked_source_term};
 use crate::forward::pstd::config::KSpaceMethod;
 use crate::forward::pstd::implementation::k_space::PSTDKSOperators;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Fft3dInOutExt;
 use kwavers_source::{SourceField, SourceInjectionMode};
 use leto::Array3;
 use tracing::{enabled, trace, warn, Level};
@@ -222,45 +223,53 @@ impl PSTDSolver {
         source_term: &Array3<f64>,
         kspace_ops: &mut PSTDKSOperators,
     ) -> KwaversResult<()> {
-        let c_ref = self.c_ref;
-        kspace_ops.ensure_wave_coeff(c_ref, dt);
-        let p_prev_old = kspace_ops.p_prev.take(); // pⁿ⁻¹ (None on the first step)
-        let is_first = p_prev_old.is_none();
-
-        let mut p_hat = kspace_ops.forward_fft_3d(&self.fields.p)?;
-        {
-            let coeff = kspace_ops
-                .wave_coeff
-                .as_ref()
-                .expect("invariant: ensure_wave_coeff populated wave_coeff");
-            let factor = if is_first { 0.5 } else { 1.0 };
-            for (value, &coef) in p_hat.iter_mut().zip(coeff.iter()) {
-                *value *= factor * coef;
-            }
-        }
-        let mut new_p = kspace_ops.inverse_fft_3d(&p_hat)?;
-
-        if let Some(prev) = &p_prev_old {
-            for ((dst, &old), &source) in new_p.iter_mut().zip(prev.iter()).zip(source_term.iter())
-            {
-                *dst += source - old;
-            }
+        let (fft, leapfrog) = kspace_ops.leapfrog(self.c_ref, dt);
+        fft.forward_r2c_into(&self.fields.p, &mut leapfrog.spectrum);
+        let factor = if leapfrog.previous.is_none() {
+            0.5
         } else {
-            for (dst, &source) in new_p.iter_mut().zip(source_term.iter()) {
-                *dst += source;
-            }
+            1.0
+        };
+        let spectrum = leapfrog
+            .spectrum
+            .as_slice_mut()
+            .expect("invariant: the leapfrog spectrum is an owned contiguous array");
+        let coefficient = leapfrog
+            .coefficient
+            .as_slice()
+            .expect("invariant: the leapfrog coefficient is an owned contiguous array");
+        for (value, &coefficient) in spectrum.iter_mut().zip(coefficient) {
+            *value *= factor * coefficient;
         }
+        fft.inverse_c2r_into(&mut leapfrog.spectrum, &mut leapfrog.next);
 
-        // pⁿ becomes pⁿ⁻¹ for the next step; new_p becomes the current pressure.
-        let shape = self.fields.p.shape();
-        let mut old_p = leto::Array3::zeros((shape[0], shape[1], shape[2]));
-        for (dst, src) in old_p.iter_mut().zip(self.fields.p.iter()) {
-            *dst = *src;
+        let next = leapfrog
+            .next
+            .as_slice_mut()
+            .expect("invariant: the leapfrog next pressure is an owned contiguous array");
+        let source = source_term.as_slice().expect(
+            "invariant: the FullKSpace source term is the solver's owned contiguous buffer",
+        );
+        if let Some(previous) = leapfrog.previous.as_mut() {
+            let old = previous
+                .as_slice()
+                .expect("invariant: the leapfrog previous pressure is an owned contiguous array");
+            for ((next, &old), &source) in next.iter_mut().zip(old).zip(source) {
+                *next += source - old;
+            }
+            // pⁿ becomes pⁿ⁻¹, pⁿ⁺¹ becomes the pressure, and the retired pⁿ⁻¹
+            // buffer is the next step's pⁿ⁺¹.
+            std::mem::swap(previous, &mut self.fields.p);
+            std::mem::swap(&mut self.fields.p, &mut leapfrog.next);
+        } else {
+            for (next, &source) in next.iter_mut().zip(source) {
+                *next += source;
+            }
+            // The first step has no pⁿ⁻¹ buffer to retire, so it builds one.
+            let shape = leapfrog.next.shape();
+            let advanced = std::mem::replace(&mut leapfrog.next, Array3::zeros(shape));
+            leapfrog.previous = Some(std::mem::replace(&mut self.fields.p, advanced));
         }
-        for (dst, src) in self.fields.p.iter_mut().zip(new_p.iter()) {
-            *dst = *src;
-        }
-        kspace_ops.p_prev = Some(old_p);
         Ok(())
     }
 }

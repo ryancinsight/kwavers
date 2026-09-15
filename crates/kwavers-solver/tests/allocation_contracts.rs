@@ -9,7 +9,7 @@ use kwavers_solver::forward::elastic::swe::{
     ArrivalDetection, ElasticBodyForceConfig, ElasticDisplacementSnapshot, ElasticWaveConfig,
     ElasticWaveField, ElasticWaveSolver, VolumetricWaveConfig, WaveFrontTracker,
 };
-use kwavers_solver::forward::pstd::config::{BoundaryConfig, PSTDConfig};
+use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
 use kwavers_solver::forward::pstd::PSTDSolver;
 use kwavers_solver::forward::viscoacoustic::ViscoacousticMemorySolver;
 #[cfg(feature = "pinn")]
@@ -574,7 +574,7 @@ fn viscoacoustic_rejected_construction_allocates_no_solver_state() {
     );
 }
 
-fn pstd_solver_with_initial_pressure(n: usize) -> PSTDSolver {
+fn pstd_solver_with_initial_pressure(n: usize, kspace_method: KSpaceMethod) -> PSTDSolver {
     let grid = Grid::new(n, n, n, 1.0e-4, 1.0e-4, 1.0e-4).expect("valid grid");
     let medium = HomogeneousMedium::new(1_000.0, 1_500.0, 0.0, 0.0, &grid);
     let mut p0 = Array3::zeros((n, n, n));
@@ -588,6 +588,7 @@ fn pstd_solver_with_initial_pressure(n: usize) -> PSTDSolver {
         nt: 16,
         boundary: BoundaryConfig::CPML(CPMLConfig::with_thickness(n / 4)),
         smooth_sources: false,
+        kspace_method,
         ..PSTDConfig::default()
     };
     PSTDSolver::new(config, grid, &medium, source).expect("valid solver")
@@ -600,22 +601,24 @@ fn pstd_solver_with_initial_pressure(n: usize) -> PSTDSolver {
 /// workers are outside it.
 #[test]
 fn pstd_steps_after_setup_do_not_allocate() {
-    let mut solver = pstd_solver_with_initial_pressure(16);
-    for _ in 0..4 {
-        solver.step_forward().expect("setup step");
+    for kspace_method in [KSpaceMethod::StandardPSTD, KSpaceMethod::FullKSpace] {
+        let mut solver = pstd_solver_with_initial_pressure(16, kspace_method);
+        for _ in 0..4 {
+            solver.step_forward().expect("setup step");
+        }
+        let before = solver.fields.p.clone();
+        let window = Window::open();
+        for _ in 0..8 {
+            solver.step_forward().expect("stable step");
+        }
+        let change = window.change();
+        drop(window);
+        assert_eq!(change.allocations, 0, "{kspace_method:?}");
+        assert_eq!(change.reallocations, 0, "{kspace_method:?}");
+        assert_ne!(
+            solver.fields.p.as_slice(),
+            before.as_slice(),
+            "the window must cover steps that advance the field"
+        );
     }
-    let before = solver.fields.p.clone();
-    let window = Window::open();
-    for _ in 0..8 {
-        solver.step_forward().expect("stable step");
-    }
-    let change = window.change();
-    drop(window);
-    assert_eq!(change.allocations, 0);
-    assert_eq!(change.reallocations, 0);
-    assert_ne!(
-        solver.fields.p.as_slice(),
-        before.as_slice(),
-        "the window must cover steps that advance the field"
-    );
 }

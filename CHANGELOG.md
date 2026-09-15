@@ -4,6 +4,17 @@
 
 ### Changed
 
+- **[major] A FullKSpace step allocates nothing and runs on the half-spectrum
+  pair.** `kwavers-solver`: `PSTDKSOperators` no longer exposes `p_prev`,
+  `wave_coeff` or `ensure_wave_coeff`; the leapfrog's coefficient, spectrum and
+  previous/next pressure are private buffers built on the first step and
+  rotated by swaps. The step transforms through `forward_r2c_into` /
+  `inverse_c2r_into` instead of the full complex pair, and the boundary runs
+  on the pressure field in place instead of on a collected copy written back,
+  which together remove seven full-grid allocations and two full-grid copies
+  per step. Migration: code that read `p_prev` or
+  `wave_coeff` reads the solver's pressure field instead; no public
+  replacement is needed for state the step owns.
 - **[major] The PSTD real-to-complex pair runs on the apollo half-spectrum
   transform, and `inverse_c2r_into` consumes its input.** `kwavers-math`:
   `Fft3dInOutExt::forward_r2c_into` and `inverse_c2r_into` call apollo
