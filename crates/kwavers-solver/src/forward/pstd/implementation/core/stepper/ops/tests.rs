@@ -1,6 +1,6 @@
 use super::{
-    add_gradient_source_term, add_masked_source_term, multiply_complex_by_real_field,
-    scale_real_field,
+    add_density_source_components, add_gradient_source_term, add_masked_source_term,
+    multiply_complex_by_real_field, scale_real_field,
 };
 use kwavers_math::fft::Complex64;
 use leto::Array3;
@@ -96,5 +96,46 @@ fn complex_by_real_is_the_per_element_product_to_the_bit() {
                 a.re.to_bits() == expected.re.to_bits() && a.im.to_bits() == expected.im.to_bits()
             });
         assert!(same, "complex by real diverges at {shape:?}");
+    }
+}
+
+#[test]
+fn density_source_is_the_per_element_sum_to_the_bit() {
+    for shape in SHAPES {
+        let source = real_field(shape, 5.0);
+        let (rhox, rhoy, rhoz) = (
+            real_field(shape, 6.0),
+            real_field(shape, 7.0),
+            real_field(shape, 8.0),
+        );
+        for (with_y, with_z) in [(true, true), (true, false), (false, true), (false, false)] {
+            let (mut rx, mut ry, mut rz) = (rhox.clone(), rhoy.clone(), rhoz.clone());
+            add_density_source_components(
+                &mut rx,
+                with_y.then_some(&mut ry),
+                with_z.then_some(&mut rz),
+                &source,
+            );
+            let same = (0..rx.len()).all(|i| {
+                let s = at(&source, i);
+                let y = if with_y {
+                    at(&rhoy, i) + s
+                } else {
+                    at(&rhoy, i)
+                };
+                let z = if with_z {
+                    at(&rhoz, i) + s
+                } else {
+                    at(&rhoz, i)
+                };
+                at(&rx, i).to_bits() == (at(&rhox, i) + s).to_bits()
+                    && at(&ry, i).to_bits() == y.to_bits()
+                    && at(&rz, i).to_bits() == z.to_bits()
+            });
+            assert!(
+                same,
+                "density source diverges at {shape:?} with y {with_y} and z {with_z}"
+            );
+        }
     }
 }
