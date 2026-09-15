@@ -63,11 +63,12 @@ mod density_as;
 mod density_cartesian;
 
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use crate::forward::pstd::lanes::for_each_z_lane;
 use crate::geometry::SolverGeometry;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 use leto::Array3 as LetoArray3;
 use leto::Array3 as NdArray3;
-use moirai_parallel::{enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with, Adaptive};
+use moirai_parallel::{for_each_chunk_pair_mut_enumerated_with, Adaptive};
 
 const PRESSURE_UPDATE_CHUNK: usize = 4096;
 
@@ -99,9 +100,22 @@ fn accumulate_split_density(
         rhoy.as_slice(),
         rhoz.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(div_values, |index, rho_sum| {
-            *rho_sum = rx_values[index] + ry_values[index] + rz_values[index];
-        });
+        let [_nx, ny, nz] = rhox.shape();
+        for_each_z_lane(
+            div_values,
+            [ny, nz],
+            4 * size_of::<f64>(),
+            |start, _, _, lane| {
+                let end = start + nz;
+                let inputs = rx_values[start..end]
+                    .iter()
+                    .zip(&ry_values[start..end])
+                    .zip(&rz_values[start..end]);
+                for (rho_sum, ((&x, &y), &z)) in lane.iter_mut().zip(inputs) {
+                    *rho_sum = x + y + z;
+                }
+            },
+        );
         return;
     }
 
@@ -156,12 +170,24 @@ fn apply_nonlinear_eos(
         bon.as_slice(),
         rho0.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |index, pressure| {
-            let rho_sum = div_values[index];
-            let nonlinear = (bon_values[index] / (2.0 * rho0_values[index])) * rho_sum * rho_sum;
-            let c = c0_values[index];
-            *pressure = c * c * (rho_sum + nonlinear);
-        });
+        let [_nx, ny, nz] = div_u.shape();
+        for_each_z_lane(
+            pressure_values,
+            [ny, nz],
+            5 * size_of::<f64>(),
+            |start, _, _, lane| {
+                let end = start + nz;
+                let inputs = div_values[start..end]
+                    .iter()
+                    .zip(&c0_values[start..end])
+                    .zip(&bon_values[start..end])
+                    .zip(&rho0_values[start..end]);
+                for (pressure, (((&rho_sum, &c), &bon), &rho0)) in lane.iter_mut().zip(inputs) {
+                    let nonlinear = (bon / (2.0 * rho0)) * rho_sum * rho_sum;
+                    *pressure = c * c * (rho_sum + nonlinear);
+                }
+            },
+        );
         return;
     }
 
@@ -286,12 +312,6 @@ impl PSTDSolver {
         //   Pass 2: p = c²·(ρ_total + bon/(2·ρ₀)·ρ_total²)  (5 arrays)
         //   Both passes use Moirai for dense standard-layout arrays.
         if self.config.nonlinearity {
-            // SAFETY: `bon.is_some() ↔ config.nonlinearity` — enforced at construction.
-            let bon = self.bon.as_ref().ok_or_else(|| {
-                KwaversError::InternalError(
-                    "bon must be populated when nonlinearity is enabled".into(),
-                )
-            })?;
             // Pass 1: accumulate split densities → ρ_total.
             accumulate_split_density(&mut self.div_u, &self.rhox, &self.rhoy, &self.rhoz);
             // Pass 2: nonlinear EOS — p = c²·(ρ_total + bon/(2·ρ₀)·ρ_total²).
@@ -299,7 +319,7 @@ impl PSTDSolver {
                 &mut self.fields.p,
                 &self.div_u,
                 &self.materials.c0,
-                bon,
+                &self.materials.nonlinearity,
                 &self.materials.rho0,
             );
         } else {
@@ -401,3 +421,6 @@ impl PSTDSolver {
         result
     }
 }
+
+#[cfg(test)]
+mod tests;

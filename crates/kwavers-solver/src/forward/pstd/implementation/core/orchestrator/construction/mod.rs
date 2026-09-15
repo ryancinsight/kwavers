@@ -235,10 +235,7 @@ impl PSTDSolver {
         let shape3 = [grid.nx, grid.ny, grid.nz];
         // Density and sound speed come from the shared sampler below, which
         // carries the same homogeneous fast path this block used to duplicate.
-        // `bon` stays local because it is `None` unless nonlinearity is active,
-        // saving N×8 bytes for the common linear case.
         let materials = MaterialFields::sample(medium, &grid);
-        let bon = config.nonlinearity.then(|| materials.nonlinearity.clone());
 
         let sensor_recorder =
             SensorRecorder::new(config.sensor_mask.as_ref(), shape, config.nt + 1)?;
@@ -303,7 +300,6 @@ impl PSTDSolver {
             ux_k: leto::Array3::zeros([grid.nx, grid.ny, nz_c]),
             grad_k: leto::Array3::zeros([grid.nx, grid.ny, nz_c]),
             materials,
-            bon,
             absorption,
             k_mag_half,
             residual_gas_absorption: None,
