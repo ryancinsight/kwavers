@@ -1,5 +1,14 @@
 # Backlog / Strategy
 
+<a id="kw-pstd-absorption-lanes"></a>
+
+## KW-PSTD-ABSORPTION-LANES-2026-09-15 — Power-law absorption adds 80% to a step through per-element dispatch [patch] [perf] — in-progress
+
+- **Finding.** `pstd_long_run` at 64³: power-law 7.17 ms against lossless 4.00 ms. Beyond its four transforms, `multiply_spectral_operator` recovers `(i, j, k)` by division per element and reads `operator[[i, j, k]]` though both arrays are contiguous half spectra (`apply.rs:112`), and `build_weighted_divergence`, `accumulate_stratum` and `apply_pressure_absorption` index several slices per element through `enumerate_mut_with::<Adaptive>`.
+- **Change.** The four kernels walk z lanes as contiguous zips on moirai unit tasks with unchanged arithmetic order; the identity `slice_with(..nz_c)` on the already-truncated operators goes; `lanes.rs` moves to `pstd/` so propagator and absorption share one walker.
+- **Acceptance:** bitwise differentials against the per-element formulas; the power-law arm of `pstd_long_run` falls with the FullKSpace arm as control; PSTD suites unchanged.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-absorption-lanes` (stacked on #774); **last-update:** 2026-09-15.
+
 <a id="kw-pstd-long-run"></a>
 
 ## KW-PSTD-LONG-RUN-2026-09-15 — A long PSTD run pays per step for work no instrument times [major] [perf] — review
