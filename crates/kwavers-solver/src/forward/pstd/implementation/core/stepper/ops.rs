@@ -1,14 +1,8 @@
 //! Dense array operations shared by PSTD stepper paths.
 
-use crate::forward::lanes::for_each_z_lane;
+use crate::forward::lanes::{for_each_z_lane, for_each_z_lane_pair, for_each_z_lane_triple};
 use kwavers_math::fft::Complex64;
 use leto::Array3 as LetoArray3;
-use moirai_parallel::{
-    for_each_chunk_mut_enumerated_with, for_each_chunk_pair_mut_enumerated_with,
-    for_each_chunk_triple_mut_enumerated_with, Adaptive,
-};
-
-const DENSE_SOURCE_CHUNK: usize = 4096;
 
 pub(super) fn scale_real_field(field: &mut LetoArray3<f64>, factor: f64) {
     let [_nx, ny, nz] = field.shape();
@@ -155,6 +149,9 @@ pub(super) fn add_density_source_components(
         );
     }
 
+    // Each branch adds the source once per written density, in the order the
+    // chunked loops did, so the sums agree with them to the bit.
+    let [_, ny, nz] = source.shape();
     match (rhoy, rhoz) {
         (Some(ry), Some(rz)) => {
             if let (Some(rx_values), Some(ry_values), Some(rz_values), Some(source_values)) = (
@@ -163,18 +160,20 @@ pub(super) fn add_density_source_components(
                 rz.as_slice_mut(),
                 source.as_slice(),
             ) {
-                for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                for_each_z_lane_triple(
                     rx_values,
                     ry_values,
                     rz_values,
-                    DENSE_SOURCE_CHUNK,
-                    |chunk_index, rx_chunk, ry_chunk, rz_chunk| {
-                        let start = chunk_index * DENSE_SOURCE_CHUNK;
-                        for (offset, rx) in rx_chunk.iter_mut().enumerate() {
-                            let value = source_values[start + offset];
+                    [ny, nz],
+                    4 * size_of::<f64>(),
+                    |start, _, _, rx, ry, rz| {
+                        let densities = rx.iter_mut().zip(ry.iter_mut()).zip(rz.iter_mut());
+                        for (((rx, ry), rz), &value) in
+                            densities.zip(&source_values[start..start + nz])
+                        {
                             *rx += value;
-                            ry_chunk[offset] += value;
-                            rz_chunk[offset] += value;
+                            *ry += value;
+                            *rz += value;
                         }
                     },
                 );
@@ -186,19 +185,7 @@ pub(super) fn add_density_source_components(
             if let (Some(rx_values), Some(ry_values), Some(source_values)) =
                 (rhox.as_slice_mut(), ry.as_slice_mut(), source.as_slice())
             {
-                for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
-                    rx_values,
-                    ry_values,
-                    DENSE_SOURCE_CHUNK,
-                    |chunk_index, rx_chunk, ry_chunk| {
-                        let start = chunk_index * DENSE_SOURCE_CHUNK;
-                        for (offset, rx) in rx_chunk.iter_mut().enumerate() {
-                            let value = source_values[start + offset];
-                            *rx += value;
-                            ry_chunk[offset] += value;
-                        }
-                    },
-                );
+                add_density_source_pair(rx_values, ry_values, source_values, [ny, nz]);
             } else {
                 add_density_source_components_indexed(rhox, Some(ry), None, source);
             }
@@ -207,19 +194,7 @@ pub(super) fn add_density_source_components(
             if let (Some(rx_values), Some(rz_values), Some(source_values)) =
                 (rhox.as_slice_mut(), rz.as_slice_mut(), source.as_slice())
             {
-                for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
-                    rx_values,
-                    rz_values,
-                    DENSE_SOURCE_CHUNK,
-                    |chunk_index, rx_chunk, rz_chunk| {
-                        let start = chunk_index * DENSE_SOURCE_CHUNK;
-                        for (offset, rx) in rx_chunk.iter_mut().enumerate() {
-                            let value = source_values[start + offset];
-                            *rx += value;
-                            rz_chunk[offset] += value;
-                        }
-                    },
-                );
+                add_density_source_pair(rx_values, rz_values, source_values, [ny, nz]);
             } else {
                 add_density_source_components_indexed(rhox, None, Some(rz), source);
             }
@@ -227,13 +202,13 @@ pub(super) fn add_density_source_components(
         (None, None) => {
             if let (Some(rx_values), Some(source_values)) = (rhox.as_slice_mut(), source.as_slice())
             {
-                for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+                for_each_z_lane(
                     rx_values,
-                    DENSE_SOURCE_CHUNK,
-                    |chunk_index, rx_chunk| {
-                        let start = chunk_index * DENSE_SOURCE_CHUNK;
-                        for (offset, rx) in rx_chunk.iter_mut().enumerate() {
-                            *rx += source_values[start + offset];
+                    [ny, nz],
+                    2 * size_of::<f64>(),
+                    |start, _, _, rx| {
+                        for (rx, &value) in rx.iter_mut().zip(&source_values[start..start + nz]) {
+                            *rx += value;
                         }
                     },
                 );
@@ -244,6 +219,28 @@ pub(super) fn add_density_source_components(
     }
 }
 
+/// Adds `source` to `rhox` and one other split density, lane by lane.
+fn add_density_source_pair(
+    rhox: &mut [f64],
+    other: &mut [f64],
+    source: &[f64],
+    [ny, nz]: [usize; 2],
+) {
+    for_each_z_lane_pair(
+        rhox,
+        other,
+        [ny, nz],
+        3 * size_of::<f64>(),
+        |start, _, _, rx, other| {
+            let densities = rx.iter_mut().zip(other.iter_mut());
+            for ((rx, other), &value) in densities.zip(&source[start..start + nz]) {
+                *rx += value;
+                *other += value;
+            }
+        },
+    );
+}
+
 fn add_density_source_components_indexed(
     rhox: &mut LetoArray3<f64>,
     mut rhoy: Option<&mut LetoArray3<f64>>,
@@ -251,9 +248,9 @@ fn add_density_source_components_indexed(
     source: &LetoArray3<f64>,
 ) {
     let [nx, ny, nz] = rhox.shape();
-    for k in 0..nz {
+    for i in 0..nx {
         for j in 0..ny {
-            for i in 0..nx {
+            for k in 0..nz {
                 let value = source[[i, j, k]];
                 rhox[[i, j, k]] += value;
                 if let Some(ry) = rhoy.as_deref_mut() {

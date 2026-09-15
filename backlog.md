@@ -2,12 +2,12 @@
 
 <a id="kw-pstd-density-source-lanes"></a>
 
-## KW-PSTD-DENSITY-SOURCE-LANES-2026-09-15 — The PSTD density source is the last step kernel on a hand-sized chunk [patch] [perf] — blocked
+## KW-PSTD-DENSITY-SOURCE-LANES-2026-09-15 — The PSTD density source is the last step kernel on a hand-sized chunk [patch] [perf] — in-progress
 
 - **Finding.** `add_density_source_components` adds the density source to up to three split densities per element in one fused pass over `DENSE_SOURCE_CHUNK = 4096`-element chunks, through moirai chunk walkers for one, two and three buffers. The lane walkers cover one and two outputs only.
 - **Change.** A three-output z-lane walker on moirai's triple unit-task operator; all four branches walk lanes with the sum unchanged; the chunk constant and the chunk walkers go; the lock advances moirai.
 - **Acceptance:** each branch is the per-element sum to the bit, serially and across tasks; PSTD source suites, allocation contracts and clippy clean.
-- **Blocked on:** `MOI-UNIT-TASK-TRIPLE-2026-09-15` landing on moirai main (re-open: that PR merged).
+- **Unblocked:** moirai #350 merged (`906feb65`); the lock advances to it.
 - **Integrator:** claude-opus-5; **branch:** `perf/kwavers-density-source-lanes` (stacked on #781); **last-update:** 2026-09-15.
 
 <a id="kw-viscoacoustic-axis-lanes"></a>
