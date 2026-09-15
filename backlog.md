@@ -1,5 +1,14 @@
 # Backlog / Strategy
 
+<a id="kw-pstd-source-lanes"></a>
+
+## KW-PSTD-SOURCE-LANES-2026-09-15 — Source, filter and residual-gas kernels dispatch per element behind a one-type dyn trait [patch] [perf] — in-progress
+
+- **Finding.** `stepper/ops.rs`: `scale_real_field`, `add_masked_source_term`, `add_gradient_source_term` and `multiply_complex_by_real_field` (the anti-aliasing filter, every step when enabled) index slices per element through `enumerate_mut_with::<Adaptive>`; `DenseFieldMut` has one implementor, `LetoArray3<f64>`, yet returns `Box<dyn Iterator>` for its fallback. `residual_gas_absorption.rs` dispatches its spectral shape, loss and dispersion kernels the same way.
+- **Change.** The seven kernels zip contiguous z lanes on moirai unit tasks with expressions unchanged; `DenseFieldMut` is deleted and the kernels take `LetoArray3<f64>`. `add_density_source_components` writes three fields per element and keeps its chunks: a triple unit form has no second consumer.
+- **Acceptance:** bitwise differentials against the per-element formulas; PSTD source, filter and residual-gas tests unchanged; allocation contract and clippy clean.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-source-lanes` (stacked on #776); **last-update:** 2026-09-15.
+
 <a id="kw-pstd-eos-lanes"></a>
 
 ## KW-PSTD-EOS-LANES-2026-09-15 — The EOS dispatches per element and nonlinear runs hold the nonlinearity field twice [patch] [perf] — in-progress

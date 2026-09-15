@@ -55,6 +55,7 @@
 //! - Commander & Prosperetti (1989). J. Acoust. Soc. Am. 85(2), 732–746.
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314, Eqs. 9–10, 19–21.
 
+use crate::forward::pstd::lanes::for_each_z_lane;
 use crate::multiphysics::residual_gas_coupling::BubblyMediumProps;
 use crate::pstd::PSTDSolver;
 use kwavers_core::error::KwaversResult;
@@ -63,7 +64,6 @@ use kwavers_physics::acoustics::bubble_dynamics::{
     commander_prosperetti_attenuation, commander_prosperetti_phase_velocity,
 };
 use leto::{Array3, ArrayView3};
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::f64::consts::TAU;
 
 /// Reference void fraction used to evaluate the (β-independent) spectral *shape*
@@ -82,9 +82,18 @@ fn multiply_spectral_shape(
 
     if let (Some(spectrum_values), Some(shape_values)) = (spectrum.as_slice_mut(), shape.as_slice())
     {
-        enumerate_mut_with::<Adaptive, _, _>(spectrum_values, |index, spectrum| {
-            *spectrum *= shape_values[index];
-        });
+        let [_nx, ny, nz] = shape.shape();
+        let element_bytes = size_of::<kwavers_math::fft::Complex64>() + size_of::<f64>();
+        for_each_z_lane(
+            spectrum_values,
+            [ny, nz],
+            element_bytes,
+            |start, _, _, lane| {
+                for (spectrum, &factor) in lane.iter_mut().zip(&shape_values[start..start + nz]) {
+                    *spectrum *= factor;
+                }
+            },
+        );
         return;
     }
 
@@ -127,9 +136,22 @@ fn apply_residual_gas_loss(
         magnitude.as_slice(),
         loss.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |index, pressure| {
-            *pressure -= dt * c0_values[index] * magnitude_values[index] * loss_values[index];
-        });
+        let [_nx, ny, nz] = c0.shape();
+        for_each_z_lane(
+            pressure_values,
+            [ny, nz],
+            4 * size_of::<f64>(),
+            |start, _, _, lane| {
+                let end = start + nz;
+                let inputs = c0_values[start..end]
+                    .iter()
+                    .zip(&magnitude_values[start..end])
+                    .zip(&loss_values[start..end]);
+                for (pressure, ((&c0, &magnitude), &loss)) in lane.iter_mut().zip(inputs) {
+                    *pressure -= dt * c0 * magnitude * loss;
+                }
+            },
+        );
         return;
     }
 
@@ -172,10 +194,22 @@ fn apply_residual_gas_dispersion(
         scale.as_slice(),
         dispersion.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |index, pressure| {
-            let c0 = c0_values[index];
-            *pressure += c0 * c0 * scale_values[index] * dispersion_values[index];
-        });
+        let [_nx, ny, nz] = c0.shape();
+        for_each_z_lane(
+            pressure_values,
+            [ny, nz],
+            4 * size_of::<f64>(),
+            |start, _, _, lane| {
+                let end = start + nz;
+                let inputs = c0_values[start..end]
+                    .iter()
+                    .zip(&scale_values[start..end])
+                    .zip(&dispersion_values[start..end]);
+                for (pressure, ((&c0, &scale), &dispersion)) in lane.iter_mut().zip(inputs) {
+                    *pressure += c0 * c0 * scale * dispersion;
+                }
+            },
+        );
         return;
     }
 

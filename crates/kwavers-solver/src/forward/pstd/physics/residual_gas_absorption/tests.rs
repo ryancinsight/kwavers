@@ -8,12 +8,16 @@
 //!    pressure field is attenuated by `dt·c₀·m·ĝ(c|k|)`, and two modes are
 //!    attenuated in the ratio of the true CP spectrum, not `(f₁/f₂)^y`.
 
-use super::{cp_dispersion_stiffness, cp_spectral_shape};
+use super::{
+    apply_residual_gas_dispersion, apply_residual_gas_loss, cp_dispersion_stiffness,
+    cp_spectral_shape, multiply_spectral_shape,
+};
 use crate::forward::pstd::config::PSTDConfig;
 use crate::multiphysics::residual_gas_coupling::BubblyMediumProps;
 use crate::pstd::PSTDSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers_source::GridSource;
@@ -294,4 +298,74 @@ fn no_gas_is_noop_and_clear_works() {
             .all(|(a, b)| (a - b).abs() < 1e-15),
         "cleared operator must leave p untouched"
     );
+}
+
+/// One volume below the lane walker's parallel floor and one above it.
+const KERNEL_SHAPES: [[usize; 3]; 2] = [[5, 3, 7], [37, 29, 31]];
+
+fn kernel_field(shape: [usize; 3], seed: f64) -> Array3<f64> {
+    let values = (0..shape.iter().product::<usize>())
+        .map(|index| (index as f64).mul_add(0.754_8, seed).sin())
+        .collect();
+    Array3::from_shape_vec(shape, values).expect("values match the shape")
+}
+
+fn kernel_at(field: &Array3<f64>, index: usize) -> f64 {
+    field.as_slice().expect("owned arrays are contiguous")[index]
+}
+
+// The lane kernels compute the expressions of the per-element loops they
+// replaced, in the same order, so the results agree to the bit.
+
+#[test]
+fn spectral_shape_multiply_is_the_per_element_product_to_the_bit() {
+    for shape in KERNEL_SHAPES {
+        let factors = kernel_field(shape, 1.0);
+        let initial = kernel_field(shape, 2.0).mapv(|v| Complex64::new(v, v * 0.25));
+        let mut spectrum = initial.clone();
+        multiply_spectral_shape(&mut spectrum, &factors);
+        let same = spectrum
+            .iter()
+            .zip(initial.iter())
+            .enumerate()
+            .all(|(i, (a, b))| {
+                let expected = *b * kernel_at(&factors, i);
+                a.re.to_bits() == expected.re.to_bits() && a.im.to_bits() == expected.im.to_bits()
+            });
+        assert!(same, "spectral shape diverges at {shape:?}");
+    }
+}
+
+#[test]
+fn residual_gas_loss_is_the_per_element_formula_to_the_bit() {
+    let dt = 2.0e-8;
+    for shape in KERNEL_SHAPES {
+        let [c0, magnitude, loss] = [3.0, 4.0, 5.0].map(|seed| kernel_field(shape, seed));
+        let initial = kernel_field(shape, 6.0);
+        let mut pressure = initial.clone();
+        apply_residual_gas_loss(&mut pressure, &c0, &magnitude, &loss, dt);
+        let same = (0..pressure.len()).all(|i| {
+            let expected = kernel_at(&initial, i)
+                - dt * kernel_at(&c0, i) * kernel_at(&magnitude, i) * kernel_at(&loss, i);
+            kernel_at(&pressure, i).to_bits() == expected.to_bits()
+        });
+        assert!(same, "residual-gas loss diverges at {shape:?}");
+    }
+}
+
+#[test]
+fn residual_gas_dispersion_is_the_per_element_formula_to_the_bit() {
+    for shape in KERNEL_SHAPES {
+        let [c0, scale, dispersion] = [7.0, 8.0, 9.0].map(|seed| kernel_field(shape, seed));
+        let initial = kernel_field(shape, 10.0);
+        let mut pressure = initial.clone();
+        apply_residual_gas_dispersion(&mut pressure, &c0, &scale, &dispersion);
+        let same = (0..pressure.len()).all(|i| {
+            let c = kernel_at(&c0, i);
+            let expected =
+                kernel_at(&initial, i) + c * c * kernel_at(&scale, i) * kernel_at(&dispersion, i);
+            kernel_at(&pressure, i).to_bits() == expected.to_bits()
+        });
+        assert!(same, "residual-gas dispersion diverges at {shape:?}");
+    }
 }
