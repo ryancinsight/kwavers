@@ -127,6 +127,48 @@ fn spectral_laplacian_of_sine_matches_analytical() {
     );
 }
 
+/// **Theorem (workspace spectral Laplacian of a Fourier mode)**:
+/// For f = cos(k·x) with DFT-representable k, ∇²f = −|k|²·f. The workspace
+/// operator transforms through the half spectrum; even and odd `nz` cover both
+/// half-spectrum depths, and the mode's bins ±b lie on both sides of `kz = 0`.
+/// A second evaluation on the same buffers reproduces the first to the bit.
+#[test]
+fn workspace_laplacian_of_fourier_mode_matches_analytical() {
+    let (dx, dy, dz) = (1.0e-3, 2.0e-3, 1.5e-3);
+    let bin = [1_usize, 2, 3];
+    for [nx, ny, nz] in [[16, 12, 8], [15, 12, 9]] {
+        let grid = Grid::new(nx, ny, nz, dx, dy, dz).unwrap();
+        let k = [
+            TWO_PI * bin[0] as f64 / (nx as f64 * dx),
+            TWO_PI * bin[1] as f64 / (ny as f64 * dy),
+            TWO_PI * bin[2] as f64 / (nz as f64 * dz),
+        ];
+        let k_sq = k.iter().map(|k| k * k).sum::<f64>();
+        let field = leto::Array3::from_shape_fn([nx, ny, nz], |[i, j, l]| {
+            (k[0] * i as f64 * dx + k[1] * j as f64 * dy + k[2] * l as f64 * dz).cos()
+        });
+        let mut operator = spectral::KuznetsovSpectralOperator::new(&grid);
+        let mut laplacian = leto::Array3::zeros([nx, ny, nz]);
+        operator.compute_laplacian_workspace(&field, &mut laplacian);
+
+        // A forward and an inverse output each sum N rounded terms, so the
+        // Laplacian carries at most 2·N·ε of the mode amplitude |k|².
+        let bound = 2.0 * (nx * ny * nz) as f64 * f64::EPSILON;
+        for (&computed, &f) in laplacian.iter().zip(field.iter()) {
+            let error = (computed + k_sq * f).abs() / k_sq;
+            assert!(
+                error <= bound,
+                "shape {:?}: relative error {error:e} > {bound:e}",
+                [nx, ny, nz]
+            );
+        }
+
+        let mut repeated = leto::Array3::zeros([nx, ny, nz]);
+        operator.compute_laplacian_workspace(&field, &mut repeated);
+        assert_eq!(repeated, laplacian);
+    }
+}
+
 /// **Theorem (nonlinearity coefficient β = 1 + B/(2A))**:
 /// For water B/A = 5.0, β = 1 + 5.0/2 = 3.5.
 /// For soft tissue B/A = 7.0, β = 1 + 7.0/2 = 4.5.

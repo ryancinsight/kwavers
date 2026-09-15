@@ -4,6 +4,18 @@
 
 ### Changed
 
+- **[major] The Kuznetsov and DG spectral Laplacians run on the half-spectrum
+  pair and allocate nothing per evaluation.** `kwavers-solver`:
+  `KuznetsovSpectralOperator::compute_laplacian_workspace` drops its unused
+  grid argument, and the uncalled `compute_gradient_workspace` is removed with
+  its three spectra; `RegionPSTDSolver::spectral_wave_step_into` returns a
+  dimension-mismatch error for a field, mask or output off the solver's grid
+  shape. Both transform through `forward_r2c_into` / `inverse_c2r_into` with the
+  symbol applied in place, removing two full-grid allocations and copies per
+  evaluation; the Kuznetsov operator holds 8 B per grid point of spectra instead
+  of 80, and the DG solver folds `-|k|^2 filter` into one half-shape table.
+  Migration: drop the grid argument; the spectral gradient is
+  `kuznetsov::numerical::compute_gradient`.
 - **[major] A FullKSpace step allocates nothing and runs on the half-spectrum
   pair.** `kwavers-solver`: `PSTDKSOperators` no longer exposes `p_prev`,
   `wave_coeff` or `ensure_wave_coeff`; the leapfrog's coefficient, spectrum and

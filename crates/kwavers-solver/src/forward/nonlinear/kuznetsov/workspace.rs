@@ -125,8 +125,9 @@ impl KuznetsovWorkspace {
 
     /// Zero all 18 scratch buffers without reallocating.
     ///
-    /// The `KuznetsovSpectralOperator` is not a scratch buffer — it holds grid-derived
-    /// wavenumber constants and is excluded from this reset.
+    /// The `KuznetsovSpectralOperator` is excluded from this reset: it holds
+    /// grid-derived wavenumber constants and a half-spectrum buffer that every
+    /// evaluation overwrites before reading.
     /// The four medium-property cache arrays (`cache_*`) are included because
     /// stale cache values from a previous heterogeneous-medium step must not
     /// leak into a subsequent homogeneous step.
@@ -154,8 +155,8 @@ impl KuznetsovWorkspace {
 
 impl ScratchArena for KuznetsovWorkspace {
     /// Returns the byte footprint of the 18 pre-allocated `Array3<f64>` scratch
-    /// buffers.  The `KuznetsovSpectralOperator` (wavenumber tables) is a grid constant,
-    /// not scratch storage, and is excluded.
+    /// buffers.  The `KuznetsovSpectralOperator` (wavenumber tables and its
+    /// half-spectrum transform buffer) belongs to the operator and is excluded.
     ///
     /// Footprint = 18 × N × 8  where N = nx × ny × nz.
     ///

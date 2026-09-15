@@ -3,6 +3,7 @@
 //! This module implements high-order spectral methods using FFT
 //! for solving PDEs in smooth regions.
 
+use crate::forward::lanes::for_each_z_lane;
 use crate::pstd::utils::{compute_anti_aliasing_filter, compute_wavenumbers};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
@@ -10,24 +11,23 @@ use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{Fft3d, Fft3dInOutExt, Shape3D};
-use leto::Array3 as LetoArray3;
 use leto::Array3;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::sync::Arc;
 
 /// Spectral solver using FFT-based methods
 pub struct RegionPSTDSolver {
     order: usize,
     grid: Arc<Grid>,
-    k2: LetoArray3<f64>,
-    filter: LetoArray3<f64>,
+    /// `−|k|²·filter` over the half spectrum `(nx, ny, nz/2+1)`; the Laplacian
+    /// symbol and the anti-aliasing filter are both even in `k`.
+    laplacian_symbol: Array3<f64>,
     wave_speed: f64,
     prev_field: Array3<f64>,
     has_prev_field: bool,
     fft: Fft3d,
-    field_hat: LetoArray3<Complex64>,
-    lap_hat: LetoArray3<Complex64>,
-    scratch_hat: LetoArray3<Complex64>,
+    /// Half spectrum of the field: the transform writes it, the symbol scales
+    /// it in place and the inverse consumes it.
+    field_hat: Array3<Complex64>,
     laplacian: Array3<f64>,
 }
 
@@ -37,120 +37,14 @@ impl std::fmt::Debug for RegionPSTDSolver {
             .field("order", &self.order)
             .field("grid_dim", &(self.grid.nx, self.grid.ny, self.grid.nz))
             .field("grid", &self.grid)
-            .field("k2", &self.k2.shape())
-            .field("filter", &self.filter.shape())
+            .field("laplacian_symbol", &self.laplacian_symbol.shape())
             .field("wave_speed", &self.wave_speed)
             .field("prev_field", &self.prev_field.shape())
             .field("has_prev_field", &self.has_prev_field)
             .field("fft", &"<fft-plan>")
             .field("field_hat", &self.field_hat.shape())
-            .field("lap_hat", &self.lap_hat.shape())
-            .field("scratch_hat", &self.scratch_hat.shape())
             .field("laplacian", &self.laplacian.shape())
             .finish()
-    }
-}
-
-#[inline]
-fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
-    let plane = ny * nz;
-    let i = index / plane;
-    let rem = index % plane;
-    let j = rem / nz;
-    let k = rem % nz;
-    (i, j, k)
-}
-
-fn fill_laplacian_symbol(
-    k2: &mut LetoArray3<f64>,
-    kx: &LetoArray3<f64>,
-    ky: &LetoArray3<f64>,
-    kz: &LetoArray3<f64>,
-) {
-    assert_eq!(
-        k2.shape(),
-        kx.shape(),
-        "invariant: DG spectral k2 shape matches kx"
-    );
-    assert_eq!(
-        k2.shape(),
-        ky.shape(),
-        "invariant: DG spectral k2 shape matches ky"
-    );
-    assert_eq!(
-        k2.shape(),
-        kz.shape(),
-        "invariant: DG spectral k2 shape matches kz"
-    );
-
-    if let (Some(k2_values), Some(kx_values), Some(ky_values), Some(kz_values)) = (
-        k2.as_slice_mut(),
-        kx.as_slice(),
-        ky.as_slice(),
-        kz.as_slice(),
-    ) {
-        enumerate_mut_with::<Adaptive, _, _>(k2_values, |index, value| {
-            let kx = kx_values[index];
-            let ky = ky_values[index];
-            let kz = kz_values[index];
-            *value = kz.mul_add(kz, kx.mul_add(kx, ky * ky));
-        });
-        return;
-    }
-
-    let [nx, ny, nz] = k2.shape();
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 0..nz {
-                let kx = kx[[i, j, k]];
-                let ky = ky[[i, j, k]];
-                let kz = kz[[i, j, k]];
-                k2[[i, j, k]] = kz.mul_add(kz, kx.mul_add(kx, ky * ky));
-            }
-        }
-    }
-}
-
-fn apply_laplacian_symbol(
-    lap_hat: &mut LetoArray3<Complex64>,
-    field_hat: &LetoArray3<Complex64>,
-    k2: &LetoArray3<f64>,
-    filter: &LetoArray3<f64>,
-) {
-    let [nx, ny, nz] = lap_hat.shape();
-    assert_eq!(
-        lap_hat.shape(),
-        field_hat.shape(),
-        "invariant: DG spectral Laplacian spectrum shape matches field spectrum"
-    );
-    assert_eq!(
-        lap_hat.shape(),
-        k2.shape(),
-        "invariant: DG spectral Laplacian spectrum shape matches k2"
-    );
-    assert_eq!(
-        lap_hat.shape(),
-        filter.shape(),
-        "invariant: DG spectral Laplacian spectrum shape matches filter"
-    );
-
-    if let (Some(lap_values), Some(field_values), Some(k2_values), Some(filter_values)) = (
-        lap_hat.as_slice_mut(),
-        field_hat.as_slice(),
-        k2.as_slice(),
-        filter.as_slice(),
-    ) {
-        enumerate_mut_with::<Adaptive, _, _>(lap_values, |index, output| {
-            *output =
-                field_values[index] * Complex64::new(-k2_values[index] * filter_values[index], 0.0);
-        });
-        return;
-    }
-
-    for index in 0..nx * ny * nz {
-        let (i, j, k) = dense_indices(index, ny, nz);
-        lap_hat[[i, j, k]] =
-            field_hat[[i, j, k]] * Complex64::new(-k2[[i, j, k]] * filter[[i, j, k]], 0.0);
     }
 }
 
@@ -168,35 +62,28 @@ impl RegionPSTDSolver {
     /// construction, and a zero extent has no transform.
     pub fn with_wave_speed(order: usize, grid: Arc<Grid>, wave_speed: f64) -> Self {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        let nz_half = nz / 2 + 1;
         let (kx, ky, kz) = compute_wavenumbers(&grid);
-
-        let mut k2 = LetoArray3::zeros([nx, ny, nz]);
-        fill_laplacian_symbol(&mut k2, &kx, &ky, &kz);
-
         let filter = compute_anti_aliasing_filter(&grid, 2.0 / 3.0, order.max(1) as u32);
-
-        let complex_zeros = Complex64::new(0.0, 0.0);
-        let field_hat = LetoArray3::from_elem([nx, ny, nz], complex_zeros);
-        let lap_hat = LetoArray3::from_elem([nx, ny, nz], complex_zeros);
-        let scratch_hat = LetoArray3::from_elem([nx, ny, nz], complex_zeros);
-        let laplacian = Array3::zeros((nx, ny, nz));
-        let prev_field = Array3::zeros((nx, ny, nz));
+        // The first `nz/2+1` z bins are the non-negative wavenumbers the half
+        // spectrum holds, in the same order as the full tables.
+        let laplacian_symbol = Array3::from_shape_fn([nx, ny, nz_half], |[i, j, k]| {
+            let (kx, ky, kz) = (kx[[i, j, k]], ky[[i, j, k]], kz[[i, j, k]]);
+            -kz.mul_add(kz, kx.mul_add(kx, ky * ky)) * filter[[i, j, k]]
+        });
 
         Self {
             order,
             grid,
-            k2,
-            filter,
+            laplacian_symbol,
             wave_speed,
-            prev_field,
+            prev_field: Array3::zeros((nx, ny, nz)),
             has_prev_field: false,
             fft: Fft3d::new(
                 Shape3D::new(nx, ny, nz).expect("invariant: grid dimensions are non-zero"),
             ),
-            field_hat,
-            lap_hat,
-            scratch_hat,
-            laplacian,
+            field_hat: Array3::from_elem([nx, ny, nz_half], Complex64::new(0.0, 0.0)),
+            laplacian: Array3::zeros((nx, ny, nz)),
         }
     }
 
@@ -211,20 +98,19 @@ impl RegionPSTDSolver {
     /// Only cells where `mask[i,j,k]` is true are updated; others copy `field` unchanged.
     ///
     /// ## Performance
-    /// Zero allocations per call when `output` is a pre-allocated caller buffer.
-    /// `prev_field` is allocated at construction and updated via `.assign()`;
-    /// `has_prev_field` selects the first-step Taylor update without storing
-    /// history in an `Option<Array3<_>>`.
+    /// Zero allocations per call when `output` is a pre-allocated caller buffer:
+    /// the field transforms into the persistent half spectrum and inverts into
+    /// the persistent Laplacian. `has_prev_field` selects the first-step Taylor
+    /// update without storing history in an `Option<Array3<_>>`.
     ///
-    /// ## Precondition
-    /// `output` must have the same shape as `field`.
     /// # Errors
-    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the wave speed is not
+    ///   positive, or if `field`, `mask` or `output` does not have the grid
+    ///   shape the solver was built for.
     ///
     /// # Panics
-    /// - Panics if an internal precondition is violated.
-    ///
+    /// - Unreachable: the symbol table and the half spectrum are allocated
+    ///   contiguous at construction.
     pub fn spectral_wave_step_into(
         &mut self,
         field: &Array3<f64>,
@@ -240,43 +126,41 @@ impl RegionPSTDSolver {
                 reason: "wave speed must be positive".to_owned(),
             }));
         }
-        if field.shape() != mask.shape() {
-            return Err(KwaversError::Validation(
-                ValidationError::DimensionMismatch {
-                    expected: format!("{:?}", field.shape()),
-                    actual: format!("{:?}", mask.shape()),
-                },
-            ));
-        }
-        if field.shape() != output.shape() {
-            return Err(KwaversError::Validation(
-                ValidationError::DimensionMismatch {
-                    expected: format!("{:?}", field.shape()),
-                    actual: format!("{:?}", output.shape()),
-                },
-            ));
+        for actual in [field.shape(), mask.shape(), output.shape()] {
+            if actual != self.laplacian.shape() {
+                return Err(KwaversError::Validation(
+                    ValidationError::DimensionMismatch {
+                        expected: format!("{:?}", self.laplacian.shape()),
+                        actual: format!("{actual:?}"),
+                    },
+                ));
+            }
         }
 
         self.wave_speed = c;
 
-        let field_leto = LetoArray3::from_shape_vec(
-            [field.shape()[0], field.shape()[1], field.shape()[2]],
-            field.iter().copied().collect(),
-        )
-        .expect("DG spectral field shape must match its Leto FFT shape");
-        self.fft.forward_into(&field_leto, &mut self.field_hat);
-        apply_laplacian_symbol(&mut self.lap_hat, &self.field_hat, &self.k2, &self.filter);
-        let mut laplacian =
-            LetoArray3::<f64>::zeros([field.shape()[0], field.shape()[1], field.shape()[2]]);
-        self.fft
-            .inverse_into(&self.lap_hat, &mut laplacian, &mut self.scratch_hat);
-        for i in 0..field.shape()[0] {
-            for j in 0..field.shape()[1] {
-                for k in 0..field.shape()[2] {
-                    self.laplacian[[i, j, k]] = laplacian[[i, j, k]];
+        self.fft.forward_r2c_into(field, &mut self.field_hat);
+        let [_, ny, nz_half] = self.field_hat.shape();
+        let symbol = self
+            .laplacian_symbol
+            .as_slice()
+            .expect("invariant: the symbol table is built contiguous");
+        let spectrum = self
+            .field_hat
+            .as_slice_mut()
+            .expect("invariant: the half spectrum is allocated contiguous");
+        for_each_z_lane(
+            spectrum,
+            [ny, nz_half],
+            size_of::<Complex64>() + size_of::<f64>(),
+            |start, _, _, lane| {
+                for (value, &scale) in lane.iter_mut().zip(&symbol[start..start + nz_half]) {
+                    *value *= scale;
                 }
-            }
-        }
+            },
+        );
+        self.fft
+            .inverse_c2r_into(&mut self.field_hat, &mut self.laplacian);
 
         let coeff = (c * dt) * (c * dt);
 
@@ -336,7 +220,9 @@ impl RegionPSTDSolver {
 #[cfg(test)]
 mod tests {
     use super::RegionPSTDSolver;
+    use crate::pstd::utils::compute_anti_aliasing_filter;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use kwavers_core::constants::numerical::TWO_PI;
     use kwavers_grid::Grid;
     use leto::Array3;
     use std::sync::Arc;
@@ -372,5 +258,55 @@ mod tests {
             .unwrap();
 
         assert_eq!(solver.prev_field.as_ptr(), prev_ptr);
+    }
+
+    /// **Theorem (filtered spectral Laplacian of a Fourier mode).** For
+    /// `u = cos(k·x)` with DFT-representable `k` and bin `b`, the step's
+    /// Laplacian is `−|k|²·F(b)·u`, `F` the anti-aliasing filter, and the first
+    /// leapfrog step is `u + ½(cΔt)²·∇²u`. Even and odd `nz` cover both
+    /// half-spectrum depths; the mode's bins `±b` lie on both sides of `kz = 0`.
+    #[test]
+    fn spectral_step_applies_the_filtered_laplacian_of_a_fourier_mode() {
+        const ORDER: usize = 4;
+        let (dx, dy, dz) = (1.0e-3, 2.0e-3, 1.5e-3);
+        let bin = [1_usize, 2, 3];
+        for [nx, ny, nz] in [[16, 12, 8], [15, 12, 9]] {
+            let grid = Arc::new(Grid::new(nx, ny, nz, dx, dy, dz).unwrap());
+            let filter = compute_anti_aliasing_filter(&grid, 2.0 / 3.0, ORDER as u32)[bin];
+            let k = [
+                TWO_PI * bin[0] as f64 / (nx as f64 * dx),
+                TWO_PI * bin[1] as f64 / (ny as f64 * dy),
+                TWO_PI * bin[2] as f64 / (nz as f64 * dz),
+            ];
+            let k_sq = k.iter().map(|k| k * k).sum::<f64>();
+            let field = Array3::from_shape_fn([nx, ny, nz], |[i, j, l]| {
+                (k[0] * i as f64 * dx + k[1] * j as f64 * dy + k[2] * l as f64 * dz).cos()
+            });
+            let mask = Array3::from_elem([nx, ny, nz], true);
+            let mut output = Array3::zeros([nx, ny, nz]);
+            let (dt, c) = (1.0e-7, SOUND_SPEED_WATER_SIM);
+            let mut solver = RegionPSTDSolver::new(ORDER, grid);
+
+            solver
+                .spectral_wave_step_into(&field, dt, c, &mask, &mut output)
+                .unwrap();
+
+            // A forward and an inverse output each sum N rounded terms, so the
+            // Laplacian carries at most 2·N·ε of the mode amplitude |k|²·F.
+            let n = (nx * ny * nz) as f64;
+            let bound = 2.0 * n * f64::EPSILON;
+            let coeff = 0.5 * ((c * dt) * (c * dt));
+            for ((&lap, &u), &next) in solver.laplacian.iter().zip(field.iter()).zip(output.iter())
+            {
+                let expected = -k_sq * filter * u;
+                let error = (lap - expected).abs() / (k_sq * filter);
+                assert!(
+                    error <= bound,
+                    "shape {:?}: Laplacian {lap} vs {expected}, relative error {error:e} > {bound:e}",
+                    [nx, ny, nz]
+                );
+                assert_eq!(next, coeff.mul_add(lap, u));
+            }
+        }
     }
 }
