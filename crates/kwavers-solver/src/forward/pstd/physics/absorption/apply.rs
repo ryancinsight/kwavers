@@ -39,23 +39,13 @@
 //! - k-wave-python: `kspace_solver.py:613` — the canonical reference run by
 //!   the parity scripts.
 
+use crate::forward::pstd::lanes::for_each_z_lane;
 use crate::pstd::PSTDSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use leto::Array3 as LetoArray3;
-use leto::{Array3, ArrayView3};
-use moirai_parallel::{enumerate_mut_with, Adaptive};
-
-#[inline]
-fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
-    let plane = ny * nz;
-    let i = index / plane;
-    let rem = index % plane;
-    let j = rem / nz;
-    let k = rem % nz;
-    (i, j, k)
-}
+use leto::Array3;
 
 fn build_weighted_divergence(
     output: &mut LetoArray3<f64>,
@@ -85,6 +75,7 @@ fn build_weighted_divergence(
         "invariant: absorption weighted divergence shape matches rho0"
     );
 
+    let [_nx, ny, nz] = output.shape();
     if let (Some(output_values), Some(x_values), Some(y_values), Some(z_values), Some(rho_values)) = (
         output.as_slice_mut(),
         div_x.as_slice(),
@@ -92,9 +83,22 @@ fn build_weighted_divergence(
         div_z.as_slice(),
         rho0.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(output_values, |index, output| {
-            *output = rho_values[index] * (x_values[index] + y_values[index] + z_values[index]);
-        });
+        for_each_z_lane(
+            output_values,
+            [ny, nz],
+            5 * size_of::<f64>(),
+            |start, _, _, lane| {
+                let end = start + nz;
+                let inputs = x_values[start..end]
+                    .iter()
+                    .zip(&y_values[start..end])
+                    .zip(&z_values[start..end])
+                    .zip(&rho_values[start..end]);
+                for (output, (((&x, &y), &z), &rho)) in lane.iter_mut().zip(inputs) {
+                    *output = rho * (x + y + z);
+                }
+            },
+        );
         return;
     }
 
@@ -109,7 +113,7 @@ fn build_weighted_divergence(
     }
 }
 
-fn multiply_spectral_operator(spectrum: &mut LetoArray3<Complex64>, operator: ArrayView3<'_, f64>) {
+fn multiply_spectral_operator(spectrum: &mut LetoArray3<Complex64>, operator: &LetoArray3<f64>) {
     assert_eq!(
         spectrum.shape(),
         operator.shape(),
@@ -117,11 +121,20 @@ fn multiply_spectral_operator(spectrum: &mut LetoArray3<Complex64>, operator: Ar
     );
 
     let [_nx, ny, nz] = spectrum.shape();
-    if let Some(spectrum_values) = spectrum.as_slice_mut() {
-        enumerate_mut_with::<Adaptive, _, _>(spectrum_values, |index, spectrum| {
-            let (i, j, k) = dense_indices(index, ny, nz);
-            *spectrum *= operator[[i, j, k]];
-        });
+    if let (Some(spectrum_values), Some(operator_values)) =
+        (spectrum.as_slice_mut(), operator.as_slice())
+    {
+        let element_bytes = size_of::<Complex64>() + size_of::<f64>();
+        for_each_z_lane(
+            spectrum_values,
+            [ny, nz],
+            element_bytes,
+            |start, _, _, lane| {
+                for (value, &factor) in lane.iter_mut().zip(&operator_values[start..start + nz]) {
+                    *value *= factor;
+                }
+            },
+        );
         return;
     }
 
@@ -158,22 +171,30 @@ fn accumulate_stratum(
         "invariant: absorption stratum accumulator shape matches weights"
     );
 
+    let [_nx, ny, nz] = accumulator.shape();
     if let (Some(acc_values), Some(value_values), Some(lo_values), Some(weight_values)) = (
         accumulator.as_slice_mut(),
         values.as_slice(),
         bracket_lo.as_slice(),
         weight_hi.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(acc_values, |index, accumulator| {
-            let lower = lo_values[index];
-            let weight = if lower == stratum {
-                1.0 - weight_values[index]
-            } else if lower + 1 == stratum {
-                weight_values[index]
-            } else {
-                0.0
-            };
-            *accumulator += weight * value_values[index];
+        let element_bytes = 3 * size_of::<f64>() + size_of::<u32>();
+        for_each_z_lane(acc_values, [ny, nz], element_bytes, |start, _, _, lane| {
+            let end = start + nz;
+            let inputs = value_values[start..end]
+                .iter()
+                .zip(&lo_values[start..end])
+                .zip(&weight_values[start..end]);
+            for (accumulator, ((&value, &lower), &weight_hi)) in lane.iter_mut().zip(inputs) {
+                let weight = if lower == stratum {
+                    1.0 - weight_hi
+                } else if lower + 1 == stratum {
+                    weight_hi
+                } else {
+                    0.0
+                };
+                *accumulator += weight * value;
+            }
         });
         return;
     }
@@ -230,6 +251,7 @@ fn apply_pressure_absorption(
         "invariant: absorption pressure shape matches L2"
     );
 
+    let [_nx, ny, nz] = pressure.shape();
     if let (
         Some(pressure_values),
         Some(c0_values),
@@ -245,13 +267,23 @@ fn apply_pressure_absorption(
         l1.as_slice(),
         l2.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |index, pressure| {
-            let c = c0_values[index];
-            *pressure += c
-                * c
-                * tau_values[index]
-                    .mul_add(l1_values[index], -(eta_values[index] * l2_values[index]));
-        });
+        for_each_z_lane(
+            pressure_values,
+            [ny, nz],
+            6 * size_of::<f64>(),
+            |start, _, _, lane| {
+                let end = start + nz;
+                let inputs = c0_values[start..end]
+                    .iter()
+                    .zip(&tau_values[start..end])
+                    .zip(&eta_values[start..end])
+                    .zip(&l1_values[start..end])
+                    .zip(&l2_values[start..end]);
+                for (pressure, ((((&c, &tau), &eta), &l1), &l2)) in lane.iter_mut().zip(inputs) {
+                    *pressure += c * c * tau.mul_add(l1, -(eta * l2));
+                }
+            },
+        );
         return;
     }
 
@@ -303,9 +335,6 @@ impl PSTDSolver {
             return Ok(());
         };
 
-        // R2C output is half-spectrum along z: shape (nx, ny, nz_c=nz/2+1).
-        let nz_c = self.grad_k.shape()[2];
-
         if let Some(strata) = &abs.strata {
             // ── Stratified path: spatially-varying exponent y(x) (beyond k-Wave).
             // For each Laplacian, accumulate the per-stratum operator weighted by
@@ -326,7 +355,7 @@ impl PSTDSolver {
                     &self.materials.rho0,
                 );
                 self.fft.forward_r2c_into(&self.dpy, &mut self.grad_k);
-                multiply_spectral_operator(&mut self.grad_k, strata.nabla1[m].view());
+                multiply_spectral_operator(&mut self.grad_k, &strata.nabla1[m]);
                 self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpy);
                 accumulate_stratum(
                     &mut self.dpx,
@@ -343,7 +372,7 @@ impl PSTDSolver {
             self.dpy.fill(0.0);
             for m in 0..m_count {
                 self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
-                multiply_spectral_operator(&mut self.grad_k, strata.nabla2[m].view());
+                multiply_spectral_operator(&mut self.grad_k, &strata.nabla2[m]);
                 self.fft
                     .inverse_c2r_into(&mut self.grad_k, &mut self.div_ux);
                 accumulate_stratum(
@@ -372,26 +401,15 @@ impl PSTDSolver {
 
             // Step 3: L1 = IFFT( |k|^(y−2) · FFT(ρ₀·∇·u) ) → dpx (clobbered).
             self.fft.forward_r2c_into(&self.dpx, &mut self.grad_k);
-            {
-                let n1 = abs
-                    .nabla1
-                    .slice_with(&s![.., .., ..nz_c])
-                    .expect("invariant: nz_c <= nz half-spectrum length");
-                multiply_spectral_operator(&mut self.grad_k, n1);
-            }
+            // Construction stores the operators on the half spectrum already.
+            multiply_spectral_operator(&mut self.grad_k, &abs.nabla1);
             self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
             // dpx now holds L1.
 
             // Step 4: L2 = IFFT( |k|^(y−1) · FFT(ρ_total) ) → dpy (clobbered).
             // div_u still holds ρ_total from the EOS step in update_pressure.
             self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
-            {
-                let n2 = abs
-                    .nabla2
-                    .slice_with(&s![.., .., ..nz_c])
-                    .expect("invariant: nz_c <= nz half-spectrum length");
-                multiply_spectral_operator(&mut self.grad_k, n2);
-            }
+            multiply_spectral_operator(&mut self.grad_k, &abs.nabla2);
             self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpy);
             // dpy now holds L2.
         }
@@ -409,3 +427,6 @@ impl PSTDSolver {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;
