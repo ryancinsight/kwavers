@@ -1,6 +1,6 @@
 //! Dense array operations shared by PSTD stepper paths.
 
-use crate::forward::pstd::lanes::for_each_z_lane;
+use crate::forward::lanes::for_each_z_lane;
 use kwavers_math::fft::Complex64;
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{

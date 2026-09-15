@@ -62,8 +62,8 @@
 mod density_as;
 mod density_cartesian;
 
+use crate::forward::lanes::{for_each_z_lane, for_each_z_lane_pair};
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
-use crate::forward::pstd::lanes::{for_each_z_lane, for_each_z_lane_pair};
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::KwaversResult;
 use leto::Array3 as LetoArray3;

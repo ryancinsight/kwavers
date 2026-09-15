@@ -78,6 +78,7 @@ pub mod elastic;
 pub mod fdtd;
 pub mod helmholtz;
 pub mod hybrid;
+mod lanes;
 pub mod nonlinear;
 pub mod ode;
 pub mod optical;

@@ -622,3 +622,50 @@ fn pstd_steps_after_setup_do_not_allocate() {
         );
     }
 }
+
+/// The k-space corrected FDTD step transforms every velocity and pressure
+/// update; after setup it reuses its half-spectrum buffers and allocates
+/// nothing on the calling thread.
+#[test]
+fn fdtd_spectral_steps_after_setup_do_not_allocate() {
+    use kwavers_solver::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
+    use kwavers_solver::forward::fdtd::solver::FdtdSolver;
+
+    const N: usize = 16;
+    const DX: f64 = 1.0e-4;
+    const C0: f64 = 1_500.0;
+    let grid = Grid::new(N, N, N, DX, DX, DX).expect("valid grid");
+    let medium = HomogeneousMedium::new(1_000.0, C0, 0.0, 0.0, &grid);
+    let mut p0 = Array3::zeros((N, N, N));
+    p0[[N / 2, N / 2, N / 2]] = 1.0;
+    let source = GridSource {
+        p0: Some(p0),
+        ..GridSource::new_empty()
+    };
+    let config = FdtdConfig {
+        kspace_correction: KSpaceCorrectionMode::Spectral,
+        staggered_grid: true,
+        cfl_factor: 0.3,
+        dt: 0.3 * DX / C0,
+        nt: 16,
+        ..FdtdConfig::default()
+    };
+    let mut solver = FdtdSolver::new(config, &grid, &medium, source).expect("valid solver");
+    for _ in 0..4 {
+        solver.step_forward().expect("setup step");
+    }
+    let before = solver.fields.p.clone();
+    let window = Window::open();
+    for _ in 0..8 {
+        solver.step_forward().expect("stable step");
+    }
+    let change = window.change();
+    drop(window);
+    assert_eq!(change.allocations, 0);
+    assert_eq!(change.reallocations, 0);
+    assert_ne!(
+        solver.fields.p.as_slice(),
+        before.as_slice(),
+        "the window must cover steps that advance the field"
+    );
+}
