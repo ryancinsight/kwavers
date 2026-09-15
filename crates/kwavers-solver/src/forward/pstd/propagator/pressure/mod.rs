@@ -63,14 +63,11 @@ mod density_as;
 mod density_cartesian;
 
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
-use crate::forward::pstd::lanes::for_each_z_lane;
+use crate::forward::pstd::lanes::{for_each_z_lane, for_each_z_lane_pair};
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::KwaversResult;
 use leto::Array3 as LetoArray3;
 use leto::Array3 as NdArray3;
-use moirai_parallel::{for_each_chunk_pair_mut_enumerated_with, Adaptive};
-
-const PRESSURE_UPDATE_CHUNK: usize = 4096;
 
 fn accumulate_split_density(
     div_u: &mut LetoArray3<f64>,
@@ -254,18 +251,27 @@ fn apply_linear_eos(
         rhoz.as_slice(),
         c0.as_slice(),
     ) {
-        for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
+        let [_nx, ny, nz] = rhox.shape();
+        for_each_z_lane_pair(
             div_values,
             pressure_values,
-            PRESSURE_UPDATE_CHUNK,
-            |chunk_index, div_chunk, pressure_chunk| {
-                let start = chunk_index * PRESSURE_UPDATE_CHUNK;
-                for (offset, div) in div_chunk.iter_mut().enumerate() {
-                    let index = start + offset;
-                    let rho_sum = rx_values[index] + ry_values[index] + rz_values[index];
-                    let c = c0_values[index];
+            [ny, nz],
+            6 * size_of::<f64>(),
+            |start, _, _, div_lane, pressure_lane| {
+                let end = start + nz;
+                let inputs = rx_values[start..end]
+                    .iter()
+                    .zip(&ry_values[start..end])
+                    .zip(&rz_values[start..end])
+                    .zip(&c0_values[start..end]);
+                for ((div, pressure), (((&x, &y), &z), &c)) in div_lane
+                    .iter_mut()
+                    .zip(pressure_lane.iter_mut())
+                    .zip(inputs)
+                {
+                    let rho_sum = x + y + z;
                     *div = rho_sum;
-                    pressure_chunk[offset] = c * c * rho_sum;
+                    *pressure = c * c * rho_sum;
                 }
             },
         );

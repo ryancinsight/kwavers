@@ -1,4 +1,4 @@
-use super::{accumulate_split_density, apply_nonlinear_eos};
+use super::{accumulate_split_density, apply_linear_eos, apply_nonlinear_eos};
 use leto::Array3;
 
 /// One volume below the lane walker's parallel floor and one above it.
@@ -47,5 +47,23 @@ fn nonlinear_eos_is_the_per_element_formula_to_the_bit() {
             at(&pressure, i).to_bits() == (c * c * (rho_sum + nonlinear)).to_bits()
         });
         assert!(same, "nonlinear EOS diverges at {shape:?}");
+    }
+}
+
+#[test]
+fn linear_eos_is_the_per_element_formula_to_the_bit() {
+    for shape in SHAPES {
+        let [rhox, rhoy, rhoz] = [1.0, 2.0, 3.0].map(|seed| real_field(shape, seed));
+        let c0 = real_field(shape, 4.0).mapv(|v| v.mul_add(10.0, 1500.0));
+        let mut div_u = real_field(shape, 5.0);
+        let mut pressure = real_field(shape, 6.0);
+        apply_linear_eos(&mut div_u, &mut pressure, &rhox, &rhoy, &rhoz, &c0);
+        let same = (0..div_u.len()).all(|i| {
+            let rho_sum = at(&rhox, i) + at(&rhoy, i) + at(&rhoz, i);
+            let c = at(&c0, i);
+            at(&div_u, i).to_bits() == rho_sum.to_bits()
+                && at(&pressure, i).to_bits() == (c * c * rho_sum).to_bits()
+        });
+        assert!(same, "linear EOS diverges at {shape:?}");
     }
 }

@@ -6,7 +6,7 @@
 //! `(i, j, k)` from a flat index cost two divisions and two remainders per
 //! element and kept the loop from vectorizing.
 
-use moirai_parallel::{for_each_unit_task_mut_with, WorkBytes};
+use moirai_parallel::{for_each_unit_task_mut_with, for_each_unit_task_pair_mut_with, WorkBytes};
 
 /// Bytes an element-wise pass moves before it spreads over workers.
 ///
@@ -58,6 +58,39 @@ pub(super) fn for_each_z_lane<T, F>(
             for (offset, values) in lanes.chunks_exact_mut(nz).enumerate() {
                 let index = first_lane + offset;
                 lane(index * nz, index / ny, index % ny, values);
+            }
+        },
+    );
+}
+
+/// Runs `lane(start, i, j, first, second)` over the aligned z lanes of two
+/// C-order outputs with trailing extents `[ny, nz]`, for a pass that writes two
+/// fields per element; `element_bytes` counts both outputs and every input.
+pub(super) fn for_each_z_lane_pair<A, B, F>(
+    first: &mut [A],
+    second: &mut [B],
+    [ny, nz]: [usize; 2],
+    element_bytes: usize,
+    lane: F,
+) where
+    A: Send,
+    B: Send,
+    F: Fn(usize, usize, usize, &mut [A], &mut [B]) + Send + Sync,
+{
+    for_each_unit_task_pair_mut_with::<WorkBytes<LANE_PARALLEL_BYTES>, _, _, _, _, _>(
+        first,
+        second,
+        nz,
+        nz * element_bytes,
+        || (),
+        |(), first_lane, firsts, seconds| {
+            for (offset, (a, b)) in firsts
+                .chunks_exact_mut(nz)
+                .zip(seconds.chunks_exact_mut(nz))
+                .enumerate()
+            {
+                let index = first_lane + offset;
+                lane(index * nz, index / ny, index % ny, a, b);
             }
         },
     );
