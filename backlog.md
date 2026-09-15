@@ -16,7 +16,7 @@
 - **Finding.** `pstd_long_run` at 64³: power-law 7.17 ms against lossless 4.00 ms. Beyond its four transforms, `multiply_spectral_operator` recovers `(i, j, k)` by division per element and reads `operator[[i, j, k]]` though both arrays are contiguous half spectra (`apply.rs:112`), and `build_weighted_divergence`, `accumulate_stratum` and `apply_pressure_absorption` index several slices per element through `enumerate_mut_with::<Adaptive>`.
 - **Change.** The four kernels walk z lanes as contiguous zips on moirai unit tasks with unchanged arithmetic order; the identity `slice_with(..nz_c)` on the already-truncated operators goes; `lanes.rs` moves to `pstd/` so propagator and absorption share one walker.
 - **Acceptance:** bitwise differentials against the per-element formulas; the power-law arm of `pstd_long_run` falls with the FullKSpace arm as control; PSTD suites unchanged.
-- **PR:** #775 (`a325ddc07`). Bitwise differentials for all four kernels; pinned `pstd_long_run` shows power-law 32³ 6–10% faster with the lossless control within 3%, 64³ unchanged; unpinned runs on this host drifted up to 36% on identical-code controls and carry no verdict.
+- **PR:** #775 (`a325ddc07`). Bitwise differentials for all four kernels; `pstd_long_run` power-law 32³ 7–14% faster multi-threaded (FullKSpace control within 2%) and 6–10% pinned; 64³ within its controls' band, no regression.
 - **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-absorption-lanes`; **last-update:** 2026-09-15.
 
 <a id="kw-pstd-long-run"></a>
