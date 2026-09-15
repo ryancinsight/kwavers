@@ -7,7 +7,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
-use moirai_parallel::{enumerate_mut_with, Adaptive};
+use crate::forward::lanes::for_each_z_lane;
 
 use leto_ops::Axis;
 
@@ -30,17 +30,27 @@ fn update_velocity_from_gradient(
         "invariant: FDTD density shape matches velocity field"
     );
 
+    let [_, ny, nz] = velocity.shape();
     if let (Some(velocity_values), Some(gradient_values), Some(density_values)) = (
         velocity.as_slice_mut(),
         gradient.as_slice(),
         density.as_slice(),
     ) {
-        enumerate_mut_with::<Adaptive, _, _>(velocity_values, |idx, velocity_value| {
-            let rho = density_values[idx];
-            if rho > 1e-9 {
-                *velocity_value -= dt / rho * gradient_values[idx];
-            }
-        });
+        for_each_z_lane(
+            velocity_values,
+            [ny, nz],
+            3 * size_of::<f64>(),
+            |start, _, _, lane| {
+                let inputs = gradient_values[start..start + nz]
+                    .iter()
+                    .zip(&density_values[start..start + nz]);
+                for (velocity_value, (&gradient_value, &rho)) in lane.iter_mut().zip(inputs) {
+                    if rho > 1e-9 {
+                        *velocity_value -= dt / rho * gradient_value;
+                    }
+                }
+            },
+        );
     } else {
         for ((velocity_value, &gradient_value), &rho) in
             velocity.iter_mut().zip(gradient.iter()).zip(density.iter())
@@ -313,4 +323,51 @@ pub(crate) fn staggered_face_densities(density: &Array3<f64>) -> [Array3<f64>; 3
         })
     };
     [face([1, 0, 0]), face([0, 1, 0]), face([0, 0, 1])]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::update_velocity_from_gradient;
+
+    /// One volume below the lane walker's parallel floor and one above it.
+    const KERNEL_SHAPES: [[usize; 3]; 2] = [[5, 3, 7], [37, 29, 31]];
+
+    fn kernel_field(shape: [usize; 3], seed: f64) -> leto::Array3<f64> {
+        let values = (0..shape.iter().product::<usize>())
+            .map(|index| (index as f64).mul_add(0.754_8, seed).sin())
+            .collect();
+        leto::Array3::from_shape_vec(shape, values).expect("values match the shape")
+    }
+
+    fn kernel_at(field: &leto::Array3<f64>, index: usize) -> f64 {
+        field.as_slice().expect("owned arrays are contiguous")[index]
+    }
+
+    /// The lane kernel computes the per-element expression in the same order,
+    /// including the density floor: every fourth density is zeroed so the skip
+    /// branch runs on both paths.
+    #[test]
+    fn velocity_update_is_the_per_element_formula_to_the_bit() {
+        const DT: f64 = 3.1e-8;
+        for shape in KERNEL_SHAPES {
+            let gradient = kernel_field(shape, 1.0);
+            let mut density = kernel_field(shape, 2.0);
+            for (index, rho) in density.iter_mut().enumerate() {
+                *rho = if index % 4 == 0 { 0.0 } else { 1_000.0 + *rho };
+            }
+            let initial = kernel_field(shape, 3.0);
+            let mut velocity = initial.clone();
+            update_velocity_from_gradient(&mut velocity, &gradient, &density, DT);
+            let same = (0..velocity.len()).all(|i| {
+                let rho = kernel_at(&density, i);
+                let expected = if rho > 1e-9 {
+                    kernel_at(&initial, i) - DT / rho * kernel_at(&gradient, i)
+                } else {
+                    kernel_at(&initial, i)
+                };
+                kernel_at(&velocity, i).to_bits() == expected.to_bits()
+            });
+            assert!(same, "velocity update diverges at {shape:?}");
+        }
+    }
 }

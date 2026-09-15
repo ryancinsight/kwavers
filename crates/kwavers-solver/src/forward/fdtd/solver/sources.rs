@@ -3,10 +3,10 @@
 //! classification by mask geometry.
 
 use leto::Array3;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::sync::Arc;
 
 use super::GenericFdtdSolver;
+use crate::forward::lanes::for_each_z_lane;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_source::{Source, SourceField, SourceInjectionMode};
@@ -24,12 +24,22 @@ fn apply_boundary_pressure_mask(pressure: &mut Array3<f64>, mask: &Array3<f64>, 
         "invariant: FDTD pressure source mask shape matches pressure field"
     );
 
+    let [_, ny, nz] = pressure.shape();
     if let (Some(pressure_values), Some(mask_values)) = (pressure.as_slice_mut(), mask.as_slice()) {
-        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
-            if mask_values[idx] > 0.0 {
-                *pressure_value = amplitude;
-            }
-        });
+        for_each_z_lane(
+            pressure_values,
+            [ny, nz],
+            2 * size_of::<f64>(),
+            |start, _, _, lane| {
+                for (pressure_value, &mask_value) in
+                    lane.iter_mut().zip(&mask_values[start..start + nz])
+                {
+                    if mask_value > 0.0 {
+                        *pressure_value = amplitude;
+                    }
+                }
+            },
+        );
     } else {
         for (pressure_value, &mask_value) in pressure.iter_mut().zip(mask.iter()) {
             if mask_value > 0.0 {
@@ -46,10 +56,20 @@ fn apply_additive_pressure_mask(pressure: &mut Array3<f64>, mask: &Array3<f64>, 
         "invariant: FDTD pressure source mask shape matches pressure field"
     );
 
+    let [_, ny, nz] = pressure.shape();
     if let (Some(pressure_values), Some(mask_values)) = (pressure.as_slice_mut(), mask.as_slice()) {
-        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
-            *pressure_value += mask_values[idx] * amplitude;
-        });
+        for_each_z_lane(
+            pressure_values,
+            [ny, nz],
+            2 * size_of::<f64>(),
+            |start, _, _, lane| {
+                for (pressure_value, &mask_value) in
+                    lane.iter_mut().zip(&mask_values[start..start + nz])
+                {
+                    *pressure_value += mask_value * amplitude;
+                }
+            },
+        );
     } else {
         for (pressure_value, &mask_value) in pressure.iter_mut().zip(mask.iter()) {
             *pressure_value += mask_value * amplitude;
@@ -261,6 +281,73 @@ impl GenericFdtdSolver<Array3<f64>> {
             // Additive mode: normalize by mask L1 norm to preserve energy
             let scale = if mask_sum > 0.0 { 1.0 / mask_sum } else { 1.0 };
             SourceInjectionMode::Additive { scale }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{apply_additive_pressure_mask, apply_boundary_pressure_mask};
+
+    /// One volume below the lane walker's parallel floor and one above it.
+    const KERNEL_SHAPES: [[usize; 3]; 2] = [[5, 3, 7], [37, 29, 31]];
+
+    fn kernel_field(shape: [usize; 3], seed: f64) -> leto::Array3<f64> {
+        let values = (0..shape.iter().product::<usize>())
+            .map(|index| (index as f64).mul_add(0.754_8, seed).sin())
+            .collect();
+        leto::Array3::from_shape_vec(shape, values).expect("values match the shape")
+    }
+
+    fn kernel_at(field: &leto::Array3<f64>, index: usize) -> f64 {
+        field.as_slice().expect("owned arrays are contiguous")[index]
+    }
+
+    /// A mask whose every third value is non-positive, so both mask kernels
+    /// meet elements they leave alone.
+    fn kernel_mask(shape: [usize; 3]) -> leto::Array3<f64> {
+        let mut mask = kernel_field(shape, 2.0);
+        for (index, value) in mask.iter_mut().enumerate() {
+            if index % 3 == 0 {
+                *value = -value.abs();
+            }
+        }
+        mask
+    }
+
+    #[test]
+    fn boundary_pressure_mask_is_the_per_element_assignment_to_the_bit() {
+        const AMPLITUDE: f64 = 1.75;
+        for shape in KERNEL_SHAPES {
+            let mask = kernel_mask(shape);
+            let initial = kernel_field(shape, 3.0);
+            let mut pressure = initial.clone();
+            apply_boundary_pressure_mask(&mut pressure, &mask, AMPLITUDE);
+            let same = (0..pressure.len()).all(|i| {
+                let expected = if kernel_at(&mask, i) > 0.0 {
+                    AMPLITUDE
+                } else {
+                    kernel_at(&initial, i)
+                };
+                kernel_at(&pressure, i).to_bits() == expected.to_bits()
+            });
+            assert!(same, "boundary pressure mask diverges at {shape:?}");
+        }
+    }
+
+    #[test]
+    fn additive_pressure_mask_is_the_per_element_sum_to_the_bit() {
+        const AMPLITUDE: f64 = 1.75;
+        for shape in KERNEL_SHAPES {
+            let mask = kernel_mask(shape);
+            let initial = kernel_field(shape, 3.0);
+            let mut pressure = initial.clone();
+            apply_additive_pressure_mask(&mut pressure, &mask, AMPLITUDE);
+            let same = (0..pressure.len()).all(|i| {
+                let expected = kernel_at(&initial, i) + kernel_at(&mask, i) * AMPLITUDE;
+                kernel_at(&pressure, i).to_bits() == expected.to_bits()
+            });
+            assert!(same, "additive pressure mask diverges at {shape:?}");
         }
     }
 }
