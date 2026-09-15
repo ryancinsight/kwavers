@@ -1,5 +1,14 @@
 # Backlog / Strategy
 
+<a id="kw-pstd-long-run"></a>
+
+## KW-PSTD-LONG-RUN-2026-09-15 — A long PSTD run pays per step for work no instrument times [patch] [perf] — in-progress
+
+- **Finding.** No benchmark times `step_forward`; the step's non-transform kernels (`velocity.rs:128,174`, `density_cartesian.rs:87,194`, `absorption/apply.rs:122`) recover `(i, j, k)` by two divisions and two modulos per element through `enumerate_mut_with::<Adaptive>` to read a factor constant along one axis, which also blocks vectorization. FullKSpace allocates about 80 B per grid point per step (`step.rs:219-264`, `k_space/operators.rs:92,103`). No test pins a zero-allocation step.
+- **Slice 1:** `pstd_long_run` bench (lossless, power-law, FullKSpace at 32³/64³) and `pstd_steps_after_setup_do_not_allocate`. **Slice 2:** row-shaped kernels over a byte-sized row primitive (upstream home: leto-ops `parallel`, see [survey](../apollo/backlog.md#apollo-lane-parallel-threshold)). **Slice 3:** FullKSpace buffers persistent.
+- **Acceptance:** per-step time falls in every arm with the transform pair's share reported; the allocation contract holds; PSTD validation suites unchanged.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-long-run`; **last-update:** 2026-09-15.
+
 <a id="kw-native-r2c"></a>
 
 ## KW-NATIVE-R2C-2026-09-11 — The PSTD spectral path costs twice the FFT it wraps [patch] [perf] — done 2026-09-15
