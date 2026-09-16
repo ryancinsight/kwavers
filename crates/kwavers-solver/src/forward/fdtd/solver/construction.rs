@@ -10,7 +10,7 @@ use leto::Array3;
 use log::info;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
-use super::{FdtdMetrics, GenericFdtdSolver};
+use super::GenericFdtdSolver;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::wave::WaveFields;
@@ -250,7 +250,6 @@ impl GenericFdtdSolver<Array3<f64>> {
             grid: grid.clone(),
             conservative_operator,
             leapfrog_operator,
-            metrics: FdtdMetrics::new(),
             cpml_boundary: None,
             spatial_order,
             gpu_accelerator: None,

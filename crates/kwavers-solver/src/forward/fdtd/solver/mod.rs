@@ -98,7 +98,6 @@ use std::sync::Arc;
 
 use super::config::FdtdConfig;
 use super::kspace_correction::KSpaceFdtdOperators;
-use super::metrics::FdtdMetrics;
 use super::source_handler::SourceHandler;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 
@@ -126,8 +125,6 @@ pub struct GenericFdtdSolver<T> {
     /// halves are negative adjoints, which is what makes the leapfrog
     /// conserve energy (KW-SOL-081).
     pub(crate) leapfrog_operator: StaggeredLeapfrog3D<f64>,
-    /// Performance metrics
-    pub(crate) metrics: FdtdMetrics,
     /// C-PML boundary (if enabled)
     pub(crate) cpml_boundary: Option<CPMLBoundary>,
     /// Spatial order enum (validated at construction)
@@ -190,7 +187,6 @@ impl<T: std::fmt::Debug> std::fmt::Debug for GenericFdtdSolver<T> {
             .field("grid", &self.grid)
             .field("conservative_operator", &self.conservative_operator)
             .field("leapfrog_operator", &self.leapfrog_operator)
-            .field("metrics", &self.metrics)
             .field("cpml_boundary", &self.cpml_boundary)
             .field("spatial_order", &self.spatial_order)
             .field(
