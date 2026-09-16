@@ -1,12 +1,12 @@
 //! Public solver accessors: GPU accelerator hookup, CPML enable, CFL helpers,
-//! metrics access/merge, sensor data extraction, orchestrated run loop.
+//! sensor data extraction, orchestrated run loop.
 
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use leto::{Array3, ArrayView2};
 use log::info;
 use std::sync::Arc;
 
-use super::{FdtdGpuAccelerator, FdtdMetrics, GenericFdtdSolver};
+use super::{FdtdGpuAccelerator, GenericFdtdSolver};
 use crate::forward::fdtd::config::KSpaceCorrectionMode;
 use kwavers_boundary::cpml::{CPMLBoundary, CPMLConfig};
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -90,16 +90,6 @@ impl GenericFdtdSolver<Array3<f64>> {
     pub fn check_cfl_stability(&self, dt: f64, max_sound_speed: f64) -> bool {
         let max_dt = self.max_stable_dt(max_sound_speed);
         dt <= max_dt
-    }
-
-    /// Get performance metrics
-    pub fn get_metrics(&self) -> &FdtdMetrics {
-        &self.metrics
-    }
-
-    /// Merge metrics from another solver instance
-    pub fn merge_metrics(&mut self, other_metrics: &FdtdMetrics) {
-        self.metrics.merge(other_metrics);
     }
 
     /// Extract recorded sensor data as `Array2<f64>`

@@ -4,6 +4,18 @@
 
 ### Changed
 
+- **[major] `FdtdMetrics` and the solver accessors that returned it are
+  removed.** `kwavers-solver`: the struct was constructed once in
+  `FdtdSolver::new` and never written, so `get_metrics` returned eight zero
+  fields, `avg_time_per_step` returned zero for every caller and
+  `merge_metrics` merged zeros into zeros. Nothing in the stack read them.
+  Gone with it: `forward::fdtd::metrics`, `FdtdMetrics::{new, merge,
+  avg_time_per_step, reset, summary}`, and
+  `GenericFdtdSolver::{get_metrics, merge_metrics}`. Migration: time
+  `step_forward` at the call site, or run the ignored release probe
+  `fdtd_step_phase_split`, which reports the per-phase split those fields
+  were shaped for and is the measurement that found them empty.
+
 - **[major] The Kuznetsov and DG spectral Laplacians run on the half-spectrum
   pair and allocate nothing per evaluation.** `kwavers-solver`:
   `KuznetsovSpectralOperator::compute_laplacian_workspace` drops its unused

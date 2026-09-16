@@ -1,13 +1,25 @@
 # Backlog / Strategy
 
+<a id="kw-prose-pr-unmergeable"></a>
+
+## KW-PROSE-PR-UNMERGEABLE-2026-09-16 — A prose-only pull request can never satisfy the required checks [patch] [ci] — review
+
+- **Finding.** `main` requires nine status checks. All nine come from `ci.yml` and `architecture-validation.yml`, and both workflows carried `paths-ignore` for `backlog.md`, `CHANGELOG.md`, `README.md`, `gap_audit.md` and `docs/**` on their pull-request trigger. A filtered workflow reports no check at all — not a skipped one — so a pull request touching only those paths sits at `BLOCKED` with zero checks forever. [#785](https://github.com/ryancinsight/kwavers/pull/785) is the live instance; the last prose-only one, #768, went in by administrative merge, which is how the defect stayed invisible.
+- **Change.** The path filter moves one step later, from the trigger to a `changes` job that reads the pull request's own file list (the API, not a diff: a checkout here is shallow, and fetching the history to classify five paths costs more than the jobs it skips). `lockfile` and `semver` gate on it in `ci.yml` and every job reaches one of those two; each standalone job gates on it in `architecture-validation.yml`. A skipped required job counts as a success, so a prose-only pull request now reports all nine and merges on its own. Anything the classifier cannot read answers `true` and runs the gate.
+- **Cost.** One sub-minute runner per prose pull request, against a pipeline that no longer needs an administrator. The push trigger keeps its filter, so prose landing on `main` still starts nothing.
+- **Acceptance:** this pull request touches workflow paths, so the classifier says `true` and the full gate runs on it; once it lands, #785 is updated and its nine checks report as skipped and it merges without `--admin`.
+- **Integrator:** claude-opus-5; **branch:** `ci/kwavers-prose-pr-checks`; **last-update:** 2026-09-16.
+
 <a id="kw-pstd-transform-split"></a>
 
-## KW-PSTD-TRANSFORM-SPLIT-2026-09-15 — The PSTD velocity and density phases are unsplit [patch] [perf] — todo
+## KW-PSTD-TRANSFORM-SPLIT-2026-09-15 — The PSTD velocity and density phases are unsplit [patch] [perf] — review
 
-- **Finding.** `pstd_step_phase_split` puts the velocity update at 1.6-1.8 ms and the density update at 1.9-2.1 ms of a 3.4-3.8 ms step, with the pressure update at 34-74 us. Each of those two phases runs three spectral derivatives beside its lane kernels, so whether the transforms or the kernels hold the time is unknown.
-- **Change.** Extend the probe with loops that run the spectral derivative calls alone, so transform and kernel time separate per phase. Probe only; no production code changes.
-- **Acceptance:** transform and kernel time reported for both phases on a quiet host; the larger one names the next lever, and if it is the transforms the work moves to apollo rather than kwavers.
-- **Status:** todo, not claimed; filed 2026-09-15 by claude-opus-5.
+- **Finding.** `pstd_step_phase_split` put the velocity update at 1.6-1.8 ms and the density update at 1.9-2.1 ms of a 3.4-3.8 ms step, with the pressure update at 34-74 us. Each of those two phases runs three spectral derivatives beside its lane kernels, so whether the transforms or the kernels held the time was unknown.
+- **Change.** Each spectral phase is timed against the transforms it runs, one arm per repeat inside one loop. Timing the arms in separate loops attributed drift in the host load to whichever arm ran under it, which on the first two attempts put a phase below the transforms it contains (a negative kernel time, run discarded). Alternating them exposes both arms to the same drift, so the split is a reading of the code on a host carrying peer builds. Probe only; no production code changes.
+- **Measured.** Two runs at 64 cubed, split-field StandardPSTD with CPML, 200 repeats per arm after 20 warm: run 1 (no peer builds at the start) velocity 1695 us as transforms 1369 plus kernels 327, density 1709 as transforms 1402 plus kernels 307; run 2 (5 to 8 peer builds) velocity 1977 as transforms 1483 plus kernels 494, density 1830 as transforms 1582 plus kernels 247.
+- **Reading.** The transforms hold 75 to 86% of both spectral phases in both runs, so the PSTD step at this size is the 3-D real transform pair, not the kwavers kernels around it. The next lever is apollo's forward and inverse r2c/c2r at 64 cubed; filed there rather than here.
+- **Acceptance met:** transform and kernel time reported for both phases, each arm positive and internally consistent in both runs.
+- **Integrator:** claude-opus-5; **branch:** `test/kwavers-pstd-transform-split`; **PR:** #787; **last-update:** 2026-09-15.
 
 <a id="kw-pstd-phase-split"></a>
 
@@ -498,32 +510,33 @@
 
 <a id="kw-mnemosyne-global-allocator-2026-09-08"></a>
 
-## KW-MNEMOSYNE-GLOBAL-ALLOCATOR-2026-09-08 — Route kwavers allocation through Mnemosyne [patch] — todo
+## KW-MNEMOSYNE-GLOBAL-ALLOCATOR-2026-09-08 — Route kwavers allocation through Mnemosyne [patch] — review
 
 - **Outcome:** the `kwavers` binary and `xtask` install `mnemosyne::Mnemosyne`
-  as their `#[global_allocator]`, `kwavers-alloc-probe`'s
-  `ThreadScopedAllocator` forwards to it instead of `System`, and
-  `DomainPMLBoundary` holds `AlignedVec`. First-party supremacy: Mnemosyne is
-  the stack's allocator, and kwavers is currently on `System`.
-- **Entry evidence:** `chore/kwavers-xtask-mnemosyne-allocator` (pushed;
-  2026-09-02, 110 behind `main`) carries the work as a 3-file, +21/-14 source
-  delta -- `crates/kwavers-alloc-probe/src/lib.rs`,
-  `crates/kwavers-boundary/src/pml/mod.rs`, `xtask/src/main.rs` -- plus four
-  superseded `mnemosyne rev` pin advances. None of its seven commits is in
-  `main`.
-- **Not a cherry-pick.** The delta imports `mnemosyne::Mnemosyne`, and `main`
-  depends only on `mnemosyne-arena`, `mnemosyne-backend`, and `mnemosyne-core`;
-  the facade crate is a manifest addition the branch made through pin commits
-  that are now stale. Port the source delta onto the current pin, do not
-  resurrect the branch's pins.
-- **The probe change needs its own oracle.** `ThreadScopedAllocator` backs the
-  allocation-contract tests, so swapping what it forwards to can move the
-  counts those tests assert. The migration must show the contracts hold under
-  Mnemosyne, or state which counts changed and why -- an allocator that pools
-  or batches does not have to allocate one-for-one with `System`.
-- **Acceptance:** the binary, xtask, and probe use Mnemosyne; the allocation
-  contract suite passes with its assertions re-derived rather than relaxed; the
-  mnemosyne pin is `main`'s current one.
+  as their `#[global_allocator]` and `kwavers-alloc-probe`'s
+  `ThreadScopedAllocator` forwards to it instead of `System`. First-party
+  supremacy: Mnemosyne is the stack's allocator, and kwavers was on `System`.
+- **Ported, not cherry-picked.** `chore/kwavers-xtask-mnemosyne-allocator` had
+  gone 13 days and 110 commits stale, and `main` has since changed every file
+  it touched. The source intent is re-applied onto current `main`, and the
+  facade enters as a workspace dependency at `main`'s own mnemosyne revision
+  `e8e825f4`, so the facade and the `mnemosyne-arena`/`-backend`/`-core`/
+  `-heap` crates resolve to one source identity. The branch's four superseded
+  pin advances are not resurrected; it is deleted once this lands.
+- **`DomainPMLBoundary` keeps `Vec`, deliberately.** The original outcome also
+  had it hold `AlignedVec`. With Mnemosyne installed globally a `Vec` already
+  allocates through Mnemosyne, so that change buys only alignment — on six
+  `thickness`-length profiles (10 elements by default) read one scalar at a
+  time through `get_damping`, against a new dependency edge from a domain
+  crate to the allocator facade. No measurement asks for it, so it is not
+  delivered; re-open with one if a profile ever moves to a vectorized read.
+- **The probe change carried its own oracle.** `ThreadScopedAllocator` backs
+  the allocation-contract tests, so swapping what it forwards to could move the
+  counts they assert. It does not: the probe counts its own calls before
+  forwarding, and the contract suites pass unchanged, with no assertion
+  re-derived or relaxed.
+- **Integrator:** claude-opus-5; **branch:**
+  `chore/kwavers-mnemosyne-global-allocator`; **last-update:** 2026-09-15.
 
 <a id="kw-semver-informational-reports-red-2026-09-08"></a>
 

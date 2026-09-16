@@ -51,6 +51,7 @@ kwavers-gpu = { path = "../kwavers-gpu", version = "5.0.0" }
 # Essential numerical computing
 moirai-parallel = { workspace = true }
 leto = { workspace = true }
+mnemosyne = { workspace = true }
 eunomia = { workspace = true }
 apollo = { workspace = true }
 gaia = { workspace = true }
