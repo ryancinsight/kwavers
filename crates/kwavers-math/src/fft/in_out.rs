@@ -2,13 +2,11 @@
 //! and the real/complex assignment kernels they run on.
 
 use leto::{Array2, Array3};
-use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
+use moirai_parallel::{for_each_unit_task_mut_with, Adaptive};
 
 use super::plan::{Fft2d, Fft3d};
 use super::Complex64;
 use apollo::RealFftData;
-
-const FFT_ASSIGN_CHUNK_LEN: usize = 4096;
 
 /// Full-spectrum (nx, ny, nz) complex-to-complex 3-D transforms with caller-owned
 /// real and complex storage.
@@ -255,27 +253,80 @@ fn assign_complex_real_3d(complex: &Array3<Complex64>, real: &mut Array3<f64>) {
 }
 
 fn assign_real_slice_to_complex(real_values: &[f64], complex_values: &mut [Complex64]) {
-    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+    // One unit writes a complex element and reads a real one.
+    for_each_unit_task_mut_with::<Adaptive, _, _, _, _>(
         complex_values,
-        FFT_ASSIGN_CHUNK_LEN,
-        |chunk_index, chunk| {
-            let base = chunk_index * FFT_ASSIGN_CHUNK_LEN;
-            for (offset, complex_value) in chunk.iter_mut().enumerate() {
-                *complex_value = Complex64::new(real_values[base + offset], 0.0);
+        1,
+        core::mem::size_of::<Complex64>() + core::mem::size_of::<f64>(),
+        || (),
+        |(), first, run| {
+            for (offset, complex_value) in run.iter_mut().enumerate() {
+                *complex_value = Complex64::new(real_values[first + offset], 0.0);
             }
         },
     );
 }
 
 fn assign_complex_slice_real(complex_values: &[Complex64], real_values: &mut [f64]) {
-    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+    // One unit writes a real element and reads a complex one.
+    for_each_unit_task_mut_with::<Adaptive, _, _, _, _>(
         real_values,
-        FFT_ASSIGN_CHUNK_LEN,
-        |chunk_index, chunk| {
-            let base = chunk_index * FFT_ASSIGN_CHUNK_LEN;
-            for (offset, real_value) in chunk.iter_mut().enumerate() {
-                *real_value = complex_values[base + offset].re;
+        1,
+        core::mem::size_of::<f64>() + core::mem::size_of::<Complex64>(),
+        || (),
+        |(), first, run| {
+            for (offset, real_value) in run.iter_mut().enumerate() {
+                *real_value = complex_values[first + offset].re;
             }
         },
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{assign_complex_slice_real, assign_real_slice_to_complex, Complex64};
+
+    /// Elements per case: past the policy's parallel floor and several unit
+    /// tasks wide at 24 bytes a unit, so a task boundary that dropped, doubled
+    /// or shifted a run shows up.
+    const LEN: usize = 1 << 16;
+
+    /// `index / 4` as an exactly representable value, distinct per element.
+    fn ramp(len: usize) -> Vec<f64> {
+        let mut value = 0.0;
+        (0..len)
+            .map(|_| {
+                value += 0.25;
+                value
+            })
+            .collect()
+    }
+
+    #[test]
+    fn every_real_element_lands_in_its_own_complex_slot() {
+        let real = ramp(LEN);
+        let mut complex = vec![Complex64::new(f64::NAN, f64::NAN); LEN];
+
+        assign_real_slice_to_complex(&real, &mut complex);
+
+        for (index, (value, source)) in complex.iter().zip(&real).enumerate() {
+            assert_eq!(value.re.to_bits(), source.to_bits(), "re[{index}]");
+            assert_eq!(value.im.to_bits(), 0.0_f64.to_bits(), "im[{index}]");
+        }
+    }
+
+    #[test]
+    fn every_complex_element_yields_its_own_real_slot() {
+        let complex: Vec<Complex64> = ramp(LEN)
+            .into_iter()
+            .map(|value| Complex64::new(value, -value))
+            .collect();
+        let mut real = vec![f64::NAN; LEN];
+
+        assign_complex_slice_real(&complex, &mut real);
+
+        for (index, (value, source)) in real.iter().zip(&complex).enumerate() {
+            assert_eq!(value.to_bits(), source.re.to_bits(), "re[{index}]");
+        }
+    }
 }
