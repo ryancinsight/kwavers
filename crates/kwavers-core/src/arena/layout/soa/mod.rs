@@ -241,8 +241,15 @@ impl SoAFieldStorage {
     /// by operating on individual fields.
     pub fn first_touch_field_parallel(&mut self, field_idx: usize) {
         if let Some(field) = self.field_mut(field_idx) {
-            const CHUNK_SIZE: usize = 512;
-            for_each_chunk_mut_with::<Adaptive, _, _>(field, CHUNK_SIZE, |chunk| {
+            // First touch binds a page to the node of the thread that writes
+            // it, so the split is by worker — one contiguous run each, as
+            // `ArenaLayoutNumaAware::first_touch` splits it. The 512-element
+            // chunk this replaced made 128 tasks per worker on a 64 Ki field
+            // and left each page on whichever worker happened to take its
+            // task, which is the affinity this call exists to establish.
+            let workers = std::thread::available_parallelism().map_or(1, usize::from);
+            let chunk_size = field.len().div_ceil(workers).max(1);
+            for_each_chunk_mut_with::<Adaptive, _, _>(field, chunk_size, |chunk| {
                 chunk.fill(0.0);
             });
         }
