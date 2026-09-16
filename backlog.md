@@ -2,12 +2,14 @@
 
 <a id="kw-pstd-transform-split"></a>
 
-## KW-PSTD-TRANSFORM-SPLIT-2026-09-15 — The PSTD velocity and density phases are unsplit [patch] [perf] — todo
+## KW-PSTD-TRANSFORM-SPLIT-2026-09-15 — The PSTD velocity and density phases are unsplit [patch] [perf] — in-progress
 
 - **Finding.** `pstd_step_phase_split` puts the velocity update at 1.6-1.8 ms and the density update at 1.9-2.1 ms of a 3.4-3.8 ms step, with the pressure update at 34-74 us. Each of those two phases runs three spectral derivatives beside its lane kernels, so whether the transforms or the kernels hold the time is unknown.
 - **Change.** Extend the probe with loops that run the spectral derivative calls alone, so transform and kernel time separate per phase. Probe only; no production code changes.
 - **Acceptance:** transform and kernel time reported for both phases on a quiet host; the larger one names the next lever, and if it is the transforms the work moves to apollo rather than kwavers.
-- **Status:** todo, not claimed; filed 2026-09-15 by claude-opus-5.
+- **Preliminary, host busy (6 to 7 peer build processes at each start):** run 2 reads velocity 1543 us as transforms 1238 plus kernels 305, and density 1828 as transforms 1630 plus kernels 198, so the transforms hold roughly 80 to 89% of both spectral phases. Run 1 produced negative kernel times, transforms above their own phase, and is discarded.
+- **Open:** a quiet re-run before any verdict. If it holds, the PSTD lever is the transforms, which is apollo work rather than kwavers.
+- **Integrator:** claude-opus-5; **branch:** `test/kwavers-pstd-transform-split` (stacked on #786); **last-update:** 2026-09-15.
 
 <a id="kw-pstd-phase-split"></a>
 

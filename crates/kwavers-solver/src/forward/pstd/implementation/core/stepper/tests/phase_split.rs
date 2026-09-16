@@ -8,7 +8,8 @@
 //! runs the three updates back to back, as a step does: its excess over the
 //! three separate loops is the cost of alternating them, and the step minus it
 //! is the rest of a step (sources, Dirichlet enforcement and sensor
-//! recording). Run in release on a quiet host:
+//! recording). Two further loops run only the transforms each of the two
+//! spectral phases runs, so transform and kernel time separate. Run in release on a quiet host:
 //!
 //! ```text
 //! cargo nextest run -p kwavers-solver --release --run-ignored only \
@@ -20,6 +21,7 @@ use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
+use kwavers_math::fft::Fft3dInOutExt;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
 use leto::Array3;
@@ -104,6 +106,24 @@ fn pstd_step_phase_split() {
         s.update_pressure(dt).expect("pressure update");
     });
 
+    // The transforms of each spectral phase, on the buffers those phases use:
+    // the velocity update runs one forward and three inverse, the density
+    // update three of each. Both write scratch the step rewrites every call.
+    let (velocity_transforms, _) = time_phase(&mut solver, |s| {
+        s.fft.forward_r2c_into(&s.fields.p, &mut s.p_k);
+        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.dpx);
+        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.dpy);
+        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_u);
+    });
+    let (density_transforms, _) = time_phase(&mut solver, |s| {
+        s.fft.forward_r2c_into(&s.fields.ux, &mut s.ux_k);
+        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_ux);
+        s.fft.forward_r2c_into(&s.fields.uy, &mut s.ux_k);
+        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_uy);
+        s.fft.forward_r2c_into(&s.fields.uz, &mut s.ux_k);
+        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_uz);
+    });
+
     // A run that diverged would time NaN arithmetic, not the step.
     assert!(
         solver.fields.p.iter().all(|value| value.is_finite()),
@@ -111,9 +131,9 @@ fn pstd_step_phase_split() {
     );
 
     eprintln!(
-        "pstd split-field: step {step:.0} us (fastest {step_fastest:.0}); \
-         velocity {velocity:.0}; density {density:.0}; pressure {pressure:.0}; \
-         back to back {back_to_back:.0} (interaction {:.0}); rest of step {:.0}",
+        "pstd split-field: step {step:.0} us (fastest {step_fastest:.0});          velocity {velocity:.0} = transforms {velocity_transforms:.0} + kernels {:.0};          density {density:.0} = transforms {density_transforms:.0} + kernels {:.0};          pressure {pressure:.0}; back to back {back_to_back:.0} (interaction {:.0});          rest of step {:.0}",
+        velocity - velocity_transforms,
+        density - density_transforms,
         back_to_back - velocity - density - pressure,
         step - back_to_back,
     );
