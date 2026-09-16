@@ -639,3 +639,44 @@ jobs:
       # profile and `#[ignore]` gate.
       - name: Treeby-Cox plane-wave absorption decay (nonlinear3d)
         run: cargo nextest run --locked -p kwavers-therapy --profile heavy --run-ignored ignored-only -E 'test(absorption_decay)'
+
+  # One check that stands for the pipeline. A job skipped by the classifier
+  # reports `skipped`, which branch protection accepts, but a *matrix* job
+  # skipped before its matrix expands reports once under its base name — so
+  # `Build & Test (stable)` never appears on a prose-only pull request and the
+  # branch waits for a check that cannot come. This job always runs, so it is
+  # the one name the branch can require for every job below it, whatever each
+  # one did.
+  ci-gate:
+    name: CI gate
+    if: always()
+    needs:
+      - changes
+      - lockfile
+      - pinn-validation
+      - quality
+      - python-surface
+      - build
+      - security
+      - memory-safety
+      - coverage
+      - validation
+      - heavy-validation-kuznetsov
+      - heavy-validation-absorption-decay
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if any job failed or was cancelled
+        shell: bash
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          set -uo pipefail
+          echo "job results: $RESULTS"
+          echo "job results: $RESULTS" >> "$GITHUB_STEP_SUMMARY"
+          case " $RESULTS " in
+            *" failure "*|*" cancelled "*)
+              echo "a gated job did not pass" >&2
+              exit 1
+              ;;
+          esac
