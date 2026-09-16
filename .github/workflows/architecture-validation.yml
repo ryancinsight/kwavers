@@ -513,3 +513,36 @@ jobs:
 
     - name: Compile CUDA runtime provider
       run: cargo build --locked -p kwavers --no-default-features --features cuda-runtime
+
+  # The counterpart to `ci-gate`: one always-running check the branch can
+  # require for every job in this workflow, whatever each one did.
+  architecture-gate:
+    name: Architecture gate
+    if: always()
+    needs:
+      - changes
+      - integration-runner-windows
+      - architecture-validation
+      - layer-boundary-checks
+      - build-matrix
+      - test-coverage
+      - integration-suite
+      - documentation
+      - cuda-runtime-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if any job failed or was cancelled
+        shell: bash
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          set -uo pipefail
+          echo "job results: $RESULTS"
+          echo "job results: $RESULTS" >> "$GITHUB_STEP_SUMMARY"
+          case " $RESULTS " in
+            *" failure "*|*" cancelled "*)
+              echo "a gated job did not pass" >&2
+              exit 1
+              ;;
+          esac
