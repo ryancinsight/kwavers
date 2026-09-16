@@ -1,5 +1,44 @@
 # Backlog / Strategy
 
+<a id="kw-first-touch-by-worker"></a>
+
+## KW-FIRST-TOUCH-BY-WORKER-2026-09-16 — Parallel first touch split at 512 elements [patch] [perf] — review
+
+- **Finding.** `SoAFieldStorage::first_touch_field_parallel` chunked at a hand-picked 512 elements while its sibling `ArenaLayoutNumaAware::first_touch` chunks by worker count. First touch binds a page to the node of the thread that writes it, so 128 tasks per worker on a 64 Ki field leave each page on whichever worker took its task — the affinity the call exists to establish.
+- **Change.** Both paths split the same way, one contiguous run per worker. This is the one site in the chunk-width sweep where unit tasks are the wrong answer: the split is semantic, not a question of bytes moved.
+- **Also found:** `SoAFieldStorage` is a 374-line public type with 13 public methods and no user anywhere in the stack — only re-exports. Filed as `KW-SOA-STORAGE-UNUSED-2026-09-16`.
+- **Integrator:** claude-opus-5; **branch:** `fix/kwavers-first-touch-by-worker`; **last-update:** 2026-09-16.
+
+<a id="kw-soa-storage-unused"></a>
+
+## KW-SOA-STORAGE-UNUSED-2026-09-16 — A public arena type has no user [major] — todo
+
+- **Finding.** `kwavers_core::arena::SoAFieldStorage` is 374 lines with 13 public methods. Nothing in kwavers or any stack consumer constructs or calls it; `kwavers-analysis` and `kwavers-core::arena` only re-export the name. Found while fixing its first-touch split.
+- **Options.** Remove it as a [major] with a CHANGELOG migration line, as `FdtdMetrics` and leto's `parallel_for` were removed; or keep it and state beside its declaration the external consumer it serves.
+- **Acceptance:** either the type is gone from the public surface with `cargo semver-checks` recording the removal, or its declaration names the consumer that justifies it.
+- **Status:** todo, not claimed; filed 2026-09-16 by claude-opus-5.
+
+<a id="kw-grid-plane-tasks"></a>
+
+## KW-GRID-PLANE-TASKS-2026-09-16 — The Laplacian schedules one plane per task [patch] [perf] — review
+
+- Delivered: PR [#794](https://github.com/ryancinsight/kwavers/pull/794), commit `f21f96479`. A task carries as many whole x-planes as the bytes it moves allow — its own plane plus the three the stencil reads — instead of one plane whatever it weighs (2 KB at 16 cubed, against moirai's ~180 ns dispatch).
+- Coverage: the two existing cases assert a Laplacian of zero everywhere, so a plane a task dropped, doubled or shifted still read zero, and at 10 cubed they sat under the parallel floor. The new case is 16 cubed with a distinct value per cell against the operator's own expression; injecting a one-plane shift fails it, which is how the oracle was checked.
+
+<a id="kw-traversal-unit-tasks"></a>
+
+## KW-TRAVERSAL-UNIT-TASKS-2026-09-16 — Field traversal adapters size their own chunks [patch] [perf] — review
+
+- Delivered: PR [#793](https://github.com/ryancinsight/kwavers/pull/793), commit `83a01c6d7`. The seven adapters in `kwavers-medium` and the `kwavers` facade take task width from the bytes a unit moves; both `FIELD_CHUNK_SIZE` constants are gone. Policy unchanged, so no dispatch change.
+- Coverage: `for_each_mut` and `zip_mut_three_refs` never ran in either suite, and the other five only at 1 to 1000 elements, under the parallel floor. Five tests now drive all seven at 32768 cells, bit for bit, each probe-confirmed to run.
+
+<a id="kw-math-unit-tasks"></a>
+
+## KW-MATH-UNIT-TASKS-2026-09-16 — Math kernels size their own chunks [patch] [perf] — review
+
+- Delivered: PR [#792](https://github.com/ryancinsight/kwavers/pull/792), commit `5dd09e627`. The traversal adapter, the two spectral assign kernels and the wavenumber fill take task width from bytes; `MATH_CHUNK_SIZE`, `FFT_ASSIGN_CHUNK_LEN` and `KSPACE_CHUNK_LEN` are gone.
+- Coverage: none of the three FFT kernels ran in this crate's suite and the adapter only at 3 to 125 elements. Four tests now drive each across several tasks against its own source, each probe-confirmed to run.
+
 <a id="kw-prose-pr-unmergeable"></a>
 
 ## KW-PROSE-PR-UNMERGEABLE-2026-09-16 — A prose-only pull request can never satisfy the required checks [patch] [ci] — review
@@ -7,8 +46,9 @@
 - **Finding.** `main` requires nine status checks. All nine come from `ci.yml` and `architecture-validation.yml`, and both workflows carried `paths-ignore` for `backlog.md`, `CHANGELOG.md`, `README.md`, `gap_audit.md` and `docs/**` on their pull-request trigger. A filtered workflow reports no check at all — not a skipped one — so a pull request touching only those paths sits at `BLOCKED` with zero checks forever. [#785](https://github.com/ryancinsight/kwavers/pull/785) is the live instance; the last prose-only one, #768, went in by administrative merge, which is how the defect stayed invisible.
 - **Change.** The path filter moves one step later, from the trigger to a `changes` job that reads the pull request's own file list (the API, not a diff: a checkout here is shallow, and fetching the history to classify five paths costs more than the jobs it skips). `lockfile` and `semver` gate on it in `ci.yml` and every job reaches one of those two; each standalone job gates on it in `architecture-validation.yml`. A skipped required job counts as a success, so a prose-only pull request now reports all nine and merges on its own. Anything the classifier cannot read answers `true` and runs the gate.
 - **Cost.** One sub-minute runner per prose pull request, against a pipeline that no longer needs an administrator. The push trigger keeps its filter, so prose landing on `main` still starts nothing.
-- **Acceptance:** this pull request touches workflow paths, so the classifier says `true` and the full gate runs on it; once it lands, #785 is updated and its nine checks report as skipped and it merges without `--admin`.
-- **Integrator:** claude-opus-5; **branch:** `ci/kwavers-prose-pr-checks`; **last-update:** 2026-09-16.
+- **Delivered, in two parts.** PR [#790](https://github.com/ryancinsight/kwavers/pull/790) moved the filter into the `changes` job; the prose pull request then reported 20 skipped checks and 2 successes, and stayed blocked on one context. `Build & Test` builds its matrix from an expression, and a matrix job skipped before its matrix expands reports once under its base name, so `Build & Test (stable)` never appeared. PR [#791](https://github.com/ryancinsight/kwavers/pull/791) adds `CI gate` and `Architecture gate` — always-running jobs depending on every job in their workflow, failing only on `failure` or `cancelled` — and both are required contexts now.
+- **Open, needs one command.** `Build & Test (stable)` still has to leave the required list; the agent session's classifier refused the call (reason: `CI Bypass`), so it waits for a human or an explicit permission rule: `gh api repos/ryancinsight/kwavers/branches/main/protection/required_status_checks/contexts --method DELETE -f "contexts[]=Build & Test (stable)"`. Coverage does not drop: `CI gate` depends on `build`. Recorded on [#785](https://github.com/ryancinsight/kwavers/pull/785#issuecomment-5692990329).
+- **Integrator:** claude-opus-5; **branches:** `ci/kwavers-prose-pr-checks`, `ci/kwavers-gate-aggregator`; **last-update:** 2026-09-16.
 
 <a id="kw-pstd-transform-split"></a>
 
@@ -29,61 +69,51 @@
 - Split at 64 cubed, split-field StandardPSTD with CPML, two runs with peer builds on the host: step 3.4-3.8 ms, velocity 1.6-1.8 ms, density 1.9-2.1 ms, pressure 34-74 us, alternating the three 0.1-1.3 ms, and the rest of the step within noise of zero. Run 2 is internally consistent: its phases sum to the step within 90 us.
 - Reading: unlike FDTD, the PSTD step is the velocity and density updates almost entirely, and the pressure update is negligible. Next increment filed as `KW-PSTD-TRANSFORM-SPLIT-2026-09-15`.
 
+<a id="kw-fdtd-metrics-unwritten"></a>
+
+## KW-FDTD-METRICS-UNWRITTEN-2026-09-15 — FdtdMetrics reports zeros no code writes [major] — done
+
+- **Finding.** `FdtdMetrics` is built once in `FdtdSolver::new` and never written. No code assigns `update_pressure_time`, `update_velocity_time`, `divergence_time`, `gradient_time`, `boundary_time`, `cfl_checks`, `max_cfl_number` or `time_steps` outside `metrics.rs`, so the public `get_metrics` returns zeros, `avg_time_per_step` returns zero for every caller, and `merge_metrics` merges zeros into zeros. Nothing in the stack consumes them. Found while attributing the FDTD step, where the metrics looked like an existing phase split and were not.
+- **Options.** Populate the fields in `step_forward` with per-phase timers, the shape `fdtd_step_phase_split` (`5b4b3db15`) already measures; or delete the struct with `get_metrics` and `merge_metrics`, a public API removal in a published crate, so [major] with a CHANGELOG entry and migration note.
+- **Acceptance:** whichever is chosen, no public accessor returns a value that no code writes.
+- Delivered: PR [#789](https://github.com/ryancinsight/kwavers/pull/789), commit `09052002a`. Removal, not timers: populating the fields would add per-step timing to feed an API no caller reads, and the measurement it would serve is the ignored release probe `fdtd_step_phase_split`, which is what found them empty. `forward::fdtd::metrics`, the struct with its five methods, the solver field and `get_metrics`/`merge_metrics` are gone, with the CHANGELOG migration line.
+
 <a id="kw-pstd-density-source-lanes"></a>
+## KW-PSTD-DENSITY-SOURCE-LANES-2026-09-15 — The PSTD density source is the last step kernel on a hand-sized chunk [patch] [perf] — done
 
-## KW-PSTD-DENSITY-SOURCE-LANES-2026-09-15 — The PSTD density source is the last step kernel on a hand-sized chunk [patch] [perf] — in-progress
-
-- **Finding.** `add_density_source_components` adds the density source to up to three split densities per element in one fused pass over `DENSE_SOURCE_CHUNK = 4096`-element chunks, through moirai chunk walkers for one, two and three buffers. The lane walkers cover one and two outputs only.
-- **Change.** A three-output z-lane walker on moirai's triple unit-task operator; all four branches walk lanes with the sum unchanged; the chunk constant and the chunk walkers go; the lock advances moirai.
-- **Acceptance:** each branch is the per-element sum to the bit, serially and across tasks; PSTD source suites, allocation contracts and clippy clean.
-- **Unblocked:** moirai #350 merged (`906feb65`); the lock advances to it.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-density-source-lanes` (stacked on #781); **last-update:** 2026-09-15.
+- Delivered: PR [#782](https://github.com/ryancinsight/kwavers/pull/782), commit `8cfce4cc1`. All four branches walk z lanes on moirai unit tasks through `for_each_z_lane_triple` over moirai #350; `DENSE_SOURCE_CHUNK` and the chunk walkers are gone; the lock advanced moirai to `906feb65`.
+- Evidence: `density_source_is_the_per_element_sum_to_the_bit` and `triple_lanes_carry_aligned_coordinates`, 193 lanes and PSTD tests, 10 allocation contracts, clippy clean. No timing claimed.
 
 <a id="kw-viscoacoustic-axis-lanes"></a>
+## KW-VISCOACOUSTIC-AXIS-LANES-2026-09-15 — The viscoacoustic derivative walks its spectrum against the storage order [patch] [perf] — done
 
-## KW-VISCOACOUSTIC-AXIS-LANES-2026-09-15 — The viscoacoustic derivative walks its spectrum against the storage order [patch] [perf] — in-progress
-
-- **Finding.** `ViscoacousticMemorySolver::axis_derivative` runs six times per 3-D step. Its symbol pass loops `z`, `y`, `x` over a C-order `(nx, ny, nz)` buffer, so the innermost step strides `ny*nz` elements, and it matches on the axis for every element; the copy-in and copy-out passes run on one thread.
-- **Change.** The symbol pass walks z lanes on moirai unit tasks with the axis resolved per lane (the wavenumber zipped along the lane for z), and the copy passes take the same walker; expressions stay unchanged so the existing FFT reference oracle holds to the bit.
-- **Acceptance:** `axis_derivative` matches `reference_axis_derivative` to the bit on every axis and shape; viscoacoustic suites and clippy clean; a `viscoacoustic_step` comparison against the parent revision, pinned for the serial cases and unpinned at 64^3 (the passes fork-join there, and one-core pinning measures worker spin).
-- **Open:** the timing comparison. The first pinned pair is interim, and the next two runs were discarded (a peer build held the host at 100% load).
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-viscoacoustic-axis-lanes` (stacked on #780); **PR:** #781; **last-update:** 2026-09-15.
+- Delivered: PR [#781](https://github.com/ryancinsight/kwavers/pull/781), commit `6e94d2e6d`. Every pass walks x planes in storage order on moirai unit tasks, with the axis resolved once per pass.
+- Outcome: the 16 cubed step 128.6-132.2 to 72.0-73.0 us (44% less) in both pinned pairs, 2-D 10 to 16% less, 1-D within 4%; 64 cubed unpinned 1.4x to 3.5x by round. `active_axes_match_fft_reference_to_the_bit` pins the bitwise equality the reference oracle did not cover before.
 
 <a id="kw-fdtd-leto-sweeps"></a>
 
-## KW-FDTD-LETO-SWEEPS-2026-09-15 — kwavers FDTD runs the parallel leto leapfrog sweeps [patch] [perf] — in-progress
+## KW-FDTD-LETO-SWEEPS-2026-09-15 — kwavers FDTD runs the parallel leto leapfrog sweeps [patch] [perf] — done
 
-- **Finding.** leto#197 and leto#198 spread all six `StaggeredLeapfrog3D` sweeps over plane tasks: in leto `benches/leapfrog.rs` the six drop from 620 to 134 µs at order 2 and from 1007 to 168 µs at order 4. kwavers locks leto at `719e8a6a`, before both. The phase probe (`5b4b3db15`) puts the serial sweeps at 682 µs of a 2.36 ms step at order 2 and 1.09 ms of 3.03 ms at order 4.
-- **Change.** The lock advances leto to `ad7c7185`; the range changes no leto dependency, only a bench target.
-- **Acceptance:** FDTD, lanes and allocation suites and clippy clean; `fdtd_step_phase_split` and `fdtd_step_64_cubed` before and after, unpinned and alternating.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fdtd-leto-sweeps` (stacked on #783); **last-update:** 2026-09-15.
+- Delivered: PR [#784](https://github.com/ryancinsight/kwavers/pull/784). The lock advances leto to `ad7c7185`, which carries leto#197 and #198 spreading all six `StaggeredLeapfrog3D` sweeps over plane tasks.
+- Outcome at 64 cubed, order 2: the step drops from 25.2-27.1 ms to 4.54 ms per ten steps, 5.5 to 7x — far more than the sweeps' own 682 us share. The re-run phase split shows why: alternating the two updates falls from 899-1111 us to 45-102 us, consistent with moirai workers spinning against a serial thread between fork-joins. Effect measured; mechanism not proven.
 
 <a id="kw-fdtd-pointwise-lanes"></a>
+## KW-FDTD-POINTWISE-LANES-2026-09-15 — FDTD step updates dispatch one closure call per element [patch] [perf] — done
 
-## KW-FDTD-POINTWISE-LANES-2026-09-15 — FDTD step updates dispatch one closure call per element [patch] [perf] — in-progress
-
-- **Finding.** Every FDTD step runs its velocity update (`update_velocity_from_gradient`, three axes), divergence accumulation (`accumulate_two_fields`) and pressure update (`apply_pressure_update`, or `apply_absorbing_pressure_update` with relaxation) through `enumerate_mut_with::<Adaptive>`. Past 1024 elements moirai splits the pass into worker-count chunks and calls the closure once per element with bounds-checked reads, so the loops neither vectorize nor size their tasks by bytes. The nonlinear pressure delta and the two pressure source masks take the same path.
-- **Change.** These kernels walk z lanes on moirai unit tasks through `forward::lanes`, zipping their inputs along each lane with expressions unchanged, including the density floor in the velocity update.
-- **Acceptance:** each kernel is the per-element formula to the bit, serially and across tasks; FDTD suites and allocation contracts clean; `fdtd_step_64_cubed` before and after, unpinned and alternating.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fdtd-pointwise-lanes` (stacked on #781); **last-update:** 2026-09-15.
+- Delivered: PR [#783](https://github.com/ryancinsight/kwavers/pull/783), commits `1ced7c48b` (seven step kernels on z lanes, one bitwise test each) and `5b4b3db15` (the `fdtd_step_phase_split` probe).
+- Outcome: no measurable change at 64 cubed, the effect being smaller than this host run-to-run spread. The probe then split the step at order 2: sweeps 682 us, pointwise updates 775 us, alternating the two updates 899 us, sources and recording 3 us.
 
 <a id="kw-spectral-solvers-half-spectrum"></a>
+## KW-SPECTRAL-SOLVERS-HALF-SPECTRUM-2026-09-15 — The Kuznetsov and DG spectral Laplacians allocate full grids every call [patch] [perf] — done
 
-## KW-SPECTRAL-SOLVERS-HALF-SPECTRUM-2026-09-15 — The Kuznetsov and DG spectral Laplacians allocate full grids every call [patch] [perf] — in-progress
-
-- **Finding.** `KuznetsovSpectralOperator::compute_laplacian_workspace` (every Kuznetsov right-hand side) and `RegionPSTDSolver::spectral_wave_step_into` (every hybrid DG step) copy the field into a fresh array, transform the full complex spectrum and invert into a fresh real array: two full-grid allocations per call. The Kuznetsov operator holds 80 B per grid point of complex spectra and the DG solver 64 B of spectra and symbol tables; the Kuznetsov gradient path and its three spectra have no callers.
-- **Change.** Both take the half-spectrum pair with the symbol applied in place on z lanes; the DG solver folds `-|k|^2 filter` into one half-shape table; the dead gradient path goes.
-- **Acceptance:** analytic Fourier-mode Laplacian tests for both operators at even and odd `nz`; repeated evaluations allocate nothing after setup; Kuznetsov, DG and PSTD suites and clippy clean.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-spectral-solvers-half-spectrum` (stacked on #779); **PR:** #780; **last-update:** 2026-09-15.
+- Delivered: PR [#780](https://github.com/ryancinsight/kwavers/pull/780), commit `4f42e5f96`. Both take the half-spectrum pair with the symbol applied in place; the DG symbol folds into one half-shape table; the uncalled Kuznetsov gradient path is deleted.
+- Evidence: analytic Fourier-mode Laplacian tests at even and odd nz, repeated evaluations allocate nothing, 290 lib tests and clippy clean. Held spectra fall from 80 to 8 B per grid point (Kuznetsov) and 64 to 12 B (DG).
 
 <a id="kw-fdtd-kspace-half-spectrum"></a>
+## KW-FDTD-KSPACE-HALF-SPECTRUM-2026-09-15 — A k-space corrected FDTD step allocates full grids for every transform [patch] [perf] — done
 
-## KW-FDTD-KSPACE-HALF-SPECTRUM-2026-09-15 — A k-space corrected FDTD step allocates full grids for every transform [patch] [perf] — in-progress
-
-- **Finding.** `KSpaceFdtdOperators::compute_grad_pos` (every velocity update) and `compute_divergence_neg` (every pressure update) call the allocating full-spectrum `forward`/`inverse`: about seven complex and six real full-grid allocations per step. The gradient kernel recovers its axis index by division per element, and the operators hold four full-shape complex buffers (64 B per grid point).
-- **Change.** Real fields and odd shift operators take the half-spectrum pair, as PSTD does: persistent half-shape spectra and a private `kappa_half`; the gradient kernel and accumulation walk lanes with expressions unchanged; the lane walker moves to `forward/` so FDTD and PSTD share it. The initial-value path keeps full-spectrum arithmetic on its own arrays.
-- **Acceptance:** the analytic sine-to-cosine gradient, constant-field and zero-divergence tests pass; a spectral FDTD step allocates nothing after setup; PSTD suites and clippy clean.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fdtd-kspace-half-spectrum` (stacked on #778); **last-update:** 2026-09-15.
+- Delivered: PR [#779](https://github.com/ryancinsight/kwavers/pull/779), commits `c8287cb2e` and `b74301263`. The step transforms through the half-spectrum pair, the gradient kernel walks lanes, and the lane walker moved to `forward/` for FDTD and PSTD to share.
+- Evidence: the analytic gradient and divergence tests, `fdtd_spectral_steps_after_setup_do_not_allocate`, 134 tests, 2 contracts, clippy clean. Held spectra halve to 32 B per grid point.
 
 <a id="kw-pstd-linear-eos-lanes"></a>
 
