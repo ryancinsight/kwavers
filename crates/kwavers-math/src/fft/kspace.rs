@@ -4,10 +4,8 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::{Array1, Array3};
-use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
+use moirai_parallel::{for_each_unit_task_mut_with, Adaptive};
 use std::f64::consts::PI;
-
-const KSPACE_CHUNK_LEN: usize = 4096;
 
 /// K-space calculator for spectral methods
 #[derive(Debug)]
@@ -60,13 +58,16 @@ impl KSpaceCalculator {
             .as_slice_memory_order_mut()
             .expect("newly allocated k-squared field is contiguous");
         let plane_len = ny * nz;
-        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+        // One unit writes one wavenumber; the three k vectors it reads are
+        // shared and small, so the width comes from the output byte.
+        for_each_unit_task_mut_with::<Adaptive, _, _, _, _>(
             values,
-            KSPACE_CHUNK_LEN,
-            |chunk_index, chunk| {
-                let base = chunk_index * KSPACE_CHUNK_LEN;
-                for (offset, val) in chunk.iter_mut().enumerate() {
-                    let linear = base + offset;
+            1,
+            core::mem::size_of::<f64>(),
+            || (),
+            |(), first, run| {
+                for (offset, val) in run.iter_mut().enumerate() {
+                    let linear = first + offset;
                     let i = linear / plane_len;
                     let rem = linear % plane_len;
                     let j = rem / nz;
@@ -115,5 +116,37 @@ impl KSpaceCalculator {
         };
 
         sinc_x * sinc_y * sinc_z
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::KSpaceCalculator;
+
+    #[test]
+    fn every_wavenumber_is_the_sum_of_its_axis_squares() {
+        // 32768 cells is several unit tasks wide at one output byte each, and
+        // past the policy's parallel floor.
+        const N: usize = 32;
+        let (dx, dy, dz) = (1.0e-3, 2.0e-3, 5.0e-4);
+
+        let k_squared = KSpaceCalculator::generate_k_squared(N, N, N, dx, dy, dz);
+        let kx = KSpaceCalculator::generate_k_vector(N, dx);
+        let ky = KSpaceCalculator::generate_k_vector(N, dy);
+        let kz = KSpaceCalculator::generate_k_vector(N, dz);
+
+        assert_eq!(k_squared.shape(), [N, N, N]);
+        for i in 0..N {
+            for j in 0..N {
+                for k in 0..N {
+                    let expected = kz[k].mul_add(kz[k], kx[i].mul_add(kx[i], ky[j] * ky[j]));
+                    assert_eq!(
+                        k_squared[[i, j, k]].to_bits(),
+                        expected.to_bits(),
+                        "k_squared[{i}, {j}, {k}]"
+                    );
+                }
+            }
+        }
     }
 }
