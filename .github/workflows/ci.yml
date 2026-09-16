@@ -9,15 +9,15 @@ on:
       - 'README.md'
       - 'gap_audit.md'
       - 'docs/**'
+  # No `paths-ignore` here, deliberately. Every job below reports a check this
+  # branch requires, and a workflow filtered out by paths reports nothing at
+  # all — so a pull request touching only prose can never satisfy them and is
+  # unmergeable except by an administrator. The `changes` job makes the same
+  # decision one step later, where a skipped required job counts as a success
+  # and costs one sub-minute runner instead of the pipeline.
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
     branches: [main, develop]
-    paths-ignore:
-      - 'backlog.md'
-      - 'CHANGELOG.md'
-      - 'README.md'
-      - 'gap_audit.md'
-      - 'docs/**'
   # The selection-drift backstop. Jobs whose signal is about drift rather than
   # about this change -- toolchain rolls, coverage, the heavy solver suites --
   # run here instead of on every pull request. Staggered from the Atlas GPU
@@ -41,6 +41,62 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  # Whether this event touches anything the gate exists to check. The push
+  # trigger still filters by path, and a schedule or dispatch always runs, so
+  # only a pull request is classified; anything the classifier cannot read
+  # answers `true`, which runs the gate.
+  changes:
+    name: Changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+    steps:
+      # The pull request's own file list, not a diff: a checkout here is
+      # shallow, so the two endpoints of the range are not in it, and asking
+      # for the whole history to classify five paths costs more than the jobs
+      # this decides to skip.
+      - name: Classify the changed paths
+        id: classify
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -uo pipefail
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! changed=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename'); then
+            echo "the file list is unreadable; running the gate" >&2
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          code=false
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            case "$path" in
+              backlog.md|CHANGELOG.md|README.md|gap_audit.md|docs/*) ;;
+              *) code=true ;;
+            esac
+          done <<< "$changed"
+          {
+            echo "### Changed paths"
+            echo
+            echo '```'
+            echo "$changed"
+            echo '```'
+            echo
+            echo "gate runs: $code"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
   # Public-surface compatibility, informational on pull requests: the
   # detected change class is visible while the change is still in
   # review. The blocking comparison runs on release.
@@ -50,7 +106,8 @@ jobs:
     # The one job in this workflow with no `needs: lockfile` to inherit
     # the draft guard from, so it carries its own; a semver run builds a
     # baseline as well as a head, across 23 packages.
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    needs: changes
+    if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
     uses: ryancinsight/atlas/.github/workflows/semver-gate.yml@744acdf83a51aeeff23a45ef3c26f460ba5f9587
     with:
       package: kwavers-alloc-probe,kwavers-analysis,kwavers-boundary,kwavers-core,kwavers-diagnostics,kwavers-driver,kwavers-field,kwavers-gpu,kwavers-grid,kwavers-imaging,kwavers-math,kwavers-medium,kwavers-mesh,kwavers-phantom,kwavers-physics,kwavers-receiver,kwavers-signal,kwavers-simulation,kwavers-solver,kwavers-source,kwavers-therapy,kwavers-transducer,kwavers
@@ -68,7 +125,8 @@ jobs:
   # check sat in the repository, wired into one benchmark workflow and nothing
   # else.
   lockfile:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    needs: changes
+    if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
     name: Lockfile integrity
     runs-on: ubuntu-latest
     timeout-minutes: 5
