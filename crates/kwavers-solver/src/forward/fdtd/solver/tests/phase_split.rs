@@ -49,22 +49,53 @@ fn time_phase_pair(
     solver: &mut FdtdSolver,
     mut first: impl FnMut(&mut FdtdSolver),
     mut second: impl FnMut(&mut FdtdSolver),
-) -> (f64, f64) {
+) -> (Phase, Phase) {
     for _ in 0..WARM_REPEATS {
         first(solver);
         second(solver);
     }
     let (mut first_total, mut second_total) = (Duration::ZERO, Duration::ZERO);
+    let (mut first_best, mut second_best) = (Duration::MAX, Duration::MAX);
     for _ in 0..REPEATS {
         let start = Instant::now();
         first(solver);
-        first_total += start.elapsed();
+        let elapsed = start.elapsed();
+        first_total += elapsed;
+        first_best = first_best.min(elapsed);
+
         let start = Instant::now();
         second(solver);
-        second_total += start.elapsed();
+        let elapsed = start.elapsed();
+        second_total += elapsed;
+        second_best = second_best.min(elapsed);
     }
-    let mean = |total: Duration| total.as_secs_f64() * 1.0e6 / REPEATS as f64;
-    (mean(first_total), mean(second_total))
+    (
+        Phase::new(first_total, first_best),
+        Phase::new(second_total, second_best),
+    )
+}
+
+/// One arm's mean and fastest repeat, in microseconds.
+///
+/// The mean is what adds across phases; the fastest repeat is what survives a
+/// busy host. A peer build inflates a mean by whatever share of the loop it
+/// stole, but it cannot make any single repeat faster, so comparing two
+/// revisions by their fastest repeats reads the code where the means read the
+/// machine. On this host the two diverge by a factor of four under load.
+#[derive(Clone, Copy)]
+struct Phase {
+    mean: f64,
+    fastest: f64,
+}
+
+impl Phase {
+    fn new(total: Duration, fastest: Duration) -> Self {
+        let micros = |d: Duration| d.as_secs_f64() * 1.0e6;
+        Self {
+            mean: micros(total) / REPEATS as f64,
+            fastest: micros(fastest),
+        }
+    }
 }
 
 fn gradients(solver: &mut FdtdSolver) {
@@ -172,15 +203,35 @@ fn fdtd_step_phase_split() {
             "order {spatial_order}: the timed run stayed bounded (peak {peak:e})"
         );
 
+        // Both statistics, because they answer different questions: the means
+        // add across phases and the fastest repeats compare two revisions.
         eprintln!(
-            "order {spatial_order}: step {step:.0} us; \
-             velocity {velocity:.0} = gradients {gradient_sweeps:.0} + pointwise {:.0}; \
-             pressure {pressure:.0} = divergences {divergence_sweeps:.0} + accumulate and update {:.0}; \
-             back to back {back_to_back:.0} (interaction {:.0}); rest of step {:.0}",
-            velocity - gradient_sweeps,
-            pressure - divergence_sweeps,
-            back_to_back - velocity - pressure,
-            step - back_to_back,
+            "order {spatial_order} mean: step {:.0} us; \
+             velocity {:.0} = gradients {:.0} + pointwise {:.0}; \
+             pressure {:.0} = divergences {:.0} + accumulate and update {:.0}; \
+             back to back {:.0} (interaction {:.0}); rest of step {:.0}",
+            step.mean,
+            velocity.mean,
+            gradient_sweeps.mean,
+            velocity.mean - gradient_sweeps.mean,
+            pressure.mean,
+            divergence_sweeps.mean,
+            pressure.mean - divergence_sweeps.mean,
+            back_to_back.mean,
+            back_to_back.mean - velocity.mean - pressure.mean,
+            step.mean - back_to_back.mean,
+        );
+        eprintln!(
+            "order {spatial_order} fastest: step {:.0} us; \
+             velocity {:.0} = gradients {:.0} + pointwise {:.0}; \
+             pressure {:.0} = divergences {:.0} + accumulate and update {:.0}",
+            step.fastest,
+            velocity.fastest,
+            gradient_sweeps.fastest,
+            velocity.fastest - gradient_sweeps.fastest,
+            pressure.fastest,
+            divergence_sweeps.fastest,
+            pressure.fastest - divergence_sweeps.fastest,
         );
     }
 }

@@ -1,5 +1,15 @@
 # Backlog / Strategy
 
+<a id="kw-fdtd-fuse-velocity"></a>
+
+## KW-FDTD-FUSE-VELOCITY-2026-09-16 — Fusing the three velocity axis updates is slower [patch] [perf] — done
+
+- **Hypothesis.** With the phase split trustworthy (`kw-fdtd-probe-diverged`), the pointwise passes are the larger half of the order-2 step. The staggered velocity update calls one pointwise kernel per axis, so the volume is walked three times and the density field read in each; one pass over the three components should read it once and save two traversals.
+- **Built and proven equivalent.** `update_velocity_from_gradients` walks the three components through `for_each_z_lane_triple`, reading each axis's own gradient and the shared density lane once. A test asserted it reproduces the three separate calls element by element, to the bit, at 24 cubed.
+- **Measured: slower.** Four rounds alternating the two arms in one tree, comparing each arm's fastest repeat (a peer build inflates a mean but cannot make a repeat faster). Order-2 velocity pointwise, microseconds: baseline 66, 68, 68, 69; fused 75, 70, 70, 76. The whole step went 309 to 313. Order 4 reads the same way. The direction is consistent across every round.
+- **Why, most likely.** The saving was already free: at 64 cubed the density field is 2 MB and stays resident across three passes, so the second and third reads cost L3 hits rather than memory traffic. Against that, the fused lane runs seven concurrent streams — three velocity writes, three gradient reads, one density — where each separate pass ran three, and this host has shown before that stream count can outweigh instruction count. Not attributed further: the change is abandoned, so the attribution would buy nothing.
+- **Outcome.** The fused kernel and its equivalence test are dropped; the instrument upgrade they motivated is kept (each arm now reports its fastest repeat beside its mean, which is what made this measurable on a shared host at all). A future attempt at pointwise fusion here should first count the streams it creates and expect the density reads to be free.
+
 <a id="kw-fdtd-probe-diverged"></a>
 
 ## KW-FDTD-PROBE-DIVERGED-2026-09-16 — The FDTD phase split timed a diverging run [patch] [perf] — review
