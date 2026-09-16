@@ -61,6 +61,15 @@ mod phase_split;
 mod stepping;
 
 /// Helper: create a minimal FdtdSolver for unit tests.
+///
+/// `dt` comes from the solver's own `max_stable_dt`, which reads the Courant
+/// limit off the staggered stencil's coefficients. Deriving it here from
+/// `1/√3` instead — as this helper did — is the collocated second-order limit,
+/// and the staggered limit falls with the order: `1/(√3·Σ|cₙ|)` is 0.4949 at
+/// order 4 against 0.5774 at order 2. A fourth-order run at `cfl_factor` 0.95
+/// therefore took a step 11% past its limit, and `fdtd_step_phase_split` timed
+/// a field that had grown to 1e250 by the end of its loops while the
+/// `is_finite` guard stayed quiet.
 fn make_solver(
     n: usize,
     dx: f64,
@@ -71,15 +80,22 @@ fn make_solver(
 ) -> FdtdSolver {
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
     let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
-    let dt = cfl_factor / (3.0_f64).sqrt() * dx / c0;
     let config = FdtdConfig {
         spatial_order,
         staggered_grid: true,
         cfl_factor,
         enable_nonlinear: false,
-        dt,
+        // Replaced below by the limit this solver reports for its own stencil;
+        // construction needs some positive step to validate.
+        dt: cfl_factor / (3.0_f64).sqrt() * dx / c0,
         nt: 10,
         ..Default::default()
+    };
+    let provisional =
+        FdtdSolver::new(config.clone(), &grid, &medium, GridSource::new_empty()).unwrap();
+    let config = FdtdConfig {
+        dt: provisional.max_stable_dt(c0),
+        ..config
     };
     FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap()
 }
