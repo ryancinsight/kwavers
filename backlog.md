@@ -1,5 +1,16 @@
 # Backlog / Strategy
 
+<a id="kw-fdtd-probe-diverged"></a>
+
+## KW-FDTD-PROBE-DIVERGED-2026-09-16 — The FDTD phase split timed a diverging run [patch] [perf] — review
+
+- **Finding.** `fdtd_step_phase_split` reported an order-4 split whose pressure field had reached 1e250 by the end of its loops. Floating point does not slow down before denormals, so a blow-up times exactly like a valid run and the probe's `is_finite` guard stayed quiet. Found by censusing the field magnitudes while chasing a different oddity: the step measuring *cheaper* than the two updates it contains.
+- **Cause, in shared test infrastructure.** `make_solver` derived `dt` from `cfl/sqrt(3)` — the collocated second-order Courant limit — whatever the spatial order. The staggered limit falls with the order: `1/(sqrt(3)*sum|c_n|)` is 0.4949 at order 4 against 0.5774 at order 2, so `cfl_factor` 0.95 put a fourth-order run 11% past its limit. The solver already computes this correctly in `max_stable_dt`, which reads the coefficients off the stencil; the helper was not asking it. It does now, and the order-4 peak falls to 8.0e4 against order 2's 5.9e4.
+- **Also fixed: the split subtracted across loops.** An update minus the sweeps it contains, and the step minus the two updates it contains, were each computed from separately-timed loops, so both carried whatever the host did between them — and the second came out negative in every run. Every arm now alternates inside one loop. The same defect and the same cure applied to the PSTD probe earlier (`kw-pstd-transform-split`).
+- **What this invalidates.** The order-4 figures recorded under `KW-FDTD-POINTWISE-LANES-2026-09-15` (sweeps 1.09 ms of a 3.03 ms step) were measured on the diverging configuration, and the order-2 split there was measured in the separate-loop form. Paired and bounded, a quiet-host order-2 step reads 367 us: velocity 153 = gradients 64 + pointwise 89, pressure 138 = divergences 67 + accumulate and update 71. The sweeps are not the larger half; the pointwise passes are.
+- **Guard.** `is_finite` becomes a bounded peak with three decades of headroom over a stable run. Restoring the old timestep fails it with `peak 2.577860636839099e250`, which is how the guard was checked rather than assumed.
+- **Integrator:** claude-opus-5; **branch:** `test/kwavers-fdtd-phase-pairs`; **last-update:** 2026-09-16.
+
 <a id="kw-first-touch-by-worker"></a>
 
 ## KW-FIRST-TOUCH-BY-WORKER-2026-09-16 — Parallel first touch split at 512 elements [patch] [perf] — review
@@ -95,13 +106,14 @@
 ## KW-FDTD-LETO-SWEEPS-2026-09-15 — kwavers FDTD runs the parallel leto leapfrog sweeps [patch] [perf] — done
 
 - Delivered: PR [#784](https://github.com/ryancinsight/kwavers/pull/784). The lock advances leto to `ad7c7185`, which carries leto#197 and #198 spreading all six `StaggeredLeapfrog3D` sweeps over plane tasks.
-- Outcome at 64 cubed, order 2: the step drops from 25.2-27.1 ms to 4.54 ms per ten steps, 5.5 to 7x — far more than the sweeps' own 682 us share. The re-run phase split shows why: alternating the two updates falls from 899-1111 us to 45-102 us, consistent with moirai workers spinning against a serial thread between fork-joins. Effect measured; mechanism not proven.
+- Outcome at 64 cubed, order 2: the step drops from 25.2-27.1 ms to 4.54 ms per ten steps, 5.5 to 7x, measured directly on `fdtd_step_64_cubed` before and after. That reading stands.
+- The explanation offered here — that the gain exceeded the sweeps' own share because alternating the two updates collapsed from 899-1111 us to 45-102 us — came from the phase split in its separate-loop form, whose differences are withdrawn (`kw-fdtd-probe-diverged`). Why the step gained more than the sweeps' share is open again.
 
 <a id="kw-fdtd-pointwise-lanes"></a>
 ## KW-FDTD-POINTWISE-LANES-2026-09-15 — FDTD step updates dispatch one closure call per element [patch] [perf] — done
 
 - Delivered: PR [#783](https://github.com/ryancinsight/kwavers/pull/783), commits `1ced7c48b` (seven step kernels on z lanes, one bitwise test each) and `5b4b3db15` (the `fdtd_step_phase_split` probe).
-- Outcome: no measurable change at 64 cubed, the effect being smaller than this host run-to-run spread. The probe then split the step at order 2: sweeps 682 us, pointwise updates 775 us, alternating the two updates 899 us, sources and recording 3 us.
+- Outcome: no measurable change at 64 cubed, the effect being smaller than this host run-to-run spread. The split the probe then reported is withdrawn: its differences were taken across separately-timed loops and its order-4 configuration was diverging (`kw-fdtd-probe-diverged`). Paired and bounded, a quiet-host order-2 step reads 367 us: velocity 153 = gradients 64 + pointwise 89, pressure 138 = divergences 67 + accumulate and update 71.
 
 <a id="kw-spectral-solvers-half-spectrum"></a>
 ## KW-SPECTRAL-SOLVERS-HALF-SPECTRUM-2026-09-15 — The Kuznetsov and DG spectral Laplacians allocate full grids every call [patch] [perf] — done
