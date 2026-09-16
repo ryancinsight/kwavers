@@ -20,6 +20,15 @@
 - **Open:** the timing comparison. The first pinned pair is interim, and the next two runs were discarded (a peer build held the host at 100% load).
 - **Integrator:** claude-opus-5; **branch:** `perf/kwavers-viscoacoustic-axis-lanes` (stacked on #780); **PR:** #781; **last-update:** 2026-09-15.
 
+<a id="kw-fdtd-leto-sweeps"></a>
+
+## KW-FDTD-LETO-SWEEPS-2026-09-15 — kwavers FDTD runs the parallel leto leapfrog sweeps [patch] [perf] — in-progress
+
+- **Finding.** leto#197 and leto#198 spread all six `StaggeredLeapfrog3D` sweeps over plane tasks: in leto `benches/leapfrog.rs` the six drop from 620 to 134 µs at order 2 and from 1007 to 168 µs at order 4. kwavers locks leto at `719e8a6a`, before both. The phase probe (`5b4b3db15`) puts the serial sweeps at 682 µs of a 2.36 ms step at order 2 and 1.09 ms of 3.03 ms at order 4.
+- **Change.** The lock advances leto to `ad7c7185`; the range changes no leto dependency, only a bench target.
+- **Acceptance:** FDTD, lanes and allocation suites and clippy clean; `fdtd_step_phase_split` and `fdtd_step_64_cubed` before and after, unpinned and alternating.
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fdtd-leto-sweeps` (stacked on #783); **last-update:** 2026-09-15.
+
 <a id="kw-fdtd-pointwise-lanes"></a>
 
 ## KW-FDTD-POINTWISE-LANES-2026-09-15 — FDTD step updates dispatch one closure call per element [patch] [perf] — in-progress
