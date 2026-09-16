@@ -92,7 +92,6 @@ pub mod config;
 pub mod dispatch; // Phase 9.1: Runtime SIMD strategy dispatch
 pub mod electromagnetic;
 pub mod kspace_correction;
-pub mod metrics;
 pub mod plugin;
 pub mod pressure_updater; // SRP: pressure field update methods
 pub mod simd_stencil;
