@@ -2,12 +2,14 @@
 
 <a id="kw-pstd-transform-split"></a>
 
-## KW-PSTD-TRANSFORM-SPLIT-2026-09-15 — The PSTD velocity and density phases are unsplit [patch] [perf] — todo
+## KW-PSTD-TRANSFORM-SPLIT-2026-09-15 — The PSTD velocity and density phases are unsplit [patch] [perf] — review
 
-- **Finding.** `pstd_step_phase_split` puts the velocity update at 1.6-1.8 ms and the density update at 1.9-2.1 ms of a 3.4-3.8 ms step, with the pressure update at 34-74 us. Each of those two phases runs three spectral derivatives beside its lane kernels, so whether the transforms or the kernels hold the time is unknown.
-- **Change.** Extend the probe with loops that run the spectral derivative calls alone, so transform and kernel time separate per phase. Probe only; no production code changes.
-- **Acceptance:** transform and kernel time reported for both phases on a quiet host; the larger one names the next lever, and if it is the transforms the work moves to apollo rather than kwavers.
-- **Status:** todo, not claimed; filed 2026-09-15 by claude-opus-5.
+- **Finding.** `pstd_step_phase_split` put the velocity update at 1.6-1.8 ms and the density update at 1.9-2.1 ms of a 3.4-3.8 ms step, with the pressure update at 34-74 us. Each of those two phases runs three spectral derivatives beside its lane kernels, so whether the transforms or the kernels held the time was unknown.
+- **Change.** Each spectral phase is timed against the transforms it runs, one arm per repeat inside one loop. Timing the arms in separate loops attributed drift in the host load to whichever arm ran under it, which on the first two attempts put a phase below the transforms it contains (a negative kernel time, run discarded). Alternating them exposes both arms to the same drift, so the split is a reading of the code on a host carrying peer builds. Probe only; no production code changes.
+- **Measured.** Two runs at 64 cubed, split-field StandardPSTD with CPML, 200 repeats per arm after 20 warm: run 1 (no peer builds at the start) velocity 1695 us as transforms 1369 plus kernels 327, density 1709 as transforms 1402 plus kernels 307; run 2 (5 to 8 peer builds) velocity 1977 as transforms 1483 plus kernels 494, density 1830 as transforms 1582 plus kernels 247.
+- **Reading.** The transforms hold 75 to 86% of both spectral phases in both runs, so the PSTD step at this size is the 3-D real transform pair, not the kwavers kernels around it. The next lever is apollo's forward and inverse r2c/c2r at 64 cubed; filed there rather than here.
+- **Acceptance met:** transform and kernel time reported for both phases, each arm positive and internally consistent in both runs.
+- **Integrator:** claude-opus-5; **branch:** `test/kwavers-pstd-transform-split`; **PR:** #787; **last-update:** 2026-09-15.
 
 <a id="kw-pstd-phase-split"></a>
 
