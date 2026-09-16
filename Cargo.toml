@@ -55,6 +55,10 @@ mnemosyne-backend = { version = "0.5.0", git = "https://github.com/ryancinsight/
 mnemosyne-core = { version = "0.2.0", git = "https://github.com/ryancinsight/Mnemosyne", package = "mnemosyne-memory-core", rev = "e8e825f482b3f6712765364254e484dd5f6e19f5" }
 # mnemosyne-heap owns NUMA memory-policy execution (bind / interleave / first-touch).
 mnemosyne-heap = { version = "0.4.0", git = "https://github.com/ryancinsight/Mnemosyne", rev = "e8e825f482b3f6712765364254e484dd5f6e19f5" }
+# mnemosyne-memory is the allocator facade: the `Mnemosyne` global allocator
+# every kwavers process installs. Same revision as the crates above, so the
+# facade and its parts resolve to one source identity.
+mnemosyne = { version = "0.7.0", git = "https://github.com/ryancinsight/Mnemosyne", package = "mnemosyne-memory", rev = "e8e825f482b3f6712765364254e484dd5f6e19f5" }
 eunomia = { version = "0.8.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
 numpy = "0.29"
 

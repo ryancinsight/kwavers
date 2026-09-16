@@ -3,6 +3,13 @@
 //! Provides automated module size checks, naming audits, test generation,
 //! and complexity analysis following the problem statement requirements.
 
+use mnemosyne::Mnemosyne;
+
+/// Mnemosyne is the stack's allocator, so every kwavers process allocates
+/// through it rather than through the platform's.
+#[global_allocator]
+static ALLOCATOR: Mnemosyne = Mnemosyne;
+
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand};
 use std::fs;
