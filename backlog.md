@@ -1,51 +1,43 @@
 # Backlog / Strategy
 
+<a id="kw-fdtd-metrics-unwritten"></a>
+
+## KW-FDTD-METRICS-UNWRITTEN-2026-09-15 — FdtdMetrics reports zeros no code writes [patch] — todo
+
+- **Finding.** `FdtdMetrics` is built once in `FdtdSolver::new` and never written. No code assigns `update_pressure_time`, `update_velocity_time`, `divergence_time`, `gradient_time`, `boundary_time`, `cfl_checks`, `max_cfl_number` or `time_steps` outside `metrics.rs`, so the public `get_metrics` returns zeros, `avg_time_per_step` returns zero for every caller, and `merge_metrics` merges zeros into zeros. Nothing in the stack consumes them. Found while attributing the FDTD step, where the metrics looked like an existing phase split and were not.
+- **Options.** Populate the fields in `step_forward` with per-phase timers, the shape `fdtd_step_phase_split` (`5b4b3db15`) already measures; or delete the struct with `get_metrics` and `merge_metrics`, a public API removal in a published crate, so [major] with a CHANGELOG entry and migration note.
+- **Acceptance:** whichever is chosen, no public accessor returns a value that no code writes.
+- **Status:** todo, not claimed; filed 2026-09-15 by claude-opus-5.
+
 <a id="kw-pstd-density-source-lanes"></a>
+## KW-PSTD-DENSITY-SOURCE-LANES-2026-09-15 — The PSTD density source is the last step kernel on a hand-sized chunk [patch] [perf] — done
 
-## KW-PSTD-DENSITY-SOURCE-LANES-2026-09-15 — The PSTD density source is the last step kernel on a hand-sized chunk [patch] [perf] — in-progress
-
-- **Finding.** `add_density_source_components` adds the density source to up to three split densities per element in one fused pass over `DENSE_SOURCE_CHUNK = 4096`-element chunks, through moirai chunk walkers for one, two and three buffers. The lane walkers cover one and two outputs only.
-- **Change.** A three-output z-lane walker on moirai's triple unit-task operator; all four branches walk lanes with the sum unchanged; the chunk constant and the chunk walkers go; the lock advances moirai.
-- **Acceptance:** each branch is the per-element sum to the bit, serially and across tasks; PSTD source suites, allocation contracts and clippy clean.
-- **Unblocked:** moirai #350 merged (`906feb65`); the lock advances to it.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-density-source-lanes` (stacked on #781); **last-update:** 2026-09-15.
+- Delivered: PR [#782](https://github.com/ryancinsight/kwavers/pull/782), commit `8cfce4cc1`. All four branches walk z lanes on moirai unit tasks through `for_each_z_lane_triple` over moirai #350; `DENSE_SOURCE_CHUNK` and the chunk walkers are gone; the lock advanced moirai to `906feb65`.
+- Evidence: `density_source_is_the_per_element_sum_to_the_bit` and `triple_lanes_carry_aligned_coordinates`, 193 lanes and PSTD tests, 10 allocation contracts, clippy clean. No timing claimed.
 
 <a id="kw-viscoacoustic-axis-lanes"></a>
+## KW-VISCOACOUSTIC-AXIS-LANES-2026-09-15 — The viscoacoustic derivative walks its spectrum against the storage order [patch] [perf] — done
 
-## KW-VISCOACOUSTIC-AXIS-LANES-2026-09-15 — The viscoacoustic derivative walks its spectrum against the storage order [patch] [perf] — in-progress
-
-- **Finding.** `ViscoacousticMemorySolver::axis_derivative` runs six times per 3-D step. Its symbol pass loops `z`, `y`, `x` over a C-order `(nx, ny, nz)` buffer, so the innermost step strides `ny*nz` elements, and it matches on the axis for every element; the copy-in and copy-out passes run on one thread.
-- **Change.** The symbol pass walks z lanes on moirai unit tasks with the axis resolved per lane (the wavenumber zipped along the lane for z), and the copy passes take the same walker; expressions stay unchanged so the existing FFT reference oracle holds to the bit.
-- **Acceptance:** `axis_derivative` matches `reference_axis_derivative` to the bit on every axis and shape; viscoacoustic suites and clippy clean; a `viscoacoustic_step` comparison against the parent revision, pinned for the serial cases and unpinned at 64^3 (the passes fork-join there, and one-core pinning measures worker spin).
-- **Open:** the timing comparison. The first pinned pair is interim, and the next two runs were discarded (a peer build held the host at 100% load).
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-viscoacoustic-axis-lanes` (stacked on #780); **PR:** #781; **last-update:** 2026-09-15.
+- Delivered: PR [#781](https://github.com/ryancinsight/kwavers/pull/781), commit `6e94d2e6d`. Every pass walks x planes in storage order on moirai unit tasks, with the axis resolved once per pass.
+- Outcome: the 16 cubed step 128.6-132.2 to 72.0-73.0 us (44% less) in both pinned pairs, 2-D 10 to 16% less, 1-D within 4%; 64 cubed unpinned 1.4x to 3.5x by round. `active_axes_match_fft_reference_to_the_bit` pins the bitwise equality the reference oracle did not cover before.
 
 <a id="kw-fdtd-pointwise-lanes"></a>
+## KW-FDTD-POINTWISE-LANES-2026-09-15 — FDTD step updates dispatch one closure call per element [patch] [perf] — done
 
-## KW-FDTD-POINTWISE-LANES-2026-09-15 — FDTD step updates dispatch one closure call per element [patch] [perf] — in-progress
-
-- **Finding.** Every FDTD step runs its velocity update (`update_velocity_from_gradient`, three axes), divergence accumulation (`accumulate_two_fields`) and pressure update (`apply_pressure_update`, or `apply_absorbing_pressure_update` with relaxation) through `enumerate_mut_with::<Adaptive>`. Past 1024 elements moirai splits the pass into worker-count chunks and calls the closure once per element with bounds-checked reads, so the loops neither vectorize nor size their tasks by bytes. The nonlinear pressure delta and the two pressure source masks take the same path.
-- **Change.** These kernels walk z lanes on moirai unit tasks through `forward::lanes`, zipping their inputs along each lane with expressions unchanged, including the density floor in the velocity update.
-- **Acceptance:** each kernel is the per-element formula to the bit, serially and across tasks; FDTD suites and allocation contracts clean; `fdtd_step_64_cubed` before and after, unpinned and alternating.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fdtd-pointwise-lanes` (stacked on #781); **last-update:** 2026-09-15.
+- Delivered: PR [#783](https://github.com/ryancinsight/kwavers/pull/783), commits `1ced7c48b` (seven step kernels on z lanes, one bitwise test each) and `5b4b3db15` (the `fdtd_step_phase_split` probe).
+- Outcome: no measurable change at 64 cubed, the effect being smaller than this host run-to-run spread. The probe then split the step at order 2: sweeps 682 us, pointwise updates 775 us, alternating the two updates 899 us, sources and recording 3 us.
 
 <a id="kw-spectral-solvers-half-spectrum"></a>
+## KW-SPECTRAL-SOLVERS-HALF-SPECTRUM-2026-09-15 — The Kuznetsov and DG spectral Laplacians allocate full grids every call [patch] [perf] — done
 
-## KW-SPECTRAL-SOLVERS-HALF-SPECTRUM-2026-09-15 — The Kuznetsov and DG spectral Laplacians allocate full grids every call [patch] [perf] — in-progress
-
-- **Finding.** `KuznetsovSpectralOperator::compute_laplacian_workspace` (every Kuznetsov right-hand side) and `RegionPSTDSolver::spectral_wave_step_into` (every hybrid DG step) copy the field into a fresh array, transform the full complex spectrum and invert into a fresh real array: two full-grid allocations per call. The Kuznetsov operator holds 80 B per grid point of complex spectra and the DG solver 64 B of spectra and symbol tables; the Kuznetsov gradient path and its three spectra have no callers.
-- **Change.** Both take the half-spectrum pair with the symbol applied in place on z lanes; the DG solver folds `-|k|^2 filter` into one half-shape table; the dead gradient path goes.
-- **Acceptance:** analytic Fourier-mode Laplacian tests for both operators at even and odd `nz`; repeated evaluations allocate nothing after setup; Kuznetsov, DG and PSTD suites and clippy clean.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-spectral-solvers-half-spectrum` (stacked on #779); **PR:** #780; **last-update:** 2026-09-15.
+- Delivered: PR [#780](https://github.com/ryancinsight/kwavers/pull/780), commit `4f42e5f96`. Both take the half-spectrum pair with the symbol applied in place; the DG symbol folds into one half-shape table; the uncalled Kuznetsov gradient path is deleted.
+- Evidence: analytic Fourier-mode Laplacian tests at even and odd nz, repeated evaluations allocate nothing, 290 lib tests and clippy clean. Held spectra fall from 80 to 8 B per grid point (Kuznetsov) and 64 to 12 B (DG).
 
 <a id="kw-fdtd-kspace-half-spectrum"></a>
+## KW-FDTD-KSPACE-HALF-SPECTRUM-2026-09-15 — A k-space corrected FDTD step allocates full grids for every transform [patch] [perf] — done
 
-## KW-FDTD-KSPACE-HALF-SPECTRUM-2026-09-15 — A k-space corrected FDTD step allocates full grids for every transform [patch] [perf] — in-progress
-
-- **Finding.** `KSpaceFdtdOperators::compute_grad_pos` (every velocity update) and `compute_divergence_neg` (every pressure update) call the allocating full-spectrum `forward`/`inverse`: about seven complex and six real full-grid allocations per step. The gradient kernel recovers its axis index by division per element, and the operators hold four full-shape complex buffers (64 B per grid point).
-- **Change.** Real fields and odd shift operators take the half-spectrum pair, as PSTD does: persistent half-shape spectra and a private `kappa_half`; the gradient kernel and accumulation walk lanes with expressions unchanged; the lane walker moves to `forward/` so FDTD and PSTD share it. The initial-value path keeps full-spectrum arithmetic on its own arrays.
-- **Acceptance:** the analytic sine-to-cosine gradient, constant-field and zero-divergence tests pass; a spectral FDTD step allocates nothing after setup; PSTD suites and clippy clean.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-fdtd-kspace-half-spectrum` (stacked on #778); **last-update:** 2026-09-15.
+- Delivered: PR [#779](https://github.com/ryancinsight/kwavers/pull/779), commits `c8287cb2e` and `b74301263`. The step transforms through the half-spectrum pair, the gradient kernel walks lanes, and the lane walker moved to `forward/` for FDTD and PSTD to share.
+- Evidence: the analytic gradient and divergence tests, `fdtd_spectral_steps_after_setup_do_not_allocate`, 134 tests, 2 contracts, clippy clean. Held spectra halve to 32 B per grid point.
 
 <a id="kw-pstd-linear-eos-lanes"></a>
 
