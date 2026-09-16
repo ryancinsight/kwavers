@@ -2892,6 +2892,7 @@ dependencies = [
  "leto-ops",
  "log",
  "loom",
+ "mnemosyne-memory 0.7.0 (git+https://github.com/ryancinsight/Mnemosyne?rev=e8e825f482b3f6712765364254e484dd5f6e19f5)",
  "moirai-parallel",
  "once_cell",
  "parking_lot",
@@ -2920,6 +2921,9 @@ dependencies = [
 [[package]]
 name = "kwavers-alloc-probe"
 version = "0.1.0"
+dependencies = [
+ "mnemosyne-memory 0.7.0 (git+https://github.com/ryancinsight/Mnemosyne?rev=e8e825f482b3f6712765364254e484dd5f6e19f5)",
+]
 
 [[package]]
 name = "kwavers-analysis"
@@ -7417,6 +7421,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "clap 4.6.6",
+ "mnemosyne-memory 0.7.0 (git+https://github.com/ryancinsight/Mnemosyne?rev=e8e825f482b3f6712765364254e484dd5f6e19f5)",
  "regex",
  "wait-timeout",
  "walkdir",
