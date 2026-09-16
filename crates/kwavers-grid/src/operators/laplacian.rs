@@ -6,7 +6,7 @@ use super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use crate::Grid;
 use kwavers_core::error::KwaversResult;
 use leto::{Array3, ArrayView3, ArrayViewMut3};
-use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
+use moirai_parallel::{for_each_unit_task_mut_with, Adaptive};
 
 /// Configuration for Laplacian computation
 #[derive(Debug, Clone)]
@@ -134,17 +134,31 @@ impl LaplacianOperator {
         }
 
         if let Some(output) = output.as_mut_slice() {
-            for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(output, ny * nz, |i, plane| {
-                if i == 0 || i + 1 == nx {
-                    return;
-                }
-                for j in 1..ny - 1 {
-                    let row_offset = j * nz;
-                    for k in 1..nz - 1 {
-                        plane[row_offset + k] = self.second_order_value(input, i, j, k);
+            // One unit is an x-plane: it writes its own plane and the
+            // stencil reads the plane either side of it, so a task carries
+            // whole planes sized by the four it moves (moirai ADR 0059).
+            let plane_len = ny * nz;
+            let plane_bytes = plane_len.saturating_mul(4 * core::mem::size_of::<f64>());
+            for_each_unit_task_mut_with::<Adaptive, _, _, _, _>(
+                output,
+                plane_len,
+                plane_bytes,
+                || (),
+                |(), first_plane, planes| {
+                    for (offset, plane) in planes.chunks_exact_mut(plane_len).enumerate() {
+                        let i = first_plane + offset;
+                        if i == 0 || i + 1 == nx {
+                            continue;
+                        }
+                        for j in 1..ny - 1 {
+                            let row_offset = j * nz;
+                            for k in 1..nz - 1 {
+                                plane[row_offset + k] = self.second_order_value(input, i, j, k);
+                            }
+                        }
                     }
-                }
-            });
+                },
+            );
             return;
         }
 
@@ -301,6 +315,58 @@ mod tests {
     use super::*;
     use crate::Grid;
     use eunomia::assert_relative_eq;
+
+    /// Every interior cell gets the stencil at its own index, across several
+    /// plane tasks.
+    ///
+    /// The constant and linear cases below are blind to a plane that a task
+    /// dropped, doubled or shifted — their Laplacian is zero everywhere, so a
+    /// wrong plane still reads zero — and at 10 cubed they sit under the
+    /// policy's parallel floor, so no task split ran at all. This case is 16
+    /// cubed, gives every cell a distinct value, and compares against the same
+    /// expression the operator applies, so the assertion is exact and a
+    /// mis-mapped plane fails it.
+    #[test]
+    fn every_interior_cell_takes_the_stencil_at_its_own_index() {
+        const N: usize = 16;
+        let grid = Grid::new(N, N, N, 0.1, 0.2, 0.05).unwrap();
+
+        let mut field = Array3::zeros([N, N, N]);
+        let mut value = 0.0_f64;
+        for i in 0..N {
+            for j in 0..N {
+                for k in 0..N {
+                    value += 0.25;
+                    field[[i, j, k]] = value;
+                }
+            }
+        }
+
+        let operator = LaplacianOperator::second_order(&grid);
+        let result = operator.apply(field.view()).unwrap();
+
+        let (dx2_inv, dy2_inv, dz2_inv) =
+            (1.0 / (0.1 * 0.1), 1.0 / (0.2 * 0.2), 1.0 / (0.05 * 0.05));
+        for i in 1..N - 1 {
+            for j in 1..N - 1 {
+                for k in 1..N - 1 {
+                    let centre = field[[i, j, k]];
+                    let expected = (2.0_f64.mul_add(-centre, field[[i + 1, j, k]])
+                        + field[[i - 1, j, k]])
+                        * dx2_inv
+                        + (2.0_f64.mul_add(-centre, field[[i, j + 1, k]]) + field[[i, j - 1, k]])
+                            * dy2_inv
+                        + (2.0_f64.mul_add(-centre, field[[i, j, k + 1]]) + field[[i, j, k - 1]])
+                            * dz2_inv;
+                    assert_eq!(
+                        result[[i, j, k]].to_bits(),
+                        expected.to_bits(),
+                        "laplacian[{i}, {j}, {k}]"
+                    );
+                }
+            }
+        }
+    }
 
     #[test]
     fn test_laplacian_constant_field() {
