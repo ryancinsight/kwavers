@@ -8,8 +8,9 @@
 //! runs the three updates back to back, as a step does: its excess over the
 //! three separate loops is the cost of alternating them, and the step minus it
 //! is the rest of a step (sources, Dirichlet enforcement and sensor
-//! recording). Two further loops run only the transforms each of the two
-//! spectral phases runs, so transform and kernel time separate. Run in release on a quiet host:
+//! recording). The two spectral phases are instead timed against their own
+//! transforms, one arm per repeat in one loop, so transform and kernel time
+//! separate under whatever load the host carries. Run in release:
 //!
 //! ```text
 //! cargo nextest run -p kwavers-solver --release --run-ignored only \
@@ -55,6 +56,36 @@ fn time_phase(solver: &mut PSTDSolver, mut phase: impl FnMut(&mut PSTDSolver)) -
     (micros(total) / REPEATS as f64, micros(fastest))
 }
 
+/// Means of `first` and `second`, in microseconds, timed alternately inside
+/// one loop after warming both.
+///
+/// Timing them in separate loops attributes any drift in the host load to
+/// whichever arm ran while it drifted: on a host carrying peer builds that put
+/// a phase below the transforms it contains, a negative kernel time. One arm
+/// per repeat exposes both to the same drift, so their difference stays a
+/// reading of the code even when neither mean is a reading of a quiet host.
+fn time_phase_pair(
+    solver: &mut PSTDSolver,
+    mut first: impl FnMut(&mut PSTDSolver),
+    mut second: impl FnMut(&mut PSTDSolver),
+) -> (f64, f64) {
+    for _ in 0..WARM_REPEATS {
+        first(solver);
+        second(solver);
+    }
+    let (mut first_total, mut second_total) = (Duration::ZERO, Duration::ZERO);
+    for _ in 0..REPEATS {
+        let start = Instant::now();
+        first(solver);
+        first_total += start.elapsed();
+        let start = Instant::now();
+        second(solver);
+        second_total += start.elapsed();
+    }
+    let mean = |total: Duration| total.as_secs_f64() * 1.0e6 / REPEATS as f64;
+    (mean(first_total), mean(second_total))
+}
+
 /// A water solver with a centred initial pressure, CPML as a long run carries.
 fn probe_solver() -> PSTDSolver {
     let grid = Grid::new(N, N, N, DX, DX, DX).expect("valid grid");
@@ -91,12 +122,36 @@ fn pstd_step_phase_split() {
     let (step, step_fastest) = time_phase(&mut solver, |s| {
         s.step_forward().expect("step");
     });
-    let (velocity, _) = time_phase(&mut solver, |s| {
-        s.update_velocity(dt).expect("velocity update");
-    });
-    let (density, _) = time_phase(&mut solver, |s| {
-        s.update_density(dt).expect("density update");
-    });
+    // Each spectral phase is timed against the transforms it runs, one arm per
+    // repeat: the velocity update runs one forward and three inverse
+    // transforms, the density update three of each. Both transform arms write
+    // scratch the step rewrites every call.
+    let (velocity, velocity_transforms) = time_phase_pair(
+        &mut solver,
+        |s| {
+            s.update_velocity(dt).expect("velocity update");
+        },
+        |s| {
+            s.fft.forward_r2c_into(&s.fields.p, &mut s.p_k);
+            s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.dpx);
+            s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.dpy);
+            s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_u);
+        },
+    );
+    let (density, density_transforms) = time_phase_pair(
+        &mut solver,
+        |s| {
+            s.update_density(dt).expect("density update");
+        },
+        |s| {
+            s.fft.forward_r2c_into(&s.fields.ux, &mut s.ux_k);
+            s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_ux);
+            s.fft.forward_r2c_into(&s.fields.uy, &mut s.ux_k);
+            s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_uy);
+            s.fft.forward_r2c_into(&s.fields.uz, &mut s.ux_k);
+            s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_uz);
+        },
+    );
     let (pressure, _) = time_phase(&mut solver, |s| {
         s.update_pressure(dt).expect("pressure update");
     });
@@ -104,24 +159,6 @@ fn pstd_step_phase_split() {
         s.update_velocity(dt).expect("velocity update");
         s.update_density(dt).expect("density update");
         s.update_pressure(dt).expect("pressure update");
-    });
-
-    // The transforms of each spectral phase, on the buffers those phases use:
-    // the velocity update runs one forward and three inverse, the density
-    // update three of each. Both write scratch the step rewrites every call.
-    let (velocity_transforms, _) = time_phase(&mut solver, |s| {
-        s.fft.forward_r2c_into(&s.fields.p, &mut s.p_k);
-        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.dpx);
-        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.dpy);
-        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_u);
-    });
-    let (density_transforms, _) = time_phase(&mut solver, |s| {
-        s.fft.forward_r2c_into(&s.fields.ux, &mut s.ux_k);
-        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_ux);
-        s.fft.forward_r2c_into(&s.fields.uy, &mut s.ux_k);
-        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_uy);
-        s.fft.forward_r2c_into(&s.fields.uz, &mut s.ux_k);
-        s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_uz);
     });
 
     // A run that diverged would time NaN arithmetic, not the step.
