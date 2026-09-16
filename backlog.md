@@ -1,5 +1,22 @@
 # Backlog / Strategy
 
+<a id="kw-pstd-transform-split"></a>
+
+## KW-PSTD-TRANSFORM-SPLIT-2026-09-15 — The PSTD velocity and density phases are unsplit [patch] [perf] — todo
+
+- **Finding.** `pstd_step_phase_split` puts the velocity update at 1.6-1.8 ms and the density update at 1.9-2.1 ms of a 3.4-3.8 ms step, with the pressure update at 34-74 us. Each of those two phases runs three spectral derivatives beside its lane kernels, so whether the transforms or the kernels hold the time is unknown.
+- **Change.** Extend the probe with loops that run the spectral derivative calls alone, so transform and kernel time separate per phase. Probe only; no production code changes.
+- **Acceptance:** transform and kernel time reported for both phases on a quiet host; the larger one names the next lever, and if it is the transforms the work moves to apollo rather than kwavers.
+- **Status:** todo, not claimed; filed 2026-09-15 by claude-opus-5.
+
+<a id="kw-pstd-phase-split"></a>
+
+## KW-PSTD-PHASE-SPLIT-2026-09-15 — The PSTD step has no phase split [patch] [perf] — done
+
+- Delivered: the ignored release probe `pstd_step_phase_split`, beside the FDTD one. No production code changes.
+- Split at 64 cubed, split-field StandardPSTD with CPML, two runs with peer builds on the host: step 3.4-3.8 ms, velocity 1.6-1.8 ms, density 1.9-2.1 ms, pressure 34-74 us, alternating the three 0.1-1.3 ms, and the rest of the step within noise of zero. Run 2 is internally consistent: its phases sum to the step within 90 us.
+- Reading: unlike FDTD, the PSTD step is the velocity and density updates almost entirely, and the pressure update is negligible. Next increment filed as `KW-PSTD-TRANSFORM-SPLIT-2026-09-15`.
+
 <a id="kw-pstd-density-source-lanes"></a>
 
 ## KW-PSTD-DENSITY-SOURCE-LANES-2026-09-15 — The PSTD density source is the last step kernel on a hand-sized chunk [patch] [perf] — in-progress

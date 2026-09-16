@@ -5,6 +5,8 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::{GridSource, SourceMode};
 
+mod phase_split;
+
 const CPML_REFERENCE_STEP2: f64 = 5.344_360e-1;
 const CPML_REFERENCE_STEP3: f64 = 1.127_856e-1;
 const CPML_REFERENCE_TOL: f64 = 1e-4;
