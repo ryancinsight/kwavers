@@ -1,5 +1,15 @@
 # Backlog / Strategy
 
+<a id="kw-prose-pr-unmergeable"></a>
+
+## KW-PROSE-PR-UNMERGEABLE-2026-09-16 — A prose-only pull request can never satisfy the required checks [patch] [ci] — review
+
+- **Finding.** `main` requires nine status checks. All nine come from `ci.yml` and `architecture-validation.yml`, and both workflows carried `paths-ignore` for `backlog.md`, `CHANGELOG.md`, `README.md`, `gap_audit.md` and `docs/**` on their pull-request trigger. A filtered workflow reports no check at all — not a skipped one — so a pull request touching only those paths sits at `BLOCKED` with zero checks forever. [#785](https://github.com/ryancinsight/kwavers/pull/785) is the live instance; the last prose-only one, #768, went in by administrative merge, which is how the defect stayed invisible.
+- **Change.** The path filter moves one step later, from the trigger to a `changes` job that reads the pull request's own file list (the API, not a diff: a checkout here is shallow, and fetching the history to classify five paths costs more than the jobs it skips). `lockfile` and `semver` gate on it in `ci.yml` and every job reaches one of those two; each standalone job gates on it in `architecture-validation.yml`. A skipped required job counts as a success, so a prose-only pull request now reports all nine and merges on its own. Anything the classifier cannot read answers `true` and runs the gate.
+- **Cost.** One sub-minute runner per prose pull request, against a pipeline that no longer needs an administrator. The push trigger keeps its filter, so prose landing on `main` still starts nothing.
+- **Acceptance:** this pull request touches workflow paths, so the classifier says `true` and the full gate runs on it; once it lands, #785 is updated and its nine checks report as skipped and it merges without `--admin`.
+- **Integrator:** claude-opus-5; **branch:** `ci/kwavers-prose-pr-checks`; **last-update:** 2026-09-16.
+
 <a id="kw-pstd-transform-split"></a>
 
 ## KW-PSTD-TRANSFORM-SPLIT-2026-09-15 — The PSTD velocity and density phases are unsplit [patch] [perf] — review
