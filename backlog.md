@@ -26,11 +26,9 @@
 
 <a id="kw-fdtd-unused-stencils"></a>
 
-## KW-FDTD-UNUSED-STENCILS-2026-09-16 — Three public FDTD stencil modules have no caller [major] — review
+## KW-FDTD-UNUSED-STENCILS-2026-09-16 — Three public FDTD stencil modules have no caller [major] — done 2026-09-17
 
-- **Finding.** `forward::fdtd::{avx512_stencil, simd_stencil, dispatch}` (1783 lines, unsafe AVX-512 kernels among them) are used only by their own tests; the solver steps through `pressure_updater` and `velocity_updater`, and no stack member names them. Their pressure update is a collocated second-order leapfrog that discards the `u_div` it takes, and the dispatcher built a processor and a fresh output field per call.
-- **Change.** The three modules and their six re-exports are removed, with a CHANGELOG migration line; two of the `kw-memory-order-pairing` sites go with them.
-- **Integrator:** claude-opus-5; **branch:** `refactor/kwavers-fdtd-unused-stencils`; **last-update:** 2026-09-16.
+- PR [#800](https://github.com/ryancinsight/kwavers/pull/800). `forward::fdtd::{avx512_stencil, simd_stencil, dispatch}` removed (1783 lines); their pressure update discarded its velocity divergence.
 
 <a id="kw-memory-order-pairing"></a>
 
