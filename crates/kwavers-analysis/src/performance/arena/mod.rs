@@ -17,8 +17,8 @@ pub use kwavers_core::arena::batch::{
 pub use kwavers_core::arena::field_arena::{ArenaConfig, ArenaStats, FieldArena};
 pub use kwavers_core::arena::layout::{
     align_up, cache_aligned_size, packed_struct_size, ArenaLayoutNumaPolicy, CacheBlockSize,
-    FieldBufferGuard, FieldLayout, FieldPool, NumaAwareAllocator, SoAFieldStorage, TiledIterator3D,
-    CACHE_LINE_SIZE, ELEMENTS_PER_CACHE_LINE,
+    FieldBufferGuard, FieldLayout, FieldPool, NumaAwareAllocator, TiledIterator3D, CACHE_LINE_SIZE,
+    ELEMENTS_PER_CACHE_LINE,
 };
 pub use kwavers_core::arena::numa::{
     current_numa_node, detect_topology, first_touch_memory_parallel, set_thread_affinity,

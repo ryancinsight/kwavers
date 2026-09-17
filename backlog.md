@@ -20,12 +20,9 @@
 
 <a id="kw-soa-storage-unused"></a>
 
-## KW-SOA-STORAGE-UNUSED-2026-09-16 — A public arena type has no user [major] — todo
+## KW-SOA-STORAGE-UNUSED-2026-09-16 — A public arena type has no user [major] — review
 
-- **Finding.** `kwavers_core::arena::SoAFieldStorage` is 374 lines with 13 public methods. Nothing in kwavers or any stack consumer constructs or calls it; `kwavers-analysis` and `kwavers-core::arena` only re-export the name. Found while fixing its first-touch split.
-- **Options.** Remove it as a [major] with a CHANGELOG migration line, as `FdtdMetrics` and leto's `parallel_for` were removed; or keep it and state beside its declaration the external consumer it serves.
-- **Acceptance:** either the type is gone from the public surface with `cargo semver-checks` recording the removal, or its declaration names the consumer that justifies it.
-- **Status:** todo, not claimed; filed 2026-09-16 by claude-opus-5.
+- Removed with its tests and both re-exports, with a CHANGELOG migration line; no constructor or method call existed outside its own tests in kwavers or any stack member (`grep -r SoAFieldStorage repos/`). Branch `chore/kwavers-board-compaction`.
 
 <a id="kw-grid-plane-tasks"></a>
 

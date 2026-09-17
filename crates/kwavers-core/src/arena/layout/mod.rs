@@ -30,14 +30,12 @@ pub mod alignment;
 pub mod numa_aware;
 pub mod packing;
 pub mod pool;
-pub mod soa;
 pub mod tiling;
 
 pub use alignment::{align_to_cache_line, align_up, cache_aligned_size, padding_needed};
 pub use numa_aware::NumaAwareAllocator;
 pub use packing::{optimal_field_order, packed_struct_size, FieldLayoutInfo};
 pub use pool::{FieldBufferGuard, FieldPool};
-pub use soa::SoAFieldStorage;
 pub use tiling::{tiled_index, CacheBlockSize, TiledIterator3D};
 // ═══════════════════════════════════════════════════════════════════════════
 // CONSTANTS AND TYPES

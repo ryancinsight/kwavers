@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **[major] `SoAFieldStorage` is removed.** `kwavers-core::arena` and its
+  `kwavers-analysis` re-export: nothing in kwavers or the stack constructed
+  or called the type outside its own tests. Callers holding several
+  equal-length `f64` fields allocate one buffer per field (`Vec<f64>` or a
+  `FieldPool` buffer) and first-touch them with
+  `NumaAwareAllocator::first_touch_parallel`.
+
 - **[major] `FdtdMetrics` and the solver accessors that returned it are
   removed.** `kwavers-solver`: the struct was constructed once in
   `FdtdSolver::new` and never written, so `get_metrics` returned eight zero
