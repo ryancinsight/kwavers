@@ -11,6 +11,7 @@ mod tests;
 use crate::heterogeneous::core::HeterogeneousMedium;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K;
+use kwavers_core::traversal::zip_mut_indexed;
 use kwavers_grid::Grid;
 use leto::Array3;
 
@@ -143,16 +144,37 @@ impl HeterogeneousFactory {
         let mut alpha_power = Array3::from_elem([nx, ny, nz], 1.0_f64);
         let mut nonlinearity = Array3::zeros([nx, ny, nz]);
 
-        crate::parallel::fill_from_function(&mut sound_speed, grid, &sound_speed_fn);
-        crate::parallel::fill_from_function(&mut density, grid, &density_fn);
+        // Coordinate tables computed once and shared across every fill below.
+        let x: Vec<f64> = (0..nx)
+            .map(|i| (i as f64).mul_add(grid.dx, grid.origin[0]))
+            .collect();
+        let y: Vec<f64> = (0..ny)
+            .map(|j| (j as f64).mul_add(grid.dy, grid.origin[1]))
+            .collect();
+        let z: Vec<f64> = (0..nz)
+            .map(|k| (k as f64).mul_add(grid.dz, grid.origin[2]))
+            .collect();
+
+        zip_mut_indexed(sound_speed.view_mut(), (), |[i, j, k], v, ()| {
+            *v = sound_speed_fn(x[i], y[j], z[k]);
+        });
+        zip_mut_indexed(density.view_mut(), (), |[i, j, k], v, ()| {
+            *v = density_fn(x[i], y[j], z[k]);
+        });
         if let Some(ref abs_fn) = absorption_fn {
-            crate::parallel::fill_from_function(&mut absorption, grid, abs_fn);
+            zip_mut_indexed(absorption.view_mut(), (), |[i, j, k], v, ()| {
+                *v = abs_fn(x[i], y[j], z[k]);
+            });
         }
         if let Some(ref yf) = alpha_power_fn {
-            crate::parallel::fill_from_function(&mut alpha_power, grid, yf);
+            zip_mut_indexed(alpha_power.view_mut(), (), |[i, j, k], v, ()| {
+                *v = yf(x[i], y[j], z[k]);
+            });
         }
         if let Some(ref nl_fn) = nonlinearity_fn {
-            crate::parallel::fill_from_function(&mut nonlinearity, grid, nl_fn);
+            zip_mut_indexed(nonlinearity.view_mut(), (), |[i, j, k], v, ()| {
+                *v = nl_fn(x[i], y[j], z[k]);
+            });
         }
 
         HeterogeneousMedium {

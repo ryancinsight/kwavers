@@ -28,8 +28,8 @@ the same traversal with a different arity set and a hand-picked chunk size.
 
 ## Decision
 
-`kwavers_core::traversal` owns the traversal: `zip_mut`, `zip_mut_indexed`,
-`zip_mut_pair` and `zip_mut_triple`, each generic over rank `N`, taking the
+`kwavers_core::traversal` owns the traversal: `zip_mut`, `zip_mut_pair` and
+`zip_mut_triple`, each with an `_indexed` form, generic over rank `N`, taking the
 read-only views as a `ZipInputs` value — `()`, one view, or a tuple of two to
 five views — so one function serves every input arity and the closure
 destructures what it reads.
@@ -39,6 +39,9 @@ destructures what it reads.
 - Dense work runs as moirai unit tasks whose width follows the bytes one
   element moves (outputs plus `ZipInputs::UNIT_BYTES`), as ADR 0059 in moirai
   prescribes, replacing the 1024- and 4096-element chunk constants.
+- Each output count has one implementation, the indexed form; the plain
+  form drops the index in a wrapping closure, which is dead arithmetic once
+  the closure inlines.
 - Shape agreement is an `assert!` with `#[track_caller]`.
 - A mutable view that cannot enumerate its elements is an invariant
   violation (`expect`), never a silent skip.
@@ -76,8 +79,18 @@ to the new module.
 
 ## Verification
 
-`kwavers-core/src/traversal/tests.rs`: a transposed input and a transposed
-output pair by logical index (both fail against the physics family's pairing),
-every input arity and output count against an index-coded oracle, the
-dense indexed path against the logical index, the shape assertion, and the
-empty field. The migrated kernels' own suites run unchanged.
+`kwavers-core/src/traversal/tests.rs`: a transposed input and transposed
+outputs pair by logical index, every input arity and output count against an
+index-coded oracle, the dense indexed paths against the logical index, the
+shape assertion, and the empty field. The same two transposed cases, run as a
+probe against the physics family before its removal, misplaced 13 248 of
+13 824 elements and wrote wrong coordinates. Injecting an off-by-one into the
+dense path, and a one-element skew into the logical walk, each fails a test.
+The migrated kernels' own suites run unchanged.
+
+Adapter A/B, old physics family against the new functions, alternating in one
+loop, fastest repeat of each, host load 10%: 16 cubed 7.1-8.2 us to
+1.0-1.9 us for every form (a 4K-element field no longer splits into 1024-element
+tasks); indexed 3.7-4.2x faster at 64 cubed and 2.8-3.5x at 128 cubed;
+three inputs 11-14% and 5-17% faster; one input equal at 64 cubed and 5-9%
+faster at 128 cubed.

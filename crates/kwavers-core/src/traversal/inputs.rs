@@ -124,7 +124,11 @@ impl<'a, A: Sync, B: Sync, const N: usize> ZipInputs<'a, N>
 }
 
 impl<'a, A: Sync, B: Sync, C: Sync, const N: usize> ZipInputs<'a, N>
-    for (ArrayView<'a, A, N>, ArrayView<'a, B, N>, ArrayView<'a, C, N>)
+    for (
+        ArrayView<'a, A, N>,
+        ArrayView<'a, B, N>,
+        ArrayView<'a, C, N>,
+    )
 {
     type Refs = (&'a A, &'a B, &'a C);
     type Slices = (&'a [A], &'a [B], &'a [C]);

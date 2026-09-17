@@ -5,7 +5,7 @@ use leto::Array3;
 
 use super::constants::K_B;
 use super::params::{BoltzmannGatingParams, GatingModel, PressureThresholdParams};
-use crate::parallel::zip_mut_ref;
+use kwavers_core::traversal::zip_mut;
 
 /// Compute per-voxel open probability using the Boltzmann two-state model.
 ///
@@ -39,7 +39,7 @@ pub fn boltzmann_p_open(
     let a = params.gating_area_m2;
     let t_half = params.half_tension_n_per_m;
     let mut out = Array3::<f64>::zeros(membrane_tension.shape());
-    zip_mut_ref(
+    zip_mut(
         out.view_mut(),
         membrane_tension.view(),
         |p: &mut f64, &dt: &f64| {
@@ -73,7 +73,7 @@ pub fn pressure_threshold_p_open(
     let p_half = params.half_pressure_pa;
     let s = params.steepness_pa;
     let mut out = Array3::<f64>::zeros(radiation_pressure.shape());
-    zip_mut_ref(
+    zip_mut(
         out.view_mut(),
         radiation_pressure.view(),
         |p: &mut f64, &p_rad: &f64| {

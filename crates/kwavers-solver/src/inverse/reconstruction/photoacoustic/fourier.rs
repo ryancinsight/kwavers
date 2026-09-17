@@ -10,7 +10,7 @@
 use apollo::{fft_1d_leto, ifft_1d_leto, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use kwavers_core::utils::iterators::apply_inplace;
+use kwavers_core::traversal::zip_mut;
 use kwavers_math::fft::{Complex64, Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use kwavers_signal::window_value;
 use kwavers_signal::SignalWindowType;
@@ -244,7 +244,7 @@ impl FourierReconstructor {
             .expect("photoacoustic inverse FFT output shape must match reconstruction grid");
 
         // Apply positivity constraint (pressure should be non-negative)
-        apply_inplace(&mut result, |x| x.max(0.0));
+        zip_mut(result.view_mut(), (), |x, ()| *x = x.max(0.0));
 
         Ok(result)
     }

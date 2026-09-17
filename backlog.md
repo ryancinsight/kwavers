@@ -1,5 +1,15 @@
 # Backlog / Strategy
 
+<a id="kw-lockstep-traversal"></a>
+
+## KW-LOCKSTEP-TRAVERSAL-2026-09-16 — Three traversal families, one pairing fields by memory order [major] [arch] [perf] — in-progress
+
+- **Finding.** Six crates carried their own traversal adapters (physics, therapy, math, medium, simulation, the facade) plus three public ones in core. `kwavers-physics::parallel` zipped `as_slice_memory_order` slices, which leto returns for C- *or* F-dense layouts: a transposed 24-cubed input misplaced 13 248 of 13 824 elements, and its indexed forms handed F-dense outputs wrong coordinates (both reproduced by probe). Its fallback discarded the iterator error. Therapy and core carried two more copies with other arities and chunk sizes (4096, per element).
+- **Change.** [ADR 132](docs/adr/132-one-lockstep-traversal.md): `kwavers_core::traversal` with one indexed implementation per output count, inputs as a `ZipInputs` tuple, logical pairing, moirai unit tasks; the three families and their callers migrate in the same change.
+- **Measured** (adapter A/B, one loop, fastest repeat, load 10%): 16 cubed 7.1-8.2 us to 1.0-1.9 us; 64 cubed indexed 54-62 to 14 us; 128 cubed indexed 436-456 to 124-157 us, three-input 5-17% faster, one-input 1-9%.
+- **Acceptance:** traversal tests (transposed input and output, every arity, shape assertion, empty field) proven to fail under injected dense and fallback defects; migrated suites unchanged; gate green.
+- **Integrator:** claude-opus-5; **branch:** `fix/kwavers-lockstep-traversal`; **last-update:** 2026-09-16.
+
 <a id="kw-fdtd-fuse-velocity"></a>
 
 ## KW-FDTD-FUSE-VELOCITY-2026-09-16 — Fusing the three velocity axis updates is slower [patch] [perf] — done 2026-09-16

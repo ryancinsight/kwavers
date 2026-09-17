@@ -1,6 +1,6 @@
 //! Shared traversal helpers for regularization gradients.
 
-use crate::parallel::zip_mut_ref;
+use kwavers_core::traversal::zip_mut;
 use leto::{ArrayView, ArrayViewMut};
 
 pub(super) fn for_each_pair_mut<const N: usize, F>(
@@ -10,7 +10,7 @@ pub(super) fn for_each_pair_mut<const N: usize, F>(
 ) where
     F: Fn(&mut f64, f64) + Send + Sync + Copy,
 {
-    zip_mut_ref(gradient, model, |gradient_value, &model_value| {
+    zip_mut(gradient, model, |gradient_value, &model_value| {
         f(gradient_value, model_value);
     });
 }

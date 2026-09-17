@@ -19,9 +19,8 @@
 //! raw energy for PAM).
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::traversal::zip_mut_pair;
 use leto::Array2;
-
-use crate::parallel::zip_two_mut_two_refs;
 
 /// Relative trust placed in each modality when forming the union channel.
 #[derive(Clone, Copy, Debug)]
@@ -99,12 +98,11 @@ pub fn fuse_lesion_map(
 
     let mut agreement = Array2::zeros(q.shape());
     let mut union = Array2::zeros(q.shape());
-    zip_two_mut_two_refs(
+    zip_mut_pair(
         agreement.view_mut(),
         union.view_mut(),
-        q.view(),
-        p.view(),
-        |a, u, &qv, &pv| {
+        (q.view(), p.view()),
+        |a, u, (&qv, &pv)| {
             *a = (qv * pv).sqrt();
             *u = (wq * qv).max(wp * pv) / w_max;
         },

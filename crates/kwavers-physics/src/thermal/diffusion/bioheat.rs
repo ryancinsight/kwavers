@@ -64,10 +64,10 @@ impl PennesBioheat {
     ) -> KwaversResult<Array3<f64>> {
         let mut source = Array3::zeros(temperature.shape());
 
-        crate::parallel::for_each_indexed_pair_mut(
+        kwavers_core::traversal::zip_mut_indexed(
             source.view_mut(),
             temperature.view(),
-            |(i, j, k), q, &t| {
+            |[i, j, k], q, &t| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -109,10 +109,10 @@ impl PennesBioheat {
         dt: Time<f64>,
     ) -> KwaversResult<()> {
         let dt_s = dt.into_base();
-        crate::parallel::for_each_indexed_pair_mut(
+        kwavers_core::traversal::zip_mut_indexed(
             temperature.view_mut(),
             laplacian.view(),
-            |(i, j, k), t, &lap| {
+            |[i, j, k], t, &lap| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;

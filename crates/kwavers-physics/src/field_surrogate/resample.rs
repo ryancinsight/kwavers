@@ -58,7 +58,7 @@ pub fn resample_trilinear(kernel: &FocalKernel, target_dx_m: f64) -> FocalKernel
 
     // Each output voxel reads eight immutable input voxels and writes one
     // disjoint output voxel, so the traversal is race-free under Moirai.
-    crate::parallel::for_each_indexed_mut(out.view_mut(), |(io, jo, ko), out_val| {
+    kwavers_core::traversal::zip_mut_indexed(out.view_mut(), (), |[io, jo, ko], out_val, ()| {
         let xi = (io as f64) * inv_zoom;
         let x0 = xi.floor() as isize;
         let fx = xi - (x0 as f64);

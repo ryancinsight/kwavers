@@ -1,6 +1,5 @@
 #![doc = include_str!("../README.md")]
 
-mod parallel;
 pub mod patient_management; // Electronic health record and clinical workflow management
 pub mod regulatory; // FDA 510(k) submission and compliance
 pub mod safety; // IEC 60601-2-37 compliance framework

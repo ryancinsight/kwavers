@@ -55,7 +55,9 @@ impl DispersionAnalysis {
             DispersionMethod::None => 1.0,
         };
 
-        crate::parallel::for_each_indexed_mut(field.view_mut(), |_, v| *v *= correction_factor);
+        kwavers_core::traversal::zip_mut_indexed(field.view_mut(), (), |_, v, ()| {
+            *v *= correction_factor;
+        });
     }
 
     /// Apply dispersion correction to a field using full 3D analysis
@@ -87,7 +89,9 @@ impl DispersionAnalysis {
             DispersionMethod::None => 1.0,
         };
 
-        crate::parallel::for_each_indexed_mut(field.view_mut(), |_, v| *v *= correction_factor);
+        kwavers_core::traversal::zip_mut_indexed(field.view_mut(), (), |_, v, ()| {
+            *v *= correction_factor;
+        });
     }
 }
 

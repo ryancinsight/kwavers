@@ -6,7 +6,6 @@ pub mod geometry;
 pub mod inverse_problems;
 pub mod linear_algebra;
 pub mod numerics;
-mod parallel;
 pub mod simd_safe;
 
 // Matrix-free linear operators and LSQR solver (Athena-backed via `linear_algebra::sparse`)

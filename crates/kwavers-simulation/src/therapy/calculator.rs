@@ -1,12 +1,12 @@
 //! Therapy calculator orchestration
 
-use crate::parallel::zip_indexed_mut_ref3;
 use kwavers_core::constants::fundamental::DENSITY_TISSUE;
 use kwavers_core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::traversal::zip_mut_indexed;
 use kwavers_grid::Grid;
 use kwavers_medium::properties::ThermalPropertyData;
 use kwavers_medium::Medium;
@@ -128,10 +128,10 @@ impl TherapyCalculator {
         let mut heat_source = Array3::zeros(self.grid_shape);
 
         // Q = 2 * α * I, where I = p²/(2*ρ*c)
-        zip_indexed_mut_ref3(
+        zip_mut_indexed(
             heat_source.view_mut(),
             pressure.view(),
-            |(i, j, k), q, &p| {
+            |[i, j, k], q, &p| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;

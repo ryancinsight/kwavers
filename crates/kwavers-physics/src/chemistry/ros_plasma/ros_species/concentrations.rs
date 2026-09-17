@@ -103,7 +103,9 @@ impl ROSConcentrations {
             let decay_factor = (-dt * decay_rate).exp();
 
             // Exponential decay: C(t+dt) = C(t) * exp(-dt/τ)
-            crate::parallel::for_each_indexed_mut(conc.view_mut(), |_, c| *c *= decay_factor);
+            kwavers_core::traversal::zip_mut_indexed(conc.view_mut(), (), |_, c, ()| {
+                *c *= decay_factor;
+            });
         }
     }
 }

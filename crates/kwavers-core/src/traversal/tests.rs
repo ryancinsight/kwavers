@@ -57,7 +57,9 @@ fn assert_field(actual: &Array3<f64>, expected: impl Fn([usize; 3]) -> f64) {
 #[test]
 fn a_transposed_input_pairs_by_logical_index() {
     let source = reversed(0.0);
-    let transposed = source.transpose([2, 1, 0]).expect("a permutation of three axes");
+    let transposed = source
+        .transpose([2, 1, 0])
+        .expect("a permutation of three axes");
     assert!(
         transposed.as_slice().is_none() && transposed.as_slice_memory_order().is_some(),
         "the input must be dense in F order for this case to mean anything"
@@ -100,7 +102,11 @@ fn every_input_arity_reads_its_own_field() {
     assert_field(&out, |_| 1.0e6);
     zip_mut(out.view_mut(), (v[0], v[1], v[2]), |o, (_, _, c)| *o = *c);
     assert_field(&out, |i| 3.0e6 + code(i));
-    zip_mut(out.view_mut(), (v[0], v[1], v[2], v[3]), |o, (_, _, _, d)| *o = *d);
+    zip_mut(
+        out.view_mut(),
+        (v[0], v[1], v[2], v[3]),
+        |o, (_, _, _, d)| *o = *d,
+    );
     assert_field(&out, |i| 4.0e6 + code(i));
     zip_mut(
         out.view_mut(),
@@ -184,10 +190,15 @@ fn multi_output_indexed_forms_report_each_position() {
         Array3::zeros(SHAPE),
         Array3::zeros(SHAPE),
     );
-    zip_mut_pair_indexed(a.view_mut(), b.view_mut(), input.view(), |index, a, b, x| {
-        *a = x - code(index);
-        *b = code(index);
-    });
+    zip_mut_pair_indexed(
+        a.view_mut(),
+        b.view_mut(),
+        input.view(),
+        |index, a, b, x| {
+            *a = x - code(index);
+            *b = code(index);
+        },
+    );
     assert_field(&a, |_| 7.0);
     assert_field(&b, code);
 
@@ -195,11 +206,17 @@ fn multi_output_indexed_forms_report_each_position() {
     let transposed = transposed_storage
         .transpose_mut([2, 1, 0])
         .expect("a permutation of three axes");
-    zip_mut_triple_indexed(a.view_mut(), transposed, c.view_mut(), (), |index, a, t, c, ()| {
-        *a = code(index);
-        *t = code(index);
-        *c = code(index) + 1.0;
-    });
+    zip_mut_triple_indexed(
+        a.view_mut(),
+        transposed,
+        c.view_mut(),
+        (),
+        |index, a, t, c, ()| {
+            *a = code(index);
+            *t = code(index);
+            *c = code(index) + 1.0;
+        },
+    );
     assert_field(&a, code);
     assert_field(&transposed_storage, |[i, j, k]| code([k, j, i]));
     assert_field(&c, |i| code(i) + 1.0);

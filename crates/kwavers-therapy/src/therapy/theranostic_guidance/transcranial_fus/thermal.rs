@@ -80,10 +80,7 @@ use kwavers_core::constants::tissue_thermal::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-use crate::parallel::{
-    zip_mut_five_refs, zip_mut_ref, zip_mut_three_refs, zip_three_mut_three_refs,
-    zip_two_mut_two_refs,
-};
+use kwavers_core::traversal::{zip_mut, zip_mut_pair, zip_mut_triple};
 
 // ── Material constants (IT'IS v4.1 / ICRU-44 / Duck 1990) ────────────────────
 
@@ -180,14 +177,12 @@ pub fn transcranial_pennes_thermal_dose(
     let mut perf_c = Array3::<f64>::zeros((nx, ny, nz));
     let mut heat_rcp = Array3::<f64>::zeros((nx, ny, nz));
 
-    zip_three_mut_three_refs(
+    zip_mut_triple(
         kappa.view_mut(),
         perf_c.view_mut(),
         heat_rcp.view_mut(),
-        skull_mask.view(),
-        brain_mask.view(),
-        intensity_w_m2.view(),
-        |kap, pc, hr, &is_skull, &is_brain, &i_val| {
+        (skull_mask.view(), brain_mask.view(), intensity_w_m2.view()),
+        |kap, pc, hr, (&is_skull, &is_brain, &i_val)| {
             let (rho, cp, k, perf, alpha) = if is_skull {
                 (SKULL_RHO, SKULL_CP, SKULL_K, SKULL_PERF, alpha_skull)
             } else if is_brain {
@@ -230,21 +225,23 @@ pub fn transcranial_pennes_thermal_dose(
 
         // dT/dt = kappa*∇²T - perf_c*(T-T_a) + heat_rcp
         let mut new_temp = Array3::<f64>::zeros((nx, ny, nz));
-        zip_mut_five_refs(
+        zip_mut(
             new_temp.view_mut(),
-            temp.view(),
-            lap.view(),
-            kappa.view(),
-            perf_c.view(),
-            heat_rcp.view(),
-            |nt, &t, &l, &kap, &pc, &hr| {
+            (
+                temp.view(),
+                lap.view(),
+                kappa.view(),
+                perf_c.view(),
+                heat_rcp.view(),
+            ),
+            |nt, (&t, &l, &kap, &pc, &hr)| {
                 *nt = t + dt_s * (kap.mul_add(l, hr) - pc * (t - baseline_c));
             },
         );
         let law = Cem43::<f64>::canonical();
         let step = Time::from_base(dt_s);
         let failure = Mutex::new(None);
-        zip_mut_ref(
+        zip_mut(
             cem43_increment.view_mut(),
             new_temp.view(),
             |increment, &temperature_c| match law.increment(
@@ -278,12 +275,11 @@ pub fn transcranial_pennes_thermal_dose(
         temp = new_temp;
 
         // Update peak temperature and accumulate CEM43.
-        zip_two_mut_two_refs(
+        zip_mut_pair(
             peak.view_mut(),
             cem43.view_mut(),
-            temp.view(),
-            cem43_increment.view(),
-            |p, c, &t, &increment| {
+            (temp.view(), cem43_increment.view()),
+            |p, c, (&t, &increment)| {
                 if t > *p {
                     *p = t;
                 }
@@ -294,12 +290,10 @@ pub fn transcranial_pennes_thermal_dose(
 
     // Lesion mask: CEM43 >= 240 min AND in brain AND not in skull.
     let mut lesion_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
-    zip_mut_three_refs(
+    zip_mut(
         lesion_mask.view_mut(),
-        cem43.view(),
-        brain_mask.view(),
-        skull_mask.view(),
-        |b, &c, &is_brain, &is_skull| {
+        (cem43.view(), brain_mask.view(), skull_mask.view()),
+        |b, (&c, &is_brain, &is_skull)| {
             *b = c >= CEM43_LESION_THRESHOLD && is_brain && !is_skull;
         },
     );

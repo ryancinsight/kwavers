@@ -215,7 +215,7 @@ impl FreqDispersionCorrection {
         k_vec: &Array3<f64>,
         dt: f64,
     ) -> KwaversResult<()> {
-        crate::parallel::zip_mut_ref(spectrum, k_vec, |s, &k_mag| {
+        kwavers_core::traversal::zip_mut(spectrum.view_mut(), k_vec.view(), |s, &k_mag| {
             if k_mag > 0.0 {
                 // Frequency from wavenumber
                 let freq = k_mag * self.properties.c0 / (TWO_PI);

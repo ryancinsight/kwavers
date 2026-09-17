@@ -152,10 +152,10 @@ impl CattaneoVernotte {
             &mut self.divergence,
         );
 
-        crate::parallel::for_each_indexed_pair_mut(
+        kwavers_core::traversal::zip_mut_indexed(
             temperature.view_mut(),
             self.divergence.view(),
-            |(i, j, k), t, &div| {
+            |[i, j, k], t, &div| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -182,7 +182,7 @@ impl CattaneoVernotte {
         let relax = dt / tau;
         let denominator = 1.0 + relax;
 
-        crate::parallel::for_each_indexed_mut(flux.view_mut(), |(i, j, k), q| {
+        kwavers_core::traversal::zip_mut_indexed(flux.view_mut(), (), |[i, j, k], q, ()| {
             if !Self::has_centered_neighbor::<AXIS>(i, j, k, grid) {
                 *q = 0.0;
                 return;
@@ -211,18 +211,22 @@ impl CattaneoVernotte {
         let y_range = Self::centered_axis_range(grid.ny);
         let z_range = Self::centered_axis_range(grid.nz);
 
-        crate::parallel::for_each_indexed_mut(divergence.view_mut(), |(i, j, k), div| {
-            if !x_range.contains(&i) || !y_range.contains(&j) || !z_range.contains(&k) {
-                *div = 0.0;
-                return;
-            }
+        kwavers_core::traversal::zip_mut_indexed(
+            divergence.view_mut(),
+            (),
+            |[i, j, k], div, ()| {
+                if !x_range.contains(&i) || !y_range.contains(&j) || !z_range.contains(&k) {
+                    *div = 0.0;
+                    return;
+                }
 
-            let div_x = Self::divergence_component::<0>(flux_x, i, j, k, grid);
-            let div_y = Self::divergence_component::<1>(flux_y, i, j, k, grid);
-            let div_z = Self::divergence_component::<2>(flux_z, i, j, k, grid);
+                let div_x = Self::divergence_component::<0>(flux_x, i, j, k, grid);
+                let div_y = Self::divergence_component::<1>(flux_y, i, j, k, grid);
+                let div_z = Self::divergence_component::<2>(flux_z, i, j, k, grid);
 
-            *div = div_x + div_y + div_z;
-        });
+                *div = div_x + div_y + div_z;
+            },
+        );
     }
 
     #[inline]
@@ -340,15 +344,27 @@ mod tests {
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0).expect("valid grid");
         let mut solver = CattaneoVernotte::new(HyperbolicParameters::default(), &grid);
 
-        crate::parallel::for_each_indexed_mut(solver.heat_flux_x.view_mut(), |(i, _, _), q| {
-            *q = i as f64;
-        });
-        crate::parallel::for_each_indexed_mut(solver.heat_flux_y.view_mut(), |(_, j, _), q| {
-            *q = (2 * j) as f64;
-        });
-        crate::parallel::for_each_indexed_mut(solver.heat_flux_z.view_mut(), |(_, _, k), q| {
-            *q = (3 * k) as f64;
-        });
+        kwavers_core::traversal::zip_mut_indexed(
+            solver.heat_flux_x.view_mut(),
+            (),
+            |[i, _, _], q, ()| {
+                *q = i as f64;
+            },
+        );
+        kwavers_core::traversal::zip_mut_indexed(
+            solver.heat_flux_y.view_mut(),
+            (),
+            |[_, j, _], q, ()| {
+                *q = (2 * j) as f64;
+            },
+        );
+        kwavers_core::traversal::zip_mut_indexed(
+            solver.heat_flux_z.view_mut(),
+            (),
+            |[_, _, k], q, ()| {
+                *q = (3 * k) as f64;
+            },
+        );
 
         let owned = solver.heat_flux_divergence(&grid);
         CattaneoVernotte::fill_heat_flux_divergence(
