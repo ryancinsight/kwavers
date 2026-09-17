@@ -309,7 +309,7 @@ where
     if let (Some(u_mask), Some(u_signal)) = (&source.u_mask, &source.u_signal) {
         // Row-major order: borrowed when `u_mask` is C-dense, otherwise
         // collected from its logical iterator.
-        let mask_flat: Cow<'_, [bool]> = u_mask.as_slice().map_or_else(
+        let mask_flat: Cow<'_, [_]> = u_mask.as_slice().map_or_else(
             || Cow::Owned(u_mask.iter().copied().collect()),
             Cow::Borrowed,
         );
@@ -465,7 +465,7 @@ fn validate_sensor_mask_shape(grid: &Grid, sensor_mask: &LetoArray3<bool>) -> Kw
 fn collect_sensor_indices(sensor_mask: &LetoArray3<bool>) -> KwaversResult<Vec<u32>> {
     // Row-major order: borrowed when `sensor_mask` is C-dense, otherwise
     // collected from its logical iterator.
-    let flat: Cow<'_, [bool]> = sensor_mask.as_slice().map_or_else(
+    let flat: Cow<'_, [_]> = sensor_mask.as_slice().map_or_else(
         || Cow::Owned(sensor_mask.iter().copied().collect()),
         Cow::Borrowed,
     );

@@ -94,7 +94,7 @@ pub fn prepare_pstd_pressure_source(
 
     // Row-major order: borrowed when `p_mask` is C-dense, otherwise
     // collected from its logical iterator.
-    let mask: Cow<'_, [bool]> = p_mask.as_slice().map_or_else(
+    let mask: Cow<'_, [_]> = p_mask.as_slice().map_or_else(
         || Cow::Owned(p_mask.iter().copied().collect()),
         Cow::Borrowed,
     );
