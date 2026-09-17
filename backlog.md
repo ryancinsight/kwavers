@@ -1,5 +1,25 @@
 # Backlog / Strategy
 
+<a id="kw-swe-unit-tasks"></a>
+
+## KW-SWE-UNIT-TASKS-2026-09-17 — The elastic stress divergence is a per-point kernel on a private stencil [major] [perf] — review
+
+- **Measured first.** `swe_step_phase_split` (new; the FDTD and PSTD probes now share its `PhaseTimer`) put the stress divergence at ~85% of a 64-cubed velocity-Verlet step: 2 x 1394-1472 us of 3307-3700 us, fastest repeats.
+- **Change.** Every derivative is one sweep of leto's `CentralFourthOrder` operator (ADR 128; leto#203 made it lane-swept, parallel, and defined on short and singleton axes), and the stresses and divergence are assembled through `kwavers_core::traversal` with the same arithmetic. Two derivative workspaces join `ElasticStepScratch`; the kernel, the private stencil and its public `fd1_x/y/z` are deleted.
+- **Stop condition, written before measuring:** the stress arm at 64 cubed at least 1.25x faster, no regression at 16 cubed. **Result** (alternating arms, fastest repeats, 3-21 concurrent builds): 64 cubed stress 1235-1524 us to 643-663 us, step 2880-3447 us to 1917-2098 us; 16 cubed step 186-190 us to 118-119 us.
+- **Acceptance:** the swept result is bitwise the pointwise assembly of separately swept derivatives at five shapes (past the parallel floors, and with short and singleton axes); plane strain matches the spatial operator exactly; strided inputs and outputs match; elastic suites unchanged.
+- **Remaining in this step:** the component updates (~10%), acceleration assembly and PML damping still walk hand-sized chunks (`INTEGRATOR_CHUNK`, `ACCELERATION_CHUNK`, `DAMPING_CHUNK`, `PML_CHUNK`).
+- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-swe-unit-tasks`; **last-update:** 2026-09-17.
+
+<a id="kw-swe-edge-growth"></a>
+
+## KW-SWE-EDGE-GROWTH-2026-09-17 — Elastic displacement grows without bound when the initial field reaches the edges [patch] [fix] — todo
+
+- **Finding.** 64 cubed, lambda = mu = 1 GPa, water density, default PML, `ux = sin`, `uy = cos` of `0.37 i + 0.53 j + 0.71 k` over the whole grid: the peak grows 1 to 9.2e3 in 400 steps at CFL 0.5, and the growth follows physical time, not step count (CFL 0.25 at step 200 equals CFL 0.5 at step 100), so it is not a timestep instability. A centred Gaussian pulse at the same settings decays into the PML at every CFL.
+- **Question.** Whether this is the boundary closure (one-sided first-order derivatives at the walls feeding a non-symmetric operator), the PML acting on displacement, or an inadmissible initial condition the solver should reject. Unbounded growth is not physical in any of the three.
+- **Acceptance:** a regression test that runs the whole-grid initial condition and bounds its energy, or a typed rejection of such initial data with its reason; the cause recorded here.
+- **Status:** todo, not claimed; filed 2026-09-17 by claude-opus-5 from the SWE probe.
+
 <a id="kw-lockstep-traversal"></a>
 
 ## KW-LOCKSTEP-TRAVERSAL-2026-09-16 — Three traversal families, one pairing fields by memory order [major] [arch] [perf] — done 2026-09-16
@@ -32,13 +52,9 @@
 
 <a id="kw-memory-order-pairing"></a>
 
-## KW-MEMORY-ORDER-PAIRING-2026-09-16 — Ten kernels pair or index memory-order slices as row-major [patch] [fix] — review
+## KW-MEMORY-ORDER-PAIRING-2026-09-16 — Ten kernels pair or index memory-order slices as row-major [patch] [fix] — done 2026-09-17
 
-- **Finding.** leto's `as_slice_memory_order` returns C- or F-dense storage; these sites zip several fields by storage position or decode a storage position as a row-major index, so an F-dense field reads the wrong elements (the defect class `kw-lockstep-traversal` fixed in the adapters): `kwavers-diagnostics` `real_time_sirt/pipeline.rs` smoothing passes (3); `kwavers-gpu` `pipeline/realtime.rs` envelope, `pipeline/streaming.rs` RF frame, `pstd_gpu/runner.rs` (2), `pstd_gpu/source.rs`; `kwavers-physics` `conservation/energy.rs` total energy, `cavitation/detection.rs`; `kwavers-python` `misc_bindings.rs` resampling; `kwavers-therapy` `nonlinear3d/cavitation/forward.rs`.
-- **Change.** Each site takes `as_slice`/`as_slice_mut` (row-major) or routes through `kwavers_core::traversal`; order-independent single-array sites keep memory order.
-- **Acceptance:** one transposed-field case per converted kernel family that fails before the change; `git grep as_slice_memory_order` leaves only order-independent single-array sites.
-- **Delivered:** cavitation detection routes through `zip_mut`; the energy total, cavitation source, SIRT smoothing, GPU envelope and RF frame, and Python resampling take row-major slices (dense-proof cited at each `expect`); the three GPU mask readers borrow row-major storage or collect the logical walk instead of rejecting other layouts. Transposed-field tests for the energy total, detection and cavitation source each fail with their site reverted.
-- **Integrator:** claude-opus-5; **branch:** `fix/kwavers-memory-order-pairing`; **last-update:** 2026-09-17.
+- PR [#801](https://github.com/ryancinsight/kwavers/pull/801). Detection routes through `kwavers_core::traversal`; the rest read row-major storage; GPU PSTD masks accept any layout; three transposed-field tests fail with their site reverted.
 
 <a id="kw-soa-storage-unused"></a>
 

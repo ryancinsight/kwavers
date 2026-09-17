@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **[major] The elastic stress divergence runs on leto's operator.**
+  `kwavers-solver`: `forward::elastic::swe::stress::{fd1_x, fd1_y, fd1_z}`
+  are removed; use `leto_ops::FiniteDifference3D::central_fourth_order`.
+  `stress_divergence_into` sweeps whole fields and is 1.9-2.3x faster at 64
+  cubed; `ElasticStepScratch::new` allocates two more grid workspaces.
+
 - **[patch] Kernels read transposed fields in logical order.** The acoustic
   energy total, therapy cavitation detection and the theranostic cavitation
   source paired an F-ordered field with C-ordered ones by storage position;
