@@ -2,14 +2,9 @@
 
 <a id="kw-lockstep-traversal"></a>
 
-## KW-LOCKSTEP-TRAVERSAL-2026-09-16 — Three traversal families, one pairing fields by memory order [major] [arch] [perf] — review
+## KW-LOCKSTEP-TRAVERSAL-2026-09-16 — Three traversal families, one pairing fields by memory order [major] [arch] [perf] — done 2026-09-16
 
-- **Finding.** Six crates carried their own traversal adapters (physics, therapy, math, medium, simulation, the facade) plus three public ones in core. `kwavers-physics::parallel` zipped `as_slice_memory_order` slices, which leto returns for C- *or* F-dense layouts: a transposed 24-cubed input misplaced 13 248 of 13 824 elements, and its indexed forms handed F-dense outputs wrong coordinates (both reproduced by probe). Its fallback discarded the iterator error. Therapy and core carried two more copies with other arities and chunk sizes (4096, per element).
-- **Change.** [ADR 132](docs/adr/132-one-lockstep-traversal.md): `kwavers_core::traversal` with one indexed implementation per output count, inputs as a `ZipInputs` tuple, logical pairing, moirai unit tasks; the three families and their callers migrate in the same change.
-- **Measured** (adapter A/B, one loop, fastest repeat, load 10%): 16 cubed 7.1-8.2 us to 1.0-1.9 us; 64 cubed indexed 54-62 to 14 us; 128 cubed indexed 436-456 to 124-157 us, three-input 5-17% faster, one-input 1-9%.
-- **Acceptance:** traversal tests (transposed input and output, every arity, shape assertion, empty field) proven to fail under injected dense and fallback defects; migrated suites unchanged; gate green.
-- **Delivered:** branch `fix/kwavers-lockstep-traversal`; gate green on `1a360a643` (5817 lib, 2619 contract tests). The same sweep found twelve more kernels reading memory order as row-major: `kw-memory-order-pairing`.
-- **Integrator:** claude-opus-5; **branch:** `fix/kwavers-lockstep-traversal`; **last-update:** 2026-09-16.
+- PR [#799](https://github.com/ryancinsight/kwavers/pull/799). [ADR 132](docs/adr/132-one-lockstep-traversal.md): `kwavers_core::traversal` replaces six crates' adapters and three core functions; logical pairing fixes F-dense misreads; 16 cubed 5-7x, indexed 64 cubed 3.7-4.2x faster.
 
 <a id="kw-fdtd-fuse-velocity"></a>
 
@@ -35,7 +30,7 @@
 
 - **Finding.** `forward::fdtd::{avx512_stencil, simd_stencil, dispatch}` (1783 lines, unsafe AVX-512 kernels among them) are used only by their own tests; the solver steps through `pressure_updater` and `velocity_updater`, and no stack member names them. Their pressure update is a collocated second-order leapfrog that discards the `u_div` it takes, and the dispatcher built a processor and a fresh output field per call.
 - **Change.** The three modules and their six re-exports are removed, with a CHANGELOG migration line; two of the `kw-memory-order-pairing` sites go with them.
-- **Integrator:** claude-opus-5; **branch:** `refactor/kwavers-fdtd-unused-stencils` (stacked on #799); **last-update:** 2026-09-16.
+- **Integrator:** claude-opus-5; **branch:** `refactor/kwavers-fdtd-unused-stencils`; **last-update:** 2026-09-16.
 
 <a id="kw-memory-order-pairing"></a>
 
