@@ -9,8 +9,8 @@ use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
-use crate::parallel::zip_mut_ref;
 use crate::thermal::response::{checked_cem43_increments, KelvinStorage};
+use kwavers_core::traversal::zip_mut;
 
 /// Kwavers-owned thermal-dose policy thresholds.
 pub mod thresholds {
@@ -65,7 +65,7 @@ impl ThermalDoseCalculator {
             dt,
             |temp_kelvin| temp_kelvin - KELVIN_OFFSET_C > MIN_DOSE_TEMPERATURE_C,
         )?;
-        zip_mut_ref(
+        zip_mut(
             self.cumulative_dose.view_mut(),
             self.increments.view(),
             |dose, &increment| *dose += increment,

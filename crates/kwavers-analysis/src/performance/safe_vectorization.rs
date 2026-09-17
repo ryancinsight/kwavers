@@ -9,7 +9,7 @@
 //! - Portable across all architectures
 //! - Moirai-backed traversal for large standard-layout arrays
 
-use kwavers_core::utils::iterators::{apply_inplace, for_each_indexed_pair_mut};
+use kwavers_core::traversal::zip_mut_indexed;
 use leto::Array3;
 
 /// Safe vectorization operations using iterator combinators
@@ -40,8 +40,8 @@ impl SafeVectorOps {
     pub fn add_arrays_parallel(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         debug_assert_eq!(a.shape(), b.shape(), "Array dimensions must match");
         let mut result = Array3::<f64>::zeros(a.shape());
-        for_each_indexed_pair_mut(result.view_mut(), a.view(), |idx, r, &av| {
-            *r = av + b[[idx.0, idx.1, idx.2]];
+        zip_mut_indexed(result.view_mut(), a.view(), |[i, j, k], r, &av| {
+            *r = av + b[[i, j, k]];
         });
         result
     }
@@ -56,7 +56,7 @@ impl SafeVectorOps {
     /// In-place scalar multiplication for zero-copy operations
     #[inline]
     pub fn scalar_multiply_inplace(array: &mut Array3<f64>, scalar: f64) {
-        apply_inplace(array, |v| v * scalar);
+        kwavers_core::traversal::zip_mut(array.view_mut(), (), |v, ()| *v *= scalar);
     }
 
     /// Element-wise exponential using ndarray mapv (no intermediate Vec allocation).
@@ -123,8 +123,8 @@ impl SafeVectorOps {
             }
         } else {
             // Non-contiguous fallback keeps ndarray's indexed stride semantics.
-            for_each_indexed_pair_mut(result.view_mut(), a.view(), |idx, r, &av| {
-                *r = av + b[[idx.0, idx.1, idx.2]];
+            zip_mut_indexed(result.view_mut(), a.view(), |[i, j, k], r, &av| {
+                *r = av + b[[i, j, k]];
             });
         }
 

@@ -15,8 +15,8 @@ use super::state::{CavitationDose, CavitationMechanicsState};
 use super::thresholds::{blake_threshold, flynn_threshold, neppiras_threshold, ThresholdModel};
 use crate::acoustics::analysis::calculate_mechanical_index;
 use crate::acoustics::bubble_dynamics::BubbleParameters;
-use crate::parallel::zip_mut_ref;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::traversal::zip_mut;
 use leto::Array3;
 
 /// Mechanical Index (MI) threshold for the onset of inertial cavitation in water
@@ -146,7 +146,7 @@ impl CavitationModel {
         let threshold = self.compute_threshold();
         let ambient_pressure = self.params.p0;
 
-        zip_mut_ref(
+        zip_mut(
             self.states.view_mut(),
             pressure_field.view(),
             |state, &p| {
@@ -192,7 +192,7 @@ impl CavitationCore for CavitationModel {
         let threshold = self.compute_threshold();
         let ambient_pressure = self.params.p0;
 
-        zip_mut_ref(
+        zip_mut(
             self.states.view_mut(),
             pressure_field.view(),
             |state, &pressure| {

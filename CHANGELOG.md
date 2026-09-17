@@ -4,6 +4,21 @@
 
 ### Changed
 
+- **[major] One lockstep field traversal: `kwavers_core::traversal`**
+  ([ADR 132](docs/adr/132-one-lockstep-traversal.md)). `zip_mut`,
+  `zip_mut_pair` and `zip_mut_triple`, with `_indexed` forms, take the
+  read-only fields as `()`, one view, or a tuple of up to five, and pair
+  elements by logical row-major position. `kwavers-core::utils::iterators::
+  {for_each_indexed_mut, for_each_indexed_pair_mut, apply_inplace}` are
+  removed: use `zip_mut_indexed(out, (), ..)`, `zip_mut_indexed(out, input,
+  ..)` and `zip_mut(out, (), ..)`; indexed closures receive `[usize; 3]`
+  where they received `(usize, usize, usize)`. Fixes physics kernels that
+  paired a C-ordered field with an F-ordered one element by storage
+  position, and sonoluminescence spectra read the same way.
+- **[patch] `SimdOps::{add_fields, multiply_fields, subtract_fields}` pair
+  operands by logical position.** `kwavers-math`: an F-ordered operand was
+  combined with the C-ordered result element by storage position.
+
 - **[major] `SoAFieldStorage` is removed.** `kwavers-core::arena` and its
   `kwavers-analysis` re-export: nothing in kwavers or the stack constructed
   or called the type outside its own tests. Callers holding several

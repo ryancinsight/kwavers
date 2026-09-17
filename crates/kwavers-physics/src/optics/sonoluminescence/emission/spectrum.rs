@@ -1,7 +1,7 @@
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use leto::{Array1, Array3, Array4};
 
-use crate::parallel::for_each_indexed_three_mut;
+use kwavers_core::traversal::zip_mut_triple_indexed;
 
 /// Parameters for sonoluminescence emission
 #[derive(Debug, Clone)]
@@ -108,22 +108,20 @@ impl SpectralField {
 
         let [_nx, ny, nz] = output_shape;
         let n_wavelengths = wavelengths.len();
-        let contiguous_intensities = intensities.as_slice_memory_order();
+        let contiguous_intensities = intensities.as_slice();
 
-        for_each_indexed_three_mut(
+        zip_mut_triple_indexed(
             total_intensity.view_mut(),
             peak_wavelength.view_mut(),
             color_temperature.view_mut(),
-            |idx, total, peak, color_temp| {
+            (),
+            |[i, j, k], total, peak, color_temp, ()| {
+                let flat = (i * ny + j) * nz + k;
                 let quantities = if let Some(intensities) = contiguous_intensities {
-                    let start = idx * n_wavelengths;
+                    let start = flat * n_wavelengths;
                     let end = start + n_wavelengths;
                     spectral_cell_quantities(wavelengths, intensities[start..end].iter().copied())
                 } else {
-                    let i = idx / (ny * nz);
-                    let rem = idx % (ny * nz);
-                    let j = rem / nz;
-                    let k = rem % nz;
                     spectral_cell_quantities(
                         wavelengths,
                         (0..n_wavelengths).map(|l| intensities[[i, j, k, l]]),

@@ -19,7 +19,6 @@ pub mod interface;
 pub mod material_fields;
 pub mod optical;
 pub mod optical_map;
-pub(crate) mod parallel;
 pub mod properties;
 pub mod thermal;
 pub mod traits;

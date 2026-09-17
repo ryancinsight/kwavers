@@ -1,7 +1,7 @@
 //! Data processing stages for visualization
 
 use super::ProcessingOperation;
-use kwavers_core::utils::iterators::apply_inplace;
+use kwavers_core::traversal::zip_mut;
 use leto::Array3;
 
 /// Processing configuration
@@ -60,15 +60,17 @@ impl ProcessingStage {
         let (target_min, target_max) = self.config.normalize_range;
         let target_range = (target_max - target_min) as f64;
 
-        apply_inplace(data, |v| {
-            target_min as f64 + (v - min) * target_range / range
+        zip_mut(data.view_mut(), (), |v, ()| {
+            *v = target_min as f64 + (*v - min) * target_range / range
         });
     }
 
     /// Apply logarithmic scaling
     fn log_scale(&self, data: &mut Array3<f64>) {
         let epsilon = self.config.log_epsilon as f64;
-        apply_inplace(data, |v| if v > epsilon { v.ln() } else { epsilon.ln() });
+        zip_mut(data.view_mut(), (), |v, ()| {
+            *v = if *v > epsilon { v.ln() } else { epsilon.ln() }
+        });
     }
 
     /// Compute gradient magnitude

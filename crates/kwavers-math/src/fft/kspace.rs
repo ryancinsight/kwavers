@@ -55,7 +55,7 @@ impl KSpaceCalculator {
         let ky_s = ky.as_slice().expect("ky contiguous");
         let kz_s = kz.as_slice().expect("kz contiguous");
         let values = k_squared
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("newly allocated k-squared field is contiguous");
         let plane_len = ny * nz;
         // One unit writes one wavenumber; the three k vectors it reads are

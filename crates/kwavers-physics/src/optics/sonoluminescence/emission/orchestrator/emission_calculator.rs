@@ -75,12 +75,14 @@ impl SonoluminescenceEmission {
         let blackbody = &self.blackbody;
         let bremsstrahlung = &self.bremsstrahlung;
 
-        crate::parallel::zip_mut_three_refs(
+        kwavers_core::traversal::zip_mut(
             self.emission_field.view_mut(),
-            temperature_field.view(),
-            radius_field.view(),
-            charge_density_field.view(),
-            |out, &temperature, &radius, &charge_density| {
+            (
+                temperature_field.view(),
+                radius_field.view(),
+                charge_density_field.view(),
+            ),
+            |out, (&temperature, &radius, &charge_density)| {
                 if temperature < params.min_temperature {
                     *out = 0.0;
                     return;

@@ -1,4 +1,4 @@
-use kwavers_core::utils::iterators::apply_inplace;
+use kwavers_core::traversal::zip_mut;
 use leto::Array3;
 
 use super::local_ops::{
@@ -105,7 +105,7 @@ pub fn normalize_features(features: &mut [Array3<f32>]) {
 
         let range = max_val - min_val;
         if range > 1e-10 {
-            apply_inplace(feature, |v| (v - min_val) / range);
+            zip_mut(feature.view_mut(), (), |v, ()| *v = (*v - min_val) / range);
         }
     }
 }

@@ -1,7 +1,7 @@
 use super::super::wave_field::NonlinearElasticWaveField;
 use super::NonlinearElasticWaveSolver;
 use kwavers_core::error::KwaversResult;
-use kwavers_core::utils::iterators::apply_inplace;
+use kwavers_core::traversal::zip_mut;
 use log::info;
 
 impl NonlinearElasticWaveSolver {
@@ -161,11 +161,11 @@ impl NonlinearElasticWaveSolver {
 
         if self.attenuation_np_per_m > 0.0 {
             let decay = (-self.attenuation_np_per_m * self.config.sound_speed() * dt).exp();
-            apply_inplace(&mut field.u_fundamental, |x| x * decay);
-            apply_inplace(&mut field.u_fundamental_prev, |x| x * decay);
-            apply_inplace(&mut field.u_second, |x| x * decay);
+            zip_mut(field.u_fundamental.view_mut(), (), |x, ()| *x *= decay);
+            zip_mut(field.u_fundamental_prev.view_mut(), (), |x, ()| *x *= decay);
+            zip_mut(field.u_second.view_mut(), (), |x, ()| *x *= decay);
             for h in &mut field.u_harmonics {
-                apply_inplace(h, |x| x * decay);
+                zip_mut(h.view_mut(), (), |x, ()| *x *= decay);
             }
         }
     }

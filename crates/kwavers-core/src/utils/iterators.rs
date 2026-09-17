@@ -4,96 +4,7 @@
 //! Uses leto view types for efficient physics simulations.
 
 use leto::{ArrayView3, ArrayViewMut3};
-use moirai_parallel::{enumerate_mut_with, for_each_index_with, for_each_mut_with, Adaptive};
-
-/// Apply an indexed mutation over a 3-D leto view.
-pub fn for_each_indexed_mut<T, F>(mut values: ArrayViewMut3<'_, T>, f: F)
-where
-    T: Send,
-    F: Fn((usize, usize, usize), &mut T) + Send + Sync,
-{
-    let shape = values.shape();
-    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-    if let Some(slice) = values.as_mut_slice() {
-        let f_ref = &f;
-        enumerate_mut_with::<Adaptive, _, _>(slice, |idx, value| {
-            let plane = ny * nz;
-            let i = idx / plane;
-            let rem = idx % plane;
-            f_ref((i, rem / nz, rem % nz), value);
-        });
-    } else {
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    f((i, j, k), &mut values[[i, j, k]]);
-                }
-            }
-        }
-    }
-}
-
-/// Apply an indexed mutation over paired 3-D leto views.
-pub fn for_each_indexed_pair_mut<T, U, F>(
-    mut values: ArrayViewMut3<'_, T>,
-    input: ArrayView3<'_, U>,
-    f: F,
-) where
-    T: Send,
-    U: Sync,
-    F: Fn((usize, usize, usize), &mut T, &U) + Send + Sync,
-{
-    debug_assert_eq!(
-        values.shape(),
-        input.shape(),
-        "invariant: paired 3-D traversal shape mismatch"
-    );
-
-    let shape = values.shape();
-    let (_nx, ny, nz) = (shape[0], shape[1], shape[2]);
-    match (values.as_mut_slice(), input.as_slice()) {
-        (Some(values_slice), Some(input_slice)) => {
-            let f_ref = &f;
-            enumerate_mut_with::<Adaptive, _, _>(values_slice, |idx, value| {
-                let plane = ny * nz;
-                let i = idx / plane;
-                let rem = idx % plane;
-                f_ref((i, rem / nz, rem % nz), value, &input_slice[idx]);
-            });
-        }
-        _ => {
-            let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-            for i in 0..nx {
-                for j in 0..ny {
-                    for k in 0..nz {
-                        f((i, j, k), &mut values[[i, j, k]], &input[[i, j, k]]);
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Apply a scalar value transform to a leto array in place.
-pub fn apply_inplace<T, F>(values: &mut leto::Array3<T>, f: F)
-where
-    T: Copy + Send,
-    F: Fn(T) -> T + Send + Sync,
-{
-    if let Some(slice) = values.view_mut().as_mut_slice() {
-        for_each_mut_with::<Adaptive, _, _>(slice, |value| {
-            *value = f(*value);
-        });
-    } else {
-        for i in 0..values.shape()[0] {
-            for j in 0..values.shape()[1] {
-                for k in 0..values.shape()[2] {
-                    values[[i, j, k]] = f(values[[i, j, k]]);
-                }
-            }
-        }
-    }
-}
+use moirai_parallel::{for_each_index_with, Adaptive};
 
 /// Iterator for processing 3D grid points with spatial coordinates.
 pub struct GridPointIterator<'a, T> {
@@ -266,15 +177,6 @@ impl<'a> IteratorGradientComputer<'a> {
 mod tests {
     use super::*;
     use leto::Array3;
-
-    #[test]
-    fn apply_inplace_updates_values() {
-        let mut data = Array3::from_vec([1, 2, 3], vec![1i32, 2, 3, 4, 5, 6])
-            .expect("shape matches data length");
-        apply_inplace(&mut data, |value| value * value);
-        let values: Vec<i32> = data.iter().copied().collect();
-        assert_eq!(values, vec![1, 4, 9, 16, 25, 36]);
-    }
 
     #[test]
     fn test_chunked_processor() {

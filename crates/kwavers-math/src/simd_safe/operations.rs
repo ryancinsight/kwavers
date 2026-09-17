@@ -43,11 +43,9 @@ impl SimdOps {
     pub fn add_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         let shape = a.shape();
         let mut result = Array3::zeros(shape);
-        if let (Some(a_s), Some(b_s), Some(r_s)) = (
-            a.as_slice_memory_order(),
-            b.as_slice_memory_order(),
-            result.as_slice_memory_order_mut(),
-        ) {
+        if let (Some(a_s), Some(b_s), Some(r_s)) =
+            (a.as_slice(), b.as_slice(), result.as_slice_mut())
+        {
             elementwise_add(a_s, b_s, r_s)
                 .expect("invariant: equal Array3 shapes produce equal slice lengths");
         } else {
@@ -63,7 +61,7 @@ impl SimdOps {
     #[must_use]
     pub fn scale_field(field: &Array3<f64>, scalar: f64) -> Array3<f64> {
         let mut result = field.clone();
-        if let Some(s) = result.as_slice_memory_order_mut() {
+        if let Some(s) = result.as_slice_mut() {
             scale(s, scalar);
         } else {
             for v in result.iter_mut() {
@@ -83,7 +81,7 @@ impl SimdOps {
     #[inline]
     #[must_use]
     pub fn norm(field: &Array3<f64>) -> f64 {
-        if let Some(s) = field.as_slice_memory_order() {
+        if let Some(s) = field.as_slice() {
             hermes_simd::dot(s, s)
                 .expect("invariant: same-slice dot never mismatches length")
                 .sqrt()
@@ -104,11 +102,9 @@ impl SimdOps {
     pub fn multiply_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         let shape = a.shape();
         let mut result = Array3::zeros(shape);
-        if let (Some(a_s), Some(b_s), Some(r_s)) = (
-            a.as_slice_memory_order(),
-            b.as_slice_memory_order(),
-            result.as_slice_memory_order_mut(),
-        ) {
+        if let (Some(a_s), Some(b_s), Some(r_s)) =
+            (a.as_slice(), b.as_slice(), result.as_slice_mut())
+        {
             elementwise_mul(a_s, b_s, r_s)
                 .expect("invariant: equal Array3 shapes produce equal slice lengths");
         } else {
@@ -131,11 +127,9 @@ impl SimdOps {
     pub fn subtract_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         let shape = a.shape();
         let mut result = Array3::zeros(shape);
-        if let (Some(a_s), Some(b_s), Some(r_s)) = (
-            a.as_slice_memory_order(),
-            b.as_slice_memory_order(),
-            result.as_slice_memory_order_mut(),
-        ) {
+        if let (Some(a_s), Some(b_s), Some(r_s)) =
+            (a.as_slice(), b.as_slice(), result.as_slice_mut())
+        {
             elementwise_sub(a_s, b_s, r_s)
                 .expect("invariant: equal Array3 shapes produce equal slice lengths");
         } else {

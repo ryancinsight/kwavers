@@ -23,7 +23,6 @@
 
 use std::collections::HashMap;
 
-mod parallel;
 pub mod theranostic;
 
 /// Selectable visualization transfer composition.

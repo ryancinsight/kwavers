@@ -7,7 +7,7 @@ use kwavers_core::constants::numerical::{MHZ_TO_HZ, PRESSURE_LIMIT};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 
-use crate::parallel::for_each_indexed_mut;
+use kwavers_core::traversal::zip_mut_indexed;
 use leto::Array3;
 use std::f64;
 
@@ -151,7 +151,7 @@ impl NonlinearWave {
         let kx_s = kx.as_slice().expect("kx contiguous");
         let ky_s = ky.as_slice().expect("ky contiguous");
         let kz_s = kz.as_slice().expect("kz contiguous");
-        for_each_indexed_mut(k_squared.view_mut(), |(i, j, k), val| {
+        zip_mut_indexed(k_squared.view_mut(), (), |[i, j, k], val, ()| {
             *val = kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
         });
 

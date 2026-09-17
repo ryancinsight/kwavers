@@ -42,9 +42,10 @@ impl BubbleInteractions {
     ) -> Array3<f64> {
         let mut interaction_field = Array3::zeros(grid_shape);
 
-        crate::parallel::for_each_indexed_mut(
+        kwavers_core::traversal::zip_mut_indexed(
             interaction_field.view_mut(),
-            |(i, j, k), field_val| {
+            (),
+            |[i, j, k], field_val, ()| {
                 let total_interaction = bubbles
                     .iter()
                     .filter(|((bi, bj, bk), _)| !(i == *bi && j == *bj && k == *bk)) // Skip self-interaction
