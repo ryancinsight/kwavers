@@ -21,82 +21,21 @@
 
 use super::make_solver;
 use crate::forward::fdtd::solver::FdtdSolver;
+use crate::phase_timing::PhaseTimer;
 use leto_ops::Axis;
-use std::time::{Duration, Instant};
 
 /// Grid of kwavers' `fdtd_step_64_cubed` instrument, cells per axis.
 const N: usize = 64;
 /// That instrument's grid spacing, in metres.
 const DX: f64 = 1.0e-4;
-/// Its Courant factor: `make_solver` derives `dt = cfl · Δx / (√3 · c₀)`.
+/// Its Courant factor, which `make_solver` applies to the solver's own
+/// staggered stability limit (`max_stable_dt`).
 const CFL: f64 = 0.95;
-/// Repeats per phase loop.
-const REPEATS: usize = 300;
-/// Repeats of a phase before its loop is timed, so plans, caches and task
-/// pools are warm for that phase.
-const WARM_REPEATS: usize = 20;
-
-/// Means of `first` and `second`, in microseconds, timed alternately inside
-/// one loop after warming both.
-///
-/// Timing them in separate loops attributes any drift in the host load to
-/// whichever arm ran while it drifted, and the interesting quantities here are
-/// differences: an update minus the sweeps it contains. The PSTD probe took
-/// that subtraction below zero on a host carrying peer builds. One arm per
-/// repeat exposes both to the same drift, so the difference stays a reading of
-/// the code.
-fn time_phase_pair(
-    solver: &mut FdtdSolver,
-    mut first: impl FnMut(&mut FdtdSolver),
-    mut second: impl FnMut(&mut FdtdSolver),
-) -> (Phase, Phase) {
-    for _ in 0..WARM_REPEATS {
-        first(solver);
-        second(solver);
-    }
-    let (mut first_total, mut second_total) = (Duration::ZERO, Duration::ZERO);
-    let (mut first_best, mut second_best) = (Duration::MAX, Duration::MAX);
-    for _ in 0..REPEATS {
-        let start = Instant::now();
-        first(solver);
-        let elapsed = start.elapsed();
-        first_total += elapsed;
-        first_best = first_best.min(elapsed);
-
-        let start = Instant::now();
-        second(solver);
-        let elapsed = start.elapsed();
-        second_total += elapsed;
-        second_best = second_best.min(elapsed);
-    }
-    (
-        Phase::new(first_total, first_best),
-        Phase::new(second_total, second_best),
-    )
-}
-
-/// One arm's mean and fastest repeat, in microseconds.
-///
-/// The mean is what adds across phases; the fastest repeat is what survives a
-/// busy host. A peer build inflates a mean by whatever share of the loop it
-/// stole, but it cannot make any single repeat faster, so comparing two
-/// revisions by their fastest repeats reads the code where the means read the
-/// machine. On this host the two diverge by a factor of four under load.
-#[derive(Clone, Copy)]
-struct Phase {
-    mean: f64,
-    fastest: f64,
-}
-
-impl Phase {
-    fn new(total: Duration, fastest: Duration) -> Self {
-        let micros = |d: Duration| d.as_secs_f64() * 1.0e6;
-        Self {
-            mean: micros(total) / REPEATS as f64,
-            fastest: micros(fastest),
-        }
-    }
-}
+/// Repeats per phase loop, after warming plans, caches and task pools.
+const TIMER: PhaseTimer = PhaseTimer {
+    repeats: 300,
+    warm: 20,
+};
 
 fn gradients(solver: &mut FdtdSolver) {
     let FdtdSolver {
@@ -158,7 +97,7 @@ fn fdtd_step_phase_split() {
         // enforcement and sensor recording), and timing the two in separate
         // loops made that difference negative — a step cannot cost less than
         // its own parts.
-        let (step, back_to_back) = time_phase_pair(
+        let (step, back_to_back) = TIMER.pair(
             &mut solver,
             |s| {
                 s.step_forward().expect("step");
@@ -171,14 +110,14 @@ fn fdtd_step_phase_split() {
         // Each update is timed against the sweeps it contains, one arm per
         // repeat, so the difference between them is a reading of the pointwise
         // work rather than of whatever the host did between two loops.
-        let (velocity, gradient_sweeps) = time_phase_pair(
+        let (velocity, gradient_sweeps) = TIMER.pair(
             &mut solver,
             |s| {
                 s.update_velocity(dt).expect("velocity update");
             },
             gradients,
         );
-        let (pressure, divergence_sweeps) = time_phase_pair(
+        let (pressure, divergence_sweeps) = TIMER.pair(
             &mut solver,
             |s| {
                 s.update_pressure(dt).expect("pressure update");

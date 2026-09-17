@@ -20,85 +20,6 @@ where
     leto::Array::new(layout, leto::VecStorage::new(data)).expect("valid f-contiguous array")
 }
 
-/// fd1_x on a linear field f = A*x gives the constant A at all interior points.
-/// # Panics
-/// - Panics if an internal precondition is violated.
-///
-#[test]
-fn test_fd1_x_linear_field() {
-    let nx = 10;
-    let dx = 0.001;
-    let a = 3.0_f64;
-    let mut f = Array3::<f64>::zeros((nx, 1, 1));
-    for i in 0..nx {
-        f[[i, 0, 0]] = a * (i as f64) * dx;
-    }
-    // Interior points: derivative should equal A.
-    for i in 2..nx - 2 {
-        let d = fd1_x(f.view(), i, 0, 0, nx, dx);
-        assert!(
-            (d - a).abs() < 1e-10,
-            "fd1_x at i={i}: got {d}, expected {a}"
-        );
-    }
-}
-
-/// fd1_y on a linear field f = B*y gives the constant B at all interior points.
-/// # Panics
-/// - Panics if an internal precondition is violated.
-///
-#[test]
-fn test_fd1_y_linear_field() {
-    let ny = 10;
-    let dy = 0.001;
-    let b = -2.5_f64;
-    let mut f = Array3::<f64>::zeros((1, ny, 1));
-    for j in 0..ny {
-        f[[0, j, 0]] = b * (j as f64) * dy;
-    }
-    for j in 2..ny - 2 {
-        let d = fd1_y(f.view(), 0, j, 0, ny, dy);
-        assert!(
-            (d - b).abs() < 1e-10,
-            "fd1_y at j={j}: got {d}, expected {b}"
-        );
-    }
-}
-
-/// fd1_z on a linear field f = C*z gives the constant C at all interior points.
-/// # Panics
-/// - Panics if an internal precondition is violated.
-///
-#[test]
-fn test_fd1_z_linear_field() {
-    let nz = 10;
-    let dz = 0.001;
-    let c = 1.7_f64;
-    let mut f = Array3::<f64>::zeros((1, 1, nz));
-    for k in 0..nz {
-        f[[0, 0, k]] = c * (k as f64) * dz;
-    }
-    for k in 2..nz - 2 {
-        let d = fd1_z(f.view(), 0, 0, k, nz, dz);
-        assert!(
-            (d - c).abs() < 1e-10,
-            "fd1_z at k={k}: got {d}, expected {c}"
-        );
-    }
-}
-
-/// Degenerate axis (size=1) must return 0.0 without panic.
-/// # Panics
-/// - Panics if an internal precondition is violated.
-///
-#[test]
-fn test_fd1_degenerate_axes() {
-    let f = Array3::<f64>::ones((1, 1, 1));
-    assert_eq!(fd1_x(f.view(), 0, 0, 0, 1, 0.001), 0.0);
-    assert_eq!(fd1_y(f.view(), 0, 0, 0, 1, 0.001), 0.0);
-    assert_eq!(fd1_z(f.view(), 0, 0, 0, 1, 0.001), 0.0);
-}
-
 /// Uniform displacement ux = A (constant) → zero stress divergence.
 ///
 /// ## Numerical note
@@ -244,52 +165,69 @@ fn plane_strain_divergence_matches_spatial_operator_exactly() {
     assert_eq!(plane.div_z, spatial.div_z);
 }
 
-fn sequential_stress_divergence(
+/// The stress tensor and its divergence assembled point by point from
+/// separately swept derivative fields: the wiring the kernel under test must
+/// reproduce (which derivative of which field feeds which component, and the
+/// order terms are summed in).
+fn pointwise_stress_divergence(
     grid: &Grid,
     lambda: &Array3<f64>,
     mu: &Array3<f64>,
     field: &ElasticWaveField,
 ) -> ElasticStepScratch {
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+    let op = leto_ops::FiniteDifference3D::central_fourth_order(grid.dx, grid.dy, grid.dz)
+        .expect("positive spacing");
+    let d = |axis: usize, f: &Array3<f64>| {
+        let mut out = Array3::zeros((nx, ny, nz));
+        let mut view = out.view_mut();
+        match axis {
+            0 => op.apply_x_into(f.view(), &mut view),
+            1 => op.apply_y_into(f.view(), &mut view),
+            _ => op.apply_z_into(f.view(), &mut view),
+        }
+        .expect("grid-shaped fields");
+        out
+    };
     let mut scratch = ElasticStepScratch::new(nx, ny, nz);
 
+    let [exx, eyy, ezz] = [d(0, &field.ux), d(1, &field.uy), d(2, &field.uz)];
+    let [ux_y, uy_x, ux_z, uz_x, uy_z, uz_y] = [
+        d(1, &field.ux),
+        d(0, &field.uy),
+        d(2, &field.ux),
+        d(0, &field.uz),
+        d(2, &field.uy),
+        d(1, &field.uz),
+    ];
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
-                let exx = fd1_x(field.ux.view(), i, j, k, nx, grid.dx);
-                let eyy = fd1_y(field.uy.view(), i, j, k, ny, grid.dy);
-                let ezz = fd1_z(field.uz.view(), i, j, k, nz, grid.dz);
-                let exy_2 = fd1_y(field.ux.view(), i, j, k, ny, grid.dy)
-                    + fd1_x(field.uy.view(), i, j, k, nx, grid.dx);
-                let exz_2 = fd1_z(field.ux.view(), i, j, k, nz, grid.dz)
-                    + fd1_x(field.uz.view(), i, j, k, nx, grid.dx);
-                let eyz_2 = fd1_z(field.uy.view(), i, j, k, nz, grid.dz)
-                    + fd1_y(field.uz.view(), i, j, k, ny, grid.dy);
-                let la = lambda[[i, j, k]];
-                let mv = mu[[i, j, k]];
+                let p = [i, j, k];
+                let (la, mv) = (lambda[p], mu[p]);
                 let la2mu = 2.0f64.mul_add(mv, la);
-                scratch.sxx[[i, j, k]] = la2mu.mul_add(exx, la * (eyy + ezz));
-                scratch.syy[[i, j, k]] = la2mu.mul_add(eyy, la * (exx + ezz));
-                scratch.szz[[i, j, k]] = la2mu.mul_add(ezz, la * (exx + eyy));
-                scratch.sxy[[i, j, k]] = mv * exy_2;
-                scratch.sxz[[i, j, k]] = mv * exz_2;
-                scratch.syz[[i, j, k]] = mv * eyz_2;
+                scratch.sxx[p] = la2mu.mul_add(exx[p], la * (eyy[p] + ezz[p]));
+                scratch.syy[p] = la2mu.mul_add(eyy[p], la * (exx[p] + ezz[p]));
+                scratch.szz[p] = la2mu.mul_add(ezz[p], la * (exx[p] + eyy[p]));
+                scratch.sxy[p] = mv * (ux_y[p] + uy_x[p]);
+                scratch.sxz[p] = mv * (ux_z[p] + uz_x[p]);
+                scratch.syz[p] = mv * (uy_z[p] + uz_y[p]);
             }
         }
     }
 
+    let terms = [
+        [d(0, &scratch.sxx), d(1, &scratch.sxy), d(2, &scratch.sxz)],
+        [d(0, &scratch.sxy), d(1, &scratch.syy), d(2, &scratch.syz)],
+        [d(0, &scratch.sxz), d(1, &scratch.syz), d(2, &scratch.szz)],
+    ];
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
-                scratch.div_x[[i, j, k]] = fd1_x(scratch.sxx.view(), i, j, k, nx, grid.dx)
-                    + fd1_y(scratch.sxy.view(), i, j, k, ny, grid.dy)
-                    + fd1_z(scratch.sxz.view(), i, j, k, nz, grid.dz);
-                scratch.div_y[[i, j, k]] = fd1_x(scratch.sxy.view(), i, j, k, nx, grid.dx)
-                    + fd1_y(scratch.syy.view(), i, j, k, ny, grid.dy)
-                    + fd1_z(scratch.syz.view(), i, j, k, nz, grid.dz);
-                scratch.div_z[[i, j, k]] = fd1_x(scratch.sxz.view(), i, j, k, nx, grid.dx)
-                    + fd1_y(scratch.syz.view(), i, j, k, ny, grid.dy)
-                    + fd1_z(scratch.szz.view(), i, j, k, nz, grid.dz);
+                let p = [i, j, k];
+                scratch.div_x[p] = terms[0][0][p] + terms[0][1][p] + terms[0][2][p];
+                scratch.div_y[p] = terms[1][0][p] + terms[1][1][p] + terms[1][2][p];
+                scratch.div_z[p] = terms[2][0][p] + terms[2][1][p] + terms[2][2][p];
             }
         }
     }
@@ -312,11 +250,11 @@ fn assert_stress_scratch_eq(actual: &ElasticStepScratch, expected: &ElasticStepS
     }
 }
 
+/// Sizes below and past the parallel floors of the sweeps and traversals,
+/// and with short and singleton axes that take only the wall closures.
 #[test]
-fn fused_stress_traversal_matches_reference_across_chunks_and_tail() {
-    // 13×10×9 crosses the 1,024-element boundary at [11, 3, 7] and leaves
-    // a 146-element tail, exercising both nonzero chunk decoding and epilogue.
-    for (nx, ny, nz) in [(7, 6, 5), (13, 10, 9)] {
+fn stress_divergence_matches_its_pointwise_assembly() {
+    for (nx, ny, nz) in [(7, 6, 5), (13, 10, 9), (32, 30, 28), (4, 3, 1), (2, 6, 3)] {
         let grid = Grid::new(nx, ny, nz, 0.7e-3, 1.1e-3, 1.3e-3).expect("grid");
         let lambda = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             2.0e6 + (i * 37 + j * 11 + k * 5) as f64
@@ -335,10 +273,10 @@ fn fused_stress_traversal_matches_reference_across_chunks_and_tail() {
             ((i * 23 + j * 2 + k * 17) as f64 * 0.029).sin()
         });
 
-        let expected = sequential_stress_divergence(&grid, &lambda, &mu, &field);
-        let mut fused = ElasticStepScratch::new(nx, ny, nz);
-        stress_divergence_into(&grid, &lambda, &mu, &field, &mut fused);
-        assert_stress_scratch_eq(&fused, &expected);
+        let expected = pointwise_stress_divergence(&grid, &lambda, &mu, &field);
+        let mut swept = ElasticStepScratch::new(nx, ny, nz);
+        stress_divergence_into(&grid, &lambda, &mu, &field, &mut swept);
+        assert_stress_scratch_eq(&swept, &expected);
     }
 }
 

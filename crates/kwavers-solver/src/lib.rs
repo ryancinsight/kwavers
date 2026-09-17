@@ -9,6 +9,9 @@ pub mod __private {
 #[cfg(test)]
 mod test_support;
 
+#[cfg(test)]
+mod phase_timing;
+
 /// ndarray `s!` macro replacement for leto `SliceArg`.
 ///
 /// Accepts native Rust range expressions (`start..end`, `..end`, `start..`, `..`)
