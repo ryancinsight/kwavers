@@ -2,12 +2,13 @@
 
 <a id="kw-lockstep-traversal"></a>
 
-## KW-LOCKSTEP-TRAVERSAL-2026-09-16 — Three traversal families, one pairing fields by memory order [major] [arch] [perf] — in-progress
+## KW-LOCKSTEP-TRAVERSAL-2026-09-16 — Three traversal families, one pairing fields by memory order [major] [arch] [perf] — review
 
 - **Finding.** Six crates carried their own traversal adapters (physics, therapy, math, medium, simulation, the facade) plus three public ones in core. `kwavers-physics::parallel` zipped `as_slice_memory_order` slices, which leto returns for C- *or* F-dense layouts: a transposed 24-cubed input misplaced 13 248 of 13 824 elements, and its indexed forms handed F-dense outputs wrong coordinates (both reproduced by probe). Its fallback discarded the iterator error. Therapy and core carried two more copies with other arities and chunk sizes (4096, per element).
 - **Change.** [ADR 132](docs/adr/132-one-lockstep-traversal.md): `kwavers_core::traversal` with one indexed implementation per output count, inputs as a `ZipInputs` tuple, logical pairing, moirai unit tasks; the three families and their callers migrate in the same change.
 - **Measured** (adapter A/B, one loop, fastest repeat, load 10%): 16 cubed 7.1-8.2 us to 1.0-1.9 us; 64 cubed indexed 54-62 to 14 us; 128 cubed indexed 436-456 to 124-157 us, three-input 5-17% faster, one-input 1-9%.
 - **Acceptance:** traversal tests (transposed input and output, every arity, shape assertion, empty field) proven to fail under injected dense and fallback defects; migrated suites unchanged; gate green.
+- **Delivered:** branch `fix/kwavers-lockstep-traversal`; gate green on `1a360a643` (5817 lib, 2619 contract tests). The same sweep found twelve more kernels reading memory order as row-major: `kw-memory-order-pairing`.
 - **Integrator:** claude-opus-5; **branch:** `fix/kwavers-lockstep-traversal`; **last-update:** 2026-09-16.
 
 <a id="kw-fdtd-fuse-velocity"></a>
@@ -27,6 +28,15 @@
 ## KW-FIRST-TOUCH-BY-WORKER-2026-09-16 — Parallel first touch split at 512 elements [patch] [perf] — done 2026-09-16
 
 - PR [#795](https://github.com/ryancinsight/kwavers/pull/795) (`08c58943b`). SoA first touch splits one run per worker, matching the NUMA-aware layout.
+
+<a id="kw-memory-order-pairing"></a>
+
+## KW-MEMORY-ORDER-PAIRING-2026-09-16 — Twelve kernels pair or index memory-order slices as row-major [patch] [fix] — todo
+
+- **Finding.** leto's `as_slice_memory_order` returns C- or F-dense storage; these sites zip several fields by storage position or decode a storage position as a row-major index, so an F-dense field reads the wrong elements (the defect class `kw-lockstep-traversal` fixed in the adapters): `kwavers-diagnostics` `real_time_sirt/pipeline.rs` smoothing passes (3); `kwavers-gpu` `pipeline/realtime.rs` envelope, `pipeline/streaming.rs` RF frame, `pstd_gpu/runner.rs` (2), `pstd_gpu/source.rs`; `kwavers-physics` `conservation/energy.rs` total energy, `cavitation/detection.rs`; `kwavers-python` `misc_bindings.rs` resampling; `kwavers-solver` `fdtd/avx512_stencil/{pressure,velocity}.rs`; `kwavers-therapy` `nonlinear3d/cavitation/forward.rs`.
+- **Change.** Each site takes `as_slice`/`as_slice_mut` (row-major) or routes through `kwavers_core::traversal`; order-independent single-array sites keep memory order.
+- **Acceptance:** one transposed-field case per converted kernel family that fails before the change; `git grep as_slice_memory_order` leaves only order-independent single-array sites.
+- **Status:** todo, not claimed; filed 2026-09-16 by claude-opus-5 from the `kw-lockstep-traversal` sweep.
 
 <a id="kw-soa-storage-unused"></a>
 
