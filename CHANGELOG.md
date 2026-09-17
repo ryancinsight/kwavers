@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **[patch] Kernels read transposed fields in logical order.** The acoustic
+  energy total, therapy cavitation detection and the theranostic cavitation
+  source paired an F-ordered field with C-ordered ones by storage position;
+  the GPU PSTD source and sensor masks rejected non-row-major layouts and
+  now accept any layout.
+
 - **[major] The unused FDTD stencil processors are removed.**
   `kwavers-solver`: `forward::fdtd::{avx512_stencil, simd_stencil, dispatch}`
   with `FdtdAvx512StencilProcessor`, `FdtdAvx512Config`, `FdtdAvx512Metrics`,

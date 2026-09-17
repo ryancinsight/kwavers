@@ -97,6 +97,64 @@ fn test_threshold_detection_cavitation_above_threshold() {
     );
 }
 
+/// Builds an owned F-contiguous `Array3<f64>` directly through leto's public
+/// `Layout`/`VecStorage`/`Array` constructors: `as_slice()` (the C-contiguity
+/// check) returns `None` while `as_slice_memory_order()` would have returned
+/// `Some` — the exact layout a caller's `.transpose([2, 1, 0])` could hand
+/// [`TherapyCavitationDetector::detect`].
+fn f_ordered_from_fn(shape: [usize; 3], f: impl Fn(usize, usize, usize) -> f64) -> Array3<f64> {
+    let [nx, ny, nz] = shape;
+    let layout = leto::Layout::f_contiguous(shape).expect("invariant: nonzero shape");
+    // `VecStorage::generate` calls its `FnMut` sequentially for positions
+    // 0..len, so a captured counter reconstructs the F-order flat index.
+    let mut p = 0usize;
+    let storage = leto::VecStorage::generate(nx * ny * nz, || {
+        let i = p % nx;
+        let j = (p / nx) % ny;
+        let k = p / (nx * ny);
+        p += 1;
+        f(i, j, k)
+    });
+    leto::Array::new(layout, storage).expect("invariant: layout fits storage")
+}
+
+/// A pressure field supplied with F-contiguous storage must mark cavitation
+/// at the same *logical* voxels as a C-contiguous field carrying identical
+/// values — pairing must not depend on `pressure`'s raw memory-order flat
+/// index, which for an F-contiguous input does not correspond to
+/// `cavitation`'s (always C-contiguous) row-major position.
+#[test]
+fn test_threshold_detection_pairs_transposed_input_by_logical_index() {
+    let det = detector();
+    let shape = [2usize, 3, 4];
+    let p_high = -2.0 * det.blake_threshold;
+    let p_low = -0.1 * det.blake_threshold;
+    // (1, 0, 0) is chosen so its C-order flat index (12, since C strides are
+    // [12, 4, 1]) differs from its F-order flat index (1, since F strides are
+    // [1, 2, 6]): a raw-memory-order pairing would place the hot voxel at
+    // logical (0, 0, 1) — the F-order decode of flat position 12 — instead.
+    let hot = |i: usize, j: usize, k: usize| i == 1 && j == 0 && k == 0;
+    let p = f_ordered_from_fn(shape, |i, j, k| if hot(i, j, k) { p_high } else { p_low });
+    assert!(
+        p.as_slice().is_none() && p.as_slice_memory_order().is_some(),
+        "pressure must be dense in F order for this case to mean anything"
+    );
+
+    let cav = det.detect(&p);
+
+    for i in 0..shape[0] {
+        for j in 0..shape[1] {
+            for k in 0..shape[2] {
+                assert_eq!(
+                    cav[[i, j, k]],
+                    hot(i, j, k),
+                    "voxel [{i}, {j}, {k}] must match the logical-index threshold check"
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn test_threshold_detection_spatial_heterogeneity() {
     let det = detector();

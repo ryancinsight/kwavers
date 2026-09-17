@@ -82,6 +82,11 @@ fn compute_row_norm_sq(
     })
 }
 
+/// `a` and `b` are always C-contiguous here: [`RealTimeSirtPipeline::apply_smoothing`]
+/// derives both from `image`, which is only ever built by `Array3::zeros` (C-contiguous
+/// by construction, per leto `Layout::c_contiguous`) and thereafter mutated only by
+/// scalar indexing or `.clone()`/`.assign()` (which preserve the destination's own
+/// layout, never adopting the source's) — never transposed or reshaped.
 fn smooth_x_pass(
     a: &Array3<f64>,
     b: &mut Array3<f64>,
@@ -93,11 +98,11 @@ fn smooth_x_pass(
 ) {
     let plane_len = ny * nz;
     let a_slice = a
-        .as_slice_memory_order()
-        .expect("invariant: Array3 smoothing read buffer is contiguous");
+        .as_slice()
+        .expect("invariant: Array3 smoothing read buffer is C-contiguous (row-major)");
     let b_slice = b
-        .as_slice_memory_order_mut()
-        .expect("invariant: Array3 smoothing write buffer is contiguous");
+        .as_slice_mut()
+        .expect("invariant: Array3 smoothing write buffer is C-contiguous (row-major)");
     let interior = &mut b_slice[plane_len..(nx - 1) * plane_len];
 
     for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
@@ -118,14 +123,16 @@ fn smooth_x_pass(
     );
 }
 
+/// See [`smooth_x_pass`]: `a`/`b` are the same chained `image` buffers, provably
+/// C-contiguous.
 fn smooth_y_pass(a: &Array3<f64>, b: &mut Array3<f64>, ny: usize, nz: usize, wn: f64, w0: f64) {
     let plane_len = ny * nz;
     let a_slice = a
-        .as_slice_memory_order()
-        .expect("invariant: Array3 smoothing read buffer is contiguous");
+        .as_slice()
+        .expect("invariant: Array3 smoothing read buffer is C-contiguous (row-major)");
     let b_slice = b
-        .as_slice_memory_order_mut()
-        .expect("invariant: Array3 smoothing write buffer is contiguous");
+        .as_slice_mut()
+        .expect("invariant: Array3 smoothing write buffer is C-contiguous (row-major)");
 
     for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(b_slice, plane_len, |i, plane| {
         let plane_base = i * plane_len;
@@ -144,13 +151,15 @@ fn smooth_y_pass(a: &Array3<f64>, b: &mut Array3<f64>, ny: usize, nz: usize, wn:
     });
 }
 
+/// See [`smooth_x_pass`]: `a`/`b` are the same chained `image` buffers, provably
+/// C-contiguous.
 fn smooth_z_pass(a: &Array3<f64>, b: &mut Array3<f64>, nz: usize, wn: f64, w0: f64) {
     let a_slice = a
-        .as_slice_memory_order()
-        .expect("invariant: Array3 smoothing read buffer is contiguous");
+        .as_slice()
+        .expect("invariant: Array3 smoothing read buffer is C-contiguous (row-major)");
     let b_slice = b
-        .as_slice_memory_order_mut()
-        .expect("invariant: Array3 smoothing write buffer is contiguous");
+        .as_slice_mut()
+        .expect("invariant: Array3 smoothing write buffer is C-contiguous (row-major)");
 
     for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(b_slice, nz, |row_idx, row| {
         let row_base = row_idx * nz;

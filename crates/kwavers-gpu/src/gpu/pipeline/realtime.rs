@@ -199,10 +199,7 @@ impl RealtimeImagingPipeline {
         let mut envelope = LetoArray3::zeros([rx_count, samples, frames]);
         let rx_plane_len = samples * frames;
 
-        match (
-            envelope.as_slice_memory_order_mut(),
-            beamformed.as_slice_memory_order(),
-        ) {
+        match (envelope.as_slice_mut(), beamformed.as_slice()) {
             (Some(envelope_values), Some(beamformed_values)) => {
                 for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
                     envelope_values,

@@ -79,7 +79,9 @@ impl StreamingDataSource {
         let mut rf_data = LetoArray4::zeros([n_tx, n_rx, n_samples, n_frames]);
         let rx_frame_len = n_samples * n_frames;
 
-        if let Some(values) = rf_data.as_slice_memory_order_mut() {
+        // `rf_data` is freshly allocated above via `LetoArray4::zeros`, which is
+        // always C-contiguous, so this is never the non-contiguous fallback path.
+        if let Some(values) = rf_data.as_slice_mut() {
             for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
                 values,
                 rx_frame_len,

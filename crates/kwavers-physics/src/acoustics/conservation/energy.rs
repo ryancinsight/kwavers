@@ -51,13 +51,18 @@ pub fn validate_energy_conservation(
 
     let dv = grid.dx * grid.dy * grid.dz;
 
+    // Each array is checked for its own C-contiguity; the fast path pairs them
+    // by raw flat index, which is only valid when every array shares the same
+    // (row-major) layout. Mixed layouts across these six independently-supplied
+    // arguments fall through to the logical `.iter()` pairing below, which is
+    // correct regardless of each array's storage order.
     let total_energy = match (
-        pressure.as_slice_memory_order(),
-        velocity_x.as_slice_memory_order(),
-        velocity_y.as_slice_memory_order(),
-        velocity_z.as_slice_memory_order(),
-        density.as_slice_memory_order(),
-        sound_speed.as_slice_memory_order(),
+        pressure.as_slice(),
+        velocity_x.as_slice(),
+        velocity_y.as_slice(),
+        velocity_z.as_slice(),
+        density.as_slice(),
+        sound_speed.as_slice(),
     ) {
         (
             Some(pressure),
@@ -143,6 +148,97 @@ mod tests {
             density,
             sound_speed,
         )
+    }
+
+    /// Builds an owned F-contiguous `Array3<f64>` directly through leto's
+    /// public `Layout`/`VecStorage`/`Array` constructors: `as_slice()` (the
+    /// C-contiguity check) returns `None` while `as_slice_memory_order()`
+    /// would have returned `Some` — the exact layout a caller's
+    /// `.transpose([2, 1, 0])` could hand this function.
+    fn f_ordered_from_fn(shape: [usize; 3], f: impl Fn(usize, usize, usize) -> f64) -> Array3<f64> {
+        let [nx, ny, nz] = shape;
+        let layout = leto::Layout::f_contiguous(shape).expect("invariant: nonzero shape");
+        // `VecStorage::generate` calls its `FnMut` sequentially for positions
+        // 0..len, so a captured counter reconstructs the F-order flat index.
+        let mut p = 0usize;
+        let storage = leto::VecStorage::generate(nx * ny * nz, || {
+            let i = p % nx;
+            let j = (p / nx) % ny;
+            let k = p / (nx * ny);
+            p += 1;
+            f(i, j, k)
+        });
+        leto::Array::new(layout, storage).expect("invariant: layout fits storage")
+    }
+
+    /// A field supplied with F-contiguous storage must be paired with the
+    /// other five fields by *logical* index, not by raw memory-order flat
+    /// index — that raw pairing is only valid when every one of the six
+    /// independently-supplied fields shares the same layout, which nothing
+    /// forces for a public five-argument-plus-pressure API.
+    ///
+    /// `pressure` and `density` both vary spatially and combine nonlinearly
+    /// in `potential = p² / (2ρc²)`; velocities are zero so kinetic energy
+    /// cannot mask a wrong pairing. Because `density` is F-contiguous while
+    /// `pressure` stays C-contiguous, a raw-memory-order pairing (`p[idx]`
+    /// against `density`'s F-order-flattened `idx`) combines mismatched
+    /// physical cells — unlike a same-shaped sum of squares or a sum over a
+    /// single array, a ratio of two independently-permuted arrays does not
+    /// generally sum to the same total (e.g. `1/1 + 4/4 = 2` vs the swapped
+    /// `1/4 + 4/1 = 4.25`), so a wrong pairing changes the total measurably.
+    #[test]
+    fn energy_conservation_pairs_a_transposed_field_by_logical_index() {
+        let grid = small_grid();
+        let shape = [4usize, 4, 4];
+        let c = SOUND_SPEED_WATER_SIM;
+        let p_at =
+            |i: usize, j: usize, k: usize| 1.0 + i as f64 + 10.0 * j as f64 + 100.0 * k as f64;
+        let rho_at = |i: usize, j: usize, k: usize| {
+            DENSITY_WATER_NOMINAL * (1.0 + 0.01 * (i as f64 + 10.0 * j as f64 + 100.0 * k as f64))
+        };
+
+        let pressure = Array3::from_shape_fn(shape, |[i, j, k]| p_at(i, j, k));
+        let density = f_ordered_from_fn(shape, rho_at);
+        assert!(
+            density.as_slice().is_none() && density.as_slice_memory_order().is_some(),
+            "density must be dense in F order for this case to mean anything"
+        );
+        let velocity_x = Array3::zeros(shape);
+        let velocity_y = Array3::zeros(shape);
+        let velocity_z = Array3::zeros(shape);
+        let sound_speed = Array3::from_elem(shape, c);
+
+        let dv = grid.dx * grid.dy * grid.dz;
+        let mut expected = 0.0_f64;
+        for i in 0..shape[0] {
+            for j in 0..shape[1] {
+                for k in 0..shape[2] {
+                    expected += acoustic_cell_energy(
+                        p_at(i, j, k),
+                        [0.0, 0.0, 0.0],
+                        rho_at(i, j, k),
+                        c,
+                        dv,
+                    );
+                }
+            }
+        }
+
+        let error = validate_energy_conservation(
+            &pressure,
+            &velocity_x,
+            &velocity_y,
+            &velocity_z,
+            &density,
+            &sound_speed,
+            expected,
+            &grid,
+        );
+        assert!(
+            error.abs() < 1e-9,
+            "pairing by raw memory order instead of logical index would not equal \
+             the direct logical-index sum (relative error={error:.3e})"
+        );
     }
 
     /// When `initial_energy` equals the computed total, relative error = 0.
