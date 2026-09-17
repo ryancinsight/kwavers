@@ -15,6 +15,9 @@
   where they received `(usize, usize, usize)`. Fixes physics kernels that
   paired a C-ordered field with an F-ordered one element by storage
   position, and sonoluminescence spectra read the same way.
+- **[patch] `SimdOps::{add_fields, multiply_fields, subtract_fields}` pair
+  operands by logical position.** `kwavers-math`: an F-ordered operand was
+  combined with the C-ordered result element by storage position.
 
 - **[major] `SoAFieldStorage` is removed.** `kwavers-core::arena` and its
   `kwavers-analysis` re-export: nothing in kwavers or the stack constructed

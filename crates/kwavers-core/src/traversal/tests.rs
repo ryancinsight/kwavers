@@ -1,4 +1,4 @@
-use leto::Array3;
+use leto::{Array2, Array3, ArrayView3, SliceArg};
 
 use super::{
     zip_mut, zip_mut_indexed, zip_mut_pair, zip_mut_pair_indexed, zip_mut_triple,
@@ -220,4 +220,145 @@ fn multi_output_indexed_forms_report_each_position() {
     assert_field(&a, code);
     assert_field(&transposed_storage, |[i, j, k]| code([k, j, i]));
     assert_field(&c, |i| code(i) + 1.0);
+}
+
+/// Offset of the `n`-th weighted input; distinct per position so a swapped,
+/// dropped or repeated member changes the weighted sum.
+fn offset(n: usize) -> f64 {
+    (n as f64 + 1.0) * 1.0e6
+}
+
+/// The weighted sum `sum_n 2^n * (code + offset(n))` over the first `arity`
+/// inputs. Every term is an integer below 2^40, so the sum is exact.
+fn weighted(arity: usize, index: [usize; 3]) -> f64 {
+    (0..arity)
+        .map(|n| f64::from(1_u32 << n) * (code(index) + offset(n)))
+        .sum()
+}
+
+/// Every arity, first all dense and then with one member transposed at each
+/// position, which sends the traversal down the logical walk.
+#[test]
+fn every_tuple_member_is_read_at_its_own_position_on_both_paths() {
+    let dense: Vec<Array3<f64>> = (0..5).map(|n| field(offset(n))).collect();
+    let stored_reversed: Vec<Array3<f64>> = (0..5).map(|n| reversed(offset(n))).collect();
+    let transposed: Vec<ArrayView3<'_, f64>> = stored_reversed
+        .iter()
+        .map(|a| a.transpose([2, 1, 0]).expect("a permutation of three axes"))
+        .collect();
+
+    for arity in 2..=5 {
+        for odd in std::iter::once(None).chain((0..arity).map(Some)) {
+            let v: Vec<ArrayView3<'_, f64>> = (0..5)
+                .map(|n| {
+                    if odd == Some(n) {
+                        transposed[n]
+                    } else {
+                        dense[n].view()
+                    }
+                })
+                .collect();
+            let mut out = Array3::zeros(SHAPE);
+            match arity {
+                2 => zip_mut(out.view_mut(), (v[0], v[1]), |o, (a, b)| *o = a + 2.0 * b),
+                3 => zip_mut(out.view_mut(), (v[0], v[1], v[2]), |o, (a, b, c)| {
+                    *o = a + 2.0 * b + 4.0 * c;
+                }),
+                4 => zip_mut(
+                    out.view_mut(),
+                    (v[0], v[1], v[2], v[3]),
+                    |o, (a, b, c, d)| {
+                        *o = a + 2.0 * b + 4.0 * c + 8.0 * d;
+                    },
+                ),
+                _ => zip_mut(
+                    out.view_mut(),
+                    (v[0], v[1], v[2], v[3], v[4]),
+                    |o, (a, b, c, d, e)| *o = a + 2.0 * b + 4.0 * c + 8.0 * d + 16.0 * e,
+                ),
+            }
+            for i in 0..SIDE {
+                for j in 0..SIDE {
+                    for k in 0..SIDE {
+                        assert_eq!(
+                            out[[i, j, k]],
+                            weighted(arity, [i, j, k]),
+                            "arity {arity}, transposed member {odd:?}, at [{i}, {j}, {k}]"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn the_dense_triple_indexed_path_reports_each_position() {
+    let input = field(3.0);
+    let (mut a, mut b, mut c) = (
+        Array3::zeros(SHAPE),
+        Array3::zeros(SHAPE),
+        Array3::zeros(SHAPE),
+    );
+    zip_mut_triple_indexed(
+        a.view_mut(),
+        b.view_mut(),
+        c.view_mut(),
+        input.view(),
+        |index, a, b, c, x| {
+            *a = x - code(index);
+            *b = code(index);
+            *c = f64::from(u32::try_from(index[0]).expect("a small index"));
+        },
+    );
+    assert_field(&a, |_| 3.0);
+    assert_field(&b, code);
+    assert_field(&c, |[i, _, _]| {
+        f64::from(u32::try_from(i).expect("a small index"))
+    });
+}
+
+/// `s![start..;2, ..]` in leto slice-argument form.
+fn every_other_row(start: isize) -> [SliceArg; 2] {
+    [
+        SliceArg::Range {
+            start: Some(start),
+            end: None,
+            step: 2,
+        },
+        SliceArg::All,
+    ]
+}
+
+/// A stepped rank-2 view is neither C- nor F-dense: the logical walk writes
+/// exactly the selected rows, each from its own inputs.
+#[test]
+fn stepped_rank_two_views_write_only_their_rows() {
+    let fill = |scale: usize| Array2::from_shape_fn((6, 5), |[i, j]| (scale * (i * 5 + j)) as f64);
+    let (first, second) = (fill(1), fill(100));
+    let mut out = Array2::<f64>::zeros((6, 5));
+    let rows = every_other_row(0);
+    zip_mut_indexed(
+        out.slice_with_mut::<2>(&rows).expect("rows within bounds"),
+        (
+            first.slice_with::<2>(&rows).expect("rows within bounds"),
+            second.slice_with::<2>(&rows).expect("rows within bounds"),
+        ),
+        |[i, j], o, (a, b)| *o = a + b + (i * 10 + j) as f64 * 1.0e6,
+    );
+    for i in 0..6 {
+        for j in 0..5 {
+            let expected = if i % 2 == 0 {
+                (101 * (i * 5 + j)) as f64 + ((i / 2) * 10 + j) as f64 * 1.0e6
+            } else {
+                0.0
+            };
+            assert_eq!(out[[i, j]], expected, "at [{i}, {j}]");
+        }
+    }
+    assert!(out
+        .slice_with::<2>(&every_other_row(1))
+        .expect("rows within bounds")
+        .iter()
+        .all(|&v| v == 0.0));
 }

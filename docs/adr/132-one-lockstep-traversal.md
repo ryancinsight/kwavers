@@ -7,7 +7,8 @@
 ## Context
 
 Element-wise kernels that write one to three fields from other fields of the
-same shape went through three independent adapter families:
+same shape went through a separate adapter set in each of six crates, plus
+three public functions in core. The three largest:
 
 | Family | Surface | Pairing | Fallback | Task width |
 |---|---|---|---|---|
@@ -23,8 +24,15 @@ any F-dense output. Its fallback discarded the `indexed_iter_mut` error, so a
 failure there wrote nothing and said nothing. The shape precondition of the
 public core pair traversal was a `debug_assert`, absent in release.
 
-Therapy depends on physics, and both depend on core; each family re-derived
-the same traversal with a different arity set and a hand-picked chunk size.
+`kwavers-math`, `kwavers-medium` (whose shape checks were `debug_assert`s),
+`kwavers-simulation` and the `kwavers` facade each carried smaller copies of
+the same adapters. Every one of these crates depends on core; each copy
+re-derived the traversal with its own arity set and chunk size.
+
+The public `kwavers_math::SimdOps::{add_fields, multiply_fields,
+subtract_fields}` zipped memory-order slices of their operands and result the
+same way, and the sonoluminescence spectrum decoded a memory-order position of
+its intensity field as a row-major index.
 
 ## Decision
 
@@ -46,9 +54,10 @@ destructures what it reads.
 - A mutable view that cannot enumerate its elements is an invariant
   violation (`expect`), never a silent skip.
 
-The three families and `utils::iterators::{for_each_indexed_mut,
+Every adapter copy and `utils::iterators::{for_each_indexed_mut,
 for_each_indexed_pair_mut, apply_inplace}` are deleted and every caller moves
-to the new module.
+to the new module. `SimdOps` and the spectrum take row-major slices
+(`as_slice`) and keep their logical fallbacks.
 
 ## Alternatives
 
@@ -80,9 +89,14 @@ to the new module.
 ## Verification
 
 `kwavers-core/src/traversal/tests.rs`: a transposed input and transposed
-outputs pair by logical index, every input arity and output count against an
-index-coded oracle, the dense indexed paths against the logical index, the
-shape assertion, and the empty field. The same two transposed cases, run as a
+outputs pair by logical index; every input arity, with each tuple member given
+its own weight and offset, both dense and with one member transposed at each
+position; every output count against an index-coded oracle; all three dense
+indexed paths against the logical index; a stepped rank-2 view writing only
+its rows; the shape assertion; and the empty field. Swapping two tuple members
+does not compile, because members carry distinct type parameters; taking one
+member's slice in memory order, or dropping the dense three-output index, each
+fails a test. The same two transposed cases, run as a
 probe against the physics family before its removal, misplaced 13 248 of
 13 824 elements and wrote wrong coordinates. Injecting an off-by-one into the
 dense path, and a one-element skew into the logical walk, each fails a test.
