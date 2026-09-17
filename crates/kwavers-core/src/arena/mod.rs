@@ -10,7 +10,7 @@
 //! | [`field_arena`] | [`ArenaConfig`], [`ArenaStats`], [`FieldArena`] |
 //! | [`temp_arena`] | [`BumpAllocator`], [`ScopedArena`] |
 //! | [`simulation_arena`] | [`ThreadLocalArena`], [`ThreadLocalFieldGuard`] |
-//! | [`layout`] | [`SoAFieldStorage`], [`FieldLayout`], [`TiledIterator3D`], NUMA-aware layout |
+//! | [`layout`] | [`FieldLayout`], [`TiledIterator3D`], NUMA-aware layout |
 //! | [`batch`] | [`BatchFieldAllocator`], [`SoAFieldBuffer`], [`TempBufferPool`] |
 //! | [`pool`] | [`BufferPool`], [`PooledBuffer`], [`NumaPoolManager`] |
 //! | [`numa`] | [`CpuTopology`], [`ArenaLayoutNumaPolicy`], [`NumaAllocator`] |
@@ -49,8 +49,8 @@ pub use batch::{
 pub use field_arena::{ArenaConfig, ArenaStats, FieldArena};
 pub use layout::{
     align_up, cache_aligned_size, packed_struct_size, ArenaLayoutNumaPolicy, CacheBlockSize,
-    FieldBufferGuard, FieldLayout, FieldPool, NumaAwareAllocator, SoAFieldStorage, TiledIterator3D,
-    CACHE_LINE_SIZE, ELEMENTS_PER_CACHE_LINE,
+    FieldBufferGuard, FieldLayout, FieldPool, NumaAwareAllocator, TiledIterator3D, CACHE_LINE_SIZE,
+    ELEMENTS_PER_CACHE_LINE,
 };
 pub use numa::{
     current_numa_node, detect_topology, first_touch_memory_parallel, set_thread_affinity,

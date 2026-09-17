@@ -6,7 +6,7 @@ use crate::arena::numa::detect_topology;
 ///
 /// Holds a placement preference ([`PlacementHint`]) and a topology snapshot
 /// ([`CpuTopology`]). Actual allocation and binding is performed by the
-/// execution primitives in [`super::memory`]; themis owns the placement
+/// execution primitives in the `numa::memory` module; themis owns the placement
 /// vocabulary only.
 #[derive(Debug, Clone)]
 pub struct NumaAllocator {
