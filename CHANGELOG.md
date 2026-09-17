@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **[major] The unused FDTD stencil processors are removed.**
+  `kwavers-solver`: `forward::fdtd::{avx512_stencil, simd_stencil, dispatch}`
+  with `FdtdAvx512StencilProcessor`, `FdtdAvx512Config`, `FdtdAvx512Metrics`,
+  `FdtdSimdStencilProcessor`, `FdtdStencilDispatcher`, `StencilStrategy` and
+  `DispatchMetrics`. Nothing called them; their pressure update ignored the
+  velocity divergence it was given. `FdtdSolver` is the FDTD path.
+
 - **[major] One lockstep field traversal: `kwavers_core::traversal`**
   ([ADR 132](docs/adr/132-one-lockstep-traversal.md)). `zip_mut`,
   `zip_mut_pair` and `zip_mut_triple`, with `_indexed` forms, take the
