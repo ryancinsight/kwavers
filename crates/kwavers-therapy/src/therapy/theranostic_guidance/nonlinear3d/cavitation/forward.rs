@@ -25,10 +25,13 @@ pub(super) fn cavitation_source(
     config: &Nonlinear3dConfig,
 ) -> Array3<f64> {
     let dim = peak_pressure.shape();
-    if let (Some(pressures), Some(source_mask)) = (
-        peak_pressure.as_slice_memory_order(),
-        volume.inversion_mask.as_slice_memory_order(),
-    ) {
+    // Both fields are checked for their own C-contiguity; the fast path pairs
+    // them by raw flat index, which is only valid when they share the same
+    // (row-major) layout. Either field diverging (e.g. a transposed mask)
+    // falls through to the logical `.iter()`/`from_shape_fn` path below.
+    if let (Some(pressures), Some(source_mask)) =
+        (peak_pressure.as_slice(), volume.inversion_mask.as_slice())
+    {
         let max_pressure = fold_reduce_with::<Adaptive, f64, _, _, _>(
             pressures.len(),
             || 0.0,
@@ -305,6 +308,84 @@ mod tests {
             pressure[center],
             pressure[boundary]
         );
+    }
+
+    /// Builds an owned F-contiguous `Array3<bool>` directly through leto's
+    /// public `Layout`/`VecStorage`/`Array` constructors: `as_slice()` (the
+    /// C-contiguity check) returns `None` while `as_slice_memory_order()`
+    /// would have returned `Some` — the exact layout a caller's
+    /// `.transpose([2, 1, 0])` could hand [`cavitation_source`] as
+    /// `volume.inversion_mask`.
+    fn f_ordered_bool_from_fn(
+        shape: [usize; 3],
+        f: impl Fn(usize, usize, usize) -> bool,
+    ) -> Array3<bool> {
+        let [nx, ny, nz] = shape;
+        let layout = leto::Layout::f_contiguous(shape).expect("invariant: nonzero shape");
+        // `VecStorage::generate` calls its `FnMut` sequentially for positions
+        // 0..len, so a captured counter reconstructs the F-order flat index.
+        let mut p = 0usize;
+        let storage = leto::VecStorage::generate(nx * ny * nz, || {
+            let i = p % nx;
+            let j = (p / nx) % ny;
+            let k = p / (nx * ny);
+            p += 1;
+            f(i, j, k)
+        });
+        leto::Array::new(layout, storage).expect("invariant: layout fits storage")
+    }
+
+    /// A transposed (F-contiguous) `inversion_mask` must gate cavitation by
+    /// the same *logical* voxel as a C-contiguous mask carrying identical
+    /// values — pairing must not depend on the mask's raw memory-order flat
+    /// index, which does not correspond to `peak_pressure`'s (always
+    /// C-contiguous) row-major position.
+    #[test]
+    fn cavitation_source_pairs_a_transposed_mask_by_logical_index() {
+        let mut config = Nonlinear3dConfig::new(AnatomyKind::Kidney);
+        config.frequency_hz = 500_000.0;
+        config.inertial_mi_threshold = 1.9;
+        config.bubble_time_steps_per_period = 24;
+        config.cycles = 2.0;
+
+        let n = 5;
+        // (1, 0, 0): C-order flat index (C strides [25, 5, 1]) is 25; F-order
+        // flat index (F strides [1, 5, 25]) is 1 — a raw-memory-order pairing
+        // would instead activate logical (0, 0, 1), the F-order decode of
+        // flat position 25, rather than (1, 0, 0).
+        let active = [1usize, 0, 0];
+        let mut volume = treatment_window_fixture(n, active);
+        volume.inversion_mask = f_ordered_bool_from_fn([n, n, n], |i, j, k| [i, j, k] == active);
+        assert!(
+            volume.inversion_mask.as_slice().is_none()
+                && volume.inversion_mask.as_slice_memory_order().is_some(),
+            "inversion_mask must be dense in F order for this case to mean anything"
+        );
+
+        let pressure = Array3::<f64>::from_elem((n, n, n), 2.0 * MPA_TO_PA);
+        let source = cavitation_source(&volume, &pressure, &config);
+        let expected_active = cavitation_value(true, pressure[active], pressure[active], &config);
+        assert!(
+            expected_active > 0.0,
+            "test fixture must produce a nonzero source at the active voxel"
+        );
+
+        for i in 0..n {
+            for j in 0..n {
+                for k in 0..n {
+                    let expected = if [i, j, k] == active {
+                        expected_active
+                    } else {
+                        0.0
+                    };
+                    assert_eq!(
+                        source[[i, j, k]],
+                        expected,
+                        "voxel [{i}, {j}, {k}] must match the logical-index mask check"
+                    );
+                }
+            }
+        }
     }
 
     fn treatment_window_fixture(n: usize, target: [usize; 3]) -> Nonlinear3dVolume {

@@ -34,12 +34,13 @@
 
 <a id="kw-memory-order-pairing"></a>
 
-## KW-MEMORY-ORDER-PAIRING-2026-09-16 — Ten kernels pair or index memory-order slices as row-major [patch] [fix] — in-progress
+## KW-MEMORY-ORDER-PAIRING-2026-09-16 — Ten kernels pair or index memory-order slices as row-major [patch] [fix] — review
 
 - **Finding.** leto's `as_slice_memory_order` returns C- or F-dense storage; these sites zip several fields by storage position or decode a storage position as a row-major index, so an F-dense field reads the wrong elements (the defect class `kw-lockstep-traversal` fixed in the adapters): `kwavers-diagnostics` `real_time_sirt/pipeline.rs` smoothing passes (3); `kwavers-gpu` `pipeline/realtime.rs` envelope, `pipeline/streaming.rs` RF frame, `pstd_gpu/runner.rs` (2), `pstd_gpu/source.rs`; `kwavers-physics` `conservation/energy.rs` total energy, `cavitation/detection.rs`; `kwavers-python` `misc_bindings.rs` resampling; `kwavers-therapy` `nonlinear3d/cavitation/forward.rs`.
 - **Change.** Each site takes `as_slice`/`as_slice_mut` (row-major) or routes through `kwavers_core::traversal`; order-independent single-array sites keep memory order.
 - **Acceptance:** one transposed-field case per converted kernel family that fails before the change; `git grep as_slice_memory_order` leaves only order-independent single-array sites.
-- **Integrator:** claude-opus-5; **branch:** `fix/kwavers-memory-order-pairing` (stacked on #800); **last-update:** 2026-09-16.
+- **Delivered:** cavitation detection routes through `zip_mut`; the energy total, cavitation source, SIRT smoothing, GPU envelope and RF frame, and Python resampling take row-major slices (dense-proof cited at each `expect`); the three GPU mask readers borrow row-major storage or collect the logical walk instead of rejecting other layouts. Transposed-field tests for the energy total, detection and cavitation source each fail with their site reverted.
+- **Integrator:** claude-opus-5; **branch:** `fix/kwavers-memory-order-pairing`; **last-update:** 2026-09-17.
 
 <a id="kw-soa-storage-unused"></a>
 

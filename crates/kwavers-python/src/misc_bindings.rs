@@ -85,11 +85,15 @@ fn resample_to_target_grid<'py>(
     let target = [target_dims.0, target_dims.1, target_dims.2];
 
     let resampled = py.detach(|| kwavers_resample(&source_leto, &transform, target));
+    // `resampled` is always `Array3::zeros(target_dims)` freshly allocated and
+    // then written only by scalar indexing inside `kwavers_resample`, so it is
+    // provably C-contiguous (row-major) here — required by `from_shape_vec`,
+    // which reinterprets its `Vec` argument as row-major for `target`'s shape.
     let out = leto::Array3::from_shape_vec(
         (target[0], target[1], target[2]),
         resampled
-            .as_slice_memory_order()
-            .expect("Leto resample output should be contiguous")
+            .as_slice()
+            .expect("Leto resample output should be C-contiguous (row-major)")
             .to_vec(),
     )
     .expect("target dimensions must match resampled voxel payload");

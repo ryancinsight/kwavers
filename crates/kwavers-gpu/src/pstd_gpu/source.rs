@@ -7,6 +7,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
+use std::borrow::Cow;
 
 /// Pressure-source payload ready for one GPU PSTD batch.
 ///
@@ -91,9 +92,12 @@ pub fn prepare_pstd_pressure_source(
         (Some(mask), Some(signal)) => (mask, signal),
     };
 
-    let mask = p_mask.as_slice_memory_order().ok_or_else(|| {
-        KwaversError::InvalidInput("p_mask must be dense row-major array".to_owned())
-    })?;
+    // Row-major order: borrowed when `p_mask` is C-dense, otherwise
+    // collected from its logical iterator.
+    let mask: Cow<'_, [bool]> = p_mask.as_slice().map_or_else(
+        || Cow::Owned(p_mask.iter().copied().collect()),
+        Cow::Borrowed,
+    );
     if mask.len() != total {
         return Err(KwaversError::InvalidInput(format!(
             "p_mask has {} cells but grid has {total}",

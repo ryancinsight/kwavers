@@ -1,7 +1,7 @@
 use super::constants::{BUBBLE_Q_FACTOR, DEFAULT_NUCLEUS_RADIUS};
 use super::{CavitationDetectionMethod, TherapyCavitationDetector};
+use kwavers_core::traversal::zip_mut;
 use leto::Array3;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 impl TherapyCavitationDetector {
     /// Detect cavitation in a snapshot pressure field.
@@ -67,14 +67,7 @@ fn mark_cavitation(pressure: &Array3<f64>, cavitation: &mut Array3<bool>, thresh
         "invariant: cavitation detection pressure and output shapes must match"
     );
 
-    let cavitation = cavitation
-        .as_slice_memory_order_mut()
-        .expect("invariant: cavitation detection output must be contiguous");
-    let pressure = pressure
-        .as_slice_memory_order()
-        .expect("invariant: cavitation pressure field must be contiguous");
-
-    enumerate_mut_with::<Adaptive, _, _>(cavitation, |idx, cav| {
-        *cav = -pressure[idx] > threshold;
+    zip_mut(cavitation.view_mut(), pressure.view(), |cav, &p| {
+        *cav = -p > threshold;
     });
 }

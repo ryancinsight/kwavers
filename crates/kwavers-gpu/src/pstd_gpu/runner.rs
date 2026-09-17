@@ -27,6 +27,7 @@ use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
 use kwavers_source::GridSource;
 use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
+use std::borrow::Cow;
 use std::f64::consts::PI;
 
 /// GPU PSTD acquisition settings.
@@ -306,9 +307,12 @@ where
     let mut velocity_source_correction = false;
 
     if let (Some(u_mask), Some(u_signal)) = (&source.u_mask, &source.u_signal) {
-        let mask_flat = u_mask.as_slice_memory_order().ok_or_else(|| {
-            KwaversError::InvalidInput("u_mask must be dense row-major array".into())
-        })?;
+        // Row-major order: borrowed when `u_mask` is C-dense, otherwise
+        // collected from its logical iterator.
+        let mask_flat: Cow<'_, [bool]> = u_mask.as_slice().map_or_else(
+            || Cow::Owned(u_mask.iter().copied().collect()),
+            Cow::Borrowed,
+        );
         if mask_flat.len() != total {
             return Err(KwaversError::InvalidInput(format!(
                 "u_mask has {} cells but grid has {total}",
@@ -459,9 +463,12 @@ fn validate_sensor_mask_shape(grid: &Grid, sensor_mask: &LetoArray3<bool>) -> Kw
 }
 
 fn collect_sensor_indices(sensor_mask: &LetoArray3<bool>) -> KwaversResult<Vec<u32>> {
-    let flat = sensor_mask.as_slice_memory_order().ok_or_else(|| {
-        KwaversError::InvalidInput("sensor_mask must be dense row-major leto::Array3".into())
-    })?;
+    // Row-major order: borrowed when `sensor_mask` is C-dense, otherwise
+    // collected from its logical iterator.
+    let flat: Cow<'_, [bool]> = sensor_mask.as_slice().map_or_else(
+        || Cow::Owned(sensor_mask.iter().copied().collect()),
+        Cow::Borrowed,
+    );
     Ok(flat
         .iter()
         .enumerate()
