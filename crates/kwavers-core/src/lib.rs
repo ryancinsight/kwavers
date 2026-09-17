@@ -10,5 +10,6 @@ pub mod log;
 #[cfg(feature = "test-util")]
 pub mod test_support;
 pub mod time;
+pub mod traversal;
 pub mod units;
 pub mod utils;
