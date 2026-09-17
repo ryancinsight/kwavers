@@ -13,16 +13,18 @@
 //! 24 × 128³ × 8 B = 24 × 16 MiB = 384 MiB of heap activity per step
 //! ```
 //!
-//! `ElasticStepScratch` pre-allocates all 12 grid workspaces and three PML
+//! `ElasticStepScratch` pre-allocates these 12 grid workspaces, the two
+//! derivative workspaces the stress sweeps pass values through, and three PML
 //! axis-factor arrays **once** before the time loop, reducing per-step heap
 //! activity to zero.
 //!
 //! ## Theorem (no aliasing)
 //!
-//! The 12 grid fields and three axis fields are independent allocations; no
+//! The 14 grid fields and three axis fields are independent allocations; no
 //! two fields alias the same memory region. `stress_divergence_into` writes
-//! `{sxx,syy,szz,sxy,sxz,syz,div_x,div_y,div_z}` and reads nothing from
-//! scratch → race-free parallel writes.  `compute_acceleration` subsequently
+//! `{sxx,syy,szz,sxy,sxz,syz,div_x,div_y,div_z}` and its two derivative
+//! workspaces, and never reads a scratch field before writing it in the same
+//! call; each sweep reads fields other than the one it writes.  `compute_acceleration` subsequently
 //! reads `{div_x,div_y,div_z}` (immutable views) and writes `{ax,ay,az}`
 //! (mutable views) — disjoint field sets, safe under Rust NLL field-split
 //! borrows.  The velocity-Verlet update reads `{ax,ay,az}` immutably and
@@ -70,6 +72,11 @@ pub struct ElasticStepScratch {
     pub ay: Array3<f64>,
     /// z-component of elastic acceleration
     pub az: Array3<f64>,
+    // --- Derivative workspace ---
+    /// One axis derivative between its sweep and the assembly that reads it.
+    pub(crate) derivative: Array3<f64>,
+    /// A second derivative read by the same assembly.
+    pub(crate) other_derivative: Array3<f64>,
     /// Cached x-axis PML factors for the active time step.
     pml_x: Array1<f64>,
     /// Cached y-axis PML factors for the active time step.
@@ -81,10 +88,10 @@ pub struct ElasticStepScratch {
 }
 
 impl ElasticStepScratch {
-    /// Allocate 12 grid workspaces and three PML axis-factor arrays.
+    /// Allocate 14 grid workspaces and three PML axis-factor arrays.
     ///
-    /// Cost: `8 × (12 × nx × ny × nz + nx + ny + nz)` bytes, paid once
-    /// before the time loop. For 128³: about 192 MiB one-time; zero per-step
+    /// Cost: `8 × (14 × nx × ny × nz + nx + ny + nz)` bytes, paid once
+    /// before the time loop. For 128³: about 224 MiB one-time; zero per-step
     /// allocation thereafter.
     #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
@@ -101,6 +108,8 @@ impl ElasticStepScratch {
             ax: Array3::<f64>::zeros((nx, ny, nz)),
             ay: Array3::<f64>::zeros((nx, ny, nz)),
             az: Array3::<f64>::zeros((nx, ny, nz)),
+            derivative: Array3::<f64>::zeros((nx, ny, nz)),
+            other_derivative: Array3::<f64>::zeros((nx, ny, nz)),
             pml_x: Array1::<f64>::zeros(nx),
             pml_y: Array1::<f64>::zeros(ny),
             pml_z: Array1::<f64>::zeros(nz),

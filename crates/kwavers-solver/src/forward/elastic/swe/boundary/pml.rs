@@ -195,7 +195,7 @@ impl ElasticSwePMLBoundary {
         let order = config.profile_order as i32;
 
         // Degenerate axes (size == 1): no propagation → no PML needed.
-        // Mirrors fd1_y / fd1_z guard (`if ny <= 1 { return 0.0 }`).
+        // A singleton axis has zero derivative along it, so nothing propagates.
         let pml_x = nx > 1;
         let pml_y = ny > 1;
         let pml_z = nz > 1;

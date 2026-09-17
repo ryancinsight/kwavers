@@ -1,43 +1,25 @@
-//! Two-pass elastic stress tensor divergence computation.
+//! Elastic stress tensor and its divergence, from whole-field derivative
+//! sweeps.
 //!
-//! ## Theorem (race-freedom under parallel execution)
+//! Every derivative is one sweep of leto's fourth-order central operator
+//! (ADR 128) over a whole field; the stresses and the divergence are then
+//! assembled pointwise through [`kwavers_core::traversal`]. A point's value
+//! depends only on its own inputs, so each pass is race-free under the
+//! parallel traversals.
 //!
-//! **Pass 1** reads `{ux,uy,uz,λ,μ}` (immutable views) and writes to six
-//! separate output arrays `{σxx,σyy,σzz,σxy,σxz,σyz}`.  Each output element
-//! `σ[i,j,k]` is written exactly once and is never read by another iteration,
-//! so parallel execution across `(i,j,k)` is race-free.
-//!
-//! **Pass 2** reads `{σxx,…,σyz}` (immutable after Pass 1 completes) and
-//! writes to `{div_x,div_y,div_z}`.  Same argument applies.
+//! Two scratch fields hold one derivative each between its sweep and the
+//! assembly that reads it. The normal strains need a third; they borrow the
+//! shear fields, which the shear pass overwrites right after.
 //!
 //! **Reference**: LeVeque (2002), "Finite Volume Methods for Hyperbolic
 //! Problems", §2.13 (stress-velocity formulation for elastic waves).
-//!
-//! ## Memory layout
-//!
-//! [`stress_divergence_into`] writes into pre-allocated fields of
-//! [`ElasticStepScratch`], eliminating all per-call heap allocations.
-//! [`stress_divergence`] is a convenience wrapper that allocates its own
-//! scratch internally; use it only in test code or non-hot paths.
 
-use super::super::coordinates::GridPosition;
 use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
-use super::fd_stencils::{fd1_x, fd1_y};
-use super::kernel::{
-    divergence_components, stress_components, FlatField, StencilPoint, StridedField,
-};
+use kwavers_core::traversal::{zip_mut, zip_mut_pair, zip_mut_triple};
 use kwavers_grid::Grid;
 use leto::Array3;
-use moirai_parallel::{
-    for_each_chunk_buffers_mut_enumerated_with, for_each_chunk_pair_mut_enumerated_with,
-    for_each_chunk_triple_mut_enumerated_with, Adaptive,
-};
-
-// At 16³, 1,024-element chunks produce four independent tasks, matching the
-// hosted four-core runner while amortizing scheduler bookkeeping. Larger grids
-// retain broad task fanout; paired operational runs rejected 512 elements.
-const STRESS_CHUNK: usize = 1024;
+use leto_ops::{Axis, FiniteDifference3D};
 
 fn validate_stress_divergence_shapes(
     grid: &Grid,
@@ -62,6 +44,8 @@ fn validate_stress_divergence_shapes(
         ("scratch.div_x", scratch.div_x.shape()),
         ("scratch.div_y", scratch.div_y.shape()),
         ("scratch.div_z", scratch.div_z.shape()),
+        ("scratch.derivative", scratch.derivative.shape()),
+        ("scratch.other_derivative", scratch.other_derivative.shape()),
     ] {
         assert!(
             actual == expected,
@@ -70,235 +54,68 @@ fn validate_stress_divergence_shapes(
     }
 }
 
-fn try_stress_standard_layout(
-    lambda: &Array3<f64>,
-    mu: &Array3<f64>,
-    field: &ElasticWaveField,
-    scratch: &mut ElasticStepScratch,
-    shape: [usize; 3],
-    spacing: [f64; 3],
-) -> bool {
-    let (Some(ux), Some(uy), Some(uz), Some(lambda), Some(mu)) = (
-        field.ux.as_slice(),
-        field.uy.as_slice(),
-        field.uz.as_slice(),
-        lambda.as_slice(),
-        mu.as_slice(),
-    ) else {
-        return false;
-    };
-    let (Some(sxx), Some(sxy), Some(sxz), Some(syy), Some(syz), Some(szz)) = (
-        scratch.sxx.as_slice_mut(),
-        scratch.sxy.as_slice_mut(),
-        scratch.sxz.as_slice_mut(),
-        scratch.syy.as_slice_mut(),
-        scratch.syz.as_slice_mut(),
-        scratch.szz.as_slice_mut(),
-    ) else {
-        return false;
-    };
-    let fields = [
-        FlatField(ux),
-        FlatField(uy),
-        FlatField(uz),
-        FlatField(lambda),
-        FlatField(mu),
-    ];
-    let [_, ny, nz] = shape;
-    for_each_chunk_buffers_mut_enumerated_with::<Adaptive, _, _, 6>(
-        [sxx, sxy, sxz, syy, syz, szz],
-        STRESS_CHUNK,
-        |chunk_idx, [sxx, sxy, sxz, syy, syz, szz]| {
-            let start = chunk_idx * STRESS_CHUNK;
-            let mut position = GridPosition::from_flat(start, ny, nz);
-            for offset in 0..sxx.len() {
-                let [xx, xy, xz, yy, yz, zz] = stress_components(
-                    fields,
-                    StencilPoint {
-                        index: start + offset,
-                        position: position.coordinates(),
-                        shape,
-                        spacing,
-                    },
-                );
-                sxx[offset] = xx;
-                sxy[offset] = xy;
-                sxz[offset] = xz;
-                syy[offset] = yy;
-                syz[offset] = yz;
-                szz[offset] = zz;
-                position.advance(ny, nz);
-            }
-        },
-    )
-    .expect("invariant: validated stress fields have equal lengths");
-    true
+/// Fourth-order central first derivatives on the grid's spacing.
+fn derivatives(grid: &Grid) -> FiniteDifference3D<f64> {
+    FiniteDifference3D::central_fourth_order(grid.dx, grid.dy, grid.dz)
+        .expect("invariant: a grid has positive spacing")
 }
 
-fn stress_strided_layout(
-    lambda: &Array3<f64>,
-    mu: &Array3<f64>,
-    field: &ElasticWaveField,
-    scratch: &mut ElasticStepScratch,
-    shape: [usize; 3],
-    spacing: [f64; 3],
-) {
-    let fields = [
-        StridedField(field.ux.view()),
-        StridedField(field.uy.view()),
-        StridedField(field.uz.view()),
-        StridedField(lambda.view()),
-        StridedField(mu.view()),
-    ];
-    let mut sxx = scratch.sxx.view_mut();
-    let mut sxy = scratch.sxy.view_mut();
-    let mut sxz = scratch.sxz.view_mut();
-    let mut syy = scratch.syy.view_mut();
-    let mut syz = scratch.syz.view_mut();
-    let mut szz = scratch.szz.view_mut();
-    let mut index = 0;
-    for i in 0..shape[0] {
-        for j in 0..shape[1] {
-            for k in 0..shape[2] {
-                let point = StencilPoint {
-                    index,
-                    position: [i, j, k],
-                    shape,
-                    spacing,
-                };
-                let [xx, xy, xz, yy, yz, zz] = stress_components(fields, point);
-                sxx[[i, j, k]] = xx;
-                sxy[[i, j, k]] = xy;
-                sxz[[i, j, k]] = xz;
-                syy[[i, j, k]] = yy;
-                syz[[i, j, k]] = yz;
-                szz[[i, j, k]] = zz;
-                index += 1;
-            }
-        }
+/// `out = ∂field/∂axis`.
+fn sweep(op: &FiniteDifference3D<f64>, axis: Axis, field: &Array3<f64>, out: &mut Array3<f64>) {
+    let mut out = out.view_mut();
+    match axis {
+        Axis::X => op.apply_x_into(field.view(), &mut out),
+        Axis::Y => op.apply_y_into(field.view(), &mut out),
+        Axis::Z => op.apply_z_into(field.view(), &mut out),
     }
+    .expect("invariant: validated elastic fields share the grid shape");
 }
 
-fn try_divergence_standard_layout(
-    scratch: &mut ElasticStepScratch,
-    shape: [usize; 3],
-    spacing: [f64; 3],
-) -> bool {
-    let (Some(sxx), Some(sxy), Some(sxz), Some(syy), Some(syz), Some(szz)) = (
-        scratch.sxx.as_slice(),
-        scratch.sxy.as_slice(),
-        scratch.sxz.as_slice(),
-        scratch.syy.as_slice(),
-        scratch.syz.as_slice(),
-        scratch.szz.as_slice(),
-    ) else {
-        return false;
-    };
-    let (Some(div_x), Some(div_y), Some(div_z)) = (
-        scratch.div_x.as_slice_mut(),
-        scratch.div_y.as_slice_mut(),
-        scratch.div_z.as_slice_mut(),
-    ) else {
-        return false;
-    };
-    let fields = [
-        FlatField(sxx),
-        FlatField(sxy),
-        FlatField(sxz),
-        FlatField(syy),
-        FlatField(syz),
-        FlatField(szz),
-    ];
-    let [_, ny, nz] = shape;
-    for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
-        div_x,
-        div_y,
-        div_z,
-        STRESS_CHUNK,
-        |chunk_idx, div_x, div_y, div_z| {
-            let start = chunk_idx * STRESS_CHUNK;
-            let mut position = GridPosition::from_flat(start, ny, nz);
-            for offset in 0..div_x.len() {
-                let [x, y, z] = divergence_components(
-                    fields,
-                    StencilPoint {
-                        index: start + offset,
-                        position: position.coordinates(),
-                        shape,
-                        spacing,
-                    },
-                );
-                div_x[offset] = x;
-                div_y[offset] = y;
-                div_z[offset] = z;
-                position.advance(ny, nz);
-            }
-        },
+/// `shear = μ (∂first/∂first_axis + ∂second/∂second_axis)`.
+fn shear(
+    op: &FiniteDifference3D<f64>,
+    (first_axis, first): (Axis, &Array3<f64>),
+    (second_axis, second): (Axis, &Array3<f64>),
+    mu: &Array3<f64>,
+    shear: &mut Array3<f64>,
+    [derivative, other_derivative]: [&mut Array3<f64>; 2],
+) {
+    sweep(op, first_axis, first, derivative);
+    sweep(op, second_axis, second, other_derivative);
+    zip_mut(
+        shear.view_mut(),
+        (derivative.view(), other_derivative.view(), mu.view()),
+        |value, (&a, &b, &mv)| *value = mv * (a + b),
     );
-    true
 }
 
-fn divergence_strided_layout(
-    scratch: &mut ElasticStepScratch,
-    shape: [usize; 3],
-    spacing: [f64; 3],
+/// `out = ∂first/∂x + ∂second/∂y + ∂third/∂z`, summed left to right.
+fn divergence(
+    op: &FiniteDifference3D<f64>,
+    [first, second, third]: [&Array3<f64>; 3],
+    out: &mut Array3<f64>,
+    [derivative, other_derivative]: [&mut Array3<f64>; 2],
 ) {
-    let fields = [
-        StridedField(scratch.sxx.view()),
-        StridedField(scratch.sxy.view()),
-        StridedField(scratch.sxz.view()),
-        StridedField(scratch.syy.view()),
-        StridedField(scratch.syz.view()),
-        StridedField(scratch.szz.view()),
-    ];
-    let mut div_x = scratch.div_x.view_mut();
-    let mut div_y = scratch.div_y.view_mut();
-    let mut div_z = scratch.div_z.view_mut();
-    let mut index = 0;
-    for i in 0..shape[0] {
-        for j in 0..shape[1] {
-            for k in 0..shape[2] {
-                let point = StencilPoint {
-                    index,
-                    position: [i, j, k],
-                    shape,
-                    spacing,
-                };
-                let [x, y, z] = divergence_components(fields, point);
-                div_x[[i, j, k]] = x;
-                div_y[[i, j, k]] = y;
-                div_z[[i, j, k]] = z;
-                index += 1;
-            }
-        }
-    }
+    sweep(op, Axis::X, first, out);
+    sweep(op, Axis::Y, second, derivative);
+    sweep(op, Axis::Z, third, other_derivative);
+    zip_mut(
+        out.view_mut(),
+        (derivative.view(), other_derivative.view()),
+        |value, (&b, &c)| *value = (*value + b) + c,
+    );
 }
 
-/// Fill `scratch.{sxx,…,syz,div_x,div_y,div_z}` with the elastic stress
-/// tensor divergence ∇·σ, reusing the caller's pre-allocated workspace.
+/// Compute the elastic stress tensor divergence ∇·σ into pre-allocated
+/// scratch buffers (zero allocation).
 ///
-/// ## Theorem (operator isolation)
-///
-/// `stress_divergence_into` is split into two independent chunk passes:
-/// - Pass 1 writes `{sxx,syy,szz,sxy,sxz,syz}` from displacement views.
-/// - Pass 2 reads the six stress fields (immutable views taken after Pass 1
-///   releases all mutable borrows) and writes `{div_x,div_y,div_z}`.
-///
-/// Rust's NLL field-split borrow rules guarantee that taking immutable views
-/// of `{sxx,…,syz}` while holding mutable views of `{div_x,div_y,div_z}`
-/// is safe because all twelve struct fields reside in distinct memory
-/// regions.
-///
-/// ## Parameters
-///
-/// - `scratch`: pre-allocated workspace whose stress and divergence fields
-///   match the grid shape; all fields are overwritten before use (no reads of
-///   stale data).
+/// Writes all six stress fields and the three divergence fields of `scratch`;
+/// its two derivative fields are overwritten as workspace. Stale contents are
+/// never read.
 ///
 /// # Panics
 ///
-/// Panics if a caller-supplied shape or an internal solver state violates
-/// the precondition required by this operation.
+/// Panics if any field or scratch shape differs from the grid's.
 pub fn stress_divergence_into(
     grid: &Grid,
     lambda: &Array3<f64>,
@@ -307,14 +124,66 @@ pub fn stress_divergence_into(
     scratch: &mut ElasticStepScratch,
 ) {
     validate_stress_divergence_shapes(grid, lambda, mu, field, scratch);
+    let op = derivatives(grid);
+    let ElasticStepScratch {
+        sxx,
+        syy,
+        szz,
+        sxy,
+        sxz,
+        syz,
+        div_x,
+        div_y,
+        div_z,
+        derivative,
+        other_derivative,
+        ..
+    } = scratch;
 
-    let shape = field.ux.shape();
-    let spacing = [grid.dx, grid.dy, grid.dz];
-    if !try_stress_standard_layout(lambda, mu, field, scratch, shape, spacing) {
-        stress_strided_layout(lambda, mu, field, scratch, shape, spacing);
+    // Normal strains, held in the shear fields until the diagonal stresses
+    // have read them.
+    sweep(&op, Axis::X, &field.ux, sxy);
+    sweep(&op, Axis::Y, &field.uy, sxz);
+    sweep(&op, Axis::Z, &field.uz, syz);
+    zip_mut_triple(
+        sxx.view_mut(),
+        syy.view_mut(),
+        szz.view_mut(),
+        (sxy.view(), sxz.view(), syz.view(), lambda.view(), mu.view()),
+        |xx, yy, zz, (&exx, &eyy, &ezz, &la, &mv)| {
+            let la2mu = 2.0f64.mul_add(mv, la);
+            *xx = la2mu.mul_add(exx, la * (eyy + ezz));
+            *yy = la2mu.mul_add(eyy, la * (exx + ezz));
+            *zz = la2mu.mul_add(ezz, la * (exx + eyy));
+        },
+    );
+
+    for (first, second, out) in [
+        ((Axis::Y, &field.ux), (Axis::X, &field.uy), &mut *sxy),
+        ((Axis::Z, &field.ux), (Axis::X, &field.uz), &mut *sxz),
+        ((Axis::Z, &field.uy), (Axis::Y, &field.uz), &mut *syz),
+    ] {
+        shear(
+            &op,
+            first,
+            second,
+            mu,
+            out,
+            [&mut *derivative, &mut *other_derivative],
+        );
     }
-    if !try_divergence_standard_layout(scratch, shape, spacing) {
-        divergence_strided_layout(scratch, shape, spacing);
+
+    for (stresses, out) in [
+        ([&*sxx, &*sxy, &*sxz], div_x),
+        ([&*sxy, &*syy, &*syz], div_y),
+        ([&*sxz, &*syz, &*szz], div_z),
+    ] {
+        divergence(
+            &op,
+            stresses,
+            out,
+            [&mut *derivative, &mut *other_derivative],
+        );
     }
 }
 
@@ -325,14 +194,14 @@ pub fn stress_divergence_into(
 /// contributions to the divergence vanish exactly. The kernel therefore
 /// computes only `{sxx, syy, sxy}` and `{div_x, div_y}`. The point-force
 /// driver's fresh scratch storage keeps `div_z = 0`. Selection happens once at
-/// the propagation boundary through a zero-sized stress mode; no dimensionality
-/// branch enters the voxel loops.
+/// the propagation boundary through a zero-sized stress mode.
 ///
 /// # Panics
 ///
-/// Panics in debug builds if the field is not a singleton-z plane-strain
-/// field. The point-force driver establishes these invariants before choosing
-/// this kernel.
+/// Panics if any field or scratch shape differs from the grid's, and in debug
+/// builds if the field is not a singleton-z plane-strain field. The
+/// point-force driver establishes these invariants before choosing this
+/// kernel.
 pub(crate) fn stress_divergence_plane_strain_into(
     grid: &Grid,
     lambda: &Array3<f64>,
@@ -340,75 +209,58 @@ pub(crate) fn stress_divergence_plane_strain_into(
     field: &ElasticWaveField,
     scratch: &mut ElasticStepScratch,
 ) {
-    let [nx, ny, nz] = field.ux.shape();
-    debug_assert_eq!(nz, 1);
-    let dx = grid.dx;
-    let dy = grid.dy;
-    let ux = field.ux.view();
-    let uy = field.uy.view();
-
-    {
-        let sxx_slice = scratch
-            .sxx
-            .as_slice_mut()
-            .expect("invariant: sxx uses standard layout");
-        let syy_slice = scratch
-            .syy
-            .as_slice_mut()
-            .expect("invariant: syy uses standard layout");
-        let sxy_slice = scratch
-            .sxy
-            .as_slice_mut()
-            .expect("invariant: sxy uses standard layout");
-        for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
-            sxx_slice,
-            syy_slice,
-            sxy_slice,
-            STRESS_CHUNK,
-            |chunk_idx, sxx_chunk, syy_chunk, sxy_chunk| {
-                let start = chunk_idx * STRESS_CHUNK;
-                for offset in 0..sxx_chunk.len() {
-                    let idx = start + offset;
-                    let i = idx / ny;
-                    let j = idx % ny;
-                    let exx = fd1_x(ux, i, j, 0, nx, dx);
-                    let eyy = fd1_y(uy, i, j, 0, ny, dy);
-                    let la = lambda[[i, j, 0]];
-                    let mv = mu[[i, j, 0]];
-                    let la2mu = 2.0f64.mul_add(mv, la);
-                    sxx_chunk[offset] = la2mu.mul_add(exx, la * eyy);
-                    syy_chunk[offset] = la2mu.mul_add(eyy, la * exx);
-                    sxy_chunk[offset] =
-                        mv * (fd1_y(ux, i, j, 0, ny, dy) + fd1_x(uy, i, j, 0, nx, dx));
-                }
-            },
-        );
-    }
-
-    let sxx = scratch.sxx.view();
-    let syy = scratch.syy.view();
-    let sxy = scratch.sxy.view();
-    let div_x = scratch
-        .div_x
-        .as_slice_mut()
-        .expect("invariant: div_x uses standard layout");
-    let div_y = scratch
-        .div_y
-        .as_slice_mut()
-        .expect("invariant: div_y uses standard layout");
-    for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
+    debug_assert_eq!(field.ux.shape()[2], 1);
+    validate_stress_divergence_shapes(grid, lambda, mu, field, scratch);
+    let op = derivatives(grid);
+    let ElasticStepScratch {
+        sxx,
+        syy,
+        sxy,
         div_x,
         div_y,
-        STRESS_CHUNK,
-        |chunk_idx, div_x_chunk, div_y_chunk| {
-            let start = chunk_idx * STRESS_CHUNK;
-            for offset in 0..div_x_chunk.len() {
-                let idx = start + offset;
-                let i = idx / ny;
-                let j = idx % ny;
-                div_x_chunk[offset] = fd1_x(sxx, i, j, 0, nx, dx) + fd1_y(sxy, i, j, 0, ny, dy);
-                div_y_chunk[offset] = fd1_x(sxy, i, j, 0, nx, dx) + fd1_y(syy, i, j, 0, ny, dy);
-            }
+        derivative,
+        other_derivative,
+        ..
+    } = scratch;
+
+    sweep(&op, Axis::X, &field.ux, derivative);
+    sweep(&op, Axis::Y, &field.uy, other_derivative);
+    plane_diagonal_stresses(sxx, syy, derivative, other_derivative, lambda, mu);
+    shear(
+        &op,
+        (Axis::Y, &field.ux),
+        (Axis::X, &field.uy),
+        mu,
+        sxy,
+        [&mut *derivative, &mut *other_derivative],
+    );
+
+    for ([first, second], out) in [([&*sxx, &*sxy], div_x), ([&*sxy, &*syy], div_y)] {
+        sweep(&op, Axis::X, first, out);
+        sweep(&op, Axis::Y, second, derivative);
+        zip_mut(out.view_mut(), derivative.view(), |value, &b| {
+            *value += b;
+        });
+    }
+}
+
+/// The in-plane diagonal stresses from their two normal strains.
+fn plane_diagonal_stresses(
+    sxx: &mut Array3<f64>,
+    syy: &mut Array3<f64>,
+    exx: &Array3<f64>,
+    eyy: &Array3<f64>,
+    lambda: &Array3<f64>,
+    mu: &Array3<f64>,
+) {
+    zip_mut_pair(
+        sxx.view_mut(),
+        syy.view_mut(),
+        (exx.view(), eyy.view(), lambda.view(), mu.view()),
+        |xx, yy, (&exx, &eyy, &la, &mv)| {
+            let la2mu = 2.0f64.mul_add(mv, la);
+            *xx = la2mu.mul_add(exx, la * eyy);
+            *yy = la2mu.mul_add(eyy, la * exx);
         },
     );
 }
