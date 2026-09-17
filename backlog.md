@@ -2,33 +2,21 @@
 
 <a id="kw-fdtd-fuse-velocity"></a>
 
-## KW-FDTD-FUSE-VELOCITY-2026-09-16 — Fusing the three velocity axis updates is slower [patch] [perf] — done
+## KW-FDTD-FUSE-VELOCITY-2026-09-16 — Fusing the three velocity axis updates is slower [patch] [perf] — done 2026-09-16
 
-- **Hypothesis.** With the phase split trustworthy (`kw-fdtd-probe-diverged`), the pointwise passes are the larger half of the order-2 step. The staggered velocity update calls one pointwise kernel per axis, so the volume is walked three times and the density field read in each; one pass over the three components should read it once and save two traversals.
-- **Built and proven equivalent.** `update_velocity_from_gradients` walks the three components through `for_each_z_lane_triple`, reading each axis's own gradient and the shared density lane once. A test asserted it reproduces the three separate calls element by element, to the bit, at 24 cubed.
-- **Measured: slower.** Four rounds alternating the two arms in one tree, comparing each arm's fastest repeat (a peer build inflates a mean but cannot make a repeat faster). Order-2 velocity pointwise, microseconds: baseline 66, 68, 68, 69; fused 75, 70, 70, 76. The whole step went 309 to 313. Order 4 reads the same way. The direction is consistent across every round.
-- **Why, most likely.** The saving was already free: at 64 cubed the density field is 2 MB and stays resident across three passes, so the second and third reads cost L3 hits rather than memory traffic. Against that, the fused lane runs seven concurrent streams — three velocity writes, three gradient reads, one density — where each separate pass ran three, and this host has shown before that stream count can outweigh instruction count. Not attributed further: the change is abandoned, so the attribution would buy nothing.
-- **Outcome.** The fused kernel and its equivalence test are dropped; the instrument upgrade they motivated is kept (each arm now reports its fastest repeat beside its mean, which is what made this measurable on a shared host at all). A future attempt at pointwise fusion here should first count the streams it creates and expect the density reads to be free.
+- Not delivered: a fused three-axis velocity pass was bitwise-equal and measured slower (order-2 pointwise 66-69 us baseline, 70-76 us fused, four rounds by fastest repeat); seven concurrent streams against three, density reads already L3 hits. Count streams before retrying pointwise fusion.
 
 <a id="kw-fdtd-probe-diverged"></a>
 
-## KW-FDTD-PROBE-DIVERGED-2026-09-16 — The FDTD phase split timed a diverging run [patch] [perf] — review
+## KW-FDTD-PROBE-DIVERGED-2026-09-16 — The FDTD phase split timed a diverging run [patch] [perf] — done 2026-09-16
 
-- **Finding.** `fdtd_step_phase_split` reported an order-4 split whose pressure field had reached 1e250 by the end of its loops. Floating point does not slow down before denormals, so a blow-up times exactly like a valid run and the probe's `is_finite` guard stayed quiet. Found by censusing the field magnitudes while chasing a different oddity: the step measuring *cheaper* than the two updates it contains.
-- **Cause, in shared test infrastructure.** `make_solver` derived `dt` from `cfl/sqrt(3)` — the collocated second-order Courant limit — whatever the spatial order. The staggered limit falls with the order: `1/(sqrt(3)*sum|c_n|)` is 0.4949 at order 4 against 0.5774 at order 2, so `cfl_factor` 0.95 put a fourth-order run 11% past its limit. The solver already computes this correctly in `max_stable_dt`, which reads the coefficients off the stencil; the helper was not asking it. It does now, and the order-4 peak falls to 8.0e4 against order 2's 5.9e4.
-- **Also fixed: the split subtracted across loops.** An update minus the sweeps it contains, and the step minus the two updates it contains, were each computed from separately-timed loops, so both carried whatever the host did between them — and the second came out negative in every run. Every arm now alternates inside one loop. The same defect and the same cure applied to the PSTD probe earlier (`kw-pstd-transform-split`).
-- **What this invalidates.** The order-4 figures recorded under `KW-FDTD-POINTWISE-LANES-2026-09-15` (sweeps 1.09 ms of a 3.03 ms step) were measured on the diverging configuration, and the order-2 split there was measured in the separate-loop form. Paired and bounded, a quiet-host order-2 step reads 367 us: velocity 153 = gradients 64 + pointwise 89, pressure 138 = divergences 67 + accumulate and update 71. The sweeps are not the larger half; the pointwise passes are.
-- **Guard.** `is_finite` becomes a bounded peak with three decades of headroom over a stable run. Restoring the old timestep fails it with `peak 2.577860636839099e250`, which is how the guard was checked rather than assumed.
-- **Integrator:** claude-opus-5; **branch:** `test/kwavers-fdtd-phase-pairs`; **last-update:** 2026-09-16.
+- PR [#796](https://github.com/ryancinsight/kwavers/pull/796) (`485863f59`). Test `dt` from `max_stable_dt` (order 4 had run 11% past the staggered limit to 2.6e250); arms paired in one loop; bounded-peak guard. Order-2 step ~310 us split evenly between sweeps and pointwise passes. #797 adds per-arm fastest repeats.
 
 <a id="kw-first-touch-by-worker"></a>
 
-## KW-FIRST-TOUCH-BY-WORKER-2026-09-16 — Parallel first touch split at 512 elements [patch] [perf] — review
+## KW-FIRST-TOUCH-BY-WORKER-2026-09-16 — Parallel first touch split at 512 elements [patch] [perf] — done 2026-09-16
 
-- **Finding.** `SoAFieldStorage::first_touch_field_parallel` chunked at a hand-picked 512 elements while its sibling `ArenaLayoutNumaAware::first_touch` chunks by worker count. First touch binds a page to the node of the thread that writes it, so 128 tasks per worker on a 64 Ki field leave each page on whichever worker took its task — the affinity the call exists to establish.
-- **Change.** Both paths split the same way, one contiguous run per worker. This is the one site in the chunk-width sweep where unit tasks are the wrong answer: the split is semantic, not a question of bytes moved.
-- **Also found:** `SoAFieldStorage` is a 374-line public type with 13 public methods and no user anywhere in the stack — only re-exports. Filed as `KW-SOA-STORAGE-UNUSED-2026-09-16`.
-- **Integrator:** claude-opus-5; **branch:** `fix/kwavers-first-touch-by-worker`; **last-update:** 2026-09-16.
+- PR [#795](https://github.com/ryancinsight/kwavers/pull/795) (`08c58943b`). SoA first touch splits one run per worker, matching the NUMA-aware layout.
 
 <a id="kw-soa-storage-unused"></a>
 
@@ -41,28 +29,25 @@
 
 <a id="kw-grid-plane-tasks"></a>
 
-## KW-GRID-PLANE-TASKS-2026-09-16 — The Laplacian schedules one plane per task [patch] [perf] — review
+## KW-GRID-PLANE-TASKS-2026-09-16 — The Laplacian schedules one plane per task [patch] [perf] — done 2026-09-16
 
-- Delivered: PR [#794](https://github.com/ryancinsight/kwavers/pull/794), commit `f21f96479`. A task carries as many whole x-planes as the bytes it moves allow — its own plane plus the three the stencil reads — instead of one plane whatever it weighs (2 KB at 16 cubed, against moirai's ~180 ns dispatch).
-- Coverage: the two existing cases assert a Laplacian of zero everywhere, so a plane a task dropped, doubled or shifted still read zero, and at 10 cubed they sat under the parallel floor. The new case is 16 cubed with a distinct value per cell against the operator's own expression; injecting a one-plane shift fails it, which is how the oracle was checked.
+- PR [#794](https://github.com/ryancinsight/kwavers/pull/794) (`9a6dd56ba`). Laplacian tasks sized by bytes moved; per-cell index oracle proven to bite.
 
 <a id="kw-traversal-unit-tasks"></a>
 
-## KW-TRAVERSAL-UNIT-TASKS-2026-09-16 — Field traversal adapters size their own chunks [patch] [perf] — review
+## KW-TRAVERSAL-UNIT-TASKS-2026-09-16 — Field traversal adapters size their own chunks [patch] [perf] — done 2026-09-16
 
-- Delivered: PR [#793](https://github.com/ryancinsight/kwavers/pull/793), commit `83a01c6d7`. The seven adapters in `kwavers-medium` and the `kwavers` facade take task width from the bytes a unit moves; both `FIELD_CHUNK_SIZE` constants are gone. Policy unchanged, so no dispatch change.
-- Coverage: `for_each_mut` and `zip_mut_three_refs` never ran in either suite, and the other five only at 1 to 1000 elements, under the parallel floor. Five tests now drive all seven at 32768 cells, bit for bit, each probe-confirmed to run.
+- PR [#793](https://github.com/ryancinsight/kwavers/pull/793) (`6fe4f8fbc`). Seven traversal adapters on moirai unit tasks; `FIELD_CHUNK_SIZE` removed.
 
 <a id="kw-math-unit-tasks"></a>
 
-## KW-MATH-UNIT-TASKS-2026-09-16 — Math kernels size their own chunks [patch] [perf] — review
+## KW-MATH-UNIT-TASKS-2026-09-16 — Math kernels size their own chunks [patch] [perf] — done 2026-09-16
 
-- Delivered: PR [#792](https://github.com/ryancinsight/kwavers/pull/792), commit `5dd09e627`. The traversal adapter, the two spectral assign kernels and the wavenumber fill take task width from bytes; `MATH_CHUNK_SIZE`, `FFT_ASSIGN_CHUNK_LEN` and `KSPACE_CHUNK_LEN` are gone.
-- Coverage: none of the three FFT kernels ran in this crate's suite and the adapter only at 3 to 125 elements. Four tests now drive each across several tasks against its own source, each probe-confirmed to run.
+- PR [#792](https://github.com/ryancinsight/kwavers/pull/792) (`19c12b420`). Math kernels on moirai unit tasks; three chunk constants removed.
 
 <a id="kw-prose-pr-unmergeable"></a>
 
-## KW-PROSE-PR-UNMERGEABLE-2026-09-16 — A prose-only pull request can never satisfy the required checks [patch] [ci] — review
+## KW-PROSE-PR-UNMERGEABLE-2026-09-16 — A prose-only pull request can never satisfy the required checks [patch] [ci] — blocked
 
 - **Finding.** `main` requires nine status checks. All nine come from `ci.yml` and `architecture-validation.yml`, and both workflows carried `paths-ignore` for `backlog.md`, `CHANGELOG.md`, `README.md`, `gap_audit.md` and `docs/**` on their pull-request trigger. A filtered workflow reports no check at all — not a skipped one — so a pull request touching only those paths sits at `BLOCKED` with zero checks forever. [#785](https://github.com/ryancinsight/kwavers/pull/785) is the live instance; the last prose-only one, #768, went in by administrative merge, which is how the defect stayed invisible.
 - **Change.** The path filter moves one step later, from the trigger to a `changes` job that reads the pull request's own file list (the API, not a diff: a checkout here is shallow, and fetching the history to classify five paths costs more than the jobs it skips). `lockfile` and `semver` gate on it in `ci.yml` and every job reaches one of those two; each standalone job gates on it in `architecture-validation.yml`. A skipped required job counts as a success, so a prose-only pull request now reports all nine and merges on its own. Anything the classifier cannot read answers `true` and runs the gate.
@@ -73,14 +58,9 @@
 
 <a id="kw-pstd-transform-split"></a>
 
-## KW-PSTD-TRANSFORM-SPLIT-2026-09-15 — The PSTD velocity and density phases are unsplit [patch] [perf] — review
+## KW-PSTD-TRANSFORM-SPLIT-2026-09-15 — The PSTD velocity and density phases are unsplit [patch] [perf] — done 2026-09-16
 
-- **Finding.** `pstd_step_phase_split` put the velocity update at 1.6-1.8 ms and the density update at 1.9-2.1 ms of a 3.4-3.8 ms step, with the pressure update at 34-74 us. Each of those two phases runs three spectral derivatives beside its lane kernels, so whether the transforms or the kernels held the time was unknown.
-- **Change.** Each spectral phase is timed against the transforms it runs, one arm per repeat inside one loop. Timing the arms in separate loops attributed drift in the host load to whichever arm ran under it, which on the first two attempts put a phase below the transforms it contains (a negative kernel time, run discarded). Alternating them exposes both arms to the same drift, so the split is a reading of the code on a host carrying peer builds. Probe only; no production code changes.
-- **Measured.** Two runs at 64 cubed, split-field StandardPSTD with CPML, 200 repeats per arm after 20 warm: run 1 (no peer builds at the start) velocity 1695 us as transforms 1369 plus kernels 327, density 1709 as transforms 1402 plus kernels 307; run 2 (5 to 8 peer builds) velocity 1977 as transforms 1483 plus kernels 494, density 1830 as transforms 1582 plus kernels 247.
-- **Reading.** The transforms hold 75 to 86% of both spectral phases in both runs, so the PSTD step at this size is the 3-D real transform pair, not the kwavers kernels around it. The next lever is apollo's forward and inverse r2c/c2r at 64 cubed; filed there rather than here.
-- **Acceptance met:** transform and kernel time reported for both phases, each arm positive and internally consistent in both runs.
-- **Integrator:** claude-opus-5; **branch:** `test/kwavers-pstd-transform-split`; **PR:** #787; **last-update:** 2026-09-15.
+- PR [#787](https://github.com/ryancinsight/kwavers/pull/787) (`c8eaedab0`). PSTD velocity and density phases timed against their transforms in paired arms; transforms are 75-86% of the step.
 
 <a id="kw-pstd-phase-split"></a>
 
@@ -139,53 +119,33 @@
 
 <a id="kw-pstd-linear-eos-lanes"></a>
 
-## KW-PSTD-LINEAR-EOS-LANES-2026-09-15 — The linear EOS is the last step kernel on a hand-sized chunk [patch] [perf] — in-progress
+## KW-PSTD-LINEAR-EOS-LANES-2026-09-15 — The linear EOS is the last step kernel on a hand-sized chunk [patch] [perf] — done 2026-09-15
 
-- **Finding.** `apply_linear_eos` runs every step of every linear run and writes `div_u` and `p` in one pass over `PRESSURE_UPDATE_CHUNK = 4096`-element chunks, reading four slices by bounds-checked index per element; the one-output lane walker could not take it.
-- **Change.** `pstd::lanes::for_each_z_lane_pair` on moirai's `for_each_unit_task_pair_mut_with` (moirai #348); the EOS zips each lane pair against its inputs with the expression unchanged and stays one fused pass; the chunk constant goes. The lock advances moirai to the revision carrying #348.
-- **Acceptance:** a bitwise differential against the per-element formula for both outputs; allocation contract and PSTD suites unchanged; clippy clean.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-linear-eos-lanes` (stacked on #777); **last-update:** 2026-09-15.
+- PR [#778](https://github.com/ryancinsight/kwavers/pull/778) (`cd8aa4ae9`). Linear EOS on paired z lanes; `PRESSURE_UPDATE_CHUNK` removed.
 
 <a id="kw-pstd-source-lanes"></a>
 
-## KW-PSTD-SOURCE-LANES-2026-09-15 — Source, filter and residual-gas kernels dispatch per element behind a one-type dyn trait [patch] [perf] — in-progress
+## KW-PSTD-SOURCE-LANES-2026-09-15 — Source, filter and residual-gas kernels dispatch per element behind a one-type dyn trait [patch] [perf] — done 2026-09-15
 
-- **Finding.** `stepper/ops.rs`: `scale_real_field`, `add_masked_source_term`, `add_gradient_source_term` and `multiply_complex_by_real_field` (the anti-aliasing filter, every step when enabled) index slices per element through `enumerate_mut_with::<Adaptive>`; `DenseFieldMut` has one implementor, `LetoArray3<f64>`, yet returns `Box<dyn Iterator>` for its fallback. `residual_gas_absorption.rs` dispatches its spectral shape, loss and dispersion kernels the same way.
-- **Change.** The seven kernels zip contiguous z lanes on moirai unit tasks with expressions unchanged; `DenseFieldMut` is deleted and the kernels take `LetoArray3<f64>`. `add_density_source_components` writes three fields per element and keeps its chunks: a triple unit form has no second consumer.
-- **Acceptance:** bitwise differentials against the per-element formulas; PSTD source, filter and residual-gas tests unchanged; allocation contract and clippy clean.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-source-lanes` (stacked on #776); **last-update:** 2026-09-15.
+- PR [#777](https://github.com/ryancinsight/kwavers/pull/777) (`a47195cfc`). Source, filter and residual-gas kernels on z lanes; `DenseFieldMut` removed.
 
 <a id="kw-pstd-eos-lanes"></a>
 
-## KW-PSTD-EOS-LANES-2026-09-15 — The EOS dispatches per element and nonlinear runs hold the nonlinearity field twice [patch] [perf] — in-progress
+## KW-PSTD-EOS-LANES-2026-09-15 — The EOS dispatches per element and nonlinear runs hold the nonlinearity field twice [patch] [perf] — done 2026-09-15
 
-- **Finding.** `accumulate_split_density` and `apply_nonlinear_eos` (`propagator/pressure/mod.rs`) index four and five slices per element through `enumerate_mut_with::<Adaptive>` every step. Construction clones `materials.nonlinearity` into `bon` on nonlinear runs; nothing writes either afterwards, so it is a second full grid (8 B per point).
-- **Change.** Both kernels zip contiguous z lanes on moirai unit tasks with expressions unchanged; `bon` is deleted and the EOS reads `materials.nonlinearity`. The linear EOS writes two outputs per element and stays on its fixed chunks until a two-output lane walker exists.
-- **Acceptance:** bitwise differentials against the per-element formulas; allocation contract and PSTD suites unchanged.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-eos-lanes` (stacked on the absorption PR); **last-update:** 2026-09-15.
+- PR [#776](https://github.com/ryancinsight/kwavers/pull/776) (`a0393eb2d`). EOS kernels on z lanes; the duplicated nonlinearity grid removed.
 
 <a id="kw-pstd-absorption-lanes"></a>
 
-## KW-PSTD-ABSORPTION-LANES-2026-09-15 — Power-law absorption adds 80% to a step through per-element dispatch [patch] [perf] — review
+## KW-PSTD-ABSORPTION-LANES-2026-09-15 — Power-law absorption adds 80% to a step through per-element dispatch [patch] [perf] — done 2026-09-15
 
-- **Finding.** `pstd_long_run` at 64³: power-law 7.17 ms against lossless 4.00 ms. Beyond its four transforms, `multiply_spectral_operator` recovers `(i, j, k)` by division per element and reads `operator[[i, j, k]]` though both arrays are contiguous half spectra (`apply.rs:112`), and `build_weighted_divergence`, `accumulate_stratum` and `apply_pressure_absorption` index several slices per element through `enumerate_mut_with::<Adaptive>`.
-- **Change.** The four kernels walk z lanes as contiguous zips on moirai unit tasks with unchanged arithmetic order; the identity `slice_with(..nz_c)` on the already-truncated operators goes; `lanes.rs` moves to `pstd/` so propagator and absorption share one walker.
-- **Acceptance:** bitwise differentials against the per-element formulas; the power-law arm of `pstd_long_run` falls with the FullKSpace arm as control; PSTD suites unchanged.
-- **PR:** #775 (`a325ddc07`). Bitwise differentials for all four kernels; `pstd_long_run` power-law 32³ 7–14% faster multi-threaded (FullKSpace control within 2%) and 6–10% pinned; 64³ within its controls' band, no regression.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-absorption-lanes`; **last-update:** 2026-09-15.
+- PR [#775](https://github.com/ryancinsight/kwavers/pull/775) (`991ac36a8`). Power-law absorption on z lanes; 32 cubed 7-14% faster, 64 cubed within control band.
 
 <a id="kw-pstd-long-run"></a>
 
-## KW-PSTD-LONG-RUN-2026-09-15 — A long PSTD run pays per step for work no instrument times [major] [perf] — review
+## KW-PSTD-LONG-RUN-2026-09-15 — A long PSTD run pays per step for work no instrument times [major] [perf] — done 2026-09-15
 
-- **Finding.** No benchmark times `step_forward`; the step's non-transform kernels (`velocity.rs:128,174`, `density_cartesian.rs:87,194`, `absorption/apply.rs:122`) recover `(i, j, k)` by two divisions and two modulos per element through `enumerate_mut_with::<Adaptive>` to read a factor constant along one axis, which also blocks vectorization. FullKSpace allocates about 80 B per grid point per step (`step.rs:219-264`, `k_space/operators.rs:92,103`). No test pins a zero-allocation step.
-- **Slice 1:** `pstd_long_run` bench (lossless, power-law, FullKSpace at 32³/64³) and `pstd_steps_after_setup_do_not_allocate`. **Slice 2:** row-shaped kernels over a byte-sized row primitive (upstream home: leto-ops `parallel`, see [survey](../apollo/backlog.md#apollo-lane-parallel-threshold)). **Slice 3:** FullKSpace buffers persistent.
-- **Acceptance:** per-step time falls in every arm with the transform pair's share reported; the allocation contract holds; PSTD validation suites unchanged.
-- **Slice 1** (`e452dfe9b`): `pstd_long_run` baseline, unpinned at 8% load — lossless 1.13 / 5.71 ms, power-law 1.75 / 7.48 ms, FullKSpace 1.09 / 12.48 ms at 32³ / 64³; `pstd_steps_after_setup_do_not_allocate` pins StandardPSTD at zero (FullKSpace read 56 in eight steps).
-- **Slice 3** (`b6358e2d7`): FullKSpace on the half-spectrum pair with persistent buffers and an in-place boundary; Fourier-mode oracle holds; the contract reads zero for both methods. FullKSpace 0.74 / 6.30 ms (−32% / −50%) at 8–19% load, against identical-code controls that drifted up to 23%; the 32³ reading needs a quiet paired repeat.
-- **Slice 2** (`45cfc5431`): split-field kernels walk z lanes on moirai `for_each_unit_task_mut_with` (moirai #346); bitwise differentials against the per-element formula; lossless 1.08 / 4.00 ms (−9% at 64³) with the FullKSpace control within 1%, at 13–16% load.
-- **PR:** #774. [major] for slice 3's removal of `PSTDKSOperators::{p_prev, wave_coeff, ensure_wave_coeff}`.
-- **Integrator:** claude-opus-5; **branch:** `perf/kwavers-pstd-long-run`; **last-update:** 2026-09-15.
+- PR [#774](https://github.com/ryancinsight/kwavers/pull/774) (`92694bf68`). `pstd_long_run` instrument; split-field kernels on z lanes (-9% at 64 cubed); unused `PSTDKSOperators` state removed.
 
 <a id="kw-native-r2c"></a>
 
@@ -570,33 +530,9 @@
 
 <a id="kw-mnemosyne-global-allocator-2026-09-08"></a>
 
-## KW-MNEMOSYNE-GLOBAL-ALLOCATOR-2026-09-08 — Route kwavers allocation through Mnemosyne [patch] — review
+## KW-MNEMOSYNE-GLOBAL-ALLOCATOR-2026-09-08 — Route kwavers allocation through Mnemosyne [patch] — done 2026-09-16
 
-- **Outcome:** the `kwavers` binary and `xtask` install `mnemosyne::Mnemosyne`
-  as their `#[global_allocator]` and `kwavers-alloc-probe`'s
-  `ThreadScopedAllocator` forwards to it instead of `System`. First-party
-  supremacy: Mnemosyne is the stack's allocator, and kwavers was on `System`.
-- **Ported, not cherry-picked.** `chore/kwavers-xtask-mnemosyne-allocator` had
-  gone 13 days and 110 commits stale, and `main` has since changed every file
-  it touched. The source intent is re-applied onto current `main`, and the
-  facade enters as a workspace dependency at `main`'s own mnemosyne revision
-  `e8e825f4`, so the facade and the `mnemosyne-arena`/`-backend`/`-core`/
-  `-heap` crates resolve to one source identity. The branch's four superseded
-  pin advances are not resurrected; it is deleted once this lands.
-- **`DomainPMLBoundary` keeps `Vec`, deliberately.** The original outcome also
-  had it hold `AlignedVec`. With Mnemosyne installed globally a `Vec` already
-  allocates through Mnemosyne, so that change buys only alignment — on six
-  `thickness`-length profiles (10 elements by default) read one scalar at a
-  time through `get_damping`, against a new dependency edge from a domain
-  crate to the allocator facade. No measurement asks for it, so it is not
-  delivered; re-open with one if a profile ever moves to a vectorized read.
-- **The probe change carried its own oracle.** `ThreadScopedAllocator` backs
-  the allocation-contract tests, so swapping what it forwards to could move the
-  counts they assert. It does not: the probe counts its own calls before
-  forwarding, and the contract suites pass unchanged, with no assertion
-  re-derived or relaxed.
-- **Integrator:** claude-opus-5; **branch:**
-  `chore/kwavers-mnemosyne-global-allocator`; **last-update:** 2026-09-15.
+- PR [#788](https://github.com/ryancinsight/kwavers/pull/788) (`997efc73a`). `kwavers` and `xtask` install Mnemosyne as global allocator; the allocation probe forwards to it with contract suites unchanged.
 
 <a id="kw-semver-informational-reports-red-2026-09-08"></a>
 
