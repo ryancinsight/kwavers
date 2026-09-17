@@ -19,6 +19,7 @@
 
 use crate::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use crate::phase_timing::PhaseTimer;
 use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
@@ -26,65 +27,16 @@ use kwavers_math::fft::Fft3dInOutExt;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
 use leto::Array3;
-use std::time::{Duration, Instant};
 
 /// Cells per axis, the grid the FDTD split used.
 const N: usize = 64;
 /// Grid spacing, in metres.
 const DX: f64 = 1.0e-4;
-/// Repeats per phase loop.
-const REPEATS: usize = 200;
-/// Repeats of a phase before its loop is timed, so plans, caches and task
-/// pools are warm for that phase.
-const WARM_REPEATS: usize = 20;
-
-/// Mean and fastest repeat of `phase`, in microseconds, after warming it.
-fn time_phase(solver: &mut PSTDSolver, mut phase: impl FnMut(&mut PSTDSolver)) -> (f64, f64) {
-    for _ in 0..WARM_REPEATS {
-        phase(solver);
-    }
-    let mut total = Duration::ZERO;
-    let mut fastest = Duration::MAX;
-    for _ in 0..REPEATS {
-        let start = Instant::now();
-        phase(solver);
-        let elapsed = start.elapsed();
-        total += elapsed;
-        fastest = fastest.min(elapsed);
-    }
-    let micros = |d: Duration| d.as_secs_f64() * 1.0e6;
-    (micros(total) / REPEATS as f64, micros(fastest))
-}
-
-/// Means of `first` and `second`, in microseconds, timed alternately inside
-/// one loop after warming both.
-///
-/// Timing them in separate loops attributes any drift in the host load to
-/// whichever arm ran while it drifted: on a host carrying peer builds that put
-/// a phase below the transforms it contains, a negative kernel time. One arm
-/// per repeat exposes both to the same drift, so their difference stays a
-/// reading of the code even when neither mean is a reading of a quiet host.
-fn time_phase_pair(
-    solver: &mut PSTDSolver,
-    mut first: impl FnMut(&mut PSTDSolver),
-    mut second: impl FnMut(&mut PSTDSolver),
-) -> (f64, f64) {
-    for _ in 0..WARM_REPEATS {
-        first(solver);
-        second(solver);
-    }
-    let (mut first_total, mut second_total) = (Duration::ZERO, Duration::ZERO);
-    for _ in 0..REPEATS {
-        let start = Instant::now();
-        first(solver);
-        first_total += start.elapsed();
-        let start = Instant::now();
-        second(solver);
-        second_total += start.elapsed();
-    }
-    let mean = |total: Duration| total.as_secs_f64() * 1.0e6 / REPEATS as f64;
-    (mean(first_total), mean(second_total))
-}
+/// Repeats per phase loop, after warming plans, caches and task pools.
+const TIMER: PhaseTimer = PhaseTimer {
+    repeats: 200,
+    warm: 20,
+};
 
 /// A water solver with a centred initial pressure, CPML as a long run carries.
 fn probe_solver() -> PSTDSolver {
@@ -119,14 +71,14 @@ fn pstd_step_phase_split() {
     let mut solver = probe_solver();
     let dt = solver.config.dt;
 
-    let (step, step_fastest) = time_phase(&mut solver, |s| {
+    let step = TIMER.single(&mut solver, |s| {
         s.step_forward().expect("step");
     });
     // Each spectral phase is timed against the transforms it runs, one arm per
     // repeat: the velocity update runs one forward and three inverse
     // transforms, the density update three of each. Both transform arms write
     // scratch the step rewrites every call.
-    let (velocity, velocity_transforms) = time_phase_pair(
+    let (velocity, velocity_transforms) = TIMER.pair(
         &mut solver,
         |s| {
             s.update_velocity(dt).expect("velocity update");
@@ -138,7 +90,7 @@ fn pstd_step_phase_split() {
             s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_u);
         },
     );
-    let (density, density_transforms) = time_phase_pair(
+    let (density, density_transforms) = TIMER.pair(
         &mut solver,
         |s| {
             s.update_density(dt).expect("density update");
@@ -152,14 +104,19 @@ fn pstd_step_phase_split() {
             s.fft.inverse_c2r_into(&mut s.grad_k, &mut s.div_uz);
         },
     );
-    let (pressure, _) = time_phase(&mut solver, |s| {
+    let pressure = TIMER.single(&mut solver, |s| {
         s.update_pressure(dt).expect("pressure update");
     });
-    let (back_to_back, _) = time_phase(&mut solver, |s| {
+    let back_to_back = TIMER.single(&mut solver, |s| {
         s.update_velocity(dt).expect("velocity update");
         s.update_density(dt).expect("density update");
         s.update_pressure(dt).expect("pressure update");
     });
+
+    let (step, step_fastest) = (step.mean, step.fastest);
+    let (velocity, velocity_transforms) = (velocity.mean, velocity_transforms.mean);
+    let (density, density_transforms) = (density.mean, density_transforms.mean);
+    let (pressure, back_to_back) = (pressure.mean, back_to_back.mean);
 
     // A run that diverged would time NaN arithmetic, not the step.
     assert!(

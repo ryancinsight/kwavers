@@ -5,6 +5,9 @@ mod body_force;
 mod damping;
 mod step;
 
+#[cfg(test)]
+mod phase_split;
+
 pub(crate) use body_force::PreparedBodyForces;
 
 use super::super::boundary::ElasticSwePMLBoundary;

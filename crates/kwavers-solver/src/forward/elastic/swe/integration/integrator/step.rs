@@ -146,7 +146,7 @@ impl TimeIntegrator<'_> {
     }
 }
 
-fn update_components<S: StressOperator>(
+pub(super) fn update_components<S: StressOperator>(
     x: &mut leto::Array3<f64>,
     y: &mut leto::Array3<f64>,
     z: &mut leto::Array3<f64>,

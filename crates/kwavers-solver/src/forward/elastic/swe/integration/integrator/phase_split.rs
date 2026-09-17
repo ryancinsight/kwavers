@@ -1,0 +1,175 @@
+//! Phase split of one three-dimensional velocity-Verlet elastic step.
+//!
+//! The step is timed against its parts run back to back: two acceleration
+//! evaluations, three component updates and the PML damping. The acceleration
+//! is timed against the stress divergence it contains, and the component
+//! updates against the damping. Each pair alternates inside one loop, so the
+//! differences read the code rather than the host. Run in release:
+//!
+//! ```text
+//! cargo nextest run -p kwavers-solver --release --run-ignored only \
+//!     -E 'test(swe_step_phase_split)' --no-capture
+//! ```
+
+use super::acceleration::{SpatialStress, StressOperator};
+use super::step::update_components;
+use super::TimeIntegrator;
+use crate::forward::elastic::swe::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
+use crate::forward::elastic::swe::scratch::ElasticStepScratch;
+use crate::forward::elastic::swe::types::ElasticWaveField;
+use crate::phase_timing::PhaseTimer;
+use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use kwavers_grid::Grid;
+use leto::Array3;
+
+/// Cells per axis, the grid the FDTD and PSTD splits use.
+const N: usize = 64;
+/// Grid spacing, in metres.
+const DX: f64 = 1.0e-3;
+/// Lamé parameters of a soft solid, in pascals.
+const LAMBDA: f64 = 1.0e9;
+const MU: f64 = 1.0e9;
+/// Squared width of the initial Gaussian pulse, in cells squared.
+const PULSE_WIDTH_SQUARED: f64 = 64.0;
+/// Fraction of the CFL-limited timestep.
+const CFL: f64 = 0.5;
+/// Repeats per phase loop, after warming caches and task pools.
+const TIMER: PhaseTimer = PhaseTimer {
+    repeats: 200,
+    warm: 20,
+};
+/// The unit pulse spreads and decays into the absorbing layer; three decades
+/// of headroom separates that from divergence, which times the same as a
+/// valid run until denormals.
+const PEAK_BOUND: f64 = 1.0e3;
+
+struct State {
+    field: ElasticWaveField,
+    scratch: ElasticStepScratch,
+}
+
+#[test]
+#[ignore = "timing probe: run in release on a quiet host with --no-capture"]
+fn swe_step_phase_split() {
+    let grid = Grid::new(N, N, N, DX, DX, DX).expect("valid grid");
+    let lambda = Array3::from_elem([N; 3], LAMBDA);
+    let mu = Array3::from_elem([N; 3], MU);
+    let density = Array3::from_elem([N; 3], DENSITY_WATER_NOMINAL);
+    let pml = ElasticSwePMLBoundary::new(&grid, SwePmlConfig::default());
+    let integrator = TimeIntegrator::new(&grid, &lambda, &mu, &density, &pml);
+    let dt = integrator.calculate_stable_timestep(CFL);
+
+    let mut state = State {
+        field: ElasticWaveField::new(N, N, N),
+        scratch: ElasticStepScratch::new(N, N, N),
+    };
+    // A centred Gaussian pulse: the integrator assumes displacement that
+    // vanishes towards the absorbing layer, and a field reaching the edges
+    // grows secularly (`kw-swe-edge-growth`), which would time a different run.
+    let centre = (N / 2) as f64;
+    for i in 0..N {
+        for j in 0..N {
+            for k in 0..N {
+                let r2 = [i, j, k]
+                    .map(|n| (n as f64 - centre).powi(2))
+                    .iter()
+                    .sum::<f64>();
+                state.field.ux[[i, j, k]] = (-r2 / PULSE_WIDTH_SQUARED).exp();
+            }
+        }
+    }
+
+    let acceleration = |state: &mut State| {
+        integrator
+            .compute_acceleration::<SpatialStress>(&state.field, &mut state.scratch, None, 0.0)
+            .expect("acceleration");
+    };
+    let half_velocity = |state: &mut State| {
+        let State { field, scratch } = state;
+        update_components::<SpatialStress>(
+            &mut field.vx,
+            &mut field.vy,
+            &mut field.vz,
+            &scratch.ax,
+            &scratch.ay,
+            &scratch.az,
+            0.5 * dt,
+        );
+    };
+    let displacement = |state: &mut State| {
+        let ElasticWaveField {
+            ux,
+            uy,
+            uz,
+            vx,
+            vy,
+            vz,
+            ..
+        } = &mut state.field;
+        update_components::<SpatialStress>(ux, uy, uz, vx, vy, vz, dt);
+    };
+    let updates = |state: &mut State| {
+        half_velocity(state);
+        displacement(state);
+        half_velocity(state);
+    };
+    let damping = |state: &mut State| {
+        integrator.apply_pml_damping_for::<SpatialStress>(&mut state.field, dt, &mut state.scratch);
+    };
+
+    let (step, back_to_back) = TIMER.pair(
+        &mut state,
+        |s| {
+            integrator
+                .step(&mut s.field, dt, None, &mut s.scratch)
+                .expect("step");
+        },
+        // The same velocity-Verlet sequence `integrate` runs, so both arms
+        // advance the field physically.
+        |s| {
+            acceleration(s);
+            half_velocity(s);
+            displacement(s);
+            acceleration(s);
+            half_velocity(s);
+            damping(s);
+        },
+    );
+    let (acceleration_total, stress) = TIMER.pair(&mut state, acceleration, |s| {
+        SpatialStress::evaluate(&grid, &lambda, &mu, &s.field, &mut s.scratch);
+    });
+    // Only the two pairs above advance the field physically; the update and
+    // damping arms below reapply one acceleration, so the guard reads the field
+    // before them.
+    let peak = [&state.field.ux, &state.field.uy, &state.field.uz]
+        .into_iter()
+        .flat_map(|component| component.iter())
+        .fold(0.0_f64, |peak, value| peak.max(value.abs()));
+    assert!(
+        peak.is_finite() && peak < PEAK_BOUND,
+        "the timed run stayed bounded: peak {peak}"
+    );
+
+    let (update_total, damping_total) = TIMER.pair(&mut state, updates, damping);
+
+    for (label, pick) in [
+        (
+            "mean",
+            (|p: crate::phase_timing::Phase| p.mean) as fn(_) -> f64,
+        ),
+        ("fastest", |p| p.fastest),
+    ] {
+        eprintln!(
+            "swe 64 cubed {label}: step {:.0} us; back to back {:.0} = 2 x acceleration {:.0} \
+             (stress {:.0} + assembly {:.0}) + updates {:.0} + damping {:.0}; rest of step {:.0}",
+            pick(step),
+            pick(back_to_back),
+            pick(acceleration_total),
+            pick(stress),
+            pick(acceleration_total) - pick(stress),
+            pick(update_total),
+            pick(damping_total),
+            pick(step) - pick(back_to_back),
+        );
+    }
+}
