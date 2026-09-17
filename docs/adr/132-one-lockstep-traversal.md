@@ -8,7 +8,7 @@
 
 Element-wise kernels that write one to three fields from other fields of the
 same shape went through a separate adapter set in each of six crates, plus
-three public functions in core. The three largest:
+three public functions in core. Three of them:
 
 | Family | Surface | Pairing | Fallback | Task width |
 |---|---|---|---|---|
