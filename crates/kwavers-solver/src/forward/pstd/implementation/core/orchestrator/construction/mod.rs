@@ -237,8 +237,18 @@ impl PSTDSolver {
         // carries the same homogeneous fast path this block used to duplicate.
         let materials = MaterialFields::sample(medium, &grid);
 
+        // The recorder holds the initial state plus one record per step, so
+        // `nt` must leave room for that extra record. `nt` is caller input:
+        // `usize::MAX` overflowed here, a panic under overflow checks and a
+        // silent zero-length record buffer without them.
+        let recorded_states = config.nt.checked_add(1).ok_or_else(|| {
+            KwaversError::InvalidInput(format!(
+                "PSTDConfig.nt = {} leaves no room for the initial record (nt + 1 overflows usize)",
+                config.nt
+            ))
+        })?;
         let sensor_recorder =
-            SensorRecorder::new(config.sensor_mask.as_ref(), shape, config.nt + 1)?;
+            SensorRecorder::new(config.sensor_mask.as_ref(), shape, recorded_states)?;
         let mut source_handler = SourceHandler::new(source, &grid)?;
         if source_handler.has_velocity_source() {
             // set_velocity_source_kappa uses ifftshift indexing (kk = (k+nz/2)%nz),
@@ -404,3 +414,6 @@ impl PSTDSolver {
         Ok(solver)
     }
 }
+
+#[cfg(test)]
+mod tests;

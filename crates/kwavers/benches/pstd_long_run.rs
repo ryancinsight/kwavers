@@ -36,6 +36,15 @@ use kwavers_source::GridSource;
 use leto::Array3;
 use std::time::Duration;
 
+/// Steps the solver is configured for: an upper bound on what criterion can
+/// run, not a target. One solver serves one benchmark for about 1 s warm-up
+/// plus 3 s measurement, and a step touches at least 32^3 = 32,768 cells, so it
+/// cannot take less than about 1 us; 2^32 steps would therefore take over an
+/// hour against a 300 s suite bound. The solver's `nt` also sizes its
+/// recording (`nt + 1` states), so `usize::MAX` -- the value this replaced --
+/// was rejected at construction.
+const STEP_BUDGET: usize = 1 << 32;
+
 /// Grid extents the solver plans.
 const EXTENTS: [usize; 2] = [32, 64];
 
@@ -108,7 +117,7 @@ fn solver(n: usize, arm: Arm) -> PSTDSolver {
     };
     let config = PSTDConfig {
         dt: CFL * SPACING / SOUND_SPEED,
-        nt: usize::MAX,
+        nt: STEP_BUDGET,
         boundary: BoundaryConfig::CPML(CPMLConfig::with_thickness(n / 4)),
         absorption_mode,
         kspace_method,
