@@ -42,10 +42,12 @@ export GIT_CONFIG_KEY_0=safe.directory
 export GIT_CONFIG_VALUE_0="$repo_root"
 
 if [ ! -f "$checker" ]; then
-  # Say so rather than passing silently, so a missing guard is visible instead
-  # of assumed.
+  # A guard that reports its own absence and exits 0 is the absence: the
+  # commit lands unverified and the message scrolls past. Refuse instead,
+  # and name the one deliberate way through.
   echo "pre-commit: scripts/lockfile.py not present; lockfile not verified" >&2
-  exit 0
+  echo "pre-commit: commit anyway with SKIP_LOCKFILE_CHECK=1 git commit" >&2
+  exit 1
 fi
 
 python_bin="${PYTHON:-}"
@@ -60,7 +62,8 @@ fi
 
 if [ -z "$python_bin" ]; then
   echo "pre-commit: no python interpreter found; lockfile not verified" >&2
-  exit 0
+  echo "pre-commit: commit anyway with SKIP_LOCKFILE_CHECK=1 git commit" >&2
+  exit 1
 fi
 
 # --check-staged is index-only and runs no cargo, so an ordinary commit that

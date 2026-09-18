@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Atlas member-side pre-push gate.
+# Atlas member-side pre-push gate (single owned copy; see below).
 #
 # Two guards, in order: the lockfile must resolve under `--locked`, and the
 # packages the push changes must pass fmt, clippy, and their tests. CI confirms
@@ -20,14 +20,30 @@
 # `scripts/lockfile.py --check` runs cargo from outside the overlay and is the
 # same check CI runs, so a push that would fail there never reaches a runner.
 #
+# Single source: this file is owned here and deployed outward to every
+# member's `.githooks/` by `scripts/atlas-lock-form.py sync-hooks`
+# (`--check` reports drift, which is what CI runs). Do not hand-edit member
+# copies; change this file and re-sync. A member copy that differs from this
+# file is drift, counted by the conformance `member_gate_versions` class.
+#
 # Install (git does not apply tracked hooks on its own):
 #
 #     python scripts/atlas-lock-form.py install-hooks
 #
 # Bypass deliberately:
 #
-#     SKIP_LOCKFILE_CHECK=1 git push
+#     SKIP_LOCKFILE_CHECK=1 git push   (lockfile section only)
+#     SKIP_LOCAL_GATE=1 git push       (fast gate section only)
 set -euo pipefail
+
+# SKIP_LOCKFILE_CHECK skips the lockfile section only; the code gate below
+# still runs. (Exiting here once skipped the gate too, so the bypass silently
+# skipped lint and tests as well.)
+skip_lockfile=0
+if [ "${SKIP_LOCKFILE_CHECK:-0}" = "1" ]; then
+  echo "pre-push: lockfile check skipped by SKIP_LOCKFILE_CHECK" >&2
+  skip_lockfile=1
+fi
 
 # A managed worktree may be owned by a different filesystem account than the
 # process pushing from it, and git does not propagate command-line config into
@@ -37,15 +53,23 @@ export GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0=safe.directory
 export GIT_CONFIG_VALUE_0="$repo_root"
 
-# The lockfile guard. Its "not needed" paths return rather than exit, so a
-# push that changes no manifest still reaches the gate below -- which is the
-# common case, and the one that has escaped.
-check_lockfile() {
-
-if [ "${SKIP_LOCKFILE_CHECK:-0}" = "1" ]; then
-  echo "pre-push: lockfile check skipped by SKIP_LOCKFILE_CHECK" >&2
-  return 0
-fi
+# The remote's default branch is whatever the remote says it is: `origin/HEAD`
+# follows a rename, `origin/main` does not (hephaestus defaults to `master`).
+# Echoes the merge-base of `$1` with that branch, or nothing when neither
+# ref resolves.
+default_branch_base() {
+  local tip="$1" ref ref_sha base
+  for ref in origin/HEAD origin/main; do
+    ref_sha="$(git rev-parse --verify --quiet "$ref" 2>/dev/null || true)"
+    [ -n "$ref_sha" ] || continue
+    base="$(git merge-base "$ref_sha" "$tip" 2>/dev/null || true)"
+    if [ -n "$base" ]; then
+      printf '%s' "$base"
+      return 0
+    fi
+  done
+  return 1
+}
 
 # The check measures the *working tree*, but the push carries a revision range.
 # Those differ whenever the pushed commits were not checked out -- a plumbing
@@ -55,7 +79,7 @@ fi
 # resolution: a push that changes no manifest and no lock cannot make the lock
 # worse than the base already found acceptable.
 touches_dependency_state=unknown
-pushed_tip=
+pushed_tip=""
 if [ ! -t 0 ]; then
   touches_dependency_state=no
   zero="$(printf '0%.0s' $(seq 40))"
@@ -63,10 +87,12 @@ if [ ! -t 0 ]; then
     # A branch deletion carries no content.
     [ "$local_sha" = "$zero" ] && continue
     if [ "$remote_sha" = "$zero" ]; then
-      # New branch: compare against whatever the remote already has, so a long
-      # series is not read as touching everything. With no upstream to compare
-      # against, fall back to running the check.
-      base="$(git merge-base "$local_sha" HEAD 2>/dev/null || true)"
+      # New branch: compare against the merge-base with the default branch,
+      # so a long series is not read as touching everything. Comparing
+      # against HEAD instead is vacuous exactly when it matters: pushing
+      # the checked-out branch makes the base the pushed tip itself, the
+      # range is empty, and a manifest-changing push skips the check.
+      base="$(default_branch_base "$local_sha" || true)"
       [ -z "$base" ] && { touches_dependency_state=unknown; break; }
     else
       base="$remote_sha"
@@ -83,17 +109,23 @@ if [ ! -t 0 ]; then
   done
 fi
 
+# No manifest in the range means the lock cannot have changed: skip its check,
+# but still run the code gate -- a source-only push still needs lint and tests.
 if [ "$touches_dependency_state" = "no" ]; then
   echo "pre-push: no Cargo.lock or Cargo.toml in the pushed range; lockfile check not needed" >&2
-  return 0
+  skip_lockfile=1
 fi
 
 # `--check` measures the working tree, so its verdict is evidence about the
 # pushed commits only while the two agree on dependency state. They diverge
 # exactly when it matters: any cargo command rewrites `Cargo.lock`, so a tree
 # whose lock a test run already repaired passes this check while the commits
-# being pushed still carry the stale one. That is how kwavers#747 put a lock
-# on `main` that failed every `--locked` job (#749).
+# being pushed still carry the stale one. That is how a stale lock reached
+# main once and failed every `--locked` job after it.
+#
+# The skips above fall through to the code gate, so this whole section runs
+# only when the lock still wants verifying.
+if [ "$skip_lockfile" = "0" ]; then
 if [ -n "$pushed_tip" ] && ! git diff --quiet "$pushed_tip" -- Cargo.lock '*Cargo.toml' 2>/dev/null; then
   cat >&2 <<MESSAGE
 
@@ -105,17 +137,10 @@ being pushed, so a check of this tree says nothing about that push.
 Commit the dependency state you verified, or check out the pushed revision and
 push from there. To push anyway: SKIP_LOCKFILE_CHECK=1 git push
 MESSAGE
-  return 1
+  exit 1
 fi
 
 checker="$repo_root/scripts/lockfile.py"
-
-if [ ! -f "$checker" ]; then
-  # Nothing to enforce on a checkout that predates the tool; say so rather than
-  # passing silently, so a missing guard is visible instead of assumed.
-  echo "pre-push: scripts/lockfile.py not present; lockfile not verified" >&2
-  return 0
-fi
 
 python_bin="${PYTHON:-}"
 if [ -z "$python_bin" ]; then
@@ -127,12 +152,19 @@ if [ -z "$python_bin" ]; then
   done
 fi
 
-if [ -z "$python_bin" ]; then
+if [ ! -f "$checker" ]; then
+  # A guard that reports its own absence and lets the push through is the
+  # absence. The code gate below would still have run, but the lock is what
+  # this section is for, and an unverified lock is the failure it exists to
+  # stop -- so refuse here and name the one deliberate way through.
+  echo "pre-push: scripts/lockfile.py not present; lockfile not verified" >&2
+  echo "pre-push: push anyway with SKIP_LOCKFILE_CHECK=1 git push" >&2
+  exit 1
+elif [ -z "$python_bin" ]; then
   echo "pre-push: no python interpreter found; lockfile not verified" >&2
-  return 0
-fi
-
-if ! "$python_bin" "$checker" --check; then
+  echo "pre-push: push anyway with SKIP_LOCKFILE_CHECK=1 git push" >&2
+  exit 1
+elif ! "$python_bin" "$checker" --check; then
   cat >&2 <<'MESSAGE'
 
 pre-push: Cargo.lock does not resolve under --locked, so every CI job that
@@ -145,25 +177,23 @@ strips the lock's git sources. Repair it with:
 
 then stage the result. To push anyway: SKIP_LOCKFILE_CHECK=1 git push
 MESSAGE
-  return 1
+  exit 1
 fi
-
-}
-
-check_lockfile || exit 1
+fi
+# End of the lockfile section; the code gate below runs unconditionally.
 
 # ---------------------------------------------------------------------------
 # Fast local gate, scoped to the pushed range.
 #
 # The lockfile guard above is one third of what CI runs, and the other two
-# thirds are where defects have actually escaped: kwavers#747 landed two
-# `clippy::implicit-clone` denials that turned `Validate Clean Architecture`
-# red on main and on every pull request that merged it, because nothing local
-# ran clippy. CI should confirm, not discover.
+# thirds are where defects have actually escaped: a merge once landed two
+# clippy denials that turned the architecture validation red on main and on
+# every pull request that merged it, because nothing local ran clippy.
+# CI should confirm, not discover.
 #
-# Scope is the push, not the workspace: a workspace clippy takes minutes here,
-# and a gate that slow is a gate people bypass. The changed files map to their
-# packages and only those are linted and tested.
+# Scope is the push, not the workspace: a workspace clippy takes minutes on a
+# large member, and a gate that slow is a gate people bypass. The changed files
+# map to their packages and only those are linted and tested.
 #
 # `cargo fmt` needs no dependency resolution; clippy and nextest do, and how
 # they resolve decides whether this gate is usable at all. Cargo finds the
@@ -194,17 +224,24 @@ if [ "${SKIP_LOCAL_GATE:-0}" = "1" ]; then
   exit 0
 fi
 
+if ! command -v cargo >/dev/null 2>&1; then
+  # No toolchain on this machine (docs-only checkout, bare CI image without
+  # Rust): say so rather than failing every push on a missing binary.
+  echo "pre-push: no cargo toolchain found; local gate not run" >&2
+  exit 0
+fi
+
 gate_base=""
 if upstream="$(git rev-parse --verify --quiet '@{upstream}' 2>/dev/null)"; then
   gate_base="$upstream"
-elif origin_main="$(git rev-parse --verify --quiet origin/main 2>/dev/null)"; then
-  # A branch pushed for the first time has no upstream yet; its own commits are
-  # what the default branch does not have.
-  gate_base="$(git merge-base "$origin_main" HEAD 2>/dev/null || true)"
+else
+  # A branch pushed for the first time has no upstream yet; its own commits
+  # are what the default branch does not have.
+  gate_base="$(default_branch_base HEAD || true)"
 fi
 
 if [ -z "$gate_base" ]; then
-  echo "pre-push: no upstream or origin/main to diff against; local gate skipped" >&2
+  echo "pre-push: no upstream or remote default branch to diff against; local gate skipped" >&2
   exit 0
 fi
 
@@ -215,19 +252,35 @@ if ! printf '%s\n' "$gate_changed" | grep -qE '\.rs$|(^|/)Cargo\.toml$'; then
   exit 0
 fi
 
-# Changed paths -> the packages that own them. A path under `crates/<dir>/` or
-# `xtask/` belongs to that manifest; anything else (docs, workflows, the board)
-# has no package and contributes nothing to lint or test.
+# Changed paths -> the packages that own them. Ownership follows Cargo itself:
+# the nearest ancestor directory holding a `[package]` manifest owns the file.
+# That covers `crates/<name>/` leaves, `xtask/`, top-level crates, and the
+# single-crate members whose sources sit beside the root manifest alike;
+# anything else (docs, workflows, the board) has no package and contributes
+# nothing to lint or test.
 gate_packages=""
 while IFS= read -r changed_path; do
   [ -n "$changed_path" ] || continue
-  case "$changed_path" in
-    crates/*/*) package_dir="crates/$(printf '%s' "$changed_path" | cut -d/ -f2)" ;;
-    xtask/*) package_dir="xtask" ;;
-    *) continue ;;
-  esac
+  owner_dir="$(dirname "$changed_path")"
+  package_dir=""
+  while [ "$owner_dir" != "." ] && [ "$owner_dir" != "/" ]; do
+    manifest="$repo_root/$owner_dir/Cargo.toml"
+    if [ -f "$manifest" ]; then
+      if grep -qE '^\[package\]' "$manifest" 2>/dev/null; then
+        package_dir="$owner_dir"
+      fi
+      break
+    fi
+    owner_dir="$(dirname "$owner_dir")"
+  done
+  if [ -z "$package_dir" ]; then
+    if [ -f "$repo_root/Cargo.toml" ] && grep -qE '^\[package\]' "$repo_root/Cargo.toml" 2>/dev/null; then
+      package_dir="."
+    else
+      continue
+    fi
+  fi
   manifest="$repo_root/$package_dir/Cargo.toml"
-  [ -f "$manifest" ] || continue
   package_name="$(sed -n 's/^name[[:space:]]*=[[:space:]]*"\(.*\)".*/\1/p' "$manifest" | head -1)"
   [ -n "$package_name" ] || continue
   case " $gate_packages " in
@@ -261,6 +314,29 @@ fi
 # says otherwise.
 #
 # Echoes 'ours', 'environment', or 'ok'.
+normalise_diagnostic_path() {
+  local value="$1"
+  value="$(printf '%s' "$value" | tr 'A-Z\' 'a-z/' 2>/dev/null)"
+
+  # Git Bash can expose the repository through its long path while cargo's
+  # diagnostics use an equivalent DOS 8.3 path (for example, RYANCL~1). Use
+  # one Windows spelling for both sides when cygpath is available; POSIX
+  # runners retain the normalized slash form above.
+  if command -v cygpath >/dev/null 2>&1; then
+    case "$value" in
+      [a-z]:/*|/*)
+        local short_value
+        if short_value="$(cygpath -m -s "$value" 2>/dev/null)"; then
+          # cygpath spells the drive letter upper case; the classifier's
+          # drive-path case is lower case, as the first pass left it.
+          value="$(printf '%s' "$short_value" | tr 'A-Z' 'a-z')"
+        fi
+        ;;
+    esac
+  fi
+  printf '%s' "$value"
+}
+
 classify_gate_step() {
   local log="$1"
   shift
@@ -270,14 +346,18 @@ classify_gate_step() {
   fi
 
   local root_normalised inside=0 outside=0 location foreign_crate=0
-  root_normalised="$(printf '%s' "$repo_root" | tr 'A-Z\' 'a-z/' 2>/dev/null)"
+  root_normalised="$(normalise_diagnostic_path "$repo_root")"
 
   # Only locations under an `error` header count. A crate that fails to compile
   # still emits warnings for whatever did compile, and counting those made the
   # verdict depend on what the build cache happened to hold.
+  #
+  # Deduplication is awk, not `sort -u`: on Windows developer machines `sort`
+  # can resolve to the System32 SORT.EXE, which rejects `-u` and empties the
+  # pipeline -- every verdict then degrades to 'ours'.
   while IFS= read -r location; do
     [ -n "$location" ] || continue
-    location="$(printf '%s' "$location" | tr 'A-Z\' 'a-z/' 2>/dev/null)"
+    location="$(normalise_diagnostic_path "$location")"
     case "$location" in
       /*|[a-z]:/*)
         case "$location" in
@@ -288,7 +368,7 @@ classify_gate_step() {
       *) inside=$((inside + 1)) ;;
     esac
   done <<DIAGNOSTICS
-$(awk '/^error/ { under_error = 1; next } /^warning/ { under_error = 0; next } under_error && /^[[:space:]]*--> / { sub(/^[[:space:]]*--> /, ""); sub(/:[0-9]+:[0-9]+$/, ""); print }' "$log" | sort -u)
+$(awk '/^error/ { under_error = 1; next } /^warning/ { under_error = 0; next } under_error && /^[[:space:]]*--> / { sub(/^[[:space:]]*--> /, ""); sub(/:[0-9]+:[0-9]+$/, ""); if (!seen[$0]++) print }' "$log")
 DIAGNOSTICS
 
   # A cached rebuild can report `could not compile` without re-emitting the
@@ -302,7 +382,7 @@ DIAGNOSTICS
       *) foreign_crate=$((foreign_crate + 1)) ;;
     esac
   done <<CRATES
-$(sed -n 's/^error: could not compile `\([^`]*\)`.*/\1/p' "$log" | sort -u)
+$(sed -n 's/^error: could not compile `\([^`]*\)`.*/\1/p' "$log" | awk '!seen[$0]++')
 CRATES
 
   if [ "$inside" -eq 0 ] && { [ "$outside" -gt 0 ] || [ "$foreign_crate" -gt 0 ]; }; then
@@ -358,7 +438,9 @@ restore_gate_lock() {
     fi
     rm -f "$gate_lock_backup" || true
   fi
+  rm -f "$gate_log" 2>/dev/null || true
 }
+
 trap restore_gate_lock EXIT INT TERM
 
 # Formatting is workspace-wide and near-instant, and its failure is the
@@ -366,17 +448,17 @@ trap restore_gate_lock EXIT INT TERM
 if ! (cd "$repo_root" && cargo fmt -- --check >/dev/null); then
   cat >&2 <<'MESSAGE'
 
-pre-push: `cargo fmt --check` fails, so `Validate Clean Architecture` would.
+pre-push: `cargo fmt --check` fails, so the architecture validation would.
 
 Run `cargo fmt` and stage the result. To push anyway: SKIP_LOCAL_GATE=1 git push
 MESSAGE
   exit 1
 fi
 
-# No `-D warnings`: the workspace lint table already denies what matters, so
-# this is CI's ratchet step scoped to the push. Adding `-D warnings` here would
-# fail on the pre-existing per-crate debt the ratchet exists to burn down, and
-# a gate that fails on debt you did not write is a gate that gets bypassed.
+# The workspace lint table denies what matters, so this gate runs clippy
+# without extra flags: adding `-D warnings` here would fail on the
+# pre-existing per-crate debt the ratchet exists to burn down, and a gate
+# that fails on debt you did not write is a gate that gets bypassed.
 gate_log="$(mktemp)"
 trap 'rm -f "$gate_log"; restore_gate_lock' EXIT INT TERM
 
