@@ -1,5 +1,15 @@
 # Backlog / Strategy
 
+<a id="kw-leto-central-coverage"></a>
+## KW-LETO-CENTRAL-COVERAGE — Elastic sweeps match the stencil table [patch] — in-progress
+
+- Outcome: verify the replacement merged in #802 independently of Leto's implementation; preserve singleton and wall closures.
+- Scope: elastic stress tests and ADR 128; no production operator or performance changes.
+- Acceptance: stresses and divergence match the table on every axis length 1–8, including plane strain; focused elastic nextest, formatting and configured solver clippy pass.
+- Basis: `412859483`; implementation and local-stencil deletion landed in `ac57d1956`.
+- Integrator: codex; branch: `fix/kwavers-leto-central-sweep`; last-update: 2026-09-18.
+
+
 <a id="kw-swe-unit-tasks"></a>
 
 ## KW-SWE-UNIT-TASKS-2026-09-17 — The elastic stress divergence is a per-point kernel on a private stencil [major] [perf] — review
