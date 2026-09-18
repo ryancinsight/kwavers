@@ -1,19 +1,15 @@
 # Backlog / Strategy
 
 <a id="kw-leto-central-coverage"></a>
-## KW-LETO-CENTRAL-COVERAGE — Elastic sweeps match the stencil table [patch] — in-progress
-
-- Outcome: verify the replacement merged in #802 independently of Leto's implementation; preserve singleton and wall closures.
-- Scope: elastic stress tests and ADR 128; no production operator or performance changes.
-- Acceptance: stresses and divergence match the table on every axis length 1–8, including plane strain; focused elastic nextest, formatting and configured solver clippy pass.
-- Basis: `412859483`; implementation and local-stencil deletion landed in `ac57d1956`.
-- Integrator: codex; branch: `fix/kwavers-leto-central-sweep`; last-update: 2026-09-18.
-
+## KW-LETO-CENTRAL-COVERAGE — Elastic sweeps match the stencil table [patch] — done
+- Independent table oracle covers every axis length 1–8, 65 plane-strain shapes, and all previous spatial cases; [ADR 128](docs/adr/128-first-derivative-stencils-belong-to-leto.md#revision-2026-09-18-elastic-and-plane-strain-sweeps). Production replacement: PR #802, `ac57d1956`; follow-up branch: `fix/kwavers-leto-central-sweep`.
+- Evidence (2026-09-18, Rust 1.97.0, local stack overlay, Leto `1fea8ce`): `cargo fmt --all --check`; `cargo clippy -p kwavers-solver --all-targets -- -D warnings`; `cargo nextest run -p kwavers-solver --lib -E 'test(forward::elastic)' --profile ci`: 87 passed, run `c62da1af-49c1-4b60-b95a-30a062c3421c`. Independent source review: no findings. No performance claim; unrelated stack overlay warnings remain.
 
 <a id="kw-swe-unit-tasks"></a>
 
-## KW-SWE-UNIT-TASKS-2026-09-17 — The elastic stress divergence is a per-point kernel on a private stencil [major] [perf] — review
+## KW-SWE-UNIT-TASKS-2026-09-17 — The elastic stress divergence is a per-point kernel on a private stencil [major] [perf] — done
 
+- **Delivery:** PR #802, merge `412859483`; independent stencil-table coverage: [KW-LETO-CENTRAL-COVERAGE](#kw-leto-central-coverage).
 - **Measured first.** `swe_step_phase_split` (new; the FDTD and PSTD probes now share its `PhaseTimer`) put the stress divergence at ~85% of a 64-cubed velocity-Verlet step: 2 x 1394-1472 us of 3307-3700 us, fastest repeats.
 - **Change.** Every derivative is one sweep of leto's `CentralFourthOrder` operator (ADR 128; leto#203 made it lane-swept, parallel, and defined on short and singleton axes), and the stresses and divergence are assembled through `kwavers_core::traversal` with the same arithmetic. Two derivative workspaces join `ElasticStepScratch`; the kernel, the private stencil and its public `fd1_x/y/z` are deleted.
 - **Stop condition, written before measuring:** the stress arm at 64 cubed at least 1.25x faster, no regression at 16 cubed. **Result** (alternating arms, fastest repeats, 3-21 concurrent builds): 64 cubed stress 1235-1524 us to 643-663 us, step 2880-3447 us to 1917-2098 us; 16 cubed step 186-190 us to 118-119 us.
