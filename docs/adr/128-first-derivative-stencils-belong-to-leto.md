@@ -78,6 +78,29 @@ The critical-path benchmark's per-order dispatch enum went with the per-order
 structs it dispatched over. Its recorded baselines do not carry across: the
 kernel under measurement is a different one.
 
+## Revision 2026-09-18: elastic and plane-strain sweeps
+
+[Elastic coverage item](../../backlog.md#kw-leto-central-coverage).
+The elastic replacement landed in kwavers PR #802 (`ac57d1956`, merged at
+`412859483`), after Leto PR #203 (`1fea8ce`) supplied whole-field central
+sweeps on short axes. `stress::fd_stencils` and its per-point kernel are
+removed; the spatial and plane-strain paths use `FiniteDifference3D` with
+`CentralFourthOrder`. Two reusable derivative fields hold sweep results.
+
+The closure is unchanged mathematically: singleton axes return zero; the
+first and last cells use one-sided first differences; the next cells use
+second-order central differences; cells with two neighbours on each side
+use the fourth-order table. This also defines axes of lengths two to four.
+The old private kernel used fused arithmetic and division, while Leto uses
+its documented sum order and reciprocal multiplication: bitwise equivalence
+to the deleted implementation is not claimed.
+
+The consumer's stress oracle evaluates the table pointwise without calling
+Leto. It checks all six stresses and three divergence components, including
+short axes, singleton axes in each direction, and interior and wall rows.
+The plane-strain comparison covers all in-plane lengths one through eight.
+These are behavior checks; they establish no performance claim.
+
 ## What this does not yet do
 
 The call sites now reach one CPU implementation. They do not yet reach a GPU

@@ -143,30 +143,41 @@ fn test_stress_divergence_quadratic_ux_fluid() {
 
 #[test]
 fn plane_strain_divergence_matches_spatial_operator_exactly() {
-    let (nx, ny) = (11, 9);
-    let grid = Grid::new(nx, ny, 1, 0.7e-3, 1.3e-3, 2.0e-3).expect("grid");
-    let lambda = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| 2.0e6 + (i * 37 + j * 11) as f64);
-    let mu = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| 0.8e6 + (i * 17 + j * 29) as f64);
-    let mut field = ElasticWaveField::new(nx, ny, 1);
-    field.ux = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| {
-        ((i * 13 + j * 7) as f64 * 0.037).sin()
-    });
-    field.uy = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| {
-        ((i * 5 + j * 19) as f64 * 0.041).cos()
-    });
-    let mut spatial = ElasticStepScratch::new(nx, ny, 1);
-    let mut plane = ElasticStepScratch::new(nx, ny, 1);
+    for (nx, ny) in [(11, 9)]
+        .into_iter()
+        .chain((1..=8).flat_map(|nx| (1..=8).map(move |ny| (nx, ny))))
+    {
+        let grid = Grid::new(nx, ny, 1, 0.7e-3, 1.3e-3, 2.0e-3).expect("grid");
+        let lambda =
+            Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| 2.0e6 + (i * 37 + j * 11) as f64);
+        let mu = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| 0.8e6 + (i * 17 + j * 29) as f64);
+        let mut field = ElasticWaveField::new(nx, ny, 1);
+        field.ux = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| {
+            ((i * 13 + j * 7) as f64 * 0.037).sin()
+        });
+        field.uy = Array3::from_shape_fn((nx, ny, 1), |[i, j, _]| {
+            ((i * 5 + j * 19) as f64 * 0.041).cos()
+        });
+        let mut spatial = ElasticStepScratch::new(nx, ny, 1);
+        let mut plane = ElasticStepScratch::new(nx, ny, 1);
 
-    stress_divergence_into(&grid, &lambda, &mu, &field, &mut spatial);
-    stress_divergence_plane_strain_into(&grid, &lambda, &mu, &field, &mut plane);
+        stress_divergence_into(&grid, &lambda, &mu, &field, &mut spatial);
+        stress_divergence_plane_strain_into(&grid, &lambda, &mu, &field, &mut plane);
 
-    assert_eq!(plane.div_x, spatial.div_x);
-    assert_eq!(plane.div_y, spatial.div_y);
-    assert_eq!(plane.div_z, spatial.div_z);
+        assert_eq!(plane.div_x, spatial.div_x);
+        assert_eq!(plane.div_y, spatial.div_y);
+        assert_eq!(plane.div_z, spatial.div_z);
+        let expected = pointwise_stress_divergence(&grid, &lambda, &mu, &field);
+        assert_stress_scratch_eq(&spatial, &expected);
+        assert_eq!(plane.sxx, expected.sxx);
+        assert_eq!(plane.syy, expected.syy);
+        assert_eq!(plane.sxy, expected.sxy);
+        assert_eq!(plane.div_z, Array3::zeros((nx, ny, 1)));
+    }
 }
 
 /// The stress tensor and its divergence assembled point by point from
-/// separately swept derivative fields: the wiring the kernel under test must
+/// derivatives evaluated from the stencil table: the kernel must
 /// reproduce (which derivative of which field feeds which component, and the
 /// order terms are summed in).
 fn pointwise_stress_divergence(
@@ -176,18 +187,32 @@ fn pointwise_stress_divergence(
     field: &ElasticWaveField,
 ) -> ElasticStepScratch {
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-    let op = leto_ops::FiniteDifference3D::central_fourth_order(grid.dx, grid.dy, grid.dz)
-        .expect("positive spacing");
+    // Independent pointwise evaluation of the documented stencil table.
+    // Match its arithmetic order so differences identify wiring or closure
+    // defects, without a tolerance hiding cancellation at the second sweep.
     let d = |axis: usize, f: &Array3<f64>| {
-        let mut out = Array3::zeros((nx, ny, nz));
-        let mut view = out.view_mut();
-        match axis {
-            0 => op.apply_x_into(f.view(), &mut view),
-            1 => op.apply_y_into(f.view(), &mut view),
-            _ => op.apply_z_into(f.view(), &mut view),
-        }
-        .expect("grid-shaped fields");
-        out
+        let h = [grid.dx, grid.dy, grid.dz][axis];
+        let n = f.shape()[axis];
+        Array3::from_shape_fn((nx, ny, nz), |p| {
+            let c = p[axis];
+            let at = |coordinate| {
+                let mut q = p;
+                q[axis] = coordinate;
+                f[q]
+            };
+            if n == 1 {
+                0.0
+            } else if c == 0 {
+                (at(1) - at(0)) * (1.0 / h)
+            } else if c == n - 1 {
+                (at(c) - at(c - 1)) * (1.0 / h)
+            } else if c == 1 || c == n - 2 {
+                (at(c + 1) - at(c - 1)) * (1.0 / (2.0 * h))
+            } else {
+                ((-8.0 * at(c - 1)) + (8.0 * at(c + 1)) + (-at(c + 2)) + at(c - 2))
+                    * (1.0 / (12.0 * h))
+            }
+        })
     };
     let mut scratch = ElasticStepScratch::new(nx, ny, nz);
 
@@ -254,7 +279,10 @@ fn assert_stress_scratch_eq(actual: &ElasticStepScratch, expected: &ElasticStepS
 /// and with short and singleton axes that take only the wall closures.
 #[test]
 fn stress_divergence_matches_its_pointwise_assembly() {
-    for (nx, ny, nz) in [(7, 6, 5), (13, 10, 9), (32, 30, 28), (4, 3, 1), (2, 6, 3)] {
+    let shapes = [(7, 6, 5), (13, 10, 9), (32, 30, 28), (4, 3, 1), (2, 6, 3)]
+        .into_iter()
+        .chain((1..=8).flat_map(|n| [(n, 7, 6), (7, n, 6), (7, 6, n)]));
+    for (nx, ny, nz) in shapes {
         let grid = Grid::new(nx, ny, nz, 0.7e-3, 1.1e-3, 1.3e-3).expect("grid");
         let lambda = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             2.0e6 + (i * 37 + j * 11 + k * 5) as f64
