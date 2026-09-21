@@ -302,14 +302,7 @@ if ! command -v cargo >/dev/null 2>&1; then
   exit 0
 fi
 
-gate_base=""
-if upstream="$(git rev-parse --verify --quiet '@{upstream}' 2>/dev/null)"; then
-  gate_base="$upstream"
-else
-  # A branch pushed for the first time has no upstream yet; its own commits
-  # are what the default branch does not have.
-  gate_base="$(default_branch_base HEAD || true)"
-fi
+gate_base="$(default_branch_base HEAD || true)"
 
 if [ -z "$gate_base" ]; then
   echo "pre-push: no upstream or remote default branch to diff against; local gate skipped" >&2
@@ -318,32 +311,117 @@ fi
 
 gate_changed="$(git diff --name-only "$gate_base" HEAD 2>/dev/null || true)"
 
-if ! printf '%s\n' "$gate_changed" | grep -qE '\.rs$|(^|/)Cargo\.toml$'; then
-  echo "pre-push: no Rust source or manifest in the pushed range; local gate not needed" >&2
-  exit 0
+# Where cargo runs. A member's main tree runs inside the stack, so the gate
+# builds against the local working trees the overlay provides. A lane (a
+# linked worktree) cannot: the overlay patches this member's packages to its
+# main tree while the lane's workspace defines the same packages, and cargo
+# stops with "package collision in the lockfile" -- a moirai lane push was
+# refused that way as a clippy failure. A lane therefore runs from a directory
+# outside the stack, naming its manifest and the stack's shared target
+# directory, which resolves the committed lock exactly as CI does.
+gate_cwd="$repo_root"
+gate_manifest=""
+# `cargo fmt` finds no targets in a virtual manifest named by path, so a lane
+# names every member; in place it reads the workspace from the working
+# directory, and `--all` there would also reach the overlay's patched trees.
+gate_fmt_scope=""
+if [ "$(git rev-parse --git-dir)" != "$(git rev-parse --git-common-dir)" ]; then
+  overlay_config=""
+  search_dir="$(dirname "$repo_root")"
+  while [ "$search_dir" != "/" ] && [ "$search_dir" != "." ]; do
+    if [ -f "$search_dir/.cargo/config.toml" ]; then
+      overlay_config="$search_dir/.cargo/config.toml"
+      break
+    fi
+    parent="$(dirname "$search_dir")"
+    [ "$parent" = "$search_dir" ] && break
+    search_dir="$parent"
+  done
+  if [ -n "$overlay_config" ]; then
+    if [ -z "${CARGO_TARGET_DIR:-}" ]; then
+      stack_target="$(sed -n 's/^[[:space:]]*target-dir[[:space:]]*=[[:space:]]*"\(.*\)".*/\1/p' "$overlay_config" | head -1)"
+      case "$stack_target" in
+        "") ;;
+        /*|[A-Za-z]:*) export CARGO_TARGET_DIR="$stack_target" ;;
+        *) export CARGO_TARGET_DIR="$(dirname "$(dirname "$overlay_config")")/$stack_target" ;;
+      esac
+    fi
+    gate_cwd="$(mktemp -d "${TMPDIR:-/tmp}/pre-push-lane.XXXXXX")"
+    # Leading space: the reproduce lines render as `cargo doc --no-deps$gate_specs`,
+    # and without it the flag joins the subcommand ("--no-deps--manifest-path").
+    gate_manifest=" --manifest-path $repo_root/Cargo.toml"
+    gate_fmt_scope="--all"
+    echo "pre-push: lane of an overlaid member; gating outside the stack overlay" >&2
+  fi
 fi
 
-# Changed paths -> the packages that own them. Ownership follows Cargo itself:
-# the nearest ancestor directory holding a `[package]` manifest owns the file.
-# That covers `crates/<name>/` leaves, `xtask/`, top-level crates, and the
-# single-crate members whose sources sit beside the root manifest alike;
-# anything else (docs, workflows, the board) has no package and contributes
-# nothing to lint or test.
+cleanup_gate_cwd() {
+  if [ "$gate_cwd" != "$repo_root" ]; then
+    rm -rf "$gate_cwd" 2>/dev/null || true
+  fi
+}
+
+if [ -z "$python_bin" ]; then
+  echo "pre-push: no python interpreter found; Cargo workspace membership not verified" >&2
+  echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
+  cleanup_gate_cwd
+  exit 1
+fi
+
+# Cargo is the authority on which package manifests belong to this workspace.
+# A nested standalone manifest (cargo-fuzz is the common case) can legally use
+# the same package name as a member, so names alone cannot establish ownership.
+# `--no-deps` reads membership without resolving dependencies or changing the
+# lockfile. Each output record is `<repo-relative manifest><tab><package name>`.
+if ! workspace_members="$(
+  cd "$gate_cwd" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+    "$python_bin" -c 'import json, os, sys
+metadata = json.load(sys.stdin)
+members = set(metadata["workspace_members"])
+root = os.path.realpath(sys.argv[1])
+for package in metadata["packages"]:
+    if package["id"] not in members:
+        continue
+    manifest = os.path.realpath(package["manifest_path"])
+    relative = os.path.relpath(manifest, root).replace(os.sep, "/")
+    print(f"{relative}\t{package['"'"'name'"'"']}")' "$repo_root"
+)"; then
+  echo "pre-push: cargo metadata could not establish workspace membership" >&2
+  echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
+  cleanup_gate_cwd
+  exit 1
+fi
+
+# Changed paths -> the packages that own them. Ownership uses the nearest
+# ancestor `[package]` manifest, then membership is checked against Cargo's
+# workspace graph above. This includes committed fixtures: they are behavioral
+# inputs to the owning package's tests even when no Rust source changed.
 gate_packages=""
+excluded_manifests=""
 while IFS= read -r changed_path; do
   [ -n "$changed_path" ] || continue
   owner_dir="$(dirname "$changed_path")"
   package_dir=""
+  excluded_manifest=""
   while [ "$owner_dir" != "." ] && [ "$owner_dir" != "/" ]; do
     manifest="$repo_root/$owner_dir/Cargo.toml"
     if [ -f "$manifest" ]; then
       if grep -qE '^\[package\]' "$manifest" 2>/dev/null; then
         package_dir="$owner_dir"
+      elif grep -qE '^\[workspace\]' "$manifest" 2>/dev/null; then
+        excluded_manifest="$owner_dir/Cargo.toml"
       fi
       break
     fi
     owner_dir="$(dirname "$owner_dir")"
   done
+  if [ -n "$excluded_manifest" ]; then
+    case " $excluded_manifests " in
+      *" $excluded_manifest "*) ;;
+      *) excluded_manifests="$excluded_manifests $excluded_manifest" ;;
+    esac
+    continue
+  fi
   if [ -z "$package_dir" ]; then
     if [ -f "$repo_root/Cargo.toml" ] && grep -qE '^\[package\]' "$repo_root/Cargo.toml" 2>/dev/null; then
       package_dir="."
@@ -352,8 +430,16 @@ while IFS= read -r changed_path; do
     fi
   fi
   manifest="$repo_root/$package_dir/Cargo.toml"
-  package_name="$(sed -n 's/^name[[:space:]]*=[[:space:]]*"\(.*\)".*/\1/p' "$manifest" | head -1)"
-  [ -n "$package_name" ] || continue
+  relative_manifest="${manifest#"$repo_root"/}"
+  relative_manifest="${relative_manifest#./}"
+  package_name="$(printf '%s\n' "$workspace_members" | awk -F '\t' -v manifest="$relative_manifest" '$1 == manifest { print $2; exit }')"
+  if [ -z "$package_name" ]; then
+    case " $excluded_manifests " in
+      *" $relative_manifest "*) ;;
+      *) excluded_manifests="$excluded_manifests $relative_manifest" ;;
+    esac
+    continue
+  fi
   case " $gate_packages " in
     *" $package_name "*) ;;
     *) gate_packages="$gate_packages $package_name" ;;
@@ -362,8 +448,23 @@ done <<GATE_PATHS
 $gate_changed
 GATE_PATHS
 
+if [ -n "${excluded_manifests// /}" ]; then
+  cat >&2 <<MESSAGE
+
+pre-push: changed files belong to a Cargo workspace excluded from the parent
+workspace:$excluded_manifests
+
+The parent gate cannot verify it with a parent-workspace -p argument. Run that
+workspace's configured gate and commit its evidence, or push anyway with
+SKIP_LOCAL_GATE=1 git push.
+MESSAGE
+  cleanup_gate_cwd
+  exit 1
+fi
+
 if [ -z "${gate_packages// /}" ]; then
   echo "pre-push: no package owns the changed files; local gate not needed" >&2
+  cleanup_gate_cwd
   exit 0
 fi
 
@@ -490,50 +591,6 @@ Check with `python scripts/atlas-stack-overlay.py check` at the stack root.
 MESSAGE
 }
 
-# Where cargo runs. A member's main tree runs inside the stack, so the gate
-# builds against the local working trees the overlay provides. A lane (a
-# linked worktree) cannot: the overlay patches this member's packages to its
-# main tree while the lane's workspace defines the same packages, and cargo
-# stops with "package collision in the lockfile" -- a moirai lane push was
-# refused that way as a clippy failure. A lane therefore runs from a directory
-# outside the stack, naming its manifest and the stack's shared target
-# directory, which resolves the committed lock exactly as CI does.
-gate_cwd="$repo_root"
-gate_manifest=""
-# `cargo fmt` finds no targets in a virtual manifest named by path, so a lane
-# names every member; in place it reads the workspace from the working
-# directory, and `--all` there would also reach the overlay's patched trees.
-gate_fmt_scope=""
-if [ "$(git rev-parse --git-dir)" != "$(git rev-parse --git-common-dir)" ]; then
-  overlay_config=""
-  search_dir="$(dirname "$repo_root")"
-  while [ "$search_dir" != "/" ] && [ "$search_dir" != "." ]; do
-    if [ -f "$search_dir/.cargo/config.toml" ]; then
-      overlay_config="$search_dir/.cargo/config.toml"
-      break
-    fi
-    parent="$(dirname "$search_dir")"
-    [ "$parent" = "$search_dir" ] && break
-    search_dir="$parent"
-  done
-  if [ -n "$overlay_config" ]; then
-    if [ -z "${CARGO_TARGET_DIR:-}" ]; then
-      stack_target="$(sed -n 's/^[[:space:]]*target-dir[[:space:]]*=[[:space:]]*"\(.*\)".*/\1/p' "$overlay_config" | head -1)"
-      case "$stack_target" in
-        "") ;;
-        /*|[A-Za-z]:*) export CARGO_TARGET_DIR="$stack_target" ;;
-        *) export CARGO_TARGET_DIR="$(dirname "$(dirname "$overlay_config")")/$stack_target" ;;
-      esac
-    fi
-    gate_cwd="$(mktemp -d "${TMPDIR:-/tmp}/pre-push-lane.XXXXXX")"
-    # Leading space: the reproduce lines render as `cargo doc --no-deps$gate_specs`,
-    # and without it the flag joins the subcommand ("--no-deps--manifest-path").
-    gate_manifest=" --manifest-path $repo_root/Cargo.toml"
-    gate_fmt_scope="--all"
-    echo "pre-push: lane of an overlaid member; gating outside the stack overlay" >&2
-  fi
-fi
-
 gate_specs="$gate_manifest"
 for package_name in $gate_packages; do
   gate_specs="$gate_specs -p $package_name"
@@ -561,9 +618,7 @@ restore_gate_lock() {
     rm -f "$gate_lock_backup" || true
   fi
   rm -f "${gate_log:-}" 2>/dev/null || true
-  if [ "$gate_cwd" != "$repo_root" ]; then
-    rm -rf "$gate_cwd" 2>/dev/null || true
-  fi
+  cleanup_gate_cwd
 }
 
 trap restore_gate_lock EXIT INT TERM
