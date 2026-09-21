@@ -28,7 +28,7 @@ jobs:
       atlas-ref: d15afbf5ad2c4126cfb174ea4f5e4a2b970d1ddf
       tag-prefix: kwavers-python-v
       abi3: true
-      abi3-python: "3.8"
+      abi3-python: "3.10"
       python-test-path: crates/kwavers-python/tests
 
   publish:

@@ -1,5 +1,21 @@
 # Backlog / Strategy
 
+## KW-PY-FLOOR-2026-09-21 — kwavers-python published a different Python floor than aequitas-python [minor] — done 2026-09-21
+
+- **Outcome.** `kwavers-python` built `abi3-py38` while `aequitas-python` moved to `abi3-py310`, so a user installing both met a version-matrix gap on Python 3.8 and 3.9, both past end of life. The two are commonly installed together: `pykwavers` depends on `aequitas_python`.
+- **Decision.** Move to `abi3-py310`, matching `aequitas-python`. The stable ABI is kept, so the release matrix stays one wheel per platform rather than one per interpreter version.
+- **Scope.** `Cargo.toml` (the pyo3 feature), `pyproject.toml` (`requires-python`, the 3.8/3.9 classifiers, the ruff and black target versions, the mypy note), the README badge and stable-ABI claim, `python-release.yml`'s `abi3-python`, `python-wheel-smoke.yml`'s interpreter, and two comments that named the old floor (the stub generator's `TypeAlias` note and the typed-consumer test's mypy note).
+- **Verification:** `tools/generate_surface.py --check` reports the committed stubs current; `cargo check -p kwavers-python --lib` is clean; `pytest tests/test_generated_surface.py tests/test_typed_consumer.py` is 8 passed on conda CPython 3.13.12. The wheel build and the full Python suite were not run here.
+- **Not regenerated: `uv.lock`, deliberately** — `uv lock --check` already failed against the *committed* pyproject (uv resolves 129 packages for the declared floor against 77 for the 3.10 floor), so the lockfile was stale before this change and it is not the cause. A plain `uv lock` rewrites 2904 lines and upgrades unrelated packages, which does not belong in a floor change. Filed as `KW-PY-UVLOCK-STALE-2026-09-21`.
+- **Non-goals:** the extension's API surface, the free-threaded wheel, and the k-Wave comparison tests.
+
+## KW-PY-UVLOCK-STALE-2026-09-21 — The Python dev lockfile is stale against its own pyproject [patch] — todo
+
+- **Finding.** `uv lock --check --directory crates/kwavers-python` fails against the committed `pyproject.toml` and the committed `uv.lock`: uv resolves 129 packages for the floor the pyproject declares, against 77 for a 3.10 floor. The tracked lockfile therefore did not match its own project before any floor change.
+- **Impact.** `uv sync` re-locks on this package; CI does not invoke uv, so no hosted gate is red.
+- **Acceptance:** a `uv lock` whose diff is reviewed as a dependency change in its own right, or an explicit decision that this lockfile is not maintained here.
+- **Status:** todo, not claimed; filed 2026-09-21 from the kwavers-python floor change.
+
 ## KW-SWE-EDGE-GROWTH-2026-09-17 — Elastic displacement grows without bound when the initial field reaches the edges [patch] [fix] — todo
 
 - **Finding.** 64 cubed, lambda = mu = 1 GPa, water density, default PML, `ux = sin`, `uy = cos` of `0.37 i + 0.53 j + 0.71 k` over the whole grid: the peak grows 1 to 9.2e3 in 400 steps at CFL 0.5, and the growth follows physical time, not step count (CFL 0.25 at step 200 equals CFL 0.5 at step 100), so it is not a timestep instability. A centred Gaussian pulse at the same settings decays into the PML at every CFL.

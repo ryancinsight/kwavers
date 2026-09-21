@@ -1,3 +1,24 @@
+## KW-PY-FLOOR — kwavers-python's published floor matched only itself 2026-09-21
+
+`kwavers-python` built `abi3-py38` while `aequitas-python` moved to
+`abi3-py310`. The two are installed together -- `pykwavers` depends on
+`aequitas_python` -- so the floors have to agree or a Python 3.8 or 3.9 user can
+install one distribution and not the other. Both versions are past end of life.
+`kwavers-python` moved to `abi3-py310`, keeping the stable ABI and so one wheel
+per platform.
+
+Verified at the new floor: `tools/generate_surface.py --check` reports the
+committed stubs current; `cargo check -p kwavers-python --lib` is clean; and
+`pytest tests/test_generated_surface.py tests/test_typed_consumer.py` is 8
+passed on conda CPython 3.13.12. Not verified here: the wheel build and the full
+Python suite, which need a maturin wheel of a large stack, and the hosted runs.
+
+`uv.lock` was deliberately left alone. `uv lock --check` fails against the
+**committed** pyproject as well -- uv resolves 129 packages for the declared
+floor, against 77 for the 3.10 floor -- so the lockfile was already stale and
+this change is not its cause; a plain `uv lock` rewrites 2904 lines and upgrades
+unrelated packages. Filed as `KW-PY-UVLOCK-STALE-2026-09-21`.
+
 ## KW-EXAMPLES-115 — Seismic example partition closure 2026-08-21
 
 ### Integration closure

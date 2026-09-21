@@ -153,8 +153,8 @@ def test_typed_consumer_passes_strict_mypy():
         "--strict",
         "--follow-imports=skip",
         # The stub imports numpy.typing; the installed numpy ships 3.12+ stub
-        # syntax, so target a modern python version regardless of the pyproject
-        # [tool.mypy] python_version = "3.8".
+        # syntax, so target a modern python version rather than the pyproject
+        # [tool.mypy] python_version.
         "--python-version",
         "3.12",
         str(PYTHON_SOURCE / "pykwavers" / "_pykwavers.pyi"),

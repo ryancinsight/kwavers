@@ -4,6 +4,15 @@
 
 ### Changed
 
+- **[minor] `kwavers-python` moves its Python floor from 3.8 to 3.10.**
+  `aequitas-python` already publishes `abi3-py310`, and the two distributions
+  are installed together -- `pykwavers` depends on `aequitas_python` -- so the
+  floors have to agree or a Python 3.8 or 3.9 user can install one and not the
+  other. Both versions are past end of life. `requires-python` is now `>=3.10`,
+  the abi3 wheel is tagged `cp310-abi3`, and the 3.8/3.9 classifiers, the ruff
+  and black target versions, the README badge, and the release and wheel-smoke
+  workflows' interpreter all move with it. The extension's API is unchanged.
+
 - **[patch] The elastic stress divergence takes one fused pass.**
   `stress_divergence_into` summed three per-axis sweeps out of three scratch
   buffers; it now calls leto's `FiniteDifference3D::divergence_into`, which

@@ -1,7 +1,7 @@
 # kwavers-python: Python Bindings for Kwavers
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Rust](https://img.shields.io/badge/built%20with-rust-orange.svg)](https://www.rust-lang.org/)
 
 Python bindings for the [kwavers](https://github.com/ryancinsight/kwavers) ultrasound
@@ -17,7 +17,7 @@ safety of Rust to Python-based acoustic simulations:
 - 🔒 **Memory Safe**: No segfaults, data races, or undefined behavior
 - 🎯 **k-Wave Compatible**: Familiar API for easy comparison and migration
 - 🧪 **Validated**: Direct comparison framework with k-Wave / k-wave-python
-- 🌐 **Cross-Platform**: Windows, Linux, macOS stable-ABI (abi3-py38) wheels via PyO3
+- 🌐 **Cross-Platform**: Windows, Linux, macOS stable-ABI (abi3-py310) wheels via PyO3
 
 ## Architecture
 
