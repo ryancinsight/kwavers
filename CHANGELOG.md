@@ -4,6 +4,27 @@
 
 ### Changed
 
+- **[docs] The PM boards are back under their 1,000-line artifact budget.**
+  `backlog.md` goes from 5,701 lines to 998 and `gap_audit.md` from 7,912 to
+  396, against the ceiling `atlas-artifact-budget.py` enforces. The cut applies
+  the board's own rule -- a board is a queue, never a ledger -- mechanically
+  where it can be (`atlas-board-compact.py --landed`: 23 closed items and 24
+  stale narrative sections out of `backlog.md`, 13 closed findings and 12
+  narrative sections out of `gap_audit.md`; every closed id verified by its
+  `Item:` trailer on `main`, so each is recoverable with
+  `git log --grep='^Item: <id>'`), and by hand where the prose still held live
+  work: the per-slice PR ledgers inside `KW-LINT-1`, `KW-GPU-060`,
+  `KW-LINT-047` and `KW-EXAMPLES-115`, the `missing_errors_doc` and
+  `missing_panics_doc` increment logs, and the 2026-05
+  `Validation Goals`/`Active Sprint`/session narratives. No live item was
+  deleted: the open threads those ledgers were the only home of are now filed
+  as items (`KW-GPU-TEARDOWN`, `KW-BOOK-CH29-RESIDUALS`,
+  `KW-FWI-PSTD-ADJOINT-RECIPROCITY`), and the compactor reports both boards
+  clean -- zero deletable items, zero narrative sections. One stale finding
+  closed with it: `KW-EXAMPLES-115` was still recorded as in progress for a
+  2-D example entry point of 1,024 lines, but every seismic example leaf is now
+  at or below 488 lines, so its own acceptance criterion is met.
+
 - **[minor] `kwavers-python` moves its Python floor from 3.8 to 3.10.**
   `aequitas-python` already publishes `abi3-py310`, and the two distributions
   are installed together -- `pykwavers` depends on `aequitas_python` -- so the
