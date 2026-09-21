@@ -80,7 +80,7 @@ kernel under measurement is a different one.
 
 ## Revision 2026-09-18: elastic and plane-strain sweeps
 
-[Elastic coverage item](../../backlog.md#kw-leto-central-coverage).
+`Elastic coverage item`.
 The elastic replacement landed in kwavers PR #802 (`ac57d1956`, merged at
 `412859483`), after Leto PR #203 (`1fea8ce`) supplied whole-field central
 sweeps on short axes. `stress::fd_stencils` and its per-point kernel are

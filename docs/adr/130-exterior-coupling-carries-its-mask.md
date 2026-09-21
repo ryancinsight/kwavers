@@ -2,7 +2,7 @@
 
 Status: Accepted
 
-Board item: [KW-SOURCE-DOMAIN-OPTIONAL-MASK-2026-09-08](../../backlog.md#kw-source-domain-optional-mask-2026-09-08)
+Board item: `KW-SOURCE-DOMAIN-OPTIONAL-MASK-2026-09-08`
 
 ## Context
 
