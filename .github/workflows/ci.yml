@@ -307,24 +307,70 @@ jobs:
             crates/kwavers-python/tests/test_typed_consumer.py -q
 
   build:
-    name: Build & Test
+    # The name is literal rather than a matrix cell because it is a required
+    # status check. A job skipped before its matrix expands reports once under
+    # the bare job name, so an expression-built `rust:` matrix published
+    # `Build & Test` while branch protection waited for `Build & Test
+    # (stable)` -- which is why a prose-only pull request could never satisfy
+    # the required checks (KW-PROSE-PR-UNMERGEABLE). A literal name reports
+    # skipped, and a skipped required check counts as satisfied.
+    name: Build & Test (stable)
     needs: lockfile
     runs-on: ubuntu-latest
-    # Keep the existing finite bound. Stable owns the full release gate;
-    # beta/nightly compile the target surface only, and stable doctests reuse
-    # that release/plotting graph instead of triggering a second test-profile
-    # build. A slow leg remains a performance defect, not timeout headroom.
+    # Keep the existing finite bound. Stable owns the full release gate, and
+    # its doctests reuse that release/plotting graph instead of triggering a
+    # second test-profile build. A slow leg remains a performance defect, not
+    # timeout headroom.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          toolchain: stable
+
+      # Shared cache; rationale at the first use in this file.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers-release
+          # The architecture preflight is the sole dev-profile writer.
+          # This narrower consumer restores only.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Install nextest
+        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+        with:
+          tool: nextest
+
+      - name: Run tests
+        run: cargo nextest run --locked -p kwavers --profile ci --lib --release --verbose --features="plotting"
+
+      - name: Run doc tests
+        run: cargo test --locked --doc -p kwavers --release --features plotting --verbose
+
+  toolchain-roll:
+    # Beta and nightly catch toolchain breakage ahead of the 6-week roll. A
+    # roll is not a property of the change under review and the nightly
+    # backstop catches it within a day either way, so they run on the schedule
+    # and stable alone gates a pull request -- 9 minutes off every one.
+    # Compiling the entire target surface is the oracle for a roll; repeating
+    # the full release suite on each leg adds no signal while roughly halving
+    # the matrix's wall-clock cost (measured beta 23m, nightly 28m for
+    # identical source).
+    name: Build & Test (${{ matrix.rust }})
+    needs: lockfile
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       matrix:
-        # Beta and nightly catch toolchain breakage ahead of the 6-week roll.
-        # A roll is not a property of the change under review, and the nightly
-        # backstop catches it within a day either way, so they run there and
-        # stable alone gates a pull request -- 9 minutes off every one.
-        rust: >-
-          ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-              && fromJSON('["stable", "beta", "nightly"]')
-              || fromJSON('["stable"]') }}
+        rust: [beta, nightly]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -342,32 +388,9 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
           shared-key: kwavers-release
-          # The architecture preflight is the sole dev-profile writer.
-          # This narrower consumer restores only.
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      # Stable is the full gate: release nextest suite + doctests. Beta and
-      # nightly exist to catch toolchain breakage ahead of the 6-week roll;
-      # compiling the entire target surface is the oracle for that, and
-      # repeating the full release suite on each leg adds no signal while
-      # roughly halving the matrix's wall-clock cost (measured beta 23m,
-      # nightly 28m for identical source).
-      - name: Install nextest
-        if: matrix.rust == 'stable'
-        uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
-        with:
-          tool: nextest
-
-      - name: Run tests
-        if: matrix.rust == 'stable'
-        run: cargo nextest run --locked -p kwavers --profile ci --lib --release --verbose --features="plotting"
-
-      - name: Run doc tests
-        if: matrix.rust == 'stable'
-        run: cargo test --locked --doc -p kwavers --release --features plotting --verbose
-
       - name: Toolchain-compat check
-        if: matrix.rust != 'stable'
         run: cargo check --locked -p kwavers --release --features "plotting" --all-targets
 
   security:
@@ -657,6 +680,7 @@ jobs:
       - quality
       - python-surface
       - build
+      - toolchain-roll
       - security
       - memory-safety
       - coverage
