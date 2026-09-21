@@ -16,7 +16,7 @@
 
 use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
-use kwavers_core::traversal::{zip_mut, zip_mut_pair, zip_mut_triple};
+use kwavers_core::traversal::{zip_mut, zip_mut_pair};
 use kwavers_grid::Grid;
 use leto::Array3;
 use leto_ops::{Axis, FiniteDifference3D};
@@ -144,23 +144,30 @@ pub fn stress_divergence_into(
         ..
     } = scratch;
 
-    // Normal strains, held in the shear fields until the diagonal stresses
-    // have read them.
-    sweep(&op, Axis::X, &field.ux, sxy);
-    sweep(&op, Axis::Y, &field.uy, sxz);
-    sweep(&op, Axis::Z, &field.uz, syz);
-    zip_mut_triple(
-        sxx.view_mut(),
-        syy.view_mut(),
-        szz.view_mut(),
-        (sxy.view(), sxz.view(), syz.view(), lambda.view(), mu.view()),
-        |xx, yy, zz, (&exx, &eyy, &ezz, &la, &mv)| {
+    // All three diagonal stresses read the same three normal strains, so one
+    // fused pass sweeps the strains once and writes the three: 16 MB of
+    // traffic at 64 cubed where sweeping them into the shear fields and
+    // combining afterwards moved 28 MB. The shear fields no longer hold
+    // strains on the way, so the shears below are their only writer.
+    let (mut xx, mut yy, mut zz) = (sxx.view_mut(), syy.view_mut(), szz.view_mut());
+    op.map_axis_derivatives_triple(
+        [
+            (Axis::X, field.ux.view()),
+            (Axis::Y, field.uy.view()),
+            (Axis::Z, field.uz.view()),
+        ],
+        [lambda.view(), mu.view()],
+        [&mut xx, &mut yy, &mut zz],
+        |[exx, eyy, ezz], [la, mv]| {
             let la2mu = 2.0f64.mul_add(mv, la);
-            *xx = la2mu.mul_add(exx, la * (eyy + ezz));
-            *yy = la2mu.mul_add(eyy, la * (exx + ezz));
-            *zz = la2mu.mul_add(ezz, la * (exx + eyy));
+            [
+                la2mu.mul_add(exx, la * (eyy + ezz)),
+                la2mu.mul_add(eyy, la * (exx + ezz)),
+                la2mu.mul_add(ezz, la * (exx + eyy)),
+            ]
         },
-    );
+    )
+    .expect("invariant: validated elastic fields share the grid shape");
 
     for (first, second, out) in [
         ((Axis::Y, &field.ux), (Axis::X, &field.uy), &mut *sxy),
