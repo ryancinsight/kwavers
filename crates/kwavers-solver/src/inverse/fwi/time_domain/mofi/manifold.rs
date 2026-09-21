@@ -91,7 +91,7 @@ pub fn default_homotopy(config: MofiConfig) -> [MofiStage; 3] {
 /// Align by a warm-started misfit homotopy: run each stage in turn, threading the
 /// recovered transform forward.
 ///
-/// `processor` selects the engine (must be [`FwiEngine::SecondOrderSelfAdjoint`])
+/// `processor` selects the engine (must be [`FwiEngine::SecondOrderSelfAdjoint`](super::super::FwiEngine::SecondOrderSelfAdjoint))
 /// and the *base* configuration; per stage it is cloned with the stage's misfit
 /// and band-limit. Returns the final stage's result, with `initial_misfit` taken
 /// from the first stage (at `φ = 0`).
@@ -143,7 +143,7 @@ pub fn align_homotopy(
 /// Align `template` to `observed` acoustic data by rigid (SE(2)) manifold
 /// optimisation of the FWI misfit, starting from the identity transform.
 ///
-/// `processor` must select [`FwiEngine::SecondOrderSelfAdjoint`] so the chained
+/// `processor` must select [`FwiEngine::SecondOrderSelfAdjoint`](super::super::FwiEngine::SecondOrderSelfAdjoint) so the chained
 /// gradient uses the exact `∂f/∂c`. `template` is the reference sound-speed image
 /// on the inversion grid; `observed` is the recorded data (recorder/Fortran row
 /// order, as produced by the engine's forward model).
