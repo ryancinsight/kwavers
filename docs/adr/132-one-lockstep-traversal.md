@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-16
-- **Board item:** [KW-LOCKSTEP-TRAVERSAL](../../backlog.md#kw-lockstep-traversal)
+- **Board item:** `KW-LOCKSTEP-TRAVERSAL`
 
 ## Context
 
