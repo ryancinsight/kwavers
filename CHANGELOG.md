@@ -12,6 +12,14 @@
   path the phase split measured memory-bound. Values are bit-identical. The
   stress evaluation is 1.4x faster at 64 cubed (669-700 us to 473-498 us of
   fastest repeat) and the step 1.3x (2036-2126 us to 1585-1621 us).
+- **[minor] `kwavers-python` moves its Python floor from 3.8 to 3.10.**
+  `aequitas-python` already publishes `abi3-py310`, and the two distributions
+  are installed together -- `pykwavers` depends on `aequitas_python` -- so the
+  floors have to agree or a Python 3.8 or 3.9 user can install one and not the
+  other. Both versions are past end of life. `requires-python` is now `>=3.10`,
+  the abi3 wheel is tagged `cp310-abi3`, and the 3.8/3.9 classifiers, the ruff
+  and black target versions, the README badge, and the release and wheel-smoke
+  workflows' interpreter all move with it. The extension's API is unchanged.
 
 - **[major] The elastic stress divergence runs on leto's operator.**
   `kwavers-solver`: `forward::elastic::swe::stress::{fd1_x, fd1_y, fd1_z}`
