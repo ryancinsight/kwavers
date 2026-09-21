@@ -72,21 +72,25 @@ fn sweep(op: &FiniteDifference3D<f64>, axis: Axis, field: &Array3<f64>, out: &mu
 }
 
 /// `shear = μ (∂first/∂first_axis + ∂second/∂second_axis)`.
+///
+/// One fused pass: leto reads both displacement components and μ once per
+/// output lane, where sweeping each axis into a scratch buffer and scaling
+/// the sum moves twice the traffic on a path measured memory-bound. The
+/// values are bit-identical to the composed form.
 fn shear(
     op: &FiniteDifference3D<f64>,
     (first_axis, first): (Axis, &Array3<f64>),
     (second_axis, second): (Axis, &Array3<f64>),
     mu: &Array3<f64>,
     shear: &mut Array3<f64>,
-    [derivative, other_derivative]: [&mut Array3<f64>; 2],
 ) {
-    sweep(op, first_axis, first, derivative);
-    sweep(op, second_axis, second, other_derivative);
-    zip_mut(
-        shear.view_mut(),
-        (derivative.view(), other_derivative.view(), mu.view()),
-        |value, (&a, &b, &mv)| *value = mv * (a + b),
-    );
+    op.map_axis_derivatives(
+        [(first_axis, first.view()), (second_axis, second.view())],
+        [mu.view()],
+        &mut shear.view_mut(),
+        |[a, b], [m]| m * (a + b),
+    )
+    .expect("invariant: validated elastic fields share the grid shape");
 }
 
 /// `out = ∂first/∂x + ∂second/∂y + ∂third/∂z`, summed left to right.
@@ -110,9 +114,10 @@ fn divergence(
 /// Compute the elastic stress tensor divergence ∇·σ into pre-allocated
 /// scratch buffers (zero allocation).
 ///
-/// Writes all six stress fields and the three divergence fields of `scratch`;
-/// its two derivative fields are overwritten as workspace. Stale contents are
-/// never read.
+/// Writes all six stress fields and the three divergence fields of `scratch`.
+/// Since the shears and the divergences each take one fused pass, the two
+/// derivative workspaces this used to sweep through are untouched here; the
+/// plane-strain kernel still uses them.
 ///
 /// # Panics
 ///
@@ -136,8 +141,6 @@ pub fn stress_divergence_into(
         div_x,
         div_y,
         div_z,
-        derivative,
-        other_derivative,
         ..
     } = scratch;
 
@@ -164,14 +167,7 @@ pub fn stress_divergence_into(
         ((Axis::Z, &field.ux), (Axis::X, &field.uz), &mut *sxz),
         ((Axis::Z, &field.uy), (Axis::Y, &field.uz), &mut *syz),
     ] {
-        shear(
-            &op,
-            first,
-            second,
-            mu,
-            out,
-            [&mut *derivative, &mut *other_derivative],
-        );
+        shear(&op, first, second, mu, out);
     }
 
     for (stresses, out) in [
@@ -222,14 +218,7 @@ pub(crate) fn stress_divergence_plane_strain_into(
     sweep(&op, Axis::X, &field.ux, derivative);
     sweep(&op, Axis::Y, &field.uy, other_derivative);
     plane_diagonal_stresses(sxx, syy, derivative, other_derivative, lambda, mu);
-    shear(
-        &op,
-        (Axis::Y, &field.ux),
-        (Axis::X, &field.uy),
-        mu,
-        sxy,
-        [&mut *derivative, &mut *other_derivative],
-    );
+    shear(&op, (Axis::Y, &field.ux), (Axis::X, &field.uy), mu, sxy);
 
     for ([first, second], out) in [([&*sxx, &*sxy], div_x), ([&*sxy, &*syy], div_y)] {
         sweep(&op, Axis::X, first, out);
