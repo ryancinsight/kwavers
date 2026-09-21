@@ -4,6 +4,15 @@
 
 ### Changed
 
+- **[patch] The elastic stress divergence takes one fused pass.**
+  `stress_divergence_into` summed three per-axis sweeps out of three scratch
+  buffers; it now calls leto's `FiniteDifference3D::divergence_into`, which
+  reads each stress field once per output lane. That is 8 MB of traffic per
+  divergence component at 64 cubed where the composed form moved 20 MB, on a
+  path the phase split measured memory-bound. Values are bit-identical. The
+  stress evaluation is 1.4x faster at 64 cubed (669-700 us to 473-498 us of
+  fastest repeat) and the step 1.3x (2036-2126 us to 1585-1621 us).
+
 - **[major] The elastic stress divergence runs on leto's operator.**
   `kwavers-solver`: `forward::elastic::swe::stress::{fd1_x, fd1_y, fd1_z}`
   are removed; use `leto_ops::FiniteDifference3D::central_fourth_order`.
