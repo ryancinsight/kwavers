@@ -2,7 +2,7 @@
 
 Status: Accepted
 
-Board item: [KW-NATIVE-R2C-2026-09-11](../../backlog.md#kw-native-r2c)
+Board item: `KW-NATIVE-R2C-2026-09-11`
 
 ## Context
 

@@ -5,7 +5,7 @@
 - **Change class:** [arch]
 - **Relates:** paths relocated by the crate split ([ADR 011](011-workspace-crate-split.md));
   typed skull configuration consolidation tracked by
-  [KW-EXAMPLES-115](../../backlog.md#kw-examples-115--type-and-partition-the-seismic-example-workflows-major-arch--in-progress-2026-08-20)
+  `KW-EXAMPLES-115`
 - **Revision 2026-08-20:** The skull workflow's existing
   `AcousticSkullProperties` configuration now stores Aequitas quantities and is
   consumed directly by both CT mappings. A proposed parallel bone-material

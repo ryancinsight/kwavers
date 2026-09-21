@@ -16,6 +16,11 @@
 //! near-incompressible `c_P/c_S ≈ 1000` would require; the FWI machinery is
 //! identical (see ADR 033 / the elastic_fwi tests).
 
+#![expect(
+    clippy::print_stdout,
+    reason = "an example is a program; its progress and output paths on stdout are its user interface"
+)]
+
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::inverse::elastography::elastic_fwi::{
