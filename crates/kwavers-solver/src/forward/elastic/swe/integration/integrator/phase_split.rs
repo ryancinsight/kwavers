@@ -19,7 +19,7 @@ use crate::forward::elastic::swe::scratch::ElasticStepScratch;
 use crate::forward::elastic::swe::types::ElasticWaveField;
 use crate::phase_timing::PhaseTimer;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-use kwavers_core::traversal::zip_mut;
+use kwavers_core::traversal::{zip_mut, zip_mut_triple};
 use kwavers_grid::Grid;
 use leto::Array3;
 use leto_ops::{Axis, FiniteDifference3D};
@@ -190,6 +190,72 @@ fn swe_step_phase_split() {
             .expect("grid-shaped fields");
         }
     };
+    // The three diagonal stresses by both routes: three sweeps into the shear
+    // fields and a pointwise combination, against one fused pass that sweeps
+    // the strains once and writes all three stresses.
+    let composed_diagonal = |s: &mut State| {
+        let State { field, scratch } = s;
+        let ElasticStepScratch {
+            sxx,
+            syy,
+            szz,
+            sxy,
+            sxz,
+            syz,
+            ..
+        } = scratch;
+        for (axis, (from, into)) in [Axis::X, Axis::Y, Axis::Z].into_iter().zip(
+            [&field.ux, &field.uy, &field.uz]
+                .into_iter()
+                .zip([&mut *sxy, &mut *sxz, &mut *syz]),
+        ) {
+            let mut into = into.view_mut();
+            match axis {
+                Axis::X => derivatives.apply_x_into(from.view(), &mut into),
+                Axis::Y => derivatives.apply_y_into(from.view(), &mut into),
+                Axis::Z => derivatives.apply_z_into(from.view(), &mut into),
+            }
+            .expect("grid-shaped fields");
+        }
+        zip_mut_triple(
+            sxx.view_mut(),
+            syy.view_mut(),
+            szz.view_mut(),
+            (sxy.view(), sxz.view(), syz.view(), lambda.view(), mu.view()),
+            |xx, yy, zz, (&exx, &eyy, &ezz, &la, &mv)| {
+                let la2mu = 2.0f64.mul_add(mv, la);
+                *xx = la2mu.mul_add(exx, la * (eyy + ezz));
+                *yy = la2mu.mul_add(eyy, la * (exx + ezz));
+                *zz = la2mu.mul_add(ezz, la * (exx + eyy));
+            },
+        );
+    };
+    let fused_diagonal = |s: &mut State| {
+        let State { field, scratch } = s;
+        let ElasticStepScratch { sxx, syy, szz, .. } = scratch;
+        let (mut xx, mut yy, mut zz) = (sxx.view_mut(), syy.view_mut(), szz.view_mut());
+        derivatives
+            .map_axis_derivatives_triple(
+                [
+                    (Axis::X, field.ux.view()),
+                    (Axis::Y, field.uy.view()),
+                    (Axis::Z, field.uz.view()),
+                ],
+                [lambda.view(), mu.view()],
+                [&mut xx, &mut yy, &mut zz],
+                |[exx, eyy, ezz], [la, mv]| {
+                    let la2mu = 2.0f64.mul_add(mv, la);
+                    [
+                        la2mu.mul_add(exx, la * (eyy + ezz)),
+                        la2mu.mul_add(eyy, la * (exx + ezz)),
+                        la2mu.mul_add(ezz, la * (exx + eyy)),
+                    ]
+                },
+            )
+            .expect("grid-shaped fields");
+    };
+    let (composed_diag, fused_diag) = TIMER.pair(&mut state, composed_diagonal, fused_diagonal);
+
     // The three shear stresses by both routes. Two sweeps into scratch and a
     // scaled sum, against one fused pass that reads both fields and mu once
     // per lane. Alternating inside one loop is what makes the difference
@@ -298,6 +364,11 @@ fn swe_step_phase_split() {
             pick(update_total),
             pick(damping_total),
             pick(step) - pick(back_to_back),
+        );
+        eprintln!(
+            "swe 64 cubed {label}: diagonal composed {:.0} us, fused {:.0}",
+            pick(composed_diag),
+            pick(fused_diag),
         );
         eprintln!(
             "swe 64 cubed {label}: three shears composed {:.0} us, fused {:.0}",
