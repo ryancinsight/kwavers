@@ -5,9 +5,7 @@ use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::acceleration::{PlaneStrainStress, SpatialStress, StressOperator};
 use super::{body_force, PreparedBodyForces, TimeIntegrator};
 use kwavers_core::error::KwaversResult;
-use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
-
-const INTEGRATOR_CHUNK: usize = 4096;
+use kwavers_core::traversal::{zip_mut_pair, zip_mut_triple};
 
 impl TimeIntegrator<'_> {
     /// Perform one velocity-Verlet time step.
@@ -146,6 +144,8 @@ impl TimeIntegrator<'_> {
     }
 }
 
+/// `x += scale · delta_x` and likewise for y and z; plane strain leaves the
+/// out-of-plane component alone.
 pub(super) fn update_components<S: StressOperator>(
     x: &mut leto::Array3<f64>,
     y: &mut leto::Array3<f64>,
@@ -156,65 +156,26 @@ pub(super) fn update_components<S: StressOperator>(
     scale: f64,
 ) {
     if S::IS_PLANE_STRAIN {
-        let x = x
-            .as_slice_mut()
-            .expect("invariant: x component uses standard layout");
-        let y = y
-            .as_slice_mut()
-            .expect("invariant: y component uses standard layout");
-        let delta_x = delta_x
-            .as_slice()
-            .expect("invariant: x delta uses standard layout");
-        let delta_y = delta_y
-            .as_slice()
-            .expect("invariant: y delta uses standard layout");
-        moirai_parallel::for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
-            x,
-            y,
-            INTEGRATOR_CHUNK,
-            |chunk_idx, x_chunk, y_chunk| {
-                let start = chunk_idx * INTEGRATOR_CHUNK;
-                for offset in 0..x_chunk.len() {
-                    let idx = start + offset;
-                    x_chunk[offset] += scale * delta_x[idx];
-                    y_chunk[offset] += scale * delta_y[idx];
-                }
+        zip_mut_pair(
+            x.view_mut(),
+            y.view_mut(),
+            (delta_x.view(), delta_y.view()),
+            |x, y, (&dx, &dy)| {
+                *x += scale * dx;
+                *y += scale * dy;
             },
         );
         return;
     }
-
-    let x = x
-        .as_slice_mut()
-        .expect("invariant: x component uses standard layout");
-    let y = y
-        .as_slice_mut()
-        .expect("invariant: y component uses standard layout");
-    let z = z
-        .as_slice_mut()
-        .expect("invariant: z component uses standard layout");
-    let delta_x = delta_x
-        .as_slice()
-        .expect("invariant: x delta uses standard layout");
-    let delta_y = delta_y
-        .as_slice()
-        .expect("invariant: y delta uses standard layout");
-    let delta_z = delta_z
-        .as_slice()
-        .expect("invariant: z delta uses standard layout");
-    for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
-        x,
-        y,
-        z,
-        INTEGRATOR_CHUNK,
-        |chunk_idx, x_chunk, y_chunk, z_chunk| {
-            let start = chunk_idx * INTEGRATOR_CHUNK;
-            for offset in 0..x_chunk.len() {
-                let idx = start + offset;
-                x_chunk[offset] += scale * delta_x[idx];
-                y_chunk[offset] += scale * delta_y[idx];
-                z_chunk[offset] += scale * delta_z[idx];
-            }
+    zip_mut_triple(
+        x.view_mut(),
+        y.view_mut(),
+        z.view_mut(),
+        (delta_x.view(), delta_y.view(), delta_z.view()),
+        |x, y, z, (&dx, &dy, &dz)| {
+            *x += scale * dx;
+            *y += scale * dy;
+            *z += scale * dz;
         },
     );
 }
