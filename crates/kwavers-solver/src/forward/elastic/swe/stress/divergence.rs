@@ -90,20 +90,21 @@ fn shear(
 }
 
 /// `out = ∂first/∂x + ∂second/∂y + ∂third/∂z`, summed left to right.
+///
+/// One fused pass: leto reads each stress field once per output lane rather
+/// than writing three per-axis buffers this then adds back, which is the
+/// difference between 8 MB and 20 MB of traffic per component at 64 cubed on
+/// a path measured memory-bound. The values are unchanged to the bit.
 fn divergence(
     op: &FiniteDifference3D<f64>,
     [first, second, third]: [&Array3<f64>; 3],
     out: &mut Array3<f64>,
-    [derivative, other_derivative]: [&mut Array3<f64>; 2],
 ) {
-    sweep(op, Axis::X, first, out);
-    sweep(op, Axis::Y, second, derivative);
-    sweep(op, Axis::Z, third, other_derivative);
-    zip_mut(
-        out.view_mut(),
-        (derivative.view(), other_derivative.view()),
-        |value, (&b, &c)| *value = (*value + b) + c,
-    );
+    op.divergence_into(
+        [first.view(), second.view(), third.view()],
+        &mut out.view_mut(),
+    )
+    .expect("invariant: validated elastic fields share the grid shape");
 }
 
 /// Compute the elastic stress tensor divergence ∇·σ into pre-allocated
@@ -178,12 +179,7 @@ pub fn stress_divergence_into(
         ([&*sxy, &*syy, &*syz], div_y),
         ([&*sxz, &*syz, &*szz], div_z),
     ] {
-        divergence(
-            &op,
-            stresses,
-            out,
-            [&mut *derivative, &mut *other_derivative],
-        );
+        divergence(&op, stresses, out);
     }
 }
 
