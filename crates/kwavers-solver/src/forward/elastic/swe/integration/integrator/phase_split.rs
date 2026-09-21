@@ -21,6 +21,7 @@ use crate::phase_timing::PhaseTimer;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_grid::Grid;
 use leto::Array3;
+use leto_ops::{Axis, FiniteDifference3D};
 
 /// Cells per axis, the grid the FDTD and PSTD splits use.
 const N: usize = 64;
@@ -138,6 +139,63 @@ fn swe_step_phase_split() {
     let (acceleration_total, stress) = TIMER.pair(&mut state, acceleration, |s| {
         SpatialStress::evaluate(&grid, &lambda, &mu, &s.field, &mut s.scratch);
     });
+    // The evaluation against the sweeps it contains: nine derivatives of the
+    // displacement components and nine of the stress components, written into
+    // the same scratch fields the evaluation writes. The difference is the
+    // pointwise assembly — six stress components and three divergence sums.
+    let derivatives = FiniteDifference3D::central_fourth_order(grid.dx, grid.dy, grid.dz)
+        .expect("a grid has positive spacing");
+    let sweeps = |s: &mut State| {
+        let State { field, scratch } = s;
+        let sweep = |axis: Axis, from: &Array3<f64>, into: &mut Array3<f64>| {
+            let mut into = into.view_mut();
+            match axis {
+                Axis::X => derivatives.apply_x_into(from.view(), &mut into),
+                Axis::Y => derivatives.apply_y_into(from.view(), &mut into),
+                Axis::Z => derivatives.apply_z_into(from.view(), &mut into),
+            }
+            .expect("grid-shaped fields");
+        };
+        for (axis, from) in [
+            (Axis::X, &field.ux),
+            (Axis::Y, &field.uy),
+            (Axis::Z, &field.uz),
+            (Axis::Y, &field.ux),
+            (Axis::X, &field.uy),
+            (Axis::Z, &field.ux),
+            (Axis::X, &field.uz),
+            (Axis::Z, &field.uy),
+            (Axis::Y, &field.uz),
+        ] {
+            sweep(axis, from, &mut scratch.derivative);
+        }
+        for (axis, from) in [
+            (Axis::X, &scratch.sxx),
+            (Axis::Y, &scratch.sxy),
+            (Axis::Z, &scratch.sxz),
+            (Axis::X, &scratch.sxy),
+            (Axis::Y, &scratch.syy),
+            (Axis::Z, &scratch.syz),
+            (Axis::X, &scratch.sxz),
+            (Axis::Y, &scratch.syz),
+            (Axis::Z, &scratch.szz),
+        ] {
+            let mut into = scratch.other_derivative.view_mut();
+            match axis {
+                Axis::X => derivatives.apply_x_into(from.view(), &mut into),
+                Axis::Y => derivatives.apply_y_into(from.view(), &mut into),
+                Axis::Z => derivatives.apply_z_into(from.view(), &mut into),
+            }
+            .expect("grid-shaped fields");
+        }
+    };
+    let (stress_again, sweeps_only) = TIMER.pair(
+        &mut state,
+        |s| {
+            SpatialStress::evaluate(&grid, &lambda, &mu, &s.field, &mut s.scratch);
+        },
+        sweeps,
+    );
     // Only the two pairs above advance the field physically; the update and
     // damping arms below reapply one acceleration, so the guard reads the field
     // before them.
@@ -170,6 +228,12 @@ fn swe_step_phase_split() {
             pick(update_total),
             pick(damping_total),
             pick(step) - pick(back_to_back),
+        );
+        eprintln!(
+            "swe 64 cubed {label}: stress {:.0} us = 18 sweeps {:.0} + assembly {:.0}",
+            pick(stress_again),
+            pick(sweeps_only),
+            pick(stress_again) - pick(sweeps_only),
         );
     }
 }
