@@ -1656,13 +1656,13 @@
   velocity, normalized coherence loss, and lag-zero signal power from one
   canonical Kasai traversal. The existing velocity/variance tuple API delegates
   to that result. Coherent-I/Q regression coverage pins the lag convention,
-  sign, power, and variance semantics for direct consumers such as LeoNeuro.
+  sign, power, and variance semantics for direct downstream consumers.
 
 ### Added (2026-07-15) - layered propagation path [minor]
 
 - Added `RayleighPropagationPath`, a validated ordered straight-ray contract
   for segmentwise phase and amplitude attenuation. `RayleighIntegralSpec` now
-  consumes that path, so field evaluation and consumers such as LeoNeuro focus
+  consumes that path, so field evaluation and downstream consumers focus
   control use one provider-owned propagation law.
 
 ### Fixed (2026-07-14) - Atlas-local Gaia resolution [patch]
@@ -1732,7 +1732,7 @@
   transducer matrix inversion through `leto-ops` while retaining Kwavers'
   canonical eigendecomposition and complex linear-system contracts. Adaptive
   MVDR/ESMV and narrowband Capon consumers now compile directly against the
-  native Leto/Eunomia provider graph used by LeoNeuro. The gate also deleted
+  native Leto/Eunomia provider graph used by a downstream consumer. The gate also deleted
   21 same-type conversions exposed across PAM and solver consumers.
 
 - Removed the rank-1 Leto/NumPy compatibility wrapper pair and routed ten PyO3

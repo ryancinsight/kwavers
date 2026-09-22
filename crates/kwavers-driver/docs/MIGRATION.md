@@ -3,7 +3,7 @@
 **Status**: Phase 0 complete (scaffolding landed). Phases 1+ sequenced below.
 
 This document is the SSOT for the rename + vertical-slice refactor that turns the
-standalone `kicad-routing` crate (`D:\kwavers\leoneuro\driver\kicad-routing`) into the
+standalone `kicad-routing` crate (a downstream consumer's `driver/kicad-routing`) into the
 **workspace MEMBER** `kwavers-driver` at `D:\kwavers\crates\kwavers-driver\` (relative to the
 parent `kwavers/` Cargo workspace).
 
@@ -1057,7 +1057,7 @@ backstops — optimizing either is premature.
 **⚠ Test reconstruction:** the original 1272-LOC file's 662-line `mod tests` block was **lost** — the
 flat `validate.rs` was removed (a tool auto-resolving the transient `validate.rs`↔`validate/mod.rs`
 module ambiguity, in the concurrent-edit environment) *before* its test body could be extracted into
-the slice, and leoneuro is git-ignored so there is no VCS copy. `tests.rs` is therefore a **from-contract
+the slice, and the downstream consumer's tree is outside version control here, so there is no VCS copy. `tests.rs` is therefore a **from-contract
 reconstruction**: 12 genuine value-semantic tests, each assertion derived analytically from the
 function contracts (Check directions/margins, PhysicsReport gate, via census, microvia AR, net
 length/skew, HV spacing, ampacity, and the full kwavers-beam seam pass/reject paths). All 12 pass; it

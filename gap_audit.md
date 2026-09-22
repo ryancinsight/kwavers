@@ -1271,7 +1271,7 @@ passed in 32m45s, with the remaining required matrix checks also green.
   IEEE TMI 34(11), 2271-2285 (2015), DOI 10.1109/TMI.2015.2428634. Evidence
 tier: realification identity, 3/3 locked value-semantic provider tests,
 warning-denied Clippy, package Rustdoc with its 57 pre-existing unresolved links
-outside the I/Q files, and LeoNeuro's independent 14/14 CPython boundary/
+outside the I/Q files, and a downstream consumer's independent 14/14 CPython boundary/
 reference suite. Residual: this is the fUS I/Q domain contract; a generic public
 complex SVD remains outside its justified scope.
 
@@ -1287,17 +1287,17 @@ complex SVD remains outside its justified scope.
   workspace `windows` 0.61/0.62 Direct3D type split before this crate builds.
 
 - Closed 2026-07-15: layered field evaluation kept its ordered segment path
-  private to `RayleighIntegralSpec`, forcing LeoNeuro/Python focus control to
+  private to `RayleighIntegralSpec`, forcing downstream Python focus control to
   reimplement or omit the same physics. `RayleighPropagationPath` now owns
   layer-order validation plus phase/attenuation accumulation, while
   `RayleighIntegralSpec` consumes that path directly. Evidence tier: exact
   segment/error contracts, locked 217/217 `kwavers-transducer` Nextest, and
   warning-denied Clippy/Rustdoc. Consumer wheel verification remains tracked in
-  `KW-RAY-040` until the LeoNeuro gate completes.
+  `KW-RAY-040` until the downstream consumer's gate completes.
 
 - Closed 2026-07-14: Kwavers declared Gaia from Git and corrected it only via
   a workspace-root source patch. Cargo ignores that patch when a downstream
-  package is isolated, causing LeoNeuro SemVer packaging to select historical
+  package is isolated, causing a downstream consumer's SemVer packaging to select historical
   Gaia without Eunomia. Gaia is now a direct Atlas path dependency and
   `kwavers-mesh` resolves it locally. Evidence tier: locked dependency-graph
   resolution, warning-denied package diagnostics, and 9/9 value-semantic
@@ -1310,7 +1310,7 @@ complex SVD remains outside its justified scope.
   the clinical surface explicit, retains only pure thermoelastic material laws
   outside it, and updates in-workspace clinical consumers. Locked Nextest passes
   1,554/1,554 without `clinical-imaging`, 1,710/1,710 with it, and 29/29 in
-  LeoNeuro; reverse dependency resolution finds no `ritk-filter` package in
+  a downstream consumer; reverse dependency resolution finds no `ritk-filter` package in
   Leo's active graph. Evidence tier: manifest/source audit, value-semantic
   regressions, locked feature-matrix integration, and active graph proof.
 

@@ -16,7 +16,7 @@
 //! Demené et al., *IEEE Transactions on Medical Imaging* 34(11), 2271-2285
 //! (2015), DOI: 10.1109/TMI.2015.2428634, establishes spatiotemporal SVD as a
 //! clutter-separation method. The complex-realification identity is verified
-//! here by paired-rank value regressions and at the LeoNeuro CPython boundary.
+//! here by paired-rank value regressions and at the downstream consumer's CPython boundary.
 
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};

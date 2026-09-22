@@ -31,7 +31,7 @@ CAD/footprint assets; generated board is LVS-clean but inspection-only until cle
       run -p kwavers-driver --features kwavers kwavers_`, example compile, and regenerated
       `output/beamforming`.
 - [x] [minor] Phase 6 workspace move + kwavers-transducer wiring: crate copied from
-      `leoneuro/driver/kicad-routing/` to `crates/kwavers-driver/`; standalone `[workspace]` table
+      a downstream consumer's `driver/kicad-routing/` to `crates/kwavers-driver/`; standalone `[workspace]` table
       removed; parent `D:\kwavers\Cargo.toml` members updated; `kwavers-transducer = { path =
       "../kwavers-transducer", optional = true }` dep added; `kwavers = ["dep:kwavers-transducer"]`
       feature updated; `KwaversSim::simulate` filled — calls `kwavers_transducer::design_array` to
@@ -56,7 +56,7 @@ CAD/footprint assets; generated board is LVS-clean but inspection-only until cle
       + min-layer/min-area variants), `tests.rs` (verbatim), `mod.rs` facade. Coupled orchestrator
       threaded via `pub(super)` seams (cooptimize drives 4 place_board helpers; result↔cooptimize
       mutual ref for `component_clearance_clean`; 2 test-exercised helpers pub(super)). Public path
-      `crate::pipeline::*` byte-identical (7-symbol lib re-export + the leoneuro example's
+      `crate::pipeline::*` byte-identical (7-symbol lib re-export + a downstream consumer's example
       `pipeline::CoOpt` resolve through the facade). All source files ≤ 455 LOC. `Cargo.toml` `0.3.10`
       → `0.3.11`. `pipeline::` 10/10; full suite 415/415 green; pipeline fmt + clippy clean. Detail in
       `docs/MIGRATION.md ## Phase 4m`.
@@ -90,7 +90,7 @@ CAD/footprint assets; generated board is LVS-clean but inspection-only until cle
       `mod.rs` facade. Public path `crate::validate::*` byte-identical (only doc-link refs externally);
       SSOT bounds stay in `crate::ssot`. ⚠ DATA LOSS: the original 662-line test block was lost when
       the flat file was removed (tool auto-resolving the `validate.rs`↔`validate/` module ambiguity)
-      before its tests could be extracted; leoneuro is git-ignored so no VCS copy. `tests.rs` is a
+      before its tests could be extracted; the downstream consumer's tree is outside version control here, so no VCS copy. `tests.rs` is a
       from-contract reconstruction — 12 genuine value-semantic tests (assertions derived analytically),
       all passing; restores coverage, cross-check vs original if a copy resurfaces. `Cargo.toml`
       `0.3.7` → `0.3.8`. Full suite 415/415 green; validate/ fmt + clippy clean. Detail in
