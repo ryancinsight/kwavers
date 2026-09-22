@@ -7,7 +7,7 @@
 //! complete element layout — element count per axis, centre-to-centre pitch, kerf
 //! (inter-element gap), element size, and fill factor — with explicit
 //! sub-wavelength (grating-lobe) classification, plus a **channel-wiring** map so
-//! a physical 2-D matrix can be driven as fewer linear channels (the LeoNeuro fUS
+//! a physical 2-D matrix can be driven as fewer linear channels (the downstream consumer's fUS
 //! device: an `el_x × el_y` matrix wired as `el_y` linear channels).
 //!
 //! The public contract uses Aequitas quantities; scalar `f64` values occur only

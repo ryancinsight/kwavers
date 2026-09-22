@@ -50,22 +50,6 @@
   nothing linked to it and the compaction that removed the heading removed the
   work with it.
 
-<a id="kw-private-consumer-named-2026-09-22"></a>
-
-## KW-PRIVATE-CONSUMER-NAMED-2026-09-22 — A private downstream consumer is named in tracked artifacts [patch] — todo
-
-- **Finding.** A confidential consumer's name appears in 12 tracked files
-  besides `.gitignore`, which is its one sanctioned trace: `CHANGELOG.md`,
-  `gap_audit.md`, `docs/adr/036`, two source files, and the driver crate's
-  changelog, checklist, migration guide and three reference-design netlists.
-  `backlog.md` is scrubbed by this change; the rest are not.
-- **Impact.** Upstream artifacts name a project that is deliberately absent
-  from the stack map. History cannot be rewritten, so the remediation is the
-  current text.
-- **Acceptance:** `git grep -i` finds the name only in `.gitignore`; each site
-  reads "a downstream consumer" instead, and the netlists are checked for
-  whether they belong in the tree at all.
-
 <a id="kw-gpu-060-is-a-status-essay"></a>
 
 ## KW-GPU-060-LEDGER — KW-GPU-060 carries 442 lines of accreted status prose [patch] — todo

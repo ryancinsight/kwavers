@@ -1,7 +1,7 @@
 (export
 	(version "E")
 	(design
-		(source "D:\\kwavers\\leoneuro\\driver\\design\\fpga_tile.kicad_sch")
+		(source "fpga_tile.kicad_sch")
 		(date "2026-06-21T15:43:04")
 		(tool "Eeschema 10.0.3")
 		(sheet

@@ -1,7 +1,8 @@
 //! Board-level DFM / physics critic.
 //!
 //! The single public entry point is [`audit`], which calls all per-family detectors
-//! and accumulates results into a [`FaultReport`] with a weighted risk score.
+//! and accumulates results into a [`FaultReport`](crate::audit::fault_report::FaultReport)
+//! with a weighted risk score.
 //! Hotspot rasterisation and efficiency-audit helpers for the placement feedback
 //! loop are also exposed here.
 
