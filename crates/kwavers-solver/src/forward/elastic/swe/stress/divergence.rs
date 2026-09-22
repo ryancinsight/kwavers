@@ -161,7 +161,7 @@ fn stress_components(
         ((Axis::Z, &field.ux), (Axis::X, &field.uz), &mut *sxz),
         ((Axis::Z, &field.uy), (Axis::Y, &field.uz), &mut *syz),
     ] {
-        shear(&op, first, second, mu, out);
+        shear(op, first, second, mu, out);
     }
 }
 
