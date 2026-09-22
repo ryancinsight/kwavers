@@ -1,4 +1,4 @@
-# 133. The elastic stress evaluation runs in slabs
+# ADR 133: The elastic stress evaluation runs in slabs
 
 Status: Proposed
 
