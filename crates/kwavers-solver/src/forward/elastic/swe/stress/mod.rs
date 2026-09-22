@@ -39,5 +39,7 @@ mod divergence;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use divergence::stress_divergence_plane_strain_into;
+pub(crate) use divergence::{
+    stress_acceleration_into, stress_divergence_plane_strain_into, DensityScale,
+};
 pub use divergence::{stress_divergence, stress_divergence_into};
