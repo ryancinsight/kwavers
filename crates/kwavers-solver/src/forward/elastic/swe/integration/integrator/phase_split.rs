@@ -12,7 +12,7 @@
 //! ```
 
 use super::acceleration::{SpatialStress, StressOperator};
-use super::step::update_components;
+use super::step::{kick_then_drift, update_components, KickDriftRoute};
 use super::TimeIntegrator;
 use crate::forward::elastic::swe::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use crate::forward::elastic::swe::scratch::ElasticStepScratch;
@@ -137,6 +137,26 @@ fn swe_step_phase_split() {
             damping(s);
         },
     );
+    // The kick and drift as two traversals against one. Both arms advance
+    // the field by the same velocity-Verlet half-step and full step, on the
+    // same accelerations, so the difference is the traversal count: two
+    // parallel regions writing three fields each, against one writing six.
+    let (composed_kick_drift, fused_kick_drift) = TIMER.pair(
+        &mut state,
+        |s| {
+            half_velocity(s);
+            displacement(s);
+        },
+        |s| {
+            kick_then_drift::<SpatialStress>(
+                &mut s.field,
+                [&s.scratch.ax, &s.scratch.ay, &s.scratch.az],
+                0.5 * dt,
+                dt,
+                KickDriftRoute::Fused,
+            );
+        },
+    );
     let (acceleration_total, stress) = TIMER.pair(&mut state, acceleration, |s| {
         SpatialStress::evaluate(&grid, &lambda, &mu, &s.field, &mut s.scratch);
     });
@@ -190,6 +210,86 @@ fn swe_step_phase_split() {
             .expect("grid-shaped fields");
         }
     };
+    // The three accelerations by both routes: three divergence passes that
+    // read nine stress lanes over six fields, against one nine-term pass that
+    // reads each field once. Cross-process runs at 96 cubed spread 20%, wider
+    // than the difference, so the routes alternate inside one loop.
+    let stress_terms = [
+        (Axis::X, 0usize),
+        (Axis::Y, 3),
+        (Axis::Z, 4),
+        (Axis::X, 3),
+        (Axis::Y, 1),
+        (Axis::Z, 5),
+        (Axis::X, 4),
+        (Axis::Y, 5),
+        (Axis::Z, 2),
+    ];
+    let separate_divergences = |s: &mut State| {
+        let ElasticStepScratch {
+            sxx,
+            syy,
+            szz,
+            sxy,
+            sxz,
+            syz,
+            ax,
+            ay,
+            az,
+            ..
+        } = &mut s.scratch;
+        let stresses = [&*sxx, &*syy, &*szz, &*sxy, &*sxz, &*syz];
+        for (triple, out) in stress_terms.chunks_exact(3).zip([ax, ay, az]) {
+            let terms = [
+                (triple[0].0, stresses[triple[0].1].view()),
+                (triple[1].0, stresses[triple[1].1].view()),
+                (triple[2].0, stresses[triple[2].1].view()),
+            ];
+            derivatives
+                .map_axis_derivatives(
+                    terms,
+                    [density.view()],
+                    &mut out.view_mut(),
+                    |[a, b, c], [rho]| ((a + b) + c) / rho,
+                )
+                .expect("grid-shaped fields");
+        }
+    };
+    let one_divergence = |s: &mut State| {
+        let ElasticStepScratch {
+            sxx,
+            syy,
+            szz,
+            sxy,
+            sxz,
+            syz,
+            ax,
+            ay,
+            az,
+            ..
+        } = &mut s.scratch;
+        let stresses = [&*sxx, &*syy, &*szz, &*sxy, &*sxz, &*syz];
+        let terms = core::array::from_fn::<_, 9, _>(|j| {
+            (stress_terms[j].0, stresses[stress_terms[j].1].view())
+        });
+        let (mut x_out, mut y_out, mut z_out) = (ax.view_mut(), ay.view_mut(), az.view_mut());
+        derivatives
+            .map_axis_derivatives_triple(
+                terms,
+                [density.view()],
+                [&mut x_out, &mut y_out, &mut z_out],
+                |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [rho]| {
+                    [
+                        ((xx + xy) + xz) / rho,
+                        ((yx + yy) + yz) / rho,
+                        ((zx + zy) + zz) / rho,
+                    ]
+                },
+            )
+            .expect("grid-shaped fields");
+    };
+    let (separate_accel, one_accel) = TIMER.pair(&mut state, separate_divergences, one_divergence);
+
     // The three diagonal stresses by both routes: three sweeps into the shear
     // fields and a pointwise combination, against one fused pass that sweeps
     // the strains once and writes all three stresses.
@@ -366,6 +466,11 @@ fn swe_step_phase_split() {
             pick(step) - pick(back_to_back),
         );
         eprintln!(
+            "swe 64 cubed {label}: divergences separate {:.0} us, one pass {:.0}",
+            pick(separate_accel),
+            pick(one_accel),
+        );
+        eprintln!(
             "swe 64 cubed {label}: diagonal composed {:.0} us, fused {:.0}",
             pick(composed_diag),
             pick(fused_diag),
@@ -374,6 +479,11 @@ fn swe_step_phase_split() {
             "swe 64 cubed {label}: three shears composed {:.0} us, fused {:.0}",
             pick(composed_shear),
             pick(fused_shear),
+        );
+        eprintln!(
+            "swe 64 cubed {label}: kick and drift composed {:.0} us, fused {:.0}",
+            pick(composed_kick_drift),
+            pick(fused_kick_drift),
         );
         eprintln!(
             "swe 64 cubed {label}: stress {:.0} us = 18 sweeps {:.0} + assembly {:.0}",

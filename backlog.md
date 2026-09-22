@@ -7,6 +7,79 @@
 - **Acceptance:** a `uv lock` whose diff is reviewed as a dependency change in its own right, or an explicit decision that this lockfile is not maintained here.
 - **Status:** todo, not claimed; filed 2026-09-21 from the kwavers-python floor change.
 
+<a id="kw-book-ch29-residuals"></a>
+
+## KW-BOOK-CH29-RESIDUALS — Chapter 29 figures 5 and 6 cannot be regenerated [patch] — todo
+
+- **Finding.** Figure 5's regeneration is blocked by the nonlinear brain PyO3
+  allocation abort, so the checked-in pressure column came from the controlled
+  CT-frame field archive instead; the same block holds figure 6.
+- **Impact.** Two book figures cannot be reproduced from committed plotting
+  code, which is the property the book's figures are supposed to have.
+- **Acceptance:** both figures regenerate from committed code, or the chapter
+  states which archive they came from and why.
+- Refiled 2026-09-22 from the deleted `Validation Goals` ledger, whose text is
+  in this file's history.
+
+<a id="kw-fwi-pstd-adjoint-reciprocity"></a>
+
+## KW-FWI-PSTD-ADJOINT-RECIPROCITY — The PSTD adjoint-reciprocity check never ran [patch] — todo
+
+- **Verified:** `FwiParameters::build_solver_for_forward` dispatches
+  `SolverType::{FDTD, PSTD}` to `build_fdtd_boxed`/`build_pstd_boxed` and
+  returns `Box<dyn Solver>`; the FDTD forward smoke test and the
+  unsupported-type rejection test pass.
+- **Not verified:** the PSTD adjoint-reciprocity check, the one live residual
+  of T15b, which the deleted ledger recorded as still open.
+- **Acceptance:** a reciprocity test over the PSTD adjoint, or a recorded
+  decision that the FDTD check covers the contract.
+- Refiled 2026-09-22 from the deleted `Session 3 closure` ledger.
+
+<a id="kw-gpu-teardown"></a>
+
+## KW-GPU-TEARDOWN — Dissolve the remaining internal `kwavers/src` into the layered crates [arch] — todo
+
+- **Outcome:** `kwavers` is a thin facade. The bulk is GPU: a `kwavers-gpu`
+  leaf owns the `ComputeBackend`/`FdtdGpuAccelerator` surfaces that stay in
+  solver and consolidates all three scattered GPU paths, with wgpu-v26 bit-rot
+  repaired as part of the move (user decision 2026-06-03).
+- **Delivered so far:** the `kwavers-gpu` scaffold.
+- **Acceptance:** no implementation left in `kwavers/src` beyond re-exports,
+  and one owner for the GPU paths.
+- Refiled 2026-09-22 from an `OPEN:` narrative heading that no id anchored, so
+  nothing linked to it and the compaction that removed the heading removed the
+  work with it.
+
+<a id="kw-private-consumer-named-2026-09-22"></a>
+
+## KW-PRIVATE-CONSUMER-NAMED-2026-09-22 — A private downstream consumer is named in tracked artifacts [patch] — todo
+
+- **Finding.** A confidential consumer's name appears in 12 tracked files
+  besides `.gitignore`, which is its one sanctioned trace: `CHANGELOG.md`,
+  `gap_audit.md`, `docs/adr/036`, two source files, and the driver crate's
+  changelog, checklist, migration guide and three reference-design netlists.
+  `backlog.md` is scrubbed by this change; the rest are not.
+- **Impact.** Upstream artifacts name a project that is deliberately absent
+  from the stack map. History cannot be rewritten, so the remediation is the
+  current text.
+- **Acceptance:** `git grep -i` finds the name only in `.gitignore`; each site
+  reads "a downstream consumer" instead, and the netlists are checked for
+  whether they belong in the tree at all.
+
+<a id="kw-gpu-060-is-a-status-essay"></a>
+
+## KW-GPU-060-LEDGER — KW-GPU-060 carries 442 lines of accreted status prose [patch] — todo
+
+- **Finding.** The item is 5 bullets and a narrative "current evidence tier"
+  paragraph that has been appended to repeatedly, at 442 lines against the
+  ~15-line per-item budget. It is 31% of the board.
+- **Acceptance:** the item states outcome, acceptance, current state and
+  residual within budget; the superseded narrative deletes, recoverable from
+  this file's history.
+- Distinguished from KW-LINT-1, whose 180 dated ledger entries deleted
+  mechanically in the same change that filed this: this one needs the prose
+  read and distilled, not pattern-matched.
+
 ## KW-SWE-EDGE-GROWTH-2026-09-17 — Elastic displacement grows without bound when the initial field reaches the edges [patch] [fix] — todo
 
 - **Finding.** 64 cubed, lambda = mu = 1 GPa, water density, default PML, `ux = sin`, `uy = cos` of `0.37 i + 0.53 j + 0.71 k` over the whole grid: the peak grows 1 to 9.2e3 in 400 steps at CFL 0.5, and the growth follows physical time, not step count (CFL 0.25 at step 200 equals CFL 0.5 at step 100), so it is not a timestep instability. A centred Gaussian pulse at the same settings decays into the PML at every CFL.
@@ -92,78 +165,127 @@
 
 ## KW-ERRORS-DOCS-ARE-TEMPLATE-OUTPUT-2026-09-09 — 300 functions document an error they cannot return [patch] — todo
 
-- **Outcome:** an `# Errors` section names the condition that produces the error,
-  or it does not exist. No function documents a failure it cannot have.
-- **Measured 2026-09-09**, repo-wide across `crates/`: **1141** occurrences of the
-  identical line ``- Returns [`Err`] if an internal constraint is violated.`` in
-  **544** files, plus **297** of ``- Propagates any [`crate::KwaversError`]
-  returned by called functions.`` **350** of those sections sit on functions that
-  **cannot fail** -- the signature returns neither `Result` nor `Option` -- by
-  crate: kwavers-solver 92, kwavers-analysis 50, kwavers-physics 44,
-  kwavers-simulation 16, kwavers-therapy 15, kwavers-transducer 11,
-  kwavers-receiver 11, kwavers-medium 11.
-- **Two defects, not one.** The 350 are *false*: they tell a reader a function
+- **Outcome:** an `# Errors` section names the condition that produces the
+  error, or it does not exist. No function documents a failure it cannot have.
+- **Measured 2026-09-09**, repo-wide across `crates/`:
+  - **1141** occurrences of the identical line
+    ``- Returns [`Err`] if an internal constraint is violated.``, in **544**
+    files. A second template supplies **297** of
+    ``- Propagates any [`crate::KwaversError`] returned by called functions.``
+  - **300** of those sections sit on functions that **cannot fail** -- the
+    signature returns neither `Result` nor `Option`. By crate: kwavers-solver
+    92, kwavers-analysis 50, kwavers-physics 44, kwavers-simulation 16,
+    kwavers-therapy 15, kwavers-transducer 11, kwavers-receiver 11,
+    kwavers-medium 11.
+  - Specimens: `pub fn num_sensors(&self) -> usize`,
+    `pub fn is_leaf(&self) -> bool`, `fn backend_type(&self) -> BackendType`,
+    each carrying "Returns [`Err`] if an internal constraint is violated."
+- **Two defects, not one.** The 300 are *false*: they tell a reader a function
   can fail when it cannot. The remaining ~840 are *contentless*: on a genuinely
-  fallible function, "an internal constraint is violated" names no invariant, no
-  input range and no caller remedy, which is what the standard asks an `# Errors`
-  section for. This is what satisfying a lint without reading the code looks like,
-  and it is why the open KW-LINT-047 rows counting 26 "missing `# Errors`" must
-  not be closed by extending this template.
-- **Delivered:** `cargo run -p xtask -- audit-errors-docs` runs inside
-  `Validate Clean Architecture`, ratchets at its baseline and fails on any rise;
-  its unit tests pin the cases a naive matcher gets wrong (a wrapped signature, a
-  `where` bound mentioning `Result`, a unit return with no arrow). All 350
-  sections were removed in #762 -- 1040 lines across 226 files, every removed
-  line a `///` doc line and none added -- the audit re-reads the tree with an
-  independent implementation and reports zero, and `BASELINE` closes to 0. The
-  local gate then caught a defect in the guard itself: with `BASELINE = 0`,
-  `total < BASELINE` is `usize < 0`, always false, denied by clippy as
-  `absurd_extreme_comparisons`; the dead branch is gone.
-- **Next:** the ~840 contentless sections on genuinely fallible functions, per
-  crate, replacing the category with the condition.
+  fallible function, "an internal constraint is violated" names no invariant,
+  no input range, and no caller remedy, which is what the standard asks an
+  `# Errors` section for.
+- **This is what satisfying a lint without reading the code looks like.**
+  `clippy::missing_errors_doc` fires on a missing section, not on a useless
+  one, so a template silenced it repo-wide. The open KW-LINT-047 rows counting
+  26 "missing `# Errors`" must not be closed by extending this template --
+  that would be gaming the measure.
+- **Order:** delete the 300 false sections first (mechanical, and they are
+  wrong rather than merely empty); then replace the contentless ones on
+  fallible functions, per crate, with the actual failure conditions.
 - **Acceptance:** zero `# Errors` sections on functions returning neither
-  `Result` nor `Option`, enforced by the conformance scan so the template cannot
-  return; and the remaining sections name a condition rather than a category.
+  `Result` nor `Option`, enforced by a check in the conformance scan so the
+  template cannot return; and the remaining sections name a condition rather
+  than a category.
+- **Guard landed in #762:** `cargo run -p xtask -- audit-errors-docs`, running
+  inside `Validate Clean Architecture`. It ratchets at **350** and fails on any
+  rise. The count is 350 rather than the 300 first reported: the audit
+  accumulates a signature to its arrow, so it sees the wrapped signatures a
+  line-at-a-time estimate skipped. Its unit tests pin the cases that make a
+  naive matcher wrong -- a wrapped signature, a `where` bound mentioning
+  `Result`, a unit return with no arrow.
+- **All 350 removed in the same pull request, enqueued as #762.** 1040 lines
+  across 226 files; every removed line is a `///` doc line and none is added,
+  so the diff carries only its declared transform. Only the template's shape
+  goes -- heading, bullets, and the bare `///` separator -- and a section
+  followed by prose or another heading keeps everything after the bullets. The
+  946 `# Panics` headings are untouched. The audit re-reads the tree with an
+  independent implementation and reports zero, so `BASELINE` closes to 0;
+  reintroducing one section makes it exit 1 and name the site.
+- **The local gate caught a defect in the guard itself:** with `BASELINE = 0`,
+  `total < BASELINE` is `usize < 0`, always false, which clippy denies as
+  `absurd_extreme_comparisons`. Refused the push; the dead branch is gone.
+- **Next:** the ~840 contentless sections on genuinely fallible functions,
+  where "an internal constraint is violated" names no invariant, no input
+  range, and no caller remedy. Per crate, replacing the category with the
+  condition.
+
 
 ## KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08 — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — in-progress
 
-- **Integrator:** claude-opus-5 (lane `kwavers-local-gate`); claimed 2026-09-09.
+- **Integrator:** claude-opus-5 (lane `kwavers-local-gate`, branch
+  `ci/kw-per-pr-matrix-starvation`); claimed 2026-09-09.
+- **Held at step (2), 2026-09-09:** #755 is written and pushed but not merged.
+  The queue is stopped, not slow -- nine consecutive runs queued with zero jobs
+  started, the oldest waiting 64 minutes, no self-hosted runners registered
+  (atlas `ATLAS-RUNNER-STARVATION-2026-09-02`). Two consequences: the step-(2)
+  round-trip cannot be measured, and #755 is the one change class the local
+  gate cannot stand in for -- its only real gate is CI itself -- so it is held
+  rather than admin-merged on evidence that does not exist. Check count is
+  already visible though: 19 at push against about 24 before.
+- **User decision 2026-09-09:** proceed on local evidence rather than wait.
+  Code items are verified locally and merged on that evidence (#756, #757, #758
+  landed this way while the queue was stopped). #755 alone stays held, because
+  a workflow change's only real gate is CI itself.
+- **Step (1) merged in #755, and step (2) measured 2026-09-09 20:55** once the
+  queue resumed. Job count is the clean number: a `main` run without the change
+  carries 15 job entries (14 executed), the pull-request run carrying it
+  executes **9** -- `Code Coverage`, both `Heavy Validation` suites, and the
+  `beta`/`nightly` matrix legs are gone from the pull-request path, exactly as
+  designed, and all four still exist for the nightly schedule. Wall clock is
+  *not* a usable comparison for this run: it spans the 90-minute outage
+  (17:30 created, 19:25 finished), so a clean round-trip re-measure is owed on
+  a normally-serviced queue.
+- **Remaining:** step (3), required status checks, tracked as KW-CI-115.
 - **Outcome:** the pull-request path runs the affected-scope checks; the full
   matrix (extra toolchains, heavy validation, coverage) moves to the scheduled
-  selection-drift backstop, bringing the verification round-trip toward the
+  selection-drift backstop, bringing verification round-trip toward the
   five-minute job target.
-- **Measured 2026-09-08, `main` runs:** CI/CD Pipeline 94 and 114 min wall clock,
-  Architecture Validation 75 min, Deploy mdBook 64 and 95 min. Job runtimes in
-  run `34257329545` sum to about 82 min but run in parallel, so most of the wall
-  clock is inter-job queueing -- runner starvation. Slowest per-PR jobs: Code
-  Coverage 25m, PINN Feature Validation 12m, Heavy Validation (absorption decay)
-  10m, Build & Test (stable) 8m, Heavy Validation (kuznetsov) 7m. One pull
-  request starts about 24 checks across 5 always-on workflows.
-- **Against policy:** extra toolchains, heavy suites and coverage are the
-  scheduled backstop, not per-PR gates; coverage is a ratchet, not a merge gate.
-- **Why it matters now:** with no ruleset and no required checks, `--auto` merges
-  immediately rather than enqueueing, so merges land on partial evidence
-  (kwavers#742 merged on its decisive check while 20 others were queued).
-  Requiring checks on top of a 100-minute pipeline would institutionalize the
-  starvation, so job and queue speed comes first, then the ruleset.
-- **Decomposition:** (1) move beta/nightly toolchains, heavy validation and
-  coverage to schedule -- **done in #755**, 5 checks and about 51 min of job time
-  off the pull-request path, nothing deleted; (1b) the feature matrix --
-  `Architecture Validation` is a second always-on workflow contributing 12 of the
-  pull request's checks, five of them `Build with Feature Combinations` (minimal,
-  gpu, plotting, pinn, full), and policy puts that matrix on the schedule too.
-  It was not folded into #755 because *which* leg gates a pull request is a
-  coverage decision: `full` alone misses the
-  feature-gated-code-referenced-unconditionally class that `minimal` catches.
-  **Recommendation:** `minimal` and `full` on pull requests, all five on
-  schedule; (2) re-measure the round-trip honestly -- the step-(2) numbers above
-  span the 90-minute outage, so a clean re-measure is owed on a
-  normally-serviced queue; (3) wire the remaining affected-scope checks as
-  required status checks and let auto-merge enqueue, tracked as KW-CI-115.
-- **Held, not merged:** #755 is the one change class whose only real gate is CI
-  itself. Its check count fell from about 24 to 19 at push.
-- **Acceptance:** a pull request's verification round-trip is measured after (1)
-  and (1b), the moved jobs still run on schedule with unchanged commands and
+- **Measured 2026-09-08, `main` runs:** CI/CD Pipeline 94 and 114 min wall
+  clock, Architecture Validation 75 min, Deploy mdBook 64 and 95 min. Job
+  runtimes in run `34257329545` sum to about 82 min but run in parallel, so
+  most of the wall clock is inter-job queueing, not work: runner starvation.
+- **Slowest per-PR jobs:** Code Coverage 25m, PINN Feature Validation 12m,
+  Heavy Validation (absorption decay) 10m, Build & Test (stable) 8m, Heavy
+  Validation (kuznetsov) 7m, Build & Test (beta) 5m, (nightly) 4m.
+- **Against policy:** extra toolchains, heavy suites, and coverage are the
+  scheduled backstop, not per-PR gates; coverage is a ratchet, not a merge
+  gate. One pull request currently starts about 24 checks across 5 always-on
+  workflows.
+- **Why it matters now:** with no ruleset and no required checks, `--auto`
+  merges immediately rather than enqueueing, so there is no queue to absorb
+  the latency — merges land on partial evidence (kwavers#742 merged on its
+  decisive check while 20 others were queued). Requiring checks on top of a
+  100-minute pipeline would institutionalize the starvation instead of curing
+  it, so job and queue speed comes first, then the ruleset.
+- **Decomposition:** (1) move beta/nightly toolchains, heavy validation, and
+  coverage to schedule -- **done in #755**, 5 checks and about 51 min of job
+  time off the pull-request path, nothing deleted; (1b) the feature matrix,
+  below; (2) re-measure round-trip; (3) wire the remaining affected-scope
+  checks as required status checks and let auto-merge enqueue.
+- **(1b) found while delivering (1):** `Architecture Validation` is a second
+  always-on workflow, measured at 75 min, contributing 12 of the pull request's
+  checks -- five of them `Build with Feature Combinations` (minimal, gpu,
+  plotting, pinn, full). Policy puts the feature matrix on the scheduled
+  backstop with the rest of the full matrix, so the same move applies. It was
+  not folded into #755 because *which* legs gate a pull request is a coverage
+  decision, not a mechanical move: `full` alone misses the
+  feature-gated-code-referenced-unconditionally class that `minimal` catches,
+  and each single-feature leg can fail on its own `cfg` combination.
+  **Recommendation:** `minimal` and `full` on pull requests -- the two
+  endpoints -- all five on schedule.
+- **Acceptance:** a pull request's verification round-trip is measured after
+  (1), the moved jobs still run on schedule with unchanged commands and
   budgets, and no check is deleted.
 
 
@@ -171,7 +293,7 @@
 
 | ID | Outcome | Class | Owner | Scope |
 |----|---------|-------|-------|-------|
-| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | Codex | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-ID census, build-timing instrumentation, focused CI/PM evidence |
+| KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | Codex `01a0253c-6013-7552-99cc-36bbbcf77f6d` | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-ID census, build-timing instrumentation, focused CI/PM evidence |
 
 - **Entry evidence:** isolated cold runs spent 2m37s compiling the GPU-enabled
   simulation graph and 2m15s compiling the GPU-enabled Python graph; their
@@ -273,45 +395,35 @@
 
 | ID | Outcome | Class | Owner | Scope |
 |----|---------|-------|-------|-------|
-| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | Codex | Workspace lint ratchet; `unused_self`, `return_self_not_must_use`, and `unnecessary_literal_bound` are clean |
+| KW-LINT-1 | The debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. | [patch] | Codex | Workspace lint ratchet; `unused_self`, `return_self_not_must_use`, and `unnecessary_literal_bound` are clean; remaining debt lines are tracked below |
 
 - Context: the clippy floor landed in #423. 21 of 24 crates already declared
-  `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed to
-  inherit, so the plumbing was live and the floor was empty.
-- Baseline at adoption, `cargo clippy -p kwavers --features pinn --lib` (which
-  lints every path member, i.e. the whole workspace): **1390** warnings --
-  `unused_self` 257, `unwrap_used` 255, `missing_panics_doc` 225,
-  `missing_errors_doc` 119, then a ~200-warning tail across 25 lints.
-- Acceptance: per lint, drive the count to zero **in production code**, then
-  delete that lint's line from the debt block so the floor re-enables it. The
-  count is the ratchet and only decreases. Suppressing a site with `#[expect]`
-  counts only where the lint is genuinely inapplicable and the reason says why --
-  `unwrap_used` inside `#[test]` is the sanctioned case, on a production path it
-  is not.
-- The ratchet as it stands, whose authoritative form is `Cargo.toml`'s
-  `Brownfield debt baseline (KW-LINT-1)` block: `unwrap_used` 223+ in
-  `kwavers-solver` alone, `pub_underscore_fields` 15, `struct_excessive_bools`
-  12, `inline_always` 10, `assigning_clones` 9
-  (`case_sensitive_file_extension_comparisons` 6, `wildcard_imports` 5, plus
-  `print_stderr`). `unwrap_used` and `print_stderr` are `restriction` lints, not
-  members of `all`/`pedantic`, so a measured count there reads the lint level
-  rather than the code -- do not promote either to `deny` on a zero measured
-  while it is allowed.
-- Burned to zero and so removed from the debt block: `missing_errors_doc`,
-  `missing_panics_doc`, `unused_self`, `return_self_not_must_use`,
-  `unnecessary_literal_bound`, `unnecessary_semicolon`,
-  `stable_sort_primitive`, `unchecked_time_subtraction`,
-  `self_only_used_in_recursion`, `bool_to_int_with_if`,
-  `large_types_passed_by_value`, `implicit_hasher`,
-  `from_iter_instead_of_collect`, `missing_fields_in_debug`,
-  `needless_for_each`.
-- The ~170 per-slice records this item used to carry (#447-#476, #751-#770:
-  "X slice merged in PR #N") were a ledger of merged increments, which is what
-  git holds; recover any of them with `git log --grep='^Item: KW-LINT-1'`.
-- Not to be closed by extending a template: the ~840 contentless `# Errors`
-  sections on genuinely fallible functions are tracked as
-  [KW-ERRORS-DOCS-ARE-TEMPLATE-OUTPUT-2026-09-09](#kw-errors-docs-are-template-output-2026-09-09),
-  and zeroing a count that way would move the measure, not the code.
+  `[lints] workspace = true`, but no `[workspace.lints.clippy]` table existed for them to
+  inherit, so the plumbing was live and the floor was empty. The floor is now the canonical
+  apollo template; what kwavers trips today sits in a counted debt block beneath it.
+- Baseline at adoption, measured by `cargo clippy -p kwavers --features pinn --lib` (which
+  lints every path member, i.e. the whole workspace): **1390** warnings. `unused_self` 257,
+  `unwrap_used` 255, `missing_panics_doc` 225, `missing_errors_doc` 119 — 62% of the total —
+  then a ~200-warning tail across 25 lints.
+- Acceptance: per lint, drive the count to zero **in the production code**, then delete that
+  lint's line from the debt block so the floor re-enables it. The count in the comment is the
+  ratchet; it only decreases. Suppressing a site with `#[expect]` counts only where the lint
+  is genuinely inapplicable and the reason says why — `unwrap_used` inside `#[test]` is the
+  sanctioned case, `unwrap_used` on a production path is not.
+- Sequencing: `missing_panics_doc` and `missing_errors_doc` (344 combined) are documentation
+  the panic/error surface should carry anyway and burn down mechanically per crate.
+  `unwrap_used` (255) is the one with real correctness content and wants the panic-policy
+  treatment (`?`, `ok_or_else`, or `expect("invariant: …")`), not a mass rewrite.
+  `unused_self` (257) is the one to read before acting: it often marks a method that should
+  be an associated function, but sometimes marks a seam deliberately taking `&self`.
+- **State.** The ratchet itself is `[workspace.lints.clippy]` in `Cargo.toml`:
+  the `allow` lines still listed are the debt, and a lint leaves the block when
+  its production count reaches zero. That block is the count; this entry does not
+  duplicate it.
+- The 180 dated slice entries this item carried are deleted. Each recorded one
+  landed slice and was superseded by the next, and every one names its pull
+  request: `git log --grep='^Item: KW-LINT-1'` and the history of this file
+  recover them. A board is a queue, not a ledger.
 
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Route collocated FDTD through Hephaestus [minor] [arch] — blocked 2026-08-18
 
@@ -381,23 +493,7 @@ markers without changing the numerical contract.
 | ID | Outcome | Class | Status | Owner | Scope |
 |----|---------|-------|--------|-------|-------|
 | KWAVERS-AEQ-MET-69 | Type B-mode scan-conversion angles and length geometry with Aequitas; keep scalar extraction at Cartesian raster and interpolation formula boundaries and preserve Eunomia's real geometry rule. | [major] [arch] | in progress 2026-08-06 | Codex | `crates/kwavers-analysis/src/signal_processing/b_mode/`, ADR 105, `gap_audit.md` |
-| KWAVERS-AEQ-MET-67 | Type thermal-acoustic coupling coefficients, heating, streaming, nonlinear heating, and update outcomes with Aequitas; correct the existing nonlinear formula to its provider-owned `W/m⁴` volumetric power-density gradient; preserve Eunomia real/complex semantics. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-physics/src/thermal/coupling/`, `crates/kwavers/src/theranostic/`, top-level rkyv edge, Aequitas provider metric, ADR 104, PM artifacts |
-| KWAVERS-AEQ-MET-66 | Type thermal-diffusion perfusion, density, heat-capacity, temperature, relaxation-time, and integration-time contracts with Aequitas; preserve CEM43 as a domain dose representation and Eunomia's real/complex rule. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-physics/src/thermal/diffusion/`, `crates/kwavers-solver/src/forward/{thermal_diffusion,pstd/implementation/core/orchestrator}/`, direct Python/simulation callers, ADR 103, PM artifacts |
 | KWAVERS-AEQ-MET-FLEX | Audit and type the flexible-array dynamic metrics: timestamps, focus/speed/delay contracts, calibration confidence, and deformation outputs; preserve raw dense mesh/signal storage boundaries. | [arch] [major] | blocked: peer-owned `crates/kwavers-transducer/src/flexible/array.rs` dirty; reopen on integration or scope release | Codex | `crates/kwavers-transducer/src/flexible/{array,beamforming,geometry,config}.rs`, direct callers/tests, ADR 070, PM artifacts |
-| KWAVERS-AEQ-MET-FLEX | Audit and type the flexible-array dynamic metrics: timestamps, focus/speed/delay contracts, calibration confidence, and deformation outputs; preserve raw dense mesh/signal storage boundaries. | [arch] [major] | done 2026-08-05; typed public contracts and corrected inverse-length curvature/energy-density semantics | Codex | `crates/kwavers-transducer/src/flexible/{array,beamforming,geometry,config}.rs`, direct callers/tests, ADR 103, PM artifacts |
-| KWAVERS-AEQ-MET-64 | Type CMUT, PMUT, and shared MEMS plate physical metrics with Aequitas, including charge-gradient and flexural-rigidity semantics; preserve Eunomia's one observable unit for complex components and keep Python scalar conversion at the FFI boundary. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-transducer/src/mems/{cmut,pmut,plate,comparison}.rs`, MEMS Python bindings, Aequitas MEMS quantities, ADR 070, PM artifacts |
-| KWAVERS-AEQ-MET-65 | Type the MEMS mutual-radiation crosstalk boundary with Aequitas `Area`, `Length`, `Frequency`, `MassDensity`, `Velocity`, and semantically correct complex `MechanicalImpedance`; preserve Eunomia's one observable phasor unit. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-transducer/src/mems/crosstalk.rs`, Aequitas mechanical-impedance quantity, ADR 070, PM artifacts |
-| KWAVERS-AEQ-MET-63 | Type focused and hemispherical source geometry, signal, timing, and validation metrics with Aequitas; preserve Eunomia real geometry and one observable unit for complex/quadrature signals; fix stale steering state and migrate direct therapy/diagnostics callers. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/{transducers/focused,hemispherical}`, direct `kwavers-therapy`, `kwavers-diagnostics`, examples, ADR 102, PM artifacts |
-| KWAVERS-AEQ-MET-62 | Type two-dimensional array geometry, beam-control, timing, and medium metrics with Aequitas; correct center-to-center pitch and preserve Eunomia real geometry and shared signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/array_2d/`, direct Python/simulation callers, ADR 101, PM artifacts |
-| KWAVERS-AEQ-MET-61 | Type shared acquisition geometry coordinates and ring/bowl radius, diameter, and row-spacing contracts with Aequitas; preserve Eunomia real geometry and migrate every direct caller. | [arch] [major] | done 2026-08-03 | Codex | `kwavers-transducer/src/transducers/acquisition_geometry.rs`, transcranial diagnostics, breast FWI physics/solver/diagnostics/Python adapters, direct tests, ADR 100, PM artifacts |
-| KWAVERS-AEQ-MET-60 | Type transducer aperture design and focused propagation metrics with Aequitas, including geometry, drive, pressure, impedance, intensity, and beam-width contracts; preserve Eunomia complex signal semantics. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/design/{mod,propagation}.rs`, direct driver callers/tests, ADR 099, PM artifacts |
-| KWAVERS-AEQ-MET-59 | Type PAM delay-and-sum and neural sensor geometry, timing, frequency, and event-coordinate metrics with Aequitas; preserve Eunomia complex signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-analysis/src/signal_processing/{pam,beamforming/neural}/**`, callers/tests, ADR 098, PM artifacts |
-| KWAVERS-AEQ-MET-58 | Type sensor-beamformer geometry, sampling, steering, aperture, F-number, and spatial-frequency metrics with Aequitas; preserve Eunomia complex steering units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/beamforming/sensor_beamformer/**`, direct Kwavers callers/tests, ADR 097, PM artifacts |
-| KWAVERS-AEQ-MET-57 | Type the shared beamforming configuration's sound speed, sampling frequency, and reference frequency with Aequitas; migrate the processor formula boundaries and preserve Eunomia complex storage units. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/beamforming/{config,processor}.rs`, callers/tests, ADR 096, PM artifacts |
-| KWAVERS-AEQ-MET-56 | Type rectangular-transducer geometry, frequency, medium speed/density, element-size, and wavenumber contracts with Aequitas; reject invalid geometry and preserve Eunomia complex storage boundaries. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/transducers/rectangular.rs`, FNM solver, Rayleigh-Sommerfeld dispatch, FNM benchmark, ADR 095, PM artifacts |
-| KWAVERS-AEQ-MET-55 | Type the public ultrafast plane-wave and diverging-wave geometry, timing, angle, frequency, F-number, image-coordinate, and scalar apodization metrics with Aequitas; preserve scalar extraction only at numerical and Leto storage boundaries and document Eunomia complex compatibility. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/{plane_wave,diverging_wave}/**`, ADR 094, PM artifacts |
-| KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
-| KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
 ## KW-MAT-043 — Direct FWI L-BFGS provider ownership [patch] [arch] — in-progress 2026-08-11
 
@@ -469,7 +565,6 @@ markers without changing the numerical contract.
   `libLIBCMT.a` and `libOLDNAMES.a` for unrelated top-level test binaries;
   focused clean physics tests pass. The hosted exact-head matrix remains
   pending.
-
 ## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — blocked
 
 - **Blocker:** release authority. Publication is the release delivery state and
@@ -652,7 +747,6 @@ markers without changing the numerical contract.
   skipped tests.
 - Residual: three existing solver tests are slow; one exceeded 30 seconds in
   this run and requires a separate profile-guided optimization item.
-
 ## KW-FFT-050 — Direct Apollo axis FFT storage [patch] — review
 
 - Owner: Codex; scope: `kwavers-math::fft` axis-transform facade, locked
@@ -677,7 +771,7 @@ markers without changing the numerical contract.
   the returned spectrum, invalid Doppler geometry is rejected rather than
   mapped through an artificial positive angle cosine, and an FFT shorter than
   the acquired ensemble fails rather than silently discarding pulses.
-- Driver: LeoNeuro's physical moving-scatterer sector ensemble requires a PW
+- Driver: a downstream consumer's physical moving-scatterer sector ensemble requires a PW
   provider that retains reverse-flow bins; the former one-sided magnitude API
   discarded that physical degree of freedom.
 - Evidence: the locked Atlas graph resolves, `kwavers-analysis` compiles, its
@@ -690,50 +784,53 @@ markers without changing the numerical contract.
 ## KW-LINT-047 — Solver all-feature lint ratchet [patch] — in-progress
 
 - **Integrator:** claude-opus-5, claimed 2026-09-09.
-- **Not met. Measured 2026-09-08**, `cargo clippy -p kwavers-solver --features
-  pinn --all-targets`: **84** diagnostics -- 28 `unused_self`, 26 missing
-  `# Errors`, 11 `println!`, 7 missing `# Panics`, 6 missing `#[must_use]`,
-  4 `assert!` with an equality comparison, 2 doc-link/recursion findings. The
-  2026-08-17 increment recorded this gate passing; it does not pass now under
-  this configuration, and `println!` in a library crate is its own floor
-  violation (`print_stdout` is denied there).
-- **Burned so far:** all 11 `print_stdout` sites are gone -- they were
-  print-debugging inside `#[cfg(test)]`, and removing them exposed five tests
-  that asserted nothing that could fail: `analytic.rs` bound its analytic
-  expectation to `_expected` and asserted `is_finite()`, and those oracles are
-  unreachable because the model is an untrained, randomly initialised network,
-  so finite differences is the only valid oracle and
-  `first_deriv.rs`/`second_deriv.rs` already apply it. Point coverage moved
-  there and the property-in-name-only tests were deleted (84 -> 75). A further
-  twelve diagnostics with a determinate fix went in #761 (6 `#[must_use]` on
-  `mut self -> Self` builders, 4 equality `assert_eq!`, 1 unquoted intra-doc
-  link, and `generate_boundary_data` -- which took `&self` and never touched it,
-  the receiver surviving only through its own recursive calls -- made an
-  associated function with its three call sites updated), 1375 solver tests
-  passing (73 -> 61).
-- **Remaining 61, and why it stops there:** 28 `unused_self` is a design finding,
-  not a mechanical fix. The 26 missing `# Errors` and 7 missing `# Panics` must
-  not be closed by extending the template that produced
+- **First increment `93e88e24d`, 84 -> 75, riding [#759](https://github.com/ryancinsight/kwavers/pull/759).**
+  All 11 `print_stdout` sites gone. They were print-debugging inside
+  `#[cfg(test)]` modules, and removing them exposed why they existed: five
+  tests asserted nothing that could fail and printed the property they named.
+  `analytic.rs` bound its analytic expectation to `_expected` and asserted
+  `is_finite()`. Those oracles are unreachable -- the model is an untrained,
+  randomly initialised network, so finite differences is the only valid oracle
+  and `first_deriv.rs`/`second_deriv.rs` already apply it. Point coverage moved
+  there; the property-in-name-only tests were deleted.
+- **Lane convergence, not a separate delivery:** a peer switched this lane's
+  branch mid-increment and built `chore/kwavers-manifest-row` on top of the
+  commit, so it lands with their driver refactor rather than its own pull
+  request. Content verified intact on their branch (authorship, message, all
+  five file changes). `fix/kw-solver-lint-ratchet` on origin had been left
+  pointing at `main` and is deleted.
+- **Finding for whoever takes the remainder:** `second_deriv.rs` deliberately
+  did not absorb the deleted analytic points. Both sides there are finite
+  differences at different step sizes (`coeus_autograd` has no double-backward),
+  so disagreement scales with the fourth derivative and `REL_TOL_SECOND` is
+  empirical, not derived -- the added point measured rel_err 2.59e-2 against
+  the 1e-2 bound. Extending that test needs a derived per-point bound first.
+- **Second increment #761, 73 -> 61.** Twelve diagnostics with a determinate
+  fix: 6 `#[must_use]` on `mut self -> Self` builders, 4 `assert!(a == b)` ->
+  `assert_eq!`, 1 unquoted intra-doc link, and `generate_boundary_data`, which
+  took `&self` and never touched it -- the receiver survived only through its
+  own recursive calls -- made an associated function with its three call sites
+  updated. 1375 solver tests pass.
+- **Remaining 61, and why it stops there:** 28 `unused_self` is a design
+  finding, not a mechanical fix. The 26 missing `# Errors` and 7 missing
+  `# Panics` must not be closed by extending the template that produced
   [KW-ERRORS-DOCS-ARE-TEMPLATE-OUTPUT-2026-09-09](#kw-errors-docs-are-template-output-2026-09-09)
-  -- doing so would move this number without improving anything, which is gaming
-  the measure.
-- **Finding for whoever takes the remainder:** `second_deriv.rs` deliberately did
-  not absorb the deleted analytic points. Both sides there are finite differences
-  at different step sizes (`coeus_autograd` has no double-backward), so
-  disagreement scales with the fourth derivative and `REL_TOL_SECOND` is
-  empirical, not derived -- the added point measured rel_err 2.59e-2 against the
-  1e-2 bound. Extending that test needs a derived per-point bound first.
-- **Lane note:** a peer switched this lane's branch mid-increment and built
-  `chore/kwavers-manifest-row` on top of the commit, so the first increment lands
-  with their driver refactor rather than its own pull request; content was
-  verified intact on their branch. `fix/kw-solver-lint-ratchet` on origin had
-  been left pointing at `main` and is deleted.
-- **Acceptance:** the measured count reaches zero under the named configuration,
-  or each survivor carries `#[expect(lint, reason = ...)]`.
+  -- doing so would move this number without improving anything, which is
+  gaming the measure.
+- **Not met. Measured 2026-09-08**, `cargo clippy -p kwavers-solver --features
+  pinn --all-targets`: 84 diagnostics -- 28 `unused_self`, 26 missing
+  `# Errors`, 11 `println!`, 7 missing `# Panics`, 6 missing `#[must_use]`, 4
+  `assert!` with an equality comparison, 2 doc-link/recursion findings.
+- The 2026-08-17 increment recorded the gate passing; it does not pass now,
+  under this configuration. `println!` in a library crate is its own floor
+  violation (engineering_gates: lint floor denies `print_stdout` there), and
+  `unused_self` at 28 sites is a design finding rather than a mechanical fix.
+- **Acceptance:** the measured count reaches zero under the named
+  configuration, or each survivor carries `#[expect(lint, reason = ...)]`.
 
 ## KW-IMG-045 — Frame-resolved physical I/Q ensemble [minor] — todo
 
-- Owner: Codex; scope: consume the direct I/Q primitives from LeoNeuro using
+- Owner: Codex; scope: consume the direct I/Q primitives from a downstream consumer using
   explicit physical scatterer states for each slow-time frame.
 - Acceptance: a color/power/PW/fUS sector sequence derives its frame-to-frame
   phase from submitted scatterer position and reflectivity evolution, then
@@ -745,27 +842,28 @@ markers without changing the numerical contract.
 ## KW-RAY-040 — Layered focus-path contract [minor] — in-progress
 
 - Owner: Codex; scope: `kwavers-transducer` layered Rayleigh propagation API,
-  LeoNeuro focus integration, reference-Python parity, tests, and PM records.
+  a downstream consumer focus integration, reference-Python parity, tests, and PM records.
 - Driver: the provider's Rayleigh kernel integrates each straight-ray layer, but
-  LeoNeuro focus steering currently receives only one sound speed while the
+  a downstream consumer focus steering currently receives only one sound speed while the
   reference script separately recreates the layered phase law.
 - Acceptance: Kwavers exposes the validated segmentwise propagation phase;
-  LeoNeuro focuses through that provider contract; the reference delegates
+  a downstream consumer focuses through that provider contract; the reference delegates
   instead of retaining an independent layered phase implementation.
 
 ## KW-DEP-039 — Make Gaia an Atlas-local dependency [patch] — review
 
-- Owner: Codex; scope: workspace manifest, dependency records, and LeoNeuro
+- Owner: Codex; scope: workspace manifest, dependency records, and a downstream consumer
   SemVer integration.
-- Driver: Cargo ignores Kwavers' root `[patch]` tables when LeoNeuro's SemVer
-  checker packages `leoneuro-sim`; its transitive Gaia Git source therefore
-  resolves a historical revision that lacks the Eunomia dependency.
+- Driver: Cargo ignores Kwavers' root `[patch]` tables when a private
+  downstream consumer's SemVer checker packages it; that consumer's transitive
+  Gaia Git source therefore resolves a historical revision that lacks the
+  Eunomia dependency.
 - Acceptance: Kwavers declares the live Atlas Gaia checkout directly, deletes
-  the redundant Gaia source patch, and LeoNeuro's historical SemVer comparison
+  the redundant Gaia source patch, and a downstream consumer's historical SemVer comparison
   resolves through the local Gaia-to-Eunomia graph.
 - Evidence: locked offline metadata resolves `gaia` at `D:\atlas\repos\gaia`;
   warning-denied `kwavers-mesh` Clippy passes; Nextest passes 9/9. The isolated
-  LeoNeuro package now passes Gaia resolution and stops at the independent
+  a downstream consumer package now passes Gaia resolution and stops at the independent
   Moirai-to-Themis Git edge (`themis ^0.10` versus 0.9.17 at its pinned Git
   revision). That residual belongs to Moirai portability, not Kwavers.
 
@@ -773,9 +871,9 @@ markers without changing the numerical contract.
 
 - Owner: Codex; scope: `kwavers-physics`, `kwavers-solver`, direct clinical
   consumers, and ADR-036.
-- Driver: LeoNeuro's forward PSTD package reaches `ritk-filter` through
+- Driver: a downstream consumer's forward PSTD package reaches `ritk-filter` through
   unconditional clinical image I/O and registration dependencies.
-- Acceptance: `leoneuro-sim` no longer reaches `ritk-filter`; PSTD builds and
+- Acceptance: that consumer no longer reaches `ritk-filter`; PSTD builds and
   its finite-aperture boundary regression runs through the native Kwavers path;
   every in-workspace user of gated clinical APIs opts in explicitly.
 - Design: [`ADR-036`](docs/ADR/036-clinical-imaging-feature-boundary.md).
@@ -823,7 +921,7 @@ markers without changing the numerical contract.
 
 - Owner: Codex; scope: `kwavers-transducer::kwave_array`, canonical planar
   aperture geometry, tests, and PM artifacts.
-- Driver: private LeoNeuro hybrid C/D sectors require full-wave PSTD sources
+- Driver: private a downstream consumer hybrid C/D sectors require full-wave PSTD sources
   without finite-disc substitution.
 - Acceptance: validated oriented disk/annular-sector geometry rasterizes through
   the existing BLI per-element source path, conserves analytical aperture area,
@@ -838,7 +936,7 @@ markers without changing the numerical contract.
 ## KW-APERTURE-002 — General planar aperture propagation [major] — review
 
 - Owner: Codex; scope: `kwavers-transducer` Rayleigh aperture types, kernel,
-  tests, ADR-035, version, and private LeoNeuro consumer migration.
+  tests, ADR-035, version, and private a downstream consumer consumer migration.
 - Driver: hybrid Fresnel-zone pMUT cells require independently driven central
   and annular electrode sectors without circular-piston tessellation.
 - Acceptance: one bounded provider kernel integrates disks and oriented annular
@@ -852,7 +950,7 @@ markers without changing the numerical contract.
 
 - Owner: Codex; scope: `kwavers-transducer::transducers::physics`, its public
   exports, analytical/differential tests, version, and synchronized PM records.
-- Driver: private Atlas consumer `leoneuro-rs` currently duplicates and
+- Driver: a private downstream consumer currently duplicates and
   double-counts finite-aperture diffraction.
 - Acceptance: the provider evaluates the baffled Rayleigh first integral with
   the `k/(2π)` surface-pressure prefactor, area-consistent disk quadrature,
@@ -870,7 +968,7 @@ markers without changing the numerical contract.
 - Acceptance: `CtMediumBuilder` is exported only by `kwavers-medium`, maps all
   five acoustic fields through `HuAcousticModel`, rejects shape mismatch, and
   focused package gates pass.
-- Driver: private Atlas consumer `leoneuro-rs` requires the provider-owned
+- Driver: a private downstream consumer requires the provider-owned
   standard-HU medium contract.
 - Evidence: warning-denied all-target/all-feature `kwavers-medium` Clippy and
   Nextest 187/187 pass on the aligned Atlas provider graph.
@@ -908,7 +1006,7 @@ markers without changing the numerical contract.
   buffer/pipeline managers and their unsafe device-pointer ownership are
   deleted; Leto remains only at the host-array boundary; WGPU value regressions
   preserve exact multiplication and affine derivatives.
-- Driver: the LeoNeuro GPU path must select Hephaestus as device-execution
+- Driver: a downstream consumer's GPU path must select Hephaestus as device-execution
   owner rather than duplicating it beneath Leto host arrays.
 - Evidence: offline GPU and CUDA-provider compilation pass; warning-denied
   Clippy passes for both feature sets; GPU backend Nextest passes 45/45 and
@@ -1350,7 +1448,7 @@ execution edges include
 - Acceptance: a GPU batch returns only requested real outputs; final pressure
   and staggered velocity fields transfer from provider buffers when requested;
   `SolverType::PstdGpu` never executes CPU PSTD as a substitute.
-- Driver: LeoNeuro must distinguish a real final-state GPU result from its
+- Driver: a downstream consumer must distinguish a real final-state GPU result from its
   CPU peak-envelope planner and must receive an explicit unsupported error for
   the CT-scale GPU constraint.
 - Decision: [`ADR-037`](docs/ADR/037-gpu-pstd-output-contract.md).
@@ -1390,36 +1488,3 @@ execution edges include
   `kwavers-therapy`, and `kwavers-python`; provider manifests/lock; ADR 044;
   this item and its owner-local checklist section.
 - Decision: [ADR 044](docs/ADR/044-asclepius-response-ownership.md).
-
-## KW-BOOK-CH29-RESIDUALS — Chapter 29 figure regeneration and the hybrid exposure backend are still blocked [patch] — todo
-
-- **Refiled from the `Validation Goals` ledger** (a 792-line list of closed
-  2026-05 increments, deleted as report genre; the full text is in git history).
-  These two threads are the open work that ledger was the only home of.
-- **Figure 5 regeneration is blocked** by the nonlinear brain PyO3 allocation
-  abort, so the checked-in PNG/PDF pressure column came from the controlled
-  CT-frame field archive instead; the same block holds Figure 6's regeneration
-  with the slower nonlinear branch profiled.
-- **The hybrid PSTD/FDTD exposure backend stays blocked** until it has source,
-  receiver, CT-medium, peak-pressure and memory-accounting parity tests against
-  the reference path. `reference_fdtd_cpml_2d` is the only selectable backend
-  today and `exposure_uses_hybrid_pstd_fdtd=false` is exported through PyO3.
-- **Acceptance:** the nonlinear brain PyO3 allocation abort is fixed or bounded
-  and Figures 5 and 6 regenerate from the nonlinear branch; the hybrid backend
-  becomes selectable only behind its parity suite.
-- **Status:** todo, not claimed; refiled 2026-09-21 by the board compaction.
-
-## KW-FWI-PSTD-ADJOINT-RECIPROCITY — The PSTD adjoint-reciprocity check never ran [patch] — todo
-
-- **Refiled from the deleted `Session 3 closure summary` / `Open Architectural
-  Items` ledgers**, where it was the one live residual of T15b.
-- **What is verified:** `FwiParameters::build_solver_for_forward` dispatches
-  `SolverType::{FDTD, PSTD}` to `build_fdtd_boxed`/`build_pstd_boxed` and returns
-  `Box<dyn Solver>`; the FDTD forward smoke test and the unsupported-type
-  rejection test pass.
-- **What is not:** the PSTD adjoint-reciprocity check, which the ledger recorded
-  as "remains open (track separately if needed)" and no item ever carried.
-- **Acceptance:** an adjoint-reciprocity test on the PSTD forward/adjoint pair --
-  an inner-product identity or finite-difference gradient agreement -- in the
-  shape the CBS dense and spectral paths already use.
-- **Status:** todo, not claimed; refiled 2026-09-21 by the board compaction.

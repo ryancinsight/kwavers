@@ -53,9 +53,9 @@ pub use layout::{
     ELEMENTS_PER_CACHE_LINE,
 };
 pub use numa::{
-    current_numa_node, detect_topology, first_touch_memory_parallel, set_thread_affinity,
-    try_current_numa_node, CpuTopology, NumaAllocator, NumaNodeId, PlacementHint, ThreadAffinity,
-    PAGE_SIZE,
+    current_numa_node, detect_topology, first_touch_memory_parallel, last_level_cache_bytes,
+    set_thread_affinity, try_current_numa_node, CpuTopology, NumaAllocator, NumaNodeId,
+    PlacementHint, ThreadAffinity, PAGE_SIZE,
 };
 pub use pool::{
     BufferBatch, BufferPool, NumaPoolManager, PoolConfig, PoolStats, PooledBuffer,

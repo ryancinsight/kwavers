@@ -249,33 +249,51 @@ pub(crate) fn stress_acceleration_into(
         az,
         ..
     } = scratch;
-    for (stresses, out) in [
-        ([&*sxx, &*sxy, &*sxz], ax),
-        ([&*sxy, &*syy, &*syz], ay),
-        ([&*sxz, &*syz, &*szz], az),
-    ] {
-        let [first, second, third] = stresses;
-        let terms = [
-            (Axis::X, first.view()),
-            (Axis::Y, second.view()),
-            (Axis::Z, third.view()),
-        ];
-        let mut destination = out.view_mut();
-        match scale {
-            DensityScale::UniformReciprocal(reciprocal) => {
-                op.map_axis_derivatives(terms, [], &mut destination, |[dx, dy, dz], []| {
-                    ((dx + dy) + dz) * reciprocal
-                })
-            }
-            DensityScale::Field(density) => op.map_axis_derivatives(
-                terms,
-                [*density],
-                &mut destination,
-                |[dx, dy, dz], [rho]| ((dx + dy) + dz) / rho,
-            ),
-        }
-        .expect("invariant: validated elastic fields share the grid shape");
+    // One pass for all three accelerations. Taken separately they read nine
+    // stress lanes over six distinct fields -- `sxy`, `sxz` and `syz` each
+    // feed two of the three -- so each repeated field crossed the bus twice.
+    // Here every field is read once per output lane: at 96 cubed that is
+    // 70 MB against 105, and one pass rather than three.
+    let (mut x_out, mut y_out, mut z_out) = (ax.view_mut(), ay.view_mut(), az.view_mut());
+    let terms = [
+        (Axis::X, sxx.view()),
+        (Axis::Y, sxy.view()),
+        (Axis::Z, sxz.view()),
+        (Axis::X, sxy.view()),
+        (Axis::Y, syy.view()),
+        (Axis::Z, syz.view()),
+        (Axis::X, sxz.view()),
+        (Axis::Y, syz.view()),
+        (Axis::Z, szz.view()),
+    ];
+    let destinations = [&mut x_out, &mut y_out, &mut z_out];
+    match scale {
+        DensityScale::UniformReciprocal(reciprocal) => op.map_axis_derivatives_triple(
+            terms,
+            [],
+            destinations,
+            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], []| {
+                [
+                    ((xx + xy) + xz) * reciprocal,
+                    ((yx + yy) + yz) * reciprocal,
+                    ((zx + zy) + zz) * reciprocal,
+                ]
+            },
+        ),
+        DensityScale::Field(density) => op.map_axis_derivatives_triple(
+            terms,
+            [*density],
+            destinations,
+            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [rho]| {
+                [
+                    ((xx + xy) + xz) / rho,
+                    ((yx + yy) + yz) / rho,
+                    ((zx + zy) + zz) / rho,
+                ]
+            },
+        ),
     }
+    .expect("invariant: validated elastic fields share the grid shape");
 }
 
 /// The six stress components of `field`, written into `scratch`.

@@ -7,13 +7,14 @@
 
 use leto::ArrayViewMut;
 use moirai_parallel::{
-    for_each_unit_task_mut_with, for_each_unit_task_pair_mut_with,
-    for_each_unit_task_triple_mut_with, Adaptive,
+    for_each_unit_task_many_mut_with, for_each_unit_task_mut_with,
+    for_each_unit_task_pair_mut_with, for_each_unit_task_triple_mut_with, Adaptive,
 };
 
 use super::inputs::ZipInputs;
 
 const ONCE: &str = "invariant: a mutable view addresses each element once";
+const RUNS: &str = "invariant: every destination holds the same element count";
 
 /// Apply `f` to every element of `out` beside the matching elements of
 /// `inputs`.
@@ -231,6 +232,91 @@ pub fn zip_mut_triple_indexed<'a, T, U, V, I, const N: usize, F>(
         .zip(inputs.logical())
     {
         f(index, a, b, c, refs);
+    }
+}
+
+/// [`zip_mut`] writing `K` fields of one shape and one type.
+///
+/// The pair and triple forms take their destinations by separate type, which
+/// suits two or three fields that differ. A pass writing more than three
+/// fields of one type -- the six a velocity-Verlet kick and drift write --
+/// takes them as one array instead, and stays one parallel region where a
+/// call per destination would be `K` of them.
+///
+/// # Panics
+///
+/// Panics if any field's shape differs from the first destination's.
+#[inline]
+#[track_caller]
+pub fn zip_mut_many<'a, T, I, const N: usize, const K: usize, F>(
+    outs: [ArrayViewMut<'_, T, N>; K],
+    inputs: I,
+    f: F,
+) where
+    T: Send,
+    I: ZipInputs<'a, N>,
+    F: Fn([&mut T; K], I::Refs) + Send + Sync,
+{
+    zip_mut_many_indexed(outs, inputs, |_, values, refs| f(values, refs));
+}
+
+/// [`zip_mut_many`] that also hands `f` each element's logical index.
+///
+/// # Panics
+///
+/// Panics if any field's shape differs from the first destination's.
+#[track_caller]
+pub fn zip_mut_many_indexed<'a, T, I, const N: usize, const K: usize, F>(
+    mut outs: [ArrayViewMut<'_, T, N>; K],
+    inputs: I,
+    f: F,
+) where
+    T: Send,
+    I: ZipInputs<'a, N>,
+    F: Fn([usize; N], [&mut T; K], I::Refs) + Send + Sync,
+{
+    let Some(first_out) = outs.first() else {
+        return;
+    };
+    let shape = first_out.shape();
+    for out in &outs {
+        assert_same_shape(out.shape(), shape);
+    }
+    inputs.assert_shape(shape);
+    if outs.iter().all(ArrayViewMut::is_c_dense) {
+        let borrowed = outs.each_mut().map(ArrayViewMut::as_mut_slice);
+        if let (true, Some(slices)) = (borrowed.iter().all(Option::is_some), inputs.slices()) {
+            let runs: [&mut [T]; K] = borrowed.map(|slice| slice.expect(ONCE));
+            for_each_unit_task_many_mut_with::<Adaptive, _, _, _, _, K>(
+                runs,
+                1,
+                K * size_of::<T>() + I::UNIT_BYTES,
+                || (),
+                |(), first, chunk| {
+                    let mut index = row_major_index(first, shape);
+                    let len = chunk[0].len();
+                    // One cursor per run: the runs are distinct buffers, so
+                    // walking them in lockstep hands out `K` references that
+                    // cannot alias, which indexing one array of runs per
+                    // element could not express.
+                    let mut cursors = chunk.map(<[T]>::iter_mut);
+                    for position in first..first + len {
+                        let values: [&mut T; K] =
+                            core::array::from_fn(|field| cursors[field].next().expect(RUNS));
+                        f(index, values, I::at(slices, position));
+                        advance(&mut index, shape);
+                    }
+                },
+            );
+            return;
+        }
+    }
+    let mut cursors = outs.map(|out| out.try_iter_mut().expect(ONCE));
+    let mut index = row_major_index(0, shape);
+    for refs in inputs.logical() {
+        let values: [&mut T; K] = core::array::from_fn(|field| cursors[field].next().expect(RUNS));
+        f(index, values, refs);
+        advance(&mut index, shape);
     }
 }
 
