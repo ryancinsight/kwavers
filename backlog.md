@@ -14,6 +14,7 @@
 - **Acceptance:** a regression test that runs the whole-grid initial condition and bounds its energy, or a typed rejection of such initial data with its reason; the cause recorded here.
 - **Status:** todo, not claimed; filed 2026-09-17 by claude-opus-5 from the SWE probe.
 
+
 ## KW-PROSE-PR-UNMERGEABLE-2026-09-16 — A prose-only pull request can never satisfy the required checks [patch] [ci] — blocked
 
 - **Finding.** `main` requires nine status checks. All nine come from `ci.yml` and `architecture-validation.yml`, and both workflows carried `paths-ignore` for `backlog.md`, `CHANGELOG.md`, `README.md`, `gap_audit.md` and `docs/**` on their pull-request trigger. A filtered workflow reports no check at all — not a skipped one — so a pull request touching only those paths sits at `BLOCKED` with zero checks forever. [#785](https://github.com/ryancinsight/kwavers/pull/785) is the live instance; the last prose-only one, #768, went in by administrative merge, which is how the defect stayed invisible.
@@ -22,6 +23,7 @@
 - **Delivered, in two parts.** PR [#790](https://github.com/ryancinsight/kwavers/pull/790) moved the filter into the `changes` job; the prose pull request then reported 20 skipped checks and 2 successes, and stayed blocked on one context. `Build & Test` builds its matrix from an expression, and a matrix job skipped before its matrix expands reports once under its base name, so `Build & Test (stable)` never appeared. PR [#791](https://github.com/ryancinsight/kwavers/pull/791) adds `CI gate` and `Architecture gate` — always-running jobs depending on every job in their workflow, failing only on `failure` or `cancelled` — and both are required contexts now.
 - **Open, needs one command.** `Build & Test (stable)` still has to leave the required list; the agent session's classifier refused the call (reason: `CI Bypass`), so it waits for a human or an explicit permission rule: `gh api repos/ryancinsight/kwavers/branches/main/protection/required_status_checks/contexts --method DELETE -f "contexts[]=Build & Test (stable)"`. Coverage does not drop: `CI gate` depends on `build`. Recorded on [#785](https://github.com/ryancinsight/kwavers/pull/785#issuecomment-5692990329).
 - **Integrator:** claude-opus-5; **branches:** `ci/kwavers-prose-pr-checks`, `ci/kwavers-gate-aggregator`; **last-update:** 2026-09-16.
+
 
 <a id="kw-manifest-implementation-2026-09-09"></a>
 
@@ -164,6 +166,7 @@
   and (1b), the moved jobs still run on schedule with unchanged commands and
   budgets, and no check is deleted.
 
+
 ## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in-progress
 
 | ID | Outcome | Class | Owner | Scope |
@@ -171,29 +174,51 @@
 | KW-SIM-TEST-COMPILE-GRAPH | Reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining all value-semantic tests. | [patch] [perf] | Codex | `kwavers-simulation` and `kwavers-python` dependency/feature graphs, test-ID census, build-timing instrumentation, focused CI/PM evidence |
 
 - **Entry evidence:** isolated cold runs spent 2m37s compiling the GPU-enabled
-  simulation graph and 2m15s the Python graph, while their actual test execution
-  took 0.617s and 1.661s. Cargo package attribution found 431 of 444 Python
-  normal/dev packages in the simulation graph, so separate invocations rebuild
-  the shared graph instead of paying for distinct tests.
-- **Delivered:** `.cargo/config.toml` now owns `cargo test-gpu-consumers`, one
-  Nextest invocation over both packages and their existing GPU features. The
-  combined selection is exactly the 128-ID union of the two censuses (107
-  simulation + 21 Python) with no additions or omissions, and it passed 127/127
-  runnable tests with one declared skip after a 1m28s shared-target build.
-  Repeated feature forwarding is already unioned by Cargo, so no manifest surgery
-  is justified by this evidence.
-- **Rejected as a CI gate, by its own acceptance clause:** `compile-timing.yml`
-  (`workflow_dispatch`, cache-free build on a fresh hosted runner) was dispatched
-  twice and measured the combined graph at **579 s and 592 s on 4 cores** against
-  the 181 s bound -- 3.2x over. The alias therefore stays a local instrument.
-- **Remaining:** `cargo build --timings` over the same graph to attribute the
-  579 s and select one dominant unit to shrink. Controlled cold timings cannot be
-  collected from the shared warm target without deleting shared derived state or
-  forking the one-cache policy, and no timing reduction is claimed from a warm
-  run.
-- **Acceptance:** preserve the exact 128-ID union, features, assertions, profile,
-  cache policy and timeout bounds; a named dominant unit is shrunk, or the
-  consolidation stays local and this item closes as rejected.
+  simulation graph and 2m15s compiling the GPU-enabled Python graph; their
+  actual test execution took 0.617s and 1.661s. Cargo package attribution found
+  431 of 444 Python normal/dev packages in the simulation graph, so separate
+  invocations rebuild the shared graph instead of paying for distinct tests.
+- **Current exact selection:** isolated `cargo nextest list` reports 107
+  simulation IDs and 21 Python IDs. The combined selection reports exactly
+  their 128-ID set union with no additions or omissions. The canonical alias
+  compiled the selected graph in 1m28s on the shared Windows target, then
+  passed 127/127 runnable tests with one declared skip in 0.977s.
+- **Implementation:** `.cargo/config.toml` now owns
+  `cargo test-gpu-consumers`, one Nextest invocation over both packages
+  and their existing GPU features. Repeated feature forwarding is already
+  unioned by Cargo, so no manifest surgery is justified by this evidence.
+- **Candidate:** source and local verification commit `5966800ba`; exact
+  combined-gate output is 127 passed, one skipped after a 1m28s shared-target
+  build. Standalone locked/offline metadata and the 91-source lock guard pass.
+- **Acceptance:** preserve the exact 128-ID union, features, assertions,
+  profile, cache policy, and timeout bounds. On two fresh equivalent four-core
+  Linux runners, the combined cold compile must not exceed 181s; otherwise
+  reject consolidation and use Cargo timings to select one dominant unit.
+- **Remaining evidence:** controlled cold compile timings cannot be collected
+  from the shared warm target without deleting shared derived state or forking
+  the one-cache policy. Fresh-run confirmation and compiler critical-path/link
+  attribution remain open; no timing reduction is claimed from the warm run.
+- **Lease:** Codex owns fresh-run timing collection and critical-path/link
+  attribution; no source region is leased while that evidence runs.
+- **Takeover (2026-09-02, Claude):** the Codex claim went stale (draft PR #675
+  untouched since 2026-08-31); the branch was merged with `main` (its
+  draft-gating workflow hunks had already landed via #683), the alias re-run
+  locally (127/127, one skip), and #675 merged on a green run. The alias is a
+  local gate only — no CI job invokes it. `compile-timing.yml`
+  (`workflow_dispatch`) now produces the missing evidence: a cache-free build
+  of the shared graph on a fresh hosted runner, its seconds in the job
+  summary against the 181 s bound. Next: dispatch it twice and record both
+  numbers here; adopt the alias in CI only if both fit.
+- **Hosted cold-compile evidence (2026-09-02, `compile-timing.yml` run
+  33598013146, PR #688):** the combined `cargo test-gpu-consumers` graph
+  cold-compiled in **579 s on a 4-core hosted runner** against the 181 s
+  acceptance bound (3.2x over); the second dispatched run, 33598014974,
+  measured 592s on 4 cores. Per the acceptance
+  clause the consolidation is **rejected as a CI gate**: the alias stays as a
+  local instrument, and the next increment is `cargo build --timings` over
+  the same graph to attribute the 579 s and select one dominant unit to
+  shrink (a DoR sub-item once the timings are collected).
+
 
 ## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — review
 
@@ -350,6 +375,29 @@ or a silent fallback. The specialized `AcousticOpticalSolver` already accepts
 a caller-supplied photoelastic coefficient. The API extension above is the
 remaining provider-owned work; this cleanup removes misleading placeholder
 markers without changing the numerical contract.
+
+## Current Aequitas integration slice — 2026-08-02
+
+| ID | Outcome | Class | Status | Owner | Scope |
+|----|---------|-------|--------|-------|-------|
+| KWAVERS-AEQ-MET-69 | Type B-mode scan-conversion angles and length geometry with Aequitas; keep scalar extraction at Cartesian raster and interpolation formula boundaries and preserve Eunomia's real geometry rule. | [major] [arch] | in progress 2026-08-06 | Codex | `crates/kwavers-analysis/src/signal_processing/b_mode/`, ADR 105, `gap_audit.md` |
+| KWAVERS-AEQ-MET-67 | Type thermal-acoustic coupling coefficients, heating, streaming, nonlinear heating, and update outcomes with Aequitas; correct the existing nonlinear formula to its provider-owned `W/m⁴` volumetric power-density gradient; preserve Eunomia real/complex semantics. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-physics/src/thermal/coupling/`, `crates/kwavers/src/theranostic/`, top-level rkyv edge, Aequitas provider metric, ADR 104, PM artifacts |
+| KWAVERS-AEQ-MET-66 | Type thermal-diffusion perfusion, density, heat-capacity, temperature, relaxation-time, and integration-time contracts with Aequitas; preserve CEM43 as a domain dose representation and Eunomia's real/complex rule. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-physics/src/thermal/diffusion/`, `crates/kwavers-solver/src/forward/{thermal_diffusion,pstd/implementation/core/orchestrator}/`, direct Python/simulation callers, ADR 103, PM artifacts |
+| KWAVERS-AEQ-MET-FLEX | Audit and type the flexible-array dynamic metrics: timestamps, focus/speed/delay contracts, calibration confidence, and deformation outputs; preserve raw dense mesh/signal storage boundaries. | [arch] [major] | blocked: peer-owned `crates/kwavers-transducer/src/flexible/array.rs` dirty; reopen on integration or scope release | Codex | `crates/kwavers-transducer/src/flexible/{array,beamforming,geometry,config}.rs`, direct callers/tests, ADR 070, PM artifacts |
+| KWAVERS-AEQ-MET-FLEX | Audit and type the flexible-array dynamic metrics: timestamps, focus/speed/delay contracts, calibration confidence, and deformation outputs; preserve raw dense mesh/signal storage boundaries. | [arch] [major] | done 2026-08-05; typed public contracts and corrected inverse-length curvature/energy-density semantics | Codex | `crates/kwavers-transducer/src/flexible/{array,beamforming,geometry,config}.rs`, direct callers/tests, ADR 103, PM artifacts |
+| KWAVERS-AEQ-MET-64 | Type CMUT, PMUT, and shared MEMS plate physical metrics with Aequitas, including charge-gradient and flexural-rigidity semantics; preserve Eunomia's one observable unit for complex components and keep Python scalar conversion at the FFI boundary. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-transducer/src/mems/{cmut,pmut,plate,comparison}.rs`, MEMS Python bindings, Aequitas MEMS quantities, ADR 070, PM artifacts |
+| KWAVERS-AEQ-MET-65 | Type the MEMS mutual-radiation crosstalk boundary with Aequitas `Area`, `Length`, `Frequency`, `MassDensity`, `Velocity`, and semantically correct complex `MechanicalImpedance`; preserve Eunomia's one observable phasor unit. | [arch] [major] | done 2026-08-05 | Codex | `crates/kwavers-transducer/src/mems/crosstalk.rs`, Aequitas mechanical-impedance quantity, ADR 070, PM artifacts |
+| KWAVERS-AEQ-MET-63 | Type focused and hemispherical source geometry, signal, timing, and validation metrics with Aequitas; preserve Eunomia real geometry and one observable unit for complex/quadrature signals; fix stale steering state and migrate direct therapy/diagnostics callers. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/{transducers/focused,hemispherical}`, direct `kwavers-therapy`, `kwavers-diagnostics`, examples, ADR 102, PM artifacts |
+| KWAVERS-AEQ-MET-62 | Type two-dimensional array geometry, beam-control, timing, and medium metrics with Aequitas; correct center-to-center pitch and preserve Eunomia real geometry and shared signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/array_2d/`, direct Python/simulation callers, ADR 101, PM artifacts |
+| KWAVERS-AEQ-MET-61 | Type shared acquisition geometry coordinates and ring/bowl radius, diameter, and row-spacing contracts with Aequitas; preserve Eunomia real geometry and migrate every direct caller. | [arch] [major] | done 2026-08-03 | Codex | `kwavers-transducer/src/transducers/acquisition_geometry.rs`, transcranial diagnostics, breast FWI physics/solver/diagnostics/Python adapters, direct tests, ADR 100, PM artifacts |
+| KWAVERS-AEQ-MET-60 | Type transducer aperture design and focused propagation metrics with Aequitas, including geometry, drive, pressure, impedance, intensity, and beam-width contracts; preserve Eunomia complex signal semantics. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/design/{mod,propagation}.rs`, direct driver callers/tests, ADR 099, PM artifacts |
+| KWAVERS-AEQ-MET-59 | Type PAM delay-and-sum and neural sensor geometry, timing, frequency, and event-coordinate metrics with Aequitas; preserve Eunomia complex signal units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-analysis/src/signal_processing/{pam,beamforming/neural}/**`, callers/tests, ADR 098, PM artifacts |
+| KWAVERS-AEQ-MET-58 | Type sensor-beamformer geometry, sampling, steering, aperture, F-number, and spatial-frequency metrics with Aequitas; preserve Eunomia complex steering units. | [arch] [major] | done 2026-08-03 | Codex | `crates/kwavers-transducer/src/beamforming/sensor_beamformer/**`, direct Kwavers callers/tests, ADR 097, PM artifacts |
+| KWAVERS-AEQ-MET-57 | Type the shared beamforming configuration's sound speed, sampling frequency, and reference frequency with Aequitas; migrate the processor formula boundaries and preserve Eunomia complex storage units. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/beamforming/{config,processor}.rs`, callers/tests, ADR 096, PM artifacts |
+| KWAVERS-AEQ-MET-56 | Type rectangular-transducer geometry, frequency, medium speed/density, element-size, and wavenumber contracts with Aequitas; reject invalid geometry and preserve Eunomia complex storage boundaries. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/transducers/rectangular.rs`, FNM solver, Rayleigh-Sommerfeld dispatch, FNM benchmark, ADR 095, PM artifacts |
+| KWAVERS-AEQ-MET-55 | Type the public ultrafast plane-wave and diverging-wave geometry, timing, angle, frequency, F-number, image-coordinate, and scalar apodization metrics with Aequitas; preserve scalar extraction only at numerical and Leto storage boundaries and document Eunomia complex compatibility. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/{plane_wave,diverging_wave}/**`, ADR 094, PM artifacts |
+| KWAVERS-AEQ-MET-54 | Type the public ultrafast transmission scheduler's speed, depth, PRF, event times, frame rates, and tilt angles with Aequitas; keep scalar extraction at the PRF/timing formula boundary and document the real-only Eunomia compatibility rule. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-transducer/src/ultrafast/sequencer/**`, manifest, ADR 093, PM artifacts |
+| KWAVERS-AEQ-INTEGRATION-1 | Integrate the current Aequitas metric closure for therapeutic microbubble and plasmonics contracts on current `main`; harden the public three-dimensional plasmonic coordinate contract and synchronize the audit. | [arch] [major] | done 2026-08-02 | Codex | `crates/kwavers-physics/src/{acoustics/therapy/microbubble,electromagnetic}`, PM artifacts |
 
 ## KW-MAT-043 — Direct FWI L-BFGS provider ownership [patch] [arch] — in-progress 2026-08-11
 
@@ -862,58 +910,437 @@ markers without changing the numerical contract.
   preserve exact multiplication and affine derivatives.
 - Driver: the LeoNeuro GPU path must select Hephaestus as device-execution
   owner rather than duplicating it beneath Leto host arrays.
-- Decision: [`ADR-039`](docs/ADR/039-hephaestus-backend-kernel-ownership.md).
-- Delivered: the provider trait surface owns the operation contracts and WGPU is
-  the only real implementation -- concrete `wgpu::Buffer`/`ComputePipeline` and
-  `GpuProviderContext<WgpuDevice>` are confined to it, `AcousticFieldKernel`,
-  `WaveEquationGpu`, `GpuThermalAcousticSolver`, `GpuBackendBufferManager`, the
-  PSTD state/pass/run/medium-update providers, `MultiGpuContext<P>` and the
-  backend `GpuComputeProvider`/`GPUBackend::dispatch_*` elementwise and
-  derivative dispatch all carry provider-native `leto::Array3<f32>`. Hephaestus
-  CUDA implements the shared unary/binary storage-kernel traits upstream, so
-  `CudaElementWiseProvider` implements the real CUDA elementwise multiplication
-  family without a Kwavers-local CUDA helper.
-- Evidence: offline GPU and CUDA-provider compilation; warning-denied Clippy for
-  both feature sets; GPU backend Nextest 45/45, CUDA-provider backend 50/50, and
-  focused provider/state selections 42/42, 52/52, 44/44 as the slices landed.
-  The WGPU cases execute exact multiplication plus all three affine spatial
-  derivatives on a real adapter; top-level GPU nextest passes 27/27 with 3
-  ignored PSTD hardware tests skipped.
-- The increment ledger this item used to carry ("X now ... and focused nextest
-  passes N/N") was per-PR narrative; recover any increment with
-  `git log --grep='^Item: KW-GPU-060'`.
-- Residual: `WgslMultiStorageKernel` is WGPU-specific, so CUDA stays outside the
-  composite provider trait until a real CUDA spatial-derivative kernel exists.
+- Evidence: offline GPU and CUDA-provider compilation pass; warning-denied
+  Clippy passes for both feature sets; GPU backend Nextest passes 45/45 and
+  CUDA-provider backend Nextest passes 50/50. The WGPU cases execute exact
+  multiplication plus all three affine spatial derivatives on a real adapter.
+- Residual: current Hephaestus `WgslMultiStorageKernel` is WGPU-specific. A
+  CUDA spatial-derivative implementation remains unavailable until a real CUDA
+  kernel exists; CUDA therefore remains outside the composite provider trait.
 
-## KW-GPU-TEARDOWN — Dissolve the remaining internal `kwavers/src` into the layered crates [arch] — todo
+Lift concrete WGPU buffer allocation, pipeline execution, and shader dispatch
+behind a Hephaestus-owned provider trait so WGPU and CUDA can implement the
+same operation contracts without algorithm-call-site branches.
 
-- **Outcome:** `kwavers` is a thin facade. The bulk is GPU: a `kwavers-gpu` leaf
-  owns the `ComputeBackend`/`FdtdGpuAccelerator` surfaces that stay in solver and
-  consolidates all three scattered GPU paths, with wgpu-v26 bit-rot repaired as
-  part of the move (user decision 2026-06-03). Filed from the
-  `OPEN: kwavers-gpu extraction + internal-folder teardown` narrative, which was
-  the same live work held in a section heading no id anchored.
-- **Delivered:** the `kwavers-gpu` scaffold as a workspace member (`462ab1939`);
-  the `kwavers::gpu` facade monolith (~5000 lines) moved behind a
-  `kwavers-gpu/gpu` feature, with the facade re-exporting `kwavers_gpu::gpu`
-  (`2c5acc444`); `profiling/gpu_allocator` moved; wgpu-v26 bit-rot repaired so
-  `--features gpu` checks for both `kwavers-solver` and `kwavers-gpu`.
-- **Blocked:** `analysis gpu` -- `bytemuck` cleared 23 errors and two trivial
-  ones remain, but the genuine blocker is that the `three_dimensional` GPU
-  beamformers reference `BEAMFORMING_3D_SHADER` / `DYNAMIC_FOCUS_3D_SHADER` WGSL
-  constants that were never written (no source, no history). That is incomplete
-  work, not bit-rot; fabricating shaders is prohibited, so the choice is
-  gate-as-incomplete or author them.
-- **Open:** gate `simulation/diagnostics gpu` under `--features gpu`;
-  consolidate `solver::backend::gpu` and `solver::forward::{fdtd,pstd}` kernels
-  plus their `*.wgsl` into `kwavers-gpu`, leaving only the traits in solver;
-  re-home `architecture/layer_validation` (dev tooling -- evaluate keep/delete)
-  and `infrastructure/io` (candidate `kwavers-io`, or it stays); remove or repair
-  `kwavers/tests/recovery_stress_tests.rs`, which imports a `gpu::recovery`
-  module that never existed; drop the dead `api` feature gates in
-  `solver/inverse/pinn/ml/mod.rs` (needs pinn-feature verification).
-- **State:** internal `kwavers/src` is down to ~1300 lines from 8799; the facade
-  re-exports, `architecture`, `infrastructure/io` and `main.rs` remain.
+Definition of Ready: ADR names the provider trait surface, operation contracts,
+buffer ownership model, and differential verification plan for WGPU versus CUDA
+where CUDA kernels exist. Acceptance: concrete `wgpu::Buffer`,
+`wgpu::ComputePipeline`, and `GpuProviderContext<WgpuDevice>` signatures are
+confined to the WGPU provider implementation; CUDA compute is exposed only for
+operations with real CUDA kernels and value-semantic differential tests.
+
+Current evidence tier: type-level/compile-time validation plus static source
+audit. `AcousticFieldKernel<P>`,
+`GpuThermalAcousticBuffers<P>`, `GpuThermalAcousticSolver<P>`,
+`GpuBackendBufferManager<P>`, PSTD construction/run-cache buffer allocation,
+PSTD shader-module, pipeline-layout, compute-pipeline creation, PSTD bind-group
+layout/bind-group assembly, and PSTD run-loop command/compute-pass submission
+now own operation/provider trait boundaries. `AcousticFieldProvider` and
+`WaveEquationGpu` use provider-native `leto::Array3<f32>` for WGPU instead of
+an ndarray f64 surface with hidden narrowing. Thermal-acoustic buffer
+upload/readback uses provider-native `leto::Array3<f32>` for WGPU instead of an
+ndarray field I/O surface. `ThermalAcousticSolverProvider` now also binds to
+the shared `GpuKernelProvider`/`GpuProviderBackend` stack, and the default WGPU
+solver provider acquires through `GpuProviderContext<WgpuDevice>` instead of
+raw `wgpu::Device`/`Queue` constructor arguments. FDTD pressure upload/readback
+now uses provider-native `leto::Array3<f32>` for WGPU and rejects non-dense
+host fields explicitly instead of widening/narrowing through ndarray. The WGPU
+FDTD pressure dispatcher now also acquires through `GpuProviderContext<WgpuDevice>`
+and satisfies `GpuKernelProvider`/`GpuProviderBackend`; CUDA remains a real
+kernel implementation gap, not a fake provider branch. `FdtdGpuProvider` now
+owns the generic FDTD GPU operation contract, `WgpuFdtd` implements it with
+real WGSL kernels and provider-native `leto::Array3<f32>` I/O, and the
+top-level roundtrip tests bind through the trait without raw WGPU device
+construction, Tokio, or ndarray. PSTD solver state is now provider-associated
+through `PstdStateProvider`, `WgpuPstdState` owns
+`GpuProviderContext<WgpuDevice>` instead of raw WGPU device/queue handles,
+WGPU host scratch/upload buffers remain owned by `WgpuPstdState`, and current
+WGPU state assembly is delegated to `WgpuPstdStateProvider::build_state`.
+WGPU medium/source upload bodies are owned by `WgpuPstdState`. Current
+run-cache allocation, bind-group rebuild, and signal-tail upload bodies are
+also owned by `WgpuPstdState`. Current WGPU dispatch, FFT, and per-phase
+pass-encoding methods are implemented on `WgpuPstdState`, and
+`WgpuPstdPassProvider` holds provider state instead of the solver wrapper.
+Current high-level WGPU run-loop orchestration is implemented on
+`WgpuPstdState`, with `GpuPstdSolver<WgpuPstdStateProvider>::run` as a public
+delegate that supplies scalar metadata and input slices. Current
+`GpuPstdSolver<P>::new` construction is provider-generic through
+`PstdStateBuilder`; WGPU remains the only real PSTD state builder. Remaining
+public `GpuPstdSolver<P>::run` execution is provider-generic through
+`PstdRunState`; WGPU remains the only real PSTD run implementation. Remaining
+PSTD medium/source-correction updates are provider-generic through
+`PstdMediumUpdateState`; WGPU remains the only real medium-update
+implementation. The WGPU/CUDA provider boundary was re-verified on 2026-07-03
+with `rustup run nightly cargo check -p kwavers-gpu --features cuda-provider`
+and a focused 5/5 `cargo nextest run` over provider identity, CUDA provider
+contract, and provider-generic context tests. `MultiGpuContext<P>` now carries
+the same `GpuDeviceProvider` parameter as `CoreGpuContext<P>` and acquires
+multi-device contexts through `P::try_acquire_devices`; WGPU remains the
+default constructor for current WGSL kernels, and CUDA type-checks at the
+topology/scheduling boundary without fake compute kernels. The backend
+`GpuComputeProvider`/`GPUBackend::dispatch_*` API now accepts
+`leto::Array3<f32>` for provider-native elementwise and derivative dispatch;
+`WgpuBackendBufferManager` now stages those operation buffers as
+`leto::Array3<f32>` directly, and focused GPU checks on 2026-07-03 pass 8/8.
+`WaveEquationGpu<P>` and `AcousticFieldKernel<P>` now carry
+`AcousticFieldProvider`, which is bound to the shared
+`GpuKernelProvider`/`GpuProviderBackend` trait stack. The default WGPU acoustic
+provider stores `GpuProviderContext<WgpuDevice>`, so future real CUDA acoustic
+kernels enter through the same Hephaestus-backed provider contract without
+changing the wrapper API.
+Hephaestus CUDA now implements the shared unary/binary storage-kernel traits
+upstream, and the Kwavers provider boundary was reverified on 2026-07-04 under
+both `gpu` and `cuda-provider` feature sets without a Kwavers-local CUDA helper.
+Evidence tier: type-level trait satisfaction plus focused provider tests.
+Runtime CUDA acoustic/FDTD execution still requires real CUDA kernel sources
+and value-semantic WGPU/CUDA differential tests.
+Follow-up 2026-07-04: `CudaElementWiseProvider` now implements the real
+CUDA elementwise multiplication operation family through Hephaestus CUDA
+`MulOp` over provider-native `leto::Array3<f32>` buffers. It is intentionally
+not a `GpuComputeProvider` until spatial derivative and the remaining
+composite backend operations have real CUDA kernels. The realtime Hilbert FFT
+path now calls the Kwavers FFT slice facade instead of Apollo's Leto-native
+plan API directly. Evidence tier: type-level trait satisfaction plus focused
+empirical tests; fmt/check/clippy pass and focused `kwavers-gpu --features
+cuda-provider provider elementwise realtime` nextest passes 52/52.
+The top-level `kwavers --features gpu --tests` compile gate now passes after
+removing the obsolete recovery stress test and replacing stale raw-WGPU, Tokio,
+and ndarray test surfaces with Hephaestus/CoreGpuContext/GPUBackend,
+pollster-backed `GpuDevice`, `GpuPstdSolver<WgpuPstdStateProvider>`, and
+provider-native `leto::Array3<f32>` coverage. Focused top-level GPU nextest
+passes 27/27 with 3 ignored PSTD hardware tests skipped. The remaining warning
+debt is also closed: `gpu_fft_arbitrary_size.rs` uses pollster-backed ignored
+tests without an unused helper, `pstd_finite_window_born.rs` no longer carries
+the unused baseline allocation, inactive Moirai patch entries with no workspace
+manifest dependency are removed, and `rustup run nightly cargo check -p kwavers
+--features gpu --tests` passes warning-clean. Remaining GPU migration debt is
+real ignored hardware execution and WGPU/CUDA differential CUDA kernels.
+Solver-facing GPU documentation now names the provider-generic `GPUBackend<P>`
+boundary and marks the legacy elastic SWE GPU file as a performance model
+instead of a real WGPU/CUDA dispatch path; focused solver backend nextest
+passes 3/3 and the stale concrete-provider wording audit returns no matches.
+The acoustic-field WGPU provider now stores `GpuDevice<WgpuDevice>` and
+acquires through the shared `GpuDeviceProvider` contract instead of directly
+acquiring/storing raw `WgpuDevice`; `kwavers-gpu --features cuda-provider`
+fmt/check/clippy pass and the focused acoustic/provider/device nextest
+selection passes 42/42.
+PSTD auto-device acquisition now also routes through `GpuDevice<WgpuDevice>`
+and `GpuDeviceProvider`; the WGPU PSTD state builder remains the only real
+PSTD implementation, the auto-device constructor no longer contains direct
+WGPU acquisition or `pollster::block_on`, and the focused
+CUDA-provider PSTD/provider nextest selection passes 6/6.
+PSTD construction and medium-update test helpers now use the same
+`GpuDevice<WgpuDevice>` provider wrapper; the scoped PSTD subtree audit finds
+no direct WGPU acquisition or `pollster::block_on`, and the focused
+CUDA-provider PSTD/provider nextest selection passes 7/7.
+The backend buffer-manager GPU construction test now also acquires through
+`GpuDevice<WgpuDevice>` and `GpuDeviceProvider`; scoped audit finds no direct
+WGPU acquisition in `backend::buffers` or `pstd_gpu`, and the focused
+CUDA-provider backend buffer-manager nextest selection passes 2/2.
+Backend buffer readback no longer uses `pollster::block_on`; both public
+readback entry points share one blocking WGPU map/read implementation returning
+provider-native `leto::Array3<f32>`, and focused CUDA-provider backend nextest
+passes 45/45.
+Top-level `kwavers/cuda-provider` and `kwavers/cuda-runtime` now forward to the
+existing `kwavers-gpu` Hephaestus CUDA provider features, so integrators can
+select the CUDA provider seam through `kwavers` without bypassing the
+provider-generic GPU traits. Focused verification passed: top-level
+`kwavers --features cuda-provider` check/clippy, `kwavers-gpu --features
+cuda-provider provider` nextest (44/44), and `kwavers-gpu` provider-edge cargo
+tree audit showing `hephaestus-core`, `hephaestus-wgpu`, and
+`hephaestus-cuda`.
+Top-level stream visualization tests now use blocking stream/pipeline entry
+points owned by `kwavers-analysis::visualization::stream` and provider-native
+`leto::Array3<f32>` frames, so that test target no longer requires Tokio or
+ndarray. The follow-up 3-D beamforming slice moved processor construction
+behind `BeamformingGpuProvider`; the current WGPU provider acquires through
+Hephaestus `WgpuDevice`, `BeamformingProcessor3D::with_provider` is the public
+provider-generic constructor, `BeamformingProcessor3D::new_wgpu` names the
+current WGPU convenience constructor, and `examples/real_time_3d_beamforming.rs`
+no longer owns Tokio. Top-level `kwavers --features gpu` also has no depth-1
+Tokio edge. Next increment: move
+the concrete 3-D beamforming operation provider from `kwavers-analysis` into
+`kwavers-gpu` when the operation contract is split out with real CUDA kernels
+or WGPU/CUDA differential tests; do not add a placeholder CUDA provider.
+Distributed neural beamforming in `kwavers-analysis` now also runs without a
+Tokio runtime: the processor exposes synchronous `process_volume_distributed`
+over the existing Moirai `Adaptive` fan-out, the test calls it directly, and
+the crate's Tokio dev-dependency is removed. Focused `pinn` check/clippy and
+distributed nextest pass; source and depth-1 dependency audits show no Tokio
+edge for `kwavers-analysis`.
+Top-level ignored GPU FFT parity tests now use Apollo's `FftBackend` plan seam
+through `kwavers_math::fft::gpu_fft::WgpuBackend` and explicit Leto test
+buffers at the GPU boundary instead of local WGPU instance/device/queue
+construction, `pollster::block_on`, or `tokio::test`. Focused verification
+passed: `kwavers --features gpu` check/clippy for
+`gpu_fft_arbitrary_size`/`gpu_cpu_fft_parity`, nextest harness discovery with
+22 ignored hardware tests skipped, and a scoped source audit for raw WGPU
+acquisition symbols in those files. Residual direct-WGPU scope remains in
+top-level raw-buffer/device tests whose public surfaces still expose
+WGPU-specialized handles.
+The top-level `kwavers/gpu` feature no longer forwards direct `wgpu`,
+`bytemuck`, or `pollster` dependencies. `kwavers-gpu` now owns synchronous
+provider acquisition, buffer readback/write, acoustic-kernel, wave-equation,
+and FDTD pressure readback wrappers; top-level GPU buffer/device/allocation
+and compute-kernel tests call those provider APIs without importing concrete
+runtime helper crates. Focused verification passed: `kwavers-gpu --features
+gpu --lib` check/clippy, affected `kwavers --features gpu` test-target
+check/clippy, affected nextest 28/28, top-level source audit, and depth-1
+dependency audit. Residual WGPU runtime ownership is confined to
+`kwavers-gpu` provider implementations for current WGSL kernels.
+The inverse regularization subtree no longer uses direct ndarray/Rayon
+`Zip::par_for_each`; Tikhonov, smoothness, and L1 gradient updates now route
+through a Moirai-backed dense traversal helper with sequential ndarray
+fallback for non-standard layouts. The `kwavers-math` source-level
+ndarray/Rayon parallel cleanup is now closed after the FFT real/complex
+packing and k-space squared-field generation routes moved through
+Moirai-backed contiguous traversal. The remaining `kwavers-math` Rayon work is
+manifest-level `ndarray/rayon` removal audit after confirming no transitive
+provider still requires the feature.
+The `kwavers-math::simd_safe` subtree now uses the Atlas Hermes SIMD facade for
+dense add/scale operations and Moirai chunk traversal for dense ternary
+`c += multiplier * a * b` accumulation, with sequential ndarray traversal only
+for non-standard layouts. Remaining `kwavers-math` ndarray-parallel holdouts
+are now narrowed to FFT/k-space. Residual upstream
+gap: Hermes needs a public ternary accumulation slice facade before Kwavers can
+route that operation through Hermes without allocating a temporary.
+The `kwavers-math` differential subtree now routes second-order central and
+staggered-grid standard-layout output fills through a shared Moirai traversal
+helper, with sequential ndarray traversal only for non-standard layouts.
+`kwavers-math` FFT/k-space traversal has also moved to Moirai for
+standard-layout arrays, so no direct Rayon or ndarray-parallel source calls
+remain under `crates/kwavers-math/src`.
+`kwavers-math` no longer enables ndarray's `rayon` feature directly: its
+manifest now keeps only `serde`, the dependency tree shows no
+`ndarray/rayon` feature under either default or `gpu`, and Apollo is consumed
+from the local Atlas checkout. Apollo's WGPU helper now resolves local
+`hephaestus-wgpu v0.11.0`, while Kwavers' GPU FFT facade exposes Apollo's
+`FftBackend` trait and keeps WGPU documented as the current implementation,
+not the provider architecture. Focused verification on 2026-07-04:
+`rustup run nightly cargo check -p kwavers-math --all-targets`, `rustup run
+nightly cargo check -p kwavers-math --features gpu --all-targets`, focused
+FFT/k-space/spectral nextest (33/33), focused GPU FFT nextest (2/2), and
+`kwavers-math` clippy pass. Residual upstream gap: Apollo has no real CUDA FFT
+provider yet; that belongs in Apollo/Hephaestus with WGPU/CUDA differential
+tests, not as a Kwavers placeholder.
+`kwavers-solver/gpu` no longer owns concrete WGPU runtime dependencies. The
+solver manifest removed direct `wgpu`, `bytemuck`, and `pollster` optional
+edges, leaving the feature as a `kwavers-math/gpu` forwarding switch while
+concrete GPU execution stays in `kwavers-gpu`. Solver FFT call sites that were
+calling Apollo's Leto-native plan methods now route through
+`kwavers_math::fft`, including new 3-D axis-transform facade functions for
+viscoacoustic derivatives. Focused verification on 2026-07-04:
+`rustup run nightly cargo check -p kwavers-solver --features gpu --all-targets`,
+backend surface nextest (3/3), KZK/PSTD/viscoacoustic/backend nextest (62/62),
+library clippy, direct dependency-tree audit, and stale-token source audit
+passed. Residual: broad `kwavers-solver --features gpu --all-targets` clippy
+is still blocked by unrelated existing test-target lint debt.
+`kwavers-gpu` no longer carries a crate-local Tokio dev-dependency: the
+remaining async GPU acquisition tests now run through `pollster`, the
+`kwavers-gpu` source/manifest Tokio audit returns no hits, and the focused
+CUDA-provider non-hardware nextest selection passed 11/11. A broader
+hardware-acquisition nextest selection still needs isolation because it was
+interrupted after producing no result for several minutes beyond compilation.
+`GpuComputeProvider` is now the composite of `GpuKernelProvider`,
+`ElementWiseMultiplyProvider`, and `SpatialDerivativeProvider`, so CUDA can
+implement only operation families backed by real kernels instead of inheriting
+placeholder methods from a coarse backend trait; the focused CUDA-provider
+operation-trait check on 2026-07-03 passed 4/4.
+The WGSL pipeline compiler/executor is now explicitly named
+`WgpuPipelineManager`, and no backend-neutral `PipelineManager` token remains
+under `kwavers-gpu/src/backend`; the focused CUDA-provider pipeline/provider
+test passed 5/5.
+The raw WGPU command-helper surface is now `WgpuComputeCommands`, and no stale
+`GpuCompute` token remains under `kwavers-gpu/src`; the focused CUDA-provider
+command-helper/provider test passed 3/3.
+`WgpuComputeProvider` now reports memory from the acquired Hephaestus device
+limits instead of a fixed 4 GiB constant, and reports unknown peak throughput
+as `0.0` instead of a fixed 5 TFLOP/s value; focused provider metadata tests
+and `kwavers-gpu --features gpu` check pass. The generic provider performance
+estimate now returns the provider-reported peak value rather than a hardcoded
+problem-size speedup curve. `WgpuComputeProvider` now reports
+`supports_fft = false` because `ComputeBackend` does not own FFT operations;
+Apollo remains the GPU FFT owner through `kwavers_math::fft::gpu_fft`.
+Realtime scheduling field maps now use `leto::Array3<f64>`. Remaining backend
+work is real CUDA kernel implementation and WGPU-vs-CUDA differential
+verification behind the scalar-associated `ComputeBackend`/`GpuComputeProvider`
+trait seam, not a placeholder provider. Remaining PSTD GPU work is real CUDA
+state/kernel implementation and WGPU-vs-CUDA differential verification, not a
+placeholder provider. A 2026-07-04 recheck confirms
+`kwavers-gpu --features cuda-provider` still compiles through the
+Hephaestus-backed provider graph after the top-level async-runtime cleanup.
+The `kwavers-simulation` GPU PSTD adapter now consumes Leto CPML profiles
+directly and makes the current WGPU `PstdStateProvider` explicit only at the
+auto-device construction boundary. The top-level async-only stream
+visualization nextest filter now passes with 0 selected tests because the
+stream test is gated away from non-GPU builds. Residual: the optional
+`async-runtime,gpu` stream test target is blocked by the missing
+`kwavers_analysis::visualization::stream` API, so the next increment is either
+to restore the real stream module in `kwavers-analysis` or delete the stale
+test if the stream contract has been superseded by the current visualization
+pipeline. `ComputeManager` is now provider-generic and its CPU
+field-update helpers use `leto::Array3<f64>`. The FDTD CPU reference dispatcher
+now uses `leto::Array3<f64>` for its f64 reference pressure stencil. The
+GPU/CPU equivalence validator now compares `leto::Array3<f64>` fields
+directly, with ndarray confined to the current FDTD solver mask/signal/output
+boundary before conversion. Realtime imaging pipeline RF input/output frame
+buffers now use `leto::Array4<f32>`/`leto::Array3<f32>`; its only remaining
+local ndarray use is the private Apollo FFT `Array1<Complex64>` Hilbert
+scratch boundary. The false `kwavers-gpu` Burn accelerator surface is removed,
+and the solver-local CUDA-shaped PINN GPU accelerator plus
+`pinn-gpu`/`burn-wgpu`/`burn-cuda` feature aliases are removed. The remaining
+Burn dependencies no longer enable Burn's `wgpu` feature. The solver PINN
+multi-GPU manager no longer enumerates WGPU adapters directly; it now surfaces
+a typed unavailable-provider error until a real Coeus training provider is
+routed through Hephaestus WGPU/CUDA device traits. Remaining PINN GPU work is
+real Coeus training routed through Hephaestus provider traits, with WGPU and
+CUDA behind the same provider seam. Follow-up on 2026-07-03 disabled Burn
+defaults on remaining kwavers Burn dependencies, kept only required non-GPU
+features, and repaired RITK's workspace Burn default from WGPU to NdArray; the
+selected `kwavers --features pinn` graph no longer contains `burn-wgpu`,
+`burn-cuda`, or `burn-rocm`. Follow-up on 2026-07-04 removed the direct
+`kwavers-python` Burn dependency from the RITK NIfTI loader by routing it
+through native `ritk-io` on `coeus-core::SequentialBackend`; focused source
+and dependency audits show direct `coeus-core`/`ritk-io`/`ritk-image` edges
+and no direct Python-loader Burn edge. The top-level
+`kwavers` crate also no longer depends directly on Rayon or exposes the
+`parallel = ["ndarray/rayon"]` feature: liver theranostic and 3-D seismic
+example fan-out/blur loops now dispatch through `moirai-parallel`, and
+`cargo tree -p kwavers --depth 1` lists `moirai-parallel` with no direct
+`rayon`. `kwavers-physics` also no longer has a direct Rayon dependency or
+source-level direct Rayon iterator usage; its residual execution-provider gap
+is the tracked ndarray-parallel kernels that still require Leto/Hephaestus
+backend migration. In `kwavers-solver`, the Westervelt spectral wave-model
+leapfrog combination loop now uses `moirai-parallel`; focused
+`westervelt_spectral::solver` nextest passed 8/8. Helmholtz FEM element
+contribution collection now uses `moirai-parallel` with explicit contribution
+array length validation; focused Helmholtz/FEM nextest passed 10/10. Westervelt
+FDTD conservation diagnostics now use Moirai indexed reductions for energy,
+momentum, and mass; focused Westervelt nextest passed 32/32. Westervelt FDTD
+Laplacian O2/O4/O6 stencil slabs now use Moirai slab traversal; focused
+Westervelt nextest passed 32/32. Westervelt FDTD nonlinear-term and update
+field traversals now use Moirai indexed traversal; focused Westervelt nextest
+passed 32/32. KZK solver observables and trait RMS field generation now use
+Moirai indexed traversal; focused KZK nextest passed 49/49. KZK
+angular-spectrum and real-field parabolic diffraction scratch/projection
+traversals now use Moirai indexed traversal. KZK spectral absorption slab
+traversal now uses Moirai indexed chunks. KZK complex parabolic diffraction
+and nonlinear delta/update slabs now use Moirai traversal as well, leaving no
+direct Rayon or ndarray-parallel source hits under the KZK subtree. The
+current focused KZK/nonlinear/diffraction/absorption nextest passed 204/204,
+and solver check/clippy pass. The mixed-domain frequency-domain propagator now
+uses Moirai indexed traversal for its complex spectral phase application, and
+focused hybrid/mixed-domain nextest passed 59/59. The legacy KZK solver
+plugin nonlinear update now uses Moirai indexed traversal for standard-layout
+fields; focused KZK/nonlinear nextest passed 181/181. FDTD dynamic pressure
+source masks now use Moirai indexed traversal for dense Dirichlet and additive
+updates; focused FDTD/source nextest passed 93/93. FDTD pressure-updater
+divergence accumulation, pressure update, and nonlinear pressure-delta
+application now use shared Moirai-backed dense traversal; focused
+pressure/FDTD nextest passed 63/63. FDTD velocity-updater spectral,
+collocated, and staggered pressure-gradient updates now use Moirai-backed
+dense traversal; focused velocity/FDTD/k-space nextest passed 91/91. FDTD
+k-space correction shifted spectral gradient/divergence kernels now use
+Moirai-backed dense traversal; focused k-space/FDTD nextest passed 91/91, and
+FDTD construction-time `rho*c^2` and nonlinear coefficient fills now use
+Moirai-backed dense traversal; focused FDTD/nonlinear/k-space nextest passed
+290/290. The FDTD direct-provider scan no longer reports direct Rayon,
+ndarray-parallel, or explicit `ndarray::Zip` tokens. PSTD utility k-squared,
+k-magnitude, and spectral-derivative scaling now use Moirai-backed dense
+helpers; focused PSTD utility nextest passed 22/22. PSTD implementation
+k-space Helmholtz and spectral-gradient multipliers now use Moirai-backed
+dense traversal; focused PSTD/k-space nextest passed 206/206. PSTD
+implementation anti-aliasing spectral filter multipliers now use Moirai-backed
+dense traversal; focused anti-aliasing/PSTD nextest passed 175/175. PSTD
+implementation full-k-space source accumulation, spectral wave-coefficient
+multiplication, and propagated pressure/source updates now use Moirai-backed
+dense traversal; focused source/step/k-space/PSTD nextest passed 231/231.
+PSTD implementation source-gain scaling, source-kappa spectral multiplication,
+split-density source injection, and dynamic velocity-source writes now share
+Moirai-backed dense stepper helpers; focused source/step/filter/PSTD nextest
+passed 234/234. PSTD implementation total split-density accumulation now uses
+Moirai-backed dense traversal; focused PSTD/source/step nextest passed 208/208.
+PSTD implementation thermal absorption coefficient scaling now uses
+Moirai-backed dense traversal; focused thermal/PSTD nextest passed 206/206.
+PSTD implementation construction-time source-kappa cosine transformation and
+initial split-density component fills now use Moirai-backed dense traversal;
+focused construction/PSTD nextest passed 209/209.
+PSTD implementation IVP density seeding, spectral-gradient construction, and
+half-step velocity scaling now use Moirai-backed dense traversal; focused
+IVP/PSTD nextest passed 209/209, and the scoped PSTD implementation-core
+direct-provider audit now reports no hits.
+PSTD spectral-correction kappa generation and correction application now use
+Moirai-backed dense traversal; focused spectral-correction/PSTD nextest passed
+175/175.
+PSTD propagator pressure equation-of-state density accumulation and pressure
+writes now use Moirai-backed dense traversal; focused pressure/PSTD nextest
+passed 203/203.
+PSTD Cartesian pressure-density spectral-gradient and split-density updates now
+use Moirai-backed dense traversal; focused density/pressure/PSTD nextest passed
+203/203.
+PSTD axisymmetric pressure-density coefficient and split-density updates now use
+Moirai-backed dense traversal; focused density/pressure/axisymmetric/PSTD
+nextest passed 203/203, and the pressure propagator subtree direct-provider
+audit now reports no hits.
+PSTD Cartesian and axisymmetric velocity spectral-gradient and velocity-field
+updates now use Moirai-backed dense traversal; focused
+velocity/pressure/density/axisymmetric/PSTD nextest passed 210/210.
+PSTD axisymmetric WSWA-FFT pressure-gradient and density-divergence propagation
+now uses Moirai-backed dense traversal; focused
+axisymmetric/velocity/density/pressure/PSTD nextest passed 210/210.
+PSTD broadband residual-gas absorption and dispersion pressure corrections now
+use Moirai-backed dense traversal; focused residual-gas/absorption/PSTD nextest
+passed 213/213.
+PSTD pressure-side fractional-Laplacian absorption correction now uses
+Moirai-backed dense traversal; focused absorption/pressure/PSTD nextest passed
+211/211.
+PSTD fractional-Laplacian absorption stratum bracket construction now uses Moirai
+indexed collection, and the absorption subtree direct-provider audit now reports
+no hits; focused absorption/pressure/PSTD nextest passed 211/211.
+PSTD spectral derivative pencil traversal now uses Moirai indexed collection for
+strided x-pencils and Moirai chunked i-slabs for y/z pencils; focused
+derivative/spectral/PSTD nextest passed 214/214.
+PSTD DG spectral Laplacian symbol construction and application now use
+Moirai-backed dense traversal; focused DG/spectral/PSTD nextest passed 210/210.
+PSTD DG one-dimensional acoustic SSP-RK stage updates now use Moirai-backed
+dense traversal; focused DG/spectral/PSTD nextest passed 210/210.
+PSTD DG modal SSP-RK and Forward Euler coefficient updates now use shared
+Moirai-backed dense RK helpers; focused DG/spectral/PSTD nextest passed
+210/210.
+PSTD DG tensor acoustic source SSP-RK state updates now use the shared
+Moirai-backed dense RK helpers; focused DG/spectral/PSTD nextest passed
+210/210.
+PSTD DG tensor CPML field and memory SSP-RK state updates now use the shared
+Moirai-backed dense RK helpers; the DG subtree direct-provider audit now
+reports no direct Rayon, ndarray-parallel, or explicit `Zip` holdouts; focused
+DG/spectral/PSTD nextest passed 210/210.
+Photoacoustic iterative reconstruction ART/OSEM updates, Fourier positivity
+clamping, and time-reversal k-space leapfrog spectrum updates now use
+Moirai-backed traversal; the photoacoustic reconstruction subtree
+direct-provider audit now reports no direct Rayon, ndarray-parallel, or
+explicit `Zip` holdouts; focused photoacoustic nextest passed 10/10.
+Hybrid angular spectrum broadband harmonic absorption now uses Moirai-backed
+dense traversal; the HAS direct-provider audit reports no direct Rayon,
+ndarray-parallel, or explicit `Zip` holdouts; focused HAS/absorption nextest
+passed 43/43.
+Nonlinear elastic propagation damping maps now use Moirai-backed dense
+traversal instead of ndarray/Rayon `par_mapv_inplace`; focused
+nonlinear/elastic/propagation nextest passed 264/264. Follow-up
+harmonic-generation and stepping slices closed the remaining direct-provider
+files in the nonlinear elastic subtree.
+Nonlinear elastic harmonic-generation Jacobi updates and delta fills now use
+Moirai-backed indexed traversal instead of ndarray/Rayon `Zip::par_for_each`;
+focused nonlinear/elastic/propagation nextest passed 264/264.
+Nonlinear elastic fundamental x-line stepping now uses Moirai-backed
+line scheduling plus a separate safe write-back pass; the
+`forward/elastic/nonlinear` direct-provider audit now reports no direct Rayon,
+ndarray-parallel, or explicit `Zip` holdouts; focused
+nonlinear/elastic/propagation nextest passed 264/264.
+Remaining
+non-Atlas
+execution edges include
+`kwavers-solver` direct Rayon/ndarray-parallel holdouts and top-level dev
+`tokio`.
 
 ## KW-GPU-048 — GPU PSTD output and dispatch honesty [major] — review
 

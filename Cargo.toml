@@ -217,6 +217,15 @@ expl_impl_clone_on_copy = "deny"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 
 [profile.dev]
+# Debuginfo budget, matching the stack's shared `.cargo/config.toml`. A config
+# profile applies only to builds rooted beneath the Atlas root, and the working
+# practice here runs cargo from a neutral directory with `--manifest-path` so
+# the development overlay does not rewrite this workspace's lock. Cargo reads
+# config from the working directory, not the manifest, so those builds fell
+# back to `debug = 2` for this workspace and every dependency: the shared
+# `target/debug` measured 383 GB against release's 41. Declared here, the
+# budget holds wherever the build is rooted.
+debug = "line-tables-only"
 # opt-level = 1: basic dead-code elimination, inlining, and loop optimisation.
 # Keeps debug symbols and unoptimised codegen units while making FFT-heavy test
 # kernels (PSTD phase-velocity, KZK conservation) ~5â€“10Ã— faster than opt-level=0.
@@ -230,6 +239,21 @@ inherits = "dev"
 # purpose-specific suite within its existing finite timeout without changing
 # the ordinary development profile, test workload, or timeout contract.
 opt-level = 3
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.dev.build-override]
+debug = false
+
+[profile.test]
+debug = "line-tables-only"
+
+[profile.test.package."*"]
+debug = false
+
+[profile.test.build-override]
+debug = false
 
 [profile.release]
 opt-level = 3

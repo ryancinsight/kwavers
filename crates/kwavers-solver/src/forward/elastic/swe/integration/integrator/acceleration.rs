@@ -1,7 +1,10 @@
 //! Stress-divergence evaluation and acceleration assembly.
 
 use super::super::super::scratch::ElasticStepScratch;
-use super::super::super::stress::{stress_divergence_into, stress_divergence_plane_strain_into};
+use super::super::super::stress::{
+    stress_acceleration_into, stress_divergence_into, stress_divergence_plane_strain_into,
+    DensityScale,
+};
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::{body_force, TimeIntegrator};
 use kwavers_core::error::KwaversResult;
@@ -66,6 +69,19 @@ impl TimeIntegrator<'_> {
         body_force: Option<&ElasticBodyForceConfig>,
         time: f64,
     ) -> KwaversResult<()> {
+        // Without a body force the scale is one operation per lane, so it
+        // rides the divergence pass instead of costing a second pass over
+        // three grids. The full evaluation is the only one that fuses; the
+        // plane-strain route keeps its own kernel, and `S::IS_PLANE_STRAIN`
+        // resolves per instantiation, so neither carries the other's branch.
+        if !S::IS_PLANE_STRAIN && body_force.is_none() {
+            let scale = self.uniform_inverse_density.map_or_else(
+                || DensityScale::Field(self.density.view()),
+                DensityScale::UniformReciprocal,
+            );
+            stress_acceleration_into(self.grid, self.lambda, self.mu, field, &scale, scratch);
+            return Ok(());
+        }
         S::evaluate(self.grid, self.lambda, self.mu, field, scratch);
         let ElasticStepScratch {
             div_x,
