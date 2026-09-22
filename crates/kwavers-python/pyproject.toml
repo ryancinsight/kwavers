@@ -11,15 +11,17 @@ authors = [
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.8"
+# Matches the `abi3-py310` floor `aequitas-python` publishes: the two
+# distributions are commonly installed together, so a shared floor is what
+# keeps a user from meeting a version-matrix gap. Python 3.8 and 3.9 are past
+# end of life.
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Healthcare Industry",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -95,18 +97,18 @@ markers = [
 
 [tool.black]
 line-length = 100
-target-version = ["py38", "py39", "py310", "py311", "py312"]
+target-version = ["py310", "py311", "py312"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py38"
+target-version = "py310"
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "DTZ", "T10", "DJ", "EM", "EXE", "ISC", "ICN", "G", "INP", "PIE", "T20", "PYI", "PT", "Q", "RSE", "RET", "SLF", "SIM", "TID", "TCH", "INT", "ARG", "PTH", "PD", "PGH", "PL", "TRY", "NPY", "RUF"]
 
 [tool.mypy]
-# The analysis target, not the runtime floor. Current mypy refuses to model
-# anything below 3.10 and aborts on the config before checking a single file,
-# which silently turned the typed-consumer gate into a no-op; `requires-python`
-# above still carries the abi3 floor the wheel actually supports.
+# The analysis target, which is a step above the runtime floor above only
+# because the installed numpy ships 3.12+ stub syntax. Current mypy refuses to
+# model anything below 3.10 and aborts on the config before checking a single
+# file, which silently turned the typed-consumer gate into a no-op.
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
