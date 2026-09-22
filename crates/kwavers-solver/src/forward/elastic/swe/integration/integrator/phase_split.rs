@@ -12,7 +12,7 @@
 //! ```
 
 use super::acceleration::{SpatialStress, StressOperator};
-use super::step::update_components;
+use super::step::{kick_then_drift, update_components, KickDriftRoute};
 use super::TimeIntegrator;
 use crate::forward::elastic::swe::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use crate::forward::elastic::swe::scratch::ElasticStepScratch;
@@ -135,6 +135,26 @@ fn swe_step_phase_split() {
             acceleration(s);
             half_velocity(s);
             damping(s);
+        },
+    );
+    // The kick and drift as two traversals against one. Both arms advance
+    // the field by the same velocity-Verlet half-step and full step, on the
+    // same accelerations, so the difference is the traversal count: two
+    // parallel regions writing three fields each, against one writing six.
+    let (composed_kick_drift, fused_kick_drift) = TIMER.pair(
+        &mut state,
+        |s| {
+            half_velocity(s);
+            displacement(s);
+        },
+        |s| {
+            kick_then_drift::<SpatialStress>(
+                &mut s.field,
+                [&s.scratch.ax, &s.scratch.ay, &s.scratch.az],
+                0.5 * dt,
+                dt,
+                KickDriftRoute::Fused,
+            );
         },
     );
     let (acceleration_total, stress) = TIMER.pair(&mut state, acceleration, |s| {
@@ -459,6 +479,11 @@ fn swe_step_phase_split() {
             "swe 64 cubed {label}: three shears composed {:.0} us, fused {:.0}",
             pick(composed_shear),
             pick(fused_shear),
+        );
+        eprintln!(
+            "swe 64 cubed {label}: kick and drift composed {:.0} us, fused {:.0}",
+            pick(composed_kick_drift),
+            pick(fused_kick_drift),
         );
         eprintln!(
             "swe 64 cubed {label}: stress {:.0} us = 18 sweeps {:.0} + assembly {:.0}",

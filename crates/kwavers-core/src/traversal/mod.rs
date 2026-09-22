@@ -30,6 +30,6 @@ mod tests;
 
 pub use inputs::ZipInputs;
 pub use zip::{
-    zip_mut, zip_mut_indexed, zip_mut_pair, zip_mut_pair_indexed, zip_mut_triple,
-    zip_mut_triple_indexed,
+    zip_mut, zip_mut_indexed, zip_mut_many, zip_mut_many_indexed, zip_mut_pair,
+    zip_mut_pair_indexed, zip_mut_triple, zip_mut_triple_indexed,
 };
