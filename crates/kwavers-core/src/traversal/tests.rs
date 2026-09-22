@@ -1,8 +1,8 @@
 use leto::{Array2, Array3, ArrayView3, SliceArg};
 
 use super::{
-    zip_mut, zip_mut_indexed, zip_mut_pair, zip_mut_pair_indexed, zip_mut_triple,
-    zip_mut_triple_indexed,
+    zip_mut, zip_mut_indexed, zip_mut_many, zip_mut_many_indexed, zip_mut_pair,
+    zip_mut_pair_indexed, zip_mut_triple, zip_mut_triple_indexed,
 };
 
 /// Past moirai's parallel floor, so the dense path splits into tasks. A cube
@@ -220,6 +220,84 @@ fn multi_output_indexed_forms_report_each_position() {
     assert_field(&a, code);
     assert_field(&transposed_storage, |[i, j, k]| code([k, j, i]));
     assert_field(&c, |i| code(i) + 1.0);
+}
+
+#[test]
+fn six_written_fields_each_get_their_own_value() {
+    let input = field(0.0);
+    let mut fields = [(); 6].map(|()| Array3::zeros(SHAPE));
+    {
+        let views = fields.each_mut().map(Array3::view_mut);
+        zip_mut_many(views, input.view(), |values, x| {
+            for (slot, value) in values.into_iter().enumerate() {
+                *value = x + slot as f64;
+            }
+        });
+    }
+    for (slot, values) in fields.iter().enumerate() {
+        assert_field(values, |i| code(i) + slot as f64);
+    }
+}
+
+#[test]
+fn a_transposed_destination_among_many_is_written_logically() {
+    let input = field(0.0);
+    let mut dense = Array3::zeros(SHAPE);
+    let mut other = Array3::zeros(SHAPE);
+    let mut transposed_storage = Array3::zeros(SHAPE);
+    {
+        let transposed = transposed_storage
+            .transpose_mut([2, 1, 0])
+            .expect("a permutation of three axes");
+        zip_mut_many(
+            [dense.view_mut(), transposed, other.view_mut()],
+            input.view(),
+            |[first, second, third], x| {
+                *first = *x;
+                *second = *x;
+                *third = x + 1.0;
+            },
+        );
+    }
+    assert_field(&dense, code);
+    assert_field(&other, |i| code(i) + 1.0);
+    assert_field(&transposed_storage, |[i, j, k]| code([k, j, i]));
+}
+
+#[test]
+fn the_many_indexed_form_reports_each_position() {
+    let input = field(7.0);
+    let mut fields = [(); 4].map(|()| Array3::zeros(SHAPE));
+    {
+        let views = fields.each_mut().map(Array3::view_mut);
+        zip_mut_many_indexed(views, input.view(), |index, values, x| {
+            let [a, b, c, d] = values;
+            *a = x - code(index);
+            *b = code(index);
+            *c = code(index) + 1.0;
+            *d = code(index) + 2.0;
+        });
+    }
+    assert_field(&fields[0], |_| 7.0);
+    assert_field(&fields[1], code);
+    assert_field(&fields[2], |i| code(i) + 1.0);
+    assert_field(&fields[3], |i| code(i) + 2.0);
+}
+
+#[test]
+#[should_panic(expected = "invariant: every written field has one shape")]
+fn a_many_destination_of_a_different_shape_is_rejected() {
+    let input = field(0.0);
+    let mut first = Array3::<f64>::zeros(SHAPE);
+    let mut second = Array3::<f64>::zeros([SIDE, SIDE, SIDE - 1]);
+    zip_mut_many(
+        [first.view_mut(), second.view_mut()],
+        input.view(),
+        |[a, b], x| {
+            *a = *x;
+            *b = *x;
+        },
+    );
 }
 
 /// Offset of the `n`-th weighted input; distinct per position so a swapped,
