@@ -9,7 +9,7 @@ Accepted for the 4.0.0 workspace API.
 `kwavers-physics` and `kwavers-solver` unconditionally depend on
 `kwavers-imaging`; Physics also unconditionally enables
 `kwavers-core/registration`. Those edges reach RITK image I/O and registration,
-including `ritk-filter`, even when a consumer uses only forward PSTD. LeoNeuro's
+including `ritk-filter`, even when a consumer uses only forward PSTD. A downstream consumer's
 simulation crate uses the latter path and neither imports nor configures the
 clinical imaging modules.
 
@@ -40,7 +40,7 @@ HU-to-sound-speed evaluation in transcranial phase correction uses
 `kwavers_core::constants::hu_mapping::HuAcousticModel`, the provider already
 used by `kwavers-medium::CtMediumBuilder`, rather than a loader-owned wrapper.
 
-In-workspace clinical consumers opt in explicitly. LeoNeuro's forward simulation
+In-workspace clinical consumers opt in explicitly. A downstream consumer's forward simulation
 does not, so its active graph excludes clinical image I/O and registration.
 The KWaveArray BLI mapper rejects source samples only once their finite
 interpolation window cannot overlap the grid; this preserves valid nearby
@@ -74,8 +74,8 @@ boundary sources.
 
 ## Verification
 
-The dependency proof is `cargo tree -p leoneuro-sim -i ritk-filter`, which must
+The dependency proof is `cargo tree -i ritk-filter` from the consumer's simulation package, which must
 report no matching active package after the cut. The forward-PSTD regression
-remains the LeoNeuro finite-aperture boundary test. Locked offline execution
+remains the downstream consumer's finite-aperture boundary test. Locked offline execution
 passes 1,554/1,554 `kwavers-physics` tests without the feature and 1,710/1,710
 with `clinical-imaging`; the corresponding Leo package passes 29/29 tests.
