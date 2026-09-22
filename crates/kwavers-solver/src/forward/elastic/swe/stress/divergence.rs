@@ -137,7 +137,7 @@ fn stress_components(
     // combining afterwards moved 28 MB. The shear fields no longer hold
     // strains on the way, so the shears below are their only writer.
     let (mut xx, mut yy, mut zz) = (sxx.view_mut(), syy.view_mut(), szz.view_mut());
-    op.map_axis_derivatives_triple(
+    op.map_axis_derivatives_many(
         [
             (Axis::X, field.ux.view()),
             (Axis::Y, field.uy.view()),
@@ -268,7 +268,7 @@ pub(crate) fn stress_acceleration_into(
     ];
     let destinations = [&mut x_out, &mut y_out, &mut z_out];
     match scale {
-        DensityScale::UniformReciprocal(reciprocal) => op.map_axis_derivatives_triple(
+        DensityScale::UniformReciprocal(reciprocal) => op.map_axis_derivatives_many(
             terms,
             [],
             destinations,
@@ -280,7 +280,7 @@ pub(crate) fn stress_acceleration_into(
                 ]
             },
         ),
-        DensityScale::Field(density) => op.map_axis_derivatives_triple(
+        DensityScale::Field(density) => op.map_axis_derivatives_many(
             terms,
             [*density],
             destinations,

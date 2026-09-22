@@ -274,7 +274,7 @@ fn swe_step_phase_split() {
         });
         let (mut x_out, mut y_out, mut z_out) = (ax.view_mut(), ay.view_mut(), az.view_mut());
         derivatives
-            .map_axis_derivatives_triple(
+            .map_axis_derivatives_many(
                 terms,
                 [density.view()],
                 [&mut x_out, &mut y_out, &mut z_out],
@@ -335,7 +335,7 @@ fn swe_step_phase_split() {
         let ElasticStepScratch { sxx, syy, szz, .. } = scratch;
         let (mut xx, mut yy, mut zz) = (sxx.view_mut(), syy.view_mut(), szz.view_mut());
         derivatives
-            .map_axis_derivatives_triple(
+            .map_axis_derivatives_many(
                 [
                     (Axis::X, field.ux.view()),
                     (Axis::Y, field.uy.view()),
