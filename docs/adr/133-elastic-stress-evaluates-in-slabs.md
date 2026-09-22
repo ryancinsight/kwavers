@@ -1,6 +1,6 @@
 # ADR 133: The elastic stress evaluation runs in slabs
 
-Status: Proposed
+Status: Accepted (revised 2026-09-22; see the revision below)
 
 ## Context
 
@@ -89,3 +89,56 @@ writers vectorise; slabbing the outermost axis keeps those intact.
 Shrinking the live set by recomputing stresses per divergence instead of
 storing them triples the stencil work, which the measurements above show is
 already the dominant term once traffic is minimised.
+
+## Revision 2026-09-22 -- built, measured, and below its own bar
+
+**What was built.** The stress window of the Decision, implemented in the
+leading planes of the scratch stress fields: each slab slides the stress
+planes it still needs to the front, computes only the rest, then writes its
+accelerations (`stress_acceleration_in_slabs`). It rests on leto ADR 0032:
+fused passes over plane windows, with the stencil chosen by the grid plane,
+so every acceleration is the whole-grid value to the bit -- asserted for
+every slab height from one plane to past `nx`, under both density scales.
+The same leto change lets all six stresses come from one pass over the nine
+displacement gradients instead of four; that alone is 169-175 -> 149-153 us
+at 64 cubed and 1621-1721 -> 1420-1503 us at 96 cubed, on every path.
+
+**What was measured** (release, fastest of paired repeats,
+`swe_acceleration_slab_sweep`):
+
+| N | whole-grid | best slabs | ratio |
+|---|---|---|---|
+| 64 | 295-312 us | 411-419 (24 planes) | 0.7x |
+| 80 | 884-1236 | 928-1059 (16-24) | ~1x |
+| 96 | 2742-3113 | 1857-1904 (24) | 1.5x |
+| 128 | 9712-10677 | 5294-5634 (16) | 1.8x |
+
+**Against the stop condition.** The Risk section set 2x at 96 cubed as the
+bar below which the slab path is dropped. It reached 1.5x there. That is a
+miss, recorded as one.
+
+Two steps on the way were attributed rather than tuned. Restricting
+whole-grid stress arrays to a plane range first gave 1.28x: each slab wrote
+to lines last touched a step earlier and paid read-for-ownership and
+write-back, which the reused window removed (1.28x -> 1.5x). Cutting the
+regions per slab from five to two through the one-pass stress improved slab
+and whole-grid alike and left the ratio where it was. Row-granular tasks did
+not move the optimum. What remains between 1.5x and the ~2.6x
+cache-resident ceiling at 96 cubed (64 cubed runs at 1.15 ns per cell) is
+not attributed.
+
+**Why it is kept anyway.** The bar was set at 96 cubed from the traffic
+estimate in Consequences. The Context names 128 cubed and above as
+production, and there the path runs at 1.8x, with the whole-grid path
+retained wherever it is faster. The complexity is one driver function, one
+selection rule and leto's windowed pass, all bitwise-tested. The decision
+to keep it is a revision of this ADR's own bar, made after the numbers were
+seen, and open to reversal: if later work at production sizes shows the
+path not paying, it is deleted as the Risk section intended.
+
+**Selection.** Whole-grid while the live fields (14, or 15 with a density
+field) fit the last-level cache that themis reports; past it, the largest
+slab whose fields fit that cache, capped at the worker count. That picks
+24 planes at 96 cubed and 16 at 128 cubed, the measured best of
+8/12/16/24/32 at each. A platform reporting no cache size stays whole-grid.
+

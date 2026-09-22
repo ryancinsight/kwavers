@@ -16,10 +16,13 @@ use super::step::{kick_then_drift, update_components, KickDriftRoute};
 use super::TimeIntegrator;
 use crate::forward::elastic::swe::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use crate::forward::elastic::swe::scratch::ElasticStepScratch;
+use crate::forward::elastic::swe::stress::{stress_acceleration_in_slabs, DensityScale};
 use crate::forward::elastic::swe::types::ElasticWaveField;
 use crate::phase_timing::PhaseTimer;
+use core::num::NonZeroUsize;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::traversal::{zip_mut, zip_mut_triple};
+
 use kwavers_grid::Grid;
 use leto::Array3;
 use leto_ops::{Axis, FiniteDifference3D};
@@ -425,6 +428,59 @@ fn swe_step_phase_split() {
     };
     let (composed_shear, fused_shear) = TIMER.pair(&mut state, composed_shears, fused_shears);
 
+    // All six stresses as four fused passes -- the diagonal, then one shear
+    // at a time -- against one pass over the nine displacement gradients.
+    // The four passes read the displacement nine times and mu four, and each
+    // is its own parallel region; the one pass reads each once.
+    let four_passes = |s: &mut State| {
+        fused_diagonal(s);
+        fused_shears(s);
+    };
+    let one_pass = |s: &mut State| {
+        let State { field, scratch } = s;
+        let ElasticStepScratch {
+            sxx,
+            syy,
+            szz,
+            sxy,
+            sxz,
+            syz,
+            ..
+        } = scratch;
+        let [ux, uy, uz] = [field.ux.view(), field.uy.view(), field.uz.view()];
+        let mut views = [sxx, syy, szz, sxy, sxz, syz].map(Array3::view_mut);
+        let [a, b, c, d, e, f] = &mut views;
+        derivatives
+            .map_axis_derivatives_many(
+                [
+                    (Axis::X, ux),
+                    (Axis::Y, ux),
+                    (Axis::Z, ux),
+                    (Axis::X, uy),
+                    (Axis::Y, uy),
+                    (Axis::Z, uy),
+                    (Axis::X, uz),
+                    (Axis::Y, uz),
+                    (Axis::Z, uz),
+                ],
+                [lambda.view(), mu.view()],
+                [a, b, c, d, e, f],
+                |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [la, mv]| {
+                    let la2mu = 2.0f64.mul_add(mv, la);
+                    [
+                        la2mu.mul_add(xx, la * (yy + zz)),
+                        la2mu.mul_add(yy, la * (xx + zz)),
+                        la2mu.mul_add(zz, la * (xx + yy)),
+                        mv * (xy + yx),
+                        mv * (xz + zx),
+                        mv * (yz + zy),
+                    ]
+                },
+            )
+            .expect("grid-shaped fields");
+    };
+    let (four_stress, one_stress) = TIMER.pair(&mut state, four_passes, one_pass);
+
     let (stress_again, sweeps_only) = TIMER.pair(
         &mut state,
         |s| {
@@ -481,6 +537,11 @@ fn swe_step_phase_split() {
             pick(fused_shear),
         );
         eprintln!(
+            "swe 64 cubed {label}: six stresses in four passes {:.0} us, in one {:.0}",
+            pick(four_stress),
+            pick(one_stress),
+        );
+        eprintln!(
             "swe 64 cubed {label}: kick and drift composed {:.0} us, fused {:.0}",
             pick(composed_kick_drift),
             pick(fused_kick_drift),
@@ -491,5 +552,70 @@ fn swe_step_phase_split() {
             pick(sweeps_only),
             pick(stress_again) - pick(sweeps_only),
         );
+    }
+}
+
+/// Repeats per arm of the slab sweep: 23 evaluations of each route at each
+/// of four sizes and five slab heights -- at most about 8 ms apiece at 128
+/// cubed -- keep the whole sweep near 5 s, inside the test budget, while
+/// the fastest repeat still reads the same as the 200-repeat probe at 96
+/// cubed.
+const SWEEP_TIMER: PhaseTimer = PhaseTimer {
+    repeats: 20,
+    warm: 3,
+};
+
+/// The acceleration evaluated whole against the same evaluation in slabs of
+/// x-planes through the stress window, at grid sizes either side of the
+/// last-level cache. Both write every plane of every output with the same
+/// arithmetic, so each pair differs only in which planes are in flight at
+/// once: a slab's stresses are read back while still resident, where the
+/// whole-grid form writes all of them before reading the first.
+#[test]
+#[ignore = "timing probe: run in release on a quiet host with --no-capture"]
+fn swe_acceleration_slab_sweep() {
+    for n in [64, 80, 96, 128] {
+        let grid = Grid::new(n, n, n, DX, DX, DX).expect("valid grid");
+        let lambda = Array3::from_elem([n; 3], LAMBDA);
+        let mu = Array3::from_elem([n; 3], MU);
+        let mut state = State {
+            field: ElasticWaveField::new(n, n, n),
+            scratch: ElasticStepScratch::new(n, n, n),
+        };
+        let centre = (n / 2) as f64;
+        for i in 0..n {
+            for j in 0..n {
+                for k in 0..n {
+                    let r2 = [i, j, k]
+                        .map(|c| (c as f64 - centre).powi(2))
+                        .iter()
+                        .sum::<f64>();
+                    state.field.ux[[i, j, k]] = (-r2 / PULSE_WIDTH_SQUARED).exp();
+                }
+            }
+        }
+        let reciprocal = DENSITY_WATER_NOMINAL.recip();
+        let evaluate_in = |s: &mut State, planes: usize| {
+            stress_acceleration_in_slabs(
+                &grid,
+                &lambda,
+                &mu,
+                &s.field,
+                &DensityScale::UniformReciprocal(reciprocal),
+                &mut s.scratch,
+                NonZeroUsize::new(planes).expect("a slab holds at least one plane"),
+            );
+        };
+        for planes in [8, 12, 16, 24, 32] {
+            let (whole, slabbed) = SWEEP_TIMER.pair(
+                &mut state,
+                |s| evaluate_in(s, n),
+                |s| evaluate_in(s, planes),
+            );
+            eprintln!(
+                "swe {n} cubed fastest: acceleration whole {:.0} us, in {planes}-plane slabs {:.0}",
+                whole.fastest, slabbed.fastest,
+            );
+        }
     }
 }

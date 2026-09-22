@@ -16,10 +16,14 @@
 
 use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
+use core::num::NonZeroUsize;
+use core::ops::Range;
+use kwavers_core::arena::last_level_cache_bytes;
 use kwavers_core::traversal::{zip_mut, zip_mut_pair};
 use kwavers_grid::Grid;
-use leto::{Array3, ArrayView3};
-use leto_ops::{Axis, FiniteDifference3D};
+
+use leto::{Array3, ArrayView3, ArrayViewMut3};
+use leto_ops::{Axis, FiniteDifference3D, PlaneWindow, PlaneWindowMut};
 
 fn validate_stress_divergence_shapes(
     grid: &Grid,
@@ -79,16 +83,23 @@ fn sweep(op: &FiniteDifference3D<f64>, axis: Axis, field: &Array3<f64>, out: &mu
 /// values are bit-identical to the composed form.
 fn shear(
     op: &FiniteDifference3D<f64>,
+    planes: Range<usize>,
     (first_axis, first): (Axis, &Array3<f64>),
     (second_axis, second): (Axis, &Array3<f64>),
     mu: &Array3<f64>,
-    shear: &mut Array3<f64>,
+    mut shear: ArrayViewMut3<'_, f64>,
+    origin: usize,
 ) {
-    op.map_axis_derivatives(
-        [(first_axis, first.view()), (second_axis, second.view())],
-        [mu.view()],
-        &mut shear.view_mut(),
-        |[a, b], [m]| m * (a + b),
+    op.map_axis_derivatives_in_windows(
+        mu.shape()[0],
+        planes,
+        [
+            (first_axis, PlaneWindow::whole(first.view())),
+            (second_axis, PlaneWindow::whole(second.view())),
+        ],
+        [PlaneWindow::whole(mu.view())],
+        [PlaneWindowMut::new(&mut shear, origin)],
+        |[a, b], [m]| [m * (a + b)],
     )
     .expect("invariant: validated elastic fields share the grid shape");
 }
@@ -123,46 +134,60 @@ pub(crate) enum DensityScale<'a> {
 }
 
 /// The six stress components from the displacement field and the Lamé
-/// parameters.
+/// parameters, on the grid planes `planes`, written into destinations that
+/// hold the grid planes from `origin` on.
+///
+/// One pass over the nine displacement gradients writes all six. As four
+/// passes -- the diagonal, which reads all three normal strains, then one
+/// per shear -- the displacement components were read nine times and `μ`
+/// four, and each pass was its own parallel region. Each stress is the same
+/// arithmetic on the same derivatives either way, so the values are
+/// unchanged to the bit.
 fn stress_components(
     op: &FiniteDifference3D<f64>,
+    planes: Range<usize>,
     lambda: &Array3<f64>,
     mu: &Array3<f64>,
     field: &ElasticWaveField,
-    [sxx, syy, szz, sxy, sxz, syz]: [&mut Array3<f64>; 6],
+    stresses: [ArrayViewMut3<'_, f64>; 6],
+    origin: usize,
 ) {
-    // All three diagonal stresses read the same three normal strains, so one
-    // fused pass sweeps the strains once and writes the three: 16 MB of
-    // traffic at 64 cubed where sweeping them into the shear fields and
-    // combining afterwards moved 28 MB. The shear fields no longer hold
-    // strains on the way, so the shears below are their only writer.
-    let (mut xx, mut yy, mut zz) = (sxx.view_mut(), syy.view_mut(), szz.view_mut());
-    op.map_axis_derivatives_many(
+    let [ux, uy, uz] = [&field.ux, &field.uy, &field.uz].map(|u| PlaneWindow::whole(u.view()));
+    let mut stresses = stresses;
+    op.map_axis_derivatives_in_windows(
+        lambda.shape()[0],
+        planes,
         [
-            (Axis::X, field.ux.view()),
-            (Axis::Y, field.uy.view()),
-            (Axis::Z, field.uz.view()),
+            (Axis::X, ux),
+            (Axis::Y, ux),
+            (Axis::Z, ux),
+            (Axis::X, uy),
+            (Axis::Y, uy),
+            (Axis::Z, uy),
+            (Axis::X, uz),
+            (Axis::Y, uz),
+            (Axis::Z, uz),
         ],
-        [lambda.view(), mu.view()],
-        [&mut xx, &mut yy, &mut zz],
-        |[exx, eyy, ezz], [la, mv]| {
+        [
+            PlaneWindow::whole(lambda.view()),
+            PlaneWindow::whole(mu.view()),
+        ],
+        stresses
+            .each_mut()
+            .map(|stress| PlaneWindowMut::new(stress, origin)),
+        |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [la, mv]| {
             let la2mu = 2.0f64.mul_add(mv, la);
             [
-                la2mu.mul_add(exx, la * (eyy + ezz)),
-                la2mu.mul_add(eyy, la * (exx + ezz)),
-                la2mu.mul_add(ezz, la * (exx + eyy)),
+                la2mu.mul_add(xx, la * (yy + zz)),
+                la2mu.mul_add(yy, la * (xx + zz)),
+                la2mu.mul_add(zz, la * (xx + yy)),
+                mv * (xy + yx),
+                mv * (xz + zx),
+                mv * (yz + zy),
             ]
         },
     )
     .expect("invariant: validated elastic fields share the grid shape");
-
-    for (first, second, out) in [
-        ((Axis::Y, &field.ux), (Axis::X, &field.uy), &mut *sxy),
-        ((Axis::Z, &field.ux), (Axis::X, &field.uz), &mut *sxz),
-        ((Axis::Z, &field.uy), (Axis::Y, &field.uz), &mut *syz),
-    ] {
-        shear(op, first, second, mu, out);
-    }
 }
 
 /// Compute the elastic stress tensor divergence ∇·σ into pre-allocated
@@ -198,7 +223,22 @@ pub fn stress_divergence_into(
         ..
     } = scratch;
 
-    stress_components(&op, lambda, mu, field, [sxx, syy, szz, sxy, sxz, syz]);
+    stress_components(
+        &op,
+        0..grid.nx,
+        lambda,
+        mu,
+        field,
+        [
+            sxx.view_mut(),
+            syy.view_mut(),
+            szz.view_mut(),
+            sxy.view_mut(),
+            sxz.view_mut(),
+            syz.view_mut(),
+        ],
+        0,
+    );
 
     for (stresses, out) in [
         ([&*sxx, &*sxy, &*sxz], div_x),
@@ -235,7 +275,92 @@ pub(crate) fn stress_acceleration_into(
     scale: &DensityScale<'_>,
     scratch: &mut ElasticStepScratch,
 ) {
-    stress_into(grid, lambda, mu, field, scratch);
+    let slab = slab_planes(grid, scale);
+    stress_acceleration_in_slabs(grid, lambda, mu, field, scale, scratch, slab);
+}
+
+/// Fields a slab keeps in flight per plane with a uniform density: the six
+/// stresses of the window, the three displacement components, the Lamé pair
+/// and the three accelerations. A density field adds one.
+const LIVE_FIELDS: usize = 14;
+
+/// How many x-planes each slab of the acceleration evaluation covers.
+///
+/// Whole-grid while the evaluation's live fields fit the last-level cache:
+/// then every intermediate is still resident when it is read back, and
+/// slabs only add passes. Past it, the largest slab whose window and the
+/// planes around it fit that cache, and no more than the worker count, since
+/// each pass hands one plane to a task.
+///
+/// Measured through `swe_acceleration_slab_sweep` (release, fastest of 20
+/// paired repeats, 36 MB last-level cache, 24 workers): at 64 cubed every
+/// slab height is slower than whole-grid, at 80 cubed the best is level with
+/// it, at 96 cubed 24-plane slabs run 1857-1904 us against 2742-3113 (1.5x),
+/// and at 128 cubed 16-plane slabs run 5294-5634 us against 9712-10677
+/// (1.8x). The rule gives 24 planes at 96 cubed and 16 at 128, the measured
+/// best of 8, 12, 16, 24 and 32 at each; which of its two limits binds is
+/// what moves the optimum between them.
+///
+/// A platform reporting no cache size evaluates whole-grid, the route that
+/// wins whenever the fields fit.
+fn slab_planes(grid: &Grid, scale: &DensityScale<'_>) -> NonZeroUsize {
+    let whole = NonZeroUsize::new(grid.nx).unwrap_or(NonZeroUsize::MIN);
+    let Some(cache) = last_level_cache_bytes() else {
+        return whole;
+    };
+    let live = LIVE_FIELDS + usize::from(matches!(scale, DensityScale::Field(_)));
+    let per_plane = live * grid.ny * grid.nz * size_of::<f64>();
+    if per_plane.saturating_mul(grid.nx) <= cache {
+        return whole;
+    }
+    let fitting = (cache / per_plane.max(1)).saturating_sub(2 * STENCIL_REACH);
+    let workers = std::thread::available_parallelism().map_or(1, usize::from);
+    NonZeroUsize::new(fitting.min(workers))
+        .unwrap_or(NonZeroUsize::MIN)
+        .min(whole)
+}
+
+/// Planes a fourth-order derivative reaches on either side of its own.
+///
+/// A slab's accelerations at planes `start..end` read stresses on
+/// `start - STENCIL_REACH..end + STENCIL_REACH`, so those stress planes must
+/// be held before the slab's divergence runs.
+const STENCIL_REACH: usize = 2;
+
+/// [`stress_acceleration_into`], evaluated `slab` x-planes at a time through
+/// a stress window.
+///
+/// The window is the leading planes of `scratch`'s six stress fields: each
+/// slab holds there the stress planes its divergence reads, starting at grid
+/// plane `start - STENCIL_REACH`. The planes the previous slab already
+/// computed and this one still needs slide to the front, and only the rest
+/// are computed, so no stress plane is computed twice. The same few
+/// megabytes are rewritten for every slab, so they stay in cache: the stress
+/// never makes the round trip through DRAM that a grid-sized intermediate
+/// does, where every line written is first read back from planes last
+/// touched a whole pass earlier.
+///
+/// A `slab` of `nx` or more is one slab, and the window is then the whole of
+/// each stress field: the whole-grid evaluation. Either way every plane of
+/// every acceleration is the value the whole-grid evaluation writes, since
+/// leto's windowed passes take the grid's stencil at each grid plane.
+///
+/// After a slabbed evaluation the stress fields hold the last slab's window,
+/// not the grid's stress.
+///
+/// # Panics
+///
+/// Panics if any field or scratch shape differs from the grid's.
+pub(crate) fn stress_acceleration_in_slabs(
+    grid: &Grid,
+    lambda: &Array3<f64>,
+    mu: &Array3<f64>,
+    field: &ElasticWaveField,
+    scale: &DensityScale<'_>,
+    scratch: &mut ElasticStepScratch,
+    slab: NonZeroUsize,
+) {
+    validate_stress_divergence_shapes(grid, lambda, mu, field, scratch);
     let op = derivatives(grid);
     let ElasticStepScratch {
         sxx,
@@ -249,26 +374,94 @@ pub(crate) fn stress_acceleration_into(
         az,
         ..
     } = scratch;
-    // One pass for all three accelerations. Taken separately they read nine
-    // stress lanes over six distinct fields -- `sxy`, `sxz` and `syz` each
-    // feed two of the three -- so each repeated field crossed the bus twice.
-    // Here every field is read once per output lane: at 96 cubed that is
-    // 70 MB against 105, and one pass rather than three.
+    let mut stresses = [sxx, syy, szz, sxy, sxz, syz];
+    let [nx, ny, nz] = [grid.nx, grid.ny, grid.nz];
+    let plane = ny * nz;
+    let mut held = 0..0;
+    for start in (0..nx).step_by(slab.get()) {
+        let end = start.saturating_add(slab.get()).min(nx);
+        let needed = start.saturating_sub(STENCIL_REACH)..end.saturating_add(STENCIL_REACH).min(nx);
+        let kept = needed.start.max(held.start)..held.end;
+        if kept.start < kept.end && kept.start > held.start {
+            let from = (kept.start - held.start) * plane..(kept.end - held.start) * plane;
+            for stress in &mut stresses {
+                stress
+                    .as_slice_mut()
+                    .expect("invariant: scratch fields are C-contiguous")
+                    .copy_within(from.clone(), 0);
+            }
+        }
+        let fresh = kept.end.max(needed.start)..needed.end;
+        let window = [(0, needed.len(), 1), (0, ny, 1), (0, nz, 1)];
+        stress_components(
+            &op,
+            fresh,
+            lambda,
+            mu,
+            field,
+            stresses.each_mut().map(|stress| {
+                stress
+                    .slice_mut(&window)
+                    .expect("invariant: the window lies within the stress field")
+            }),
+            needed.start,
+        );
+        accelerations(
+            &op,
+            start..end,
+            stresses.each_ref().map(|stress| {
+                stress
+                    .slice(&window)
+                    .expect("invariant: the window lies within the stress field")
+            }),
+            needed.start,
+            scale,
+            [&mut *ax, &mut *ay, &mut *az],
+        );
+        held = needed;
+    }
+}
+
+/// The accelerations on the grid planes `planes`: the divergence of the
+/// stress tensor, whose fields hold the grid planes from `origin` on, scaled
+/// by the density.
+///
+/// One pass for all three. Taken separately they read nine stress lanes over
+/// six distinct fields -- `sxy`, `sxz` and `syz` each feed two of the three
+/// -- so each repeated field crossed the bus twice. Here every field is read
+/// once per output lane: at 96 cubed that is 70 MB against 105, and one pass
+/// rather than three.
+fn accelerations(
+    op: &FiniteDifference3D<f64>,
+    planes: Range<usize>,
+    [sxx, syy, szz, sxy, sxz, syz]: [ArrayView3<'_, f64>; 6],
+    origin: usize,
+    scale: &DensityScale<'_>,
+    [ax, ay, az]: [&mut Array3<f64>; 3],
+) {
+    let grid_planes = ax.shape()[0];
     let (mut x_out, mut y_out, mut z_out) = (ax.view_mut(), ay.view_mut(), az.view_mut());
+    let held = |stress| PlaneWindow::new(stress, origin);
     let terms = [
-        (Axis::X, sxx.view()),
-        (Axis::Y, sxy.view()),
-        (Axis::Z, sxz.view()),
-        (Axis::X, sxy.view()),
-        (Axis::Y, syy.view()),
-        (Axis::Z, syz.view()),
-        (Axis::X, sxz.view()),
-        (Axis::Y, syz.view()),
-        (Axis::Z, szz.view()),
+        (Axis::X, held(sxx)),
+        (Axis::Y, held(sxy)),
+        (Axis::Z, held(sxz)),
+        (Axis::X, held(sxy)),
+        (Axis::Y, held(syy)),
+        (Axis::Z, held(syz)),
+        (Axis::X, held(sxz)),
+        (Axis::Y, held(syz)),
+        (Axis::Z, held(szz)),
     ];
-    let destinations = [&mut x_out, &mut y_out, &mut z_out];
+    let destinations = [
+        PlaneWindowMut::whole(&mut x_out),
+        PlaneWindowMut::whole(&mut y_out),
+        PlaneWindowMut::whole(&mut z_out),
+    ];
     match scale {
-        DensityScale::UniformReciprocal(reciprocal) => op.map_axis_derivatives_many(
+        DensityScale::UniformReciprocal(reciprocal) => op.map_axis_derivatives_in_windows(
+            grid_planes,
+            planes,
             terms,
             [],
             destinations,
@@ -280,9 +473,11 @@ pub(crate) fn stress_acceleration_into(
                 ]
             },
         ),
-        DensityScale::Field(density) => op.map_axis_derivatives_many(
+        DensityScale::Field(density) => op.map_axis_derivatives_in_windows(
+            grid_planes,
+            planes,
             terms,
-            [*density],
+            [PlaneWindow::whole(*density)],
             destinations,
             |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [rho]| {
                 [
@@ -294,37 +489,6 @@ pub(crate) fn stress_acceleration_into(
         ),
     }
     .expect("invariant: validated elastic fields share the grid shape");
-}
-
-/// The six stress components of `field`, written into `scratch`.
-///
-/// [`stress_divergence_into`] is this followed by the three divergences. A
-/// caller that scales the divergence -- the acceleration divides it by the
-/// density -- takes them apart, so the scale rides the divergence pass
-/// instead of costing a second one over three fields.
-///
-/// # Panics
-///
-/// Panics if any field or scratch shape differs from the grid's.
-pub(crate) fn stress_into(
-    grid: &Grid,
-    lambda: &Array3<f64>,
-    mu: &Array3<f64>,
-    field: &ElasticWaveField,
-    scratch: &mut ElasticStepScratch,
-) {
-    validate_stress_divergence_shapes(grid, lambda, mu, field, scratch);
-    let op = derivatives(grid);
-    let ElasticStepScratch {
-        sxx,
-        syy,
-        szz,
-        sxy,
-        sxz,
-        syz,
-        ..
-    } = scratch;
-    stress_components(&op, lambda, mu, field, [sxx, syy, szz, sxy, sxz, syz]);
 }
 
 /// Fill the in-plane stress divergence for a plane-strain field.
@@ -366,7 +530,15 @@ pub(crate) fn stress_divergence_plane_strain_into(
     sweep(&op, Axis::X, &field.ux, derivative);
     sweep(&op, Axis::Y, &field.uy, other_derivative);
     plane_diagonal_stresses(sxx, syy, derivative, other_derivative, lambda, mu);
-    shear(&op, (Axis::Y, &field.ux), (Axis::X, &field.uy), mu, sxy);
+    shear(
+        &op,
+        0..grid.nx,
+        (Axis::Y, &field.ux),
+        (Axis::X, &field.uy),
+        mu,
+        sxy.view_mut(),
+        0,
+    );
 
     for ([first, second], out) in [([&*sxx, &*sxy], div_x), ([&*sxy, &*syy], div_y)] {
         sweep(&op, Axis::X, first, out);

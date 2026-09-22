@@ -400,3 +400,71 @@ fn mismatched_equal_length_stress_shape_rejects_before_mutation() {
     assert_eq!(scratch.div_y, Array3::from_elem((nx, ny, nz), 8.0));
     assert_eq!(scratch.div_z, Array3::from_elem((nx, ny, nz), 9.0));
 }
+
+/// The acceleration evaluated through the stress window, at every slab size
+/// from one plane -- narrower than the stencil's reach, so each slab slides
+/// planes it shares with the next -- to the whole grid, is the whole-grid
+/// evaluation to the bit, under both density scales and on grids whose
+/// plane count no slab size divides.
+#[test]
+fn every_slab_size_gives_the_whole_grid_accelerations_bit_for_bit() {
+    for (nx, ny, nz) in [(1, 4, 3), (2, 5, 4), (5, 6, 5), (11, 7, 6), (16, 6, 5)] {
+        let grid = Grid::new(nx, ny, nz, 0.7e-3, 1.1e-3, 1.3e-3).expect("grid");
+        let lambda = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            2.0e6 + (i * 37 + j * 11 + k * 5) as f64
+        });
+        let mu = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            0.8e6 + (i * 17 + j * 29 + k * 13) as f64
+        });
+        let density = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            1000.0 + (i * 3 + j * 7 + k * 11) as f64
+        });
+        let mut field = ElasticWaveField::new(nx, ny, nz);
+        field.ux = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            ((i * 13 + j * 7 + k * 3) as f64 * 0.037).sin()
+        });
+        field.uy = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            ((i * 5 + j * 19 + k * 11) as f64 * 0.041).cos()
+        });
+        field.uz = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            ((i * 23 + j * 2 + k * 17) as f64 * 0.029).sin()
+        });
+        let scales = [
+            (
+                "uniform",
+                DensityScale::UniformReciprocal(997.0_f64.recip()),
+            ),
+            ("field", DensityScale::Field(density.view())),
+        ];
+        for (label, scale) in &scales {
+            let mut whole = ElasticStepScratch::new(nx, ny, nz);
+            stress_acceleration_into(&grid, &lambda, &mu, &field, scale, &mut whole);
+            for slab in 1..=nx + 1 {
+                let mut slabbed = ElasticStepScratch::new(nx, ny, nz);
+                stress_acceleration_in_slabs(
+                    &grid,
+                    &lambda,
+                    &mu,
+                    &field,
+                    scale,
+                    &mut slabbed,
+                    core::num::NonZeroUsize::new(slab).expect("a slab holds a plane"),
+                );
+                for (component, left, right) in [
+                    ("ax", &whole.ax, &slabbed.ax),
+                    ("ay", &whole.ay, &slabbed.ay),
+                    ("az", &whole.az, &slabbed.az),
+                ] {
+                    for (index, (a, b)) in left.iter().zip(right.iter()).enumerate() {
+                        assert_eq!(
+                            a.to_bits(),
+                            b.to_bits(),
+                            "{label} density, {nx}x{ny}x{nz}, {slab}-plane slabs: {component} \
+                             at flat {index}: {a} against {b}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}

@@ -99,4 +99,4 @@
 | [130](130-exterior-coupling-carries-its-mask.md) | Exterior coupling carries its body mask | Accepted |
 | [131](131-c2r-inverse-consumes-its-input.md) | The complex-to-real inverse consumes its input spectrum | Accepted |
 | [132](132-one-lockstep-traversal.md) | One lockstep field traversal, in kwavers-core | Accepted |
-| [133](133-elastic-stress-evaluates-in-slabs.md) | The elastic stress evaluation runs in slabs | Proposed |
+| [133](133-elastic-stress-evaluates-in-slabs.md) | The elastic stress evaluation runs in slabs | Accepted |
