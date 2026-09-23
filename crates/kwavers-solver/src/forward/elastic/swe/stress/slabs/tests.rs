@@ -1,6 +1,6 @@
 use super::super::super::{scratch::ElasticStepScratch, types::ElasticWaveField};
 use super::super::tests::from_shape_fn_fortran;
-use super::super::{stress_divergence_into, DensityScale, VelocityKick};
+use super::super::{stress_divergence_into, DensityScale, Lame, VelocityKick};
 use super::{slab_height, stress_kick_in_slabs, window_slides, Caches};
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -73,8 +73,10 @@ fn every_slab_size_kicks_the_velocities_as_the_separate_passes_do_bit_for_bit() 
                 let mut scratch = ElasticStepScratch::new(nx, ny, nz);
                 stress_kick_in_slabs(
                     &grid,
-                    &lambda,
-                    &mu,
+                    Lame::Field {
+                        lambda: lambda.view(),
+                        mu: mu.view(),
+                    },
                     &mut kicked,
                     &kick,
                     &mut scratch,
@@ -147,4 +149,60 @@ fn a_stress_field_out_of_c_order_stops_the_window_sliding() {
     assert!(window_slides(&scratch));
     scratch.sxz = from_shape_fn_fortran(shape, |_| 0.0);
     assert!(!window_slides(&scratch));
+}
+
+/// A uniform medium given as its Lamé pair kicks the velocities as the same
+/// medium given as constant fields does, to the bit, for slabs narrower than
+/// the stencil's reach, a middling height and the whole grid.
+#[test]
+fn a_uniform_lame_pair_kicks_as_its_constant_fields_do() {
+    let (nx, ny, nz) = (11, 7, 6);
+    let grid = Grid::new(nx, ny, nz, 0.7e-3, 1.1e-3, 1.3e-3).expect("grid");
+    let (lambda_value, mu_value) = (2.25e9, 0.75e6);
+    let lambda = Array3::from_elem((nx, ny, nz), lambda_value);
+    let mu = Array3::from_elem((nx, ny, nz), mu_value);
+    let mut field = ElasticWaveField::new(nx, ny, nz);
+    field.ux = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+        ((i * 13 + j * 7 + k * 3) as f64 * 0.037).sin()
+    });
+    field.uy = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+        ((i * 5 + j * 19 + k * 11) as f64 * 0.041).cos()
+    });
+    field.uz = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+        ((i * 23 + j * 2 + k * 17) as f64 * 0.029).sin()
+    });
+    let kick = VelocityKick {
+        scale: DensityScale::UniformReciprocal(997.0_f64.recip()),
+        half_dt: 3.7e-7,
+    };
+    for slab in [1, 4, nx] {
+        let slab = core::num::NonZeroUsize::new(slab).expect("a slab holds a plane");
+        let kicked = |lame| {
+            let mut kicked = field.clone();
+            let mut scratch = ElasticStepScratch::new(nx, ny, nz);
+            stress_kick_in_slabs(&grid, lame, &mut kicked, &kick, &mut scratch, slab);
+            kicked
+        };
+        let fields = kicked(Lame::Field {
+            lambda: lambda.view(),
+            mu: mu.view(),
+        });
+        let pair = kicked(Lame::Uniform {
+            lambda: lambda_value,
+            mu: mu_value,
+        });
+        for (component, want, got) in [
+            ("vx", &fields.vx, &pair.vx),
+            ("vy", &fields.vy, &pair.vy),
+            ("vz", &fields.vz, &pair.vz),
+        ] {
+            for (index, (a, b)) in want.iter().zip(got.iter()).enumerate() {
+                assert_eq!(
+                    a.to_bits(),
+                    b.to_bits(),
+                    "{slab}-plane slabs: {component} at flat {index}: {a} against {b}"
+                );
+            }
+        }
+    }
 }

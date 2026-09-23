@@ -5,7 +5,8 @@
 use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
 use super::divergence::{
-    derivatives, stress_components, validate_stress_divergence_shapes, DensityScale, VelocityKick,
+    derivatives, stress_components, validate_stress_divergence_shapes, DensityScale, Lame,
+    VelocityKick,
 };
 use core::num::NonZeroUsize;
 use core::ops::Range;
@@ -41,8 +42,7 @@ use leto_ops::{Axis, FiniteDifference3D, PlaneWindow, PlaneWindowMut};
 /// Panics if any field or scratch shape differs from the grid's.
 pub(crate) fn stress_kick_into(
     grid: &Grid,
-    lambda: &Array3<f64>,
-    mu: &Array3<f64>,
+    lame: Lame<'_>,
     field: &mut ElasticWaveField,
     kick: &VelocityKick<'_>,
     scratch: &mut ElasticStepScratch,
@@ -52,7 +52,7 @@ pub(crate) fn stress_kick_into(
     } else {
         NonZeroUsize::new(grid.nx).unwrap_or(NonZeroUsize::MIN)
     };
-    stress_kick_in_slabs(grid, lambda, mu, field, kick, scratch, slab);
+    stress_kick_in_slabs(grid, lame, field, kick, scratch, slab);
 }
 
 /// Whether the stress window can slide in `scratch`: it moves planes as
@@ -73,6 +73,11 @@ fn window_slides(scratch: &ElasticStepScratch) -> bool {
 /// Fields a slab keeps in flight per plane with a uniform density: the six
 /// stresses of the window, the three displacement components, the Lamé pair
 /// and the three velocities. A density field adds one.
+///
+/// The Lamé pair counts when it is uniform too. Sized for twelve fields, the
+/// 128-cubed slab grows from 16 planes to 20, and the paired step measured
+/// that no faster; sized for fourteen, a uniform pair is 4-9% faster than
+/// its constant fields at 96 and 128 cubed.
 const LIVE_FIELDS: usize = 14;
 
 /// How many x-planes each slab of the kick evaluation covers.
@@ -180,14 +185,13 @@ const STENCIL_REACH: usize = 2;
 /// C-contiguous.
 pub(crate) fn stress_kick_in_slabs(
     grid: &Grid,
-    lambda: &Array3<f64>,
-    mu: &Array3<f64>,
+    lame: Lame<'_>,
     field: &mut ElasticWaveField,
     kick: &VelocityKick<'_>,
     scratch: &mut ElasticStepScratch,
     slab: NonZeroUsize,
 ) {
-    validate_stress_divergence_shapes(grid, lambda, mu, field, scratch);
+    validate_stress_divergence_shapes(grid, &lame, field, scratch);
     let op = derivatives(grid);
     let ElasticStepScratch {
         sxx,
@@ -229,8 +233,7 @@ pub(crate) fn stress_kick_in_slabs(
         stress_components(
             &op,
             fresh,
-            lambda,
-            mu,
+            lame,
             [&*ux, &*uy, &*uz],
             stresses.each_mut().map(|stress| {
                 stress

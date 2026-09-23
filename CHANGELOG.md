@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **[patch] A uniform elastic medium keeps its Lamé fields out of the
+  kick pass.** `TimeIntegrator` detects a medium holding one `(λ, μ)` pair,
+  as it already did one density, and the stress pass reads the pair instead
+  of two grids: the step is 4-9% faster at 96 and 128 cubed, values
+  bit-identical. Density and Lamé uniformity are read in logical order, so a
+  non-C-contiguous density no longer panics in `TimeIntegrator::new`.
 - **[patch] The elastic step evaluates its acceleration in slabs past the
   caches and kicks the velocities in the same pass.** All six stresses come
   from one fused pass (-12% on every path). Past what an even split across

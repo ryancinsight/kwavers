@@ -25,15 +25,20 @@ use leto_ops::{Axis, FiniteDifference3D, PlaneWindow, PlaneWindowMut};
 
 pub(super) fn validate_stress_divergence_shapes(
     grid: &Grid,
-    lambda: &Array3<f64>,
-    mu: &Array3<f64>,
+    lame: &Lame<'_>,
     field: &ElasticWaveField,
     scratch: &ElasticStepScratch,
 ) {
     let expected = [grid.nx, grid.ny, grid.nz];
+    if let Lame::Field { lambda, mu } = lame {
+        for (name, actual) in [("lambda", lambda.shape()), ("mu", mu.shape())] {
+            assert!(
+                actual == expected,
+                "invariant: {name} shape {actual:?} must match grid shape {expected:?}"
+            );
+        }
+    }
     for (name, actual) in [
-        ("lambda", lambda.shape()),
-        ("mu", mu.shape()),
         ("field.ux", field.ux.shape()),
         ("field.uy", field.uy.shape()),
         ("field.uz", field.uz.shape()),
@@ -54,6 +59,25 @@ pub(super) fn validate_stress_divergence_shapes(
             "invariant: {name} shape {actual:?} must match grid shape {expected:?}"
         );
     }
+}
+
+/// The Lamé parameters a stress pass reads: one pair for a uniform medium,
+/// or a field of each.
+///
+/// A uniform pair keeps two grids out of the pass -- two of the eleven it
+/// streams from memory once the fields outgrow the caches -- and the
+/// arithmetic is the same, so a medium holding one value everywhere gives
+/// the same stresses to the bit either way.
+#[derive(Clone, Copy)]
+pub(crate) enum Lame<'a> {
+    Uniform {
+        lambda: f64,
+        mu: f64,
+    },
+    Field {
+        lambda: ArrayView3<'a, f64>,
+        mu: ArrayView3<'a, f64>,
+    },
 }
 
 /// Fourth-order central first derivatives on the grid's spacing.
@@ -144,48 +168,62 @@ pub(crate) struct VelocityKick<'a> {
 pub(super) fn stress_components(
     op: &FiniteDifference3D<f64>,
     planes: Range<usize>,
-    lambda: &Array3<f64>,
-    mu: &Array3<f64>,
+    lame: Lame<'_>,
     displacement: [&Array3<f64>; 3],
     stresses: [ArrayViewMut3<'_, f64>; 6],
     origin: usize,
 ) {
+    let grid_planes = displacement[0].shape()[0];
     let [ux, uy, uz] = displacement.map(|u| PlaneWindow::whole(u.view()));
+    let gradients = [
+        (Axis::X, ux),
+        (Axis::Y, ux),
+        (Axis::Z, ux),
+        (Axis::X, uy),
+        (Axis::Y, uy),
+        (Axis::Z, uy),
+        (Axis::X, uz),
+        (Axis::Y, uz),
+        (Axis::Z, uz),
+    ];
     let mut stresses = stresses;
-    op.map_axis_derivatives_in_windows(
-        lambda.shape()[0],
-        planes,
-        [
-            (Axis::X, ux),
-            (Axis::Y, ux),
-            (Axis::Z, ux),
-            (Axis::X, uy),
-            (Axis::Y, uy),
-            (Axis::Z, uy),
-            (Axis::X, uz),
-            (Axis::Y, uz),
-            (Axis::Z, uz),
-        ],
-        [
-            PlaneWindow::whole(lambda.view()),
-            PlaneWindow::whole(mu.view()),
-        ],
-        stresses
-            .each_mut()
-            .map(|stress| PlaneWindowMut::new(stress, origin)),
-        |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [la, mv], _| {
-            let la2mu = 2.0f64.mul_add(mv, la);
-            [
-                la2mu.mul_add(xx, la * (yy + zz)),
-                la2mu.mul_add(yy, la * (xx + zz)),
-                la2mu.mul_add(zz, la * (xx + yy)),
-                mv * (xy + yx),
-                mv * (xz + zx),
-                mv * (yz + zy),
-            ]
-        },
-    )
+    let destinations = stresses
+        .each_mut()
+        .map(|stress| PlaneWindowMut::new(stress, origin));
+    match lame {
+        Lame::Uniform { lambda, mu } => op.map_axis_derivatives_in_windows(
+            grid_planes,
+            planes,
+            gradients,
+            [],
+            destinations,
+            |gradients, [], _| hooke(gradients, lambda, mu),
+        ),
+        Lame::Field { lambda, mu } => op.map_axis_derivatives_in_windows(
+            grid_planes,
+            planes,
+            gradients,
+            [PlaneWindow::whole(lambda), PlaneWindow::whole(mu)],
+            destinations,
+            |gradients, [lambda, mu], _| hooke(gradients, lambda, mu),
+        ),
+    }
     .expect("invariant: validated elastic fields share the grid shape");
+}
+
+/// The six stresses, `σxx σyy σzz σxy σxz σyz`, from the nine displacement
+/// gradients `∂u_i/∂x_j` in row order and the Lamé pair (Hooke's law).
+#[inline(always)]
+fn hooke([xx, xy, xz, yx, yy, yz, zx, zy, zz]: [f64; 9], lambda: f64, mu: f64) -> [f64; 6] {
+    let la2mu = 2.0f64.mul_add(mu, lambda);
+    [
+        la2mu.mul_add(xx, lambda * (yy + zz)),
+        la2mu.mul_add(yy, lambda * (xx + zz)),
+        la2mu.mul_add(zz, lambda * (xx + yy)),
+        mu * (xy + yx),
+        mu * (xz + zx),
+        mu * (yz + zy),
+    ]
 }
 
 /// Compute the elastic stress tensor divergence ∇·σ into pre-allocated
@@ -206,7 +244,11 @@ pub fn stress_divergence_into(
     field: &ElasticWaveField,
     scratch: &mut ElasticStepScratch,
 ) {
-    validate_stress_divergence_shapes(grid, lambda, mu, field, scratch);
+    let lame = Lame::Field {
+        lambda: lambda.view(),
+        mu: mu.view(),
+    };
+    validate_stress_divergence_shapes(grid, &lame, field, scratch);
     let op = derivatives(grid);
     let ElasticStepScratch {
         sxx,
@@ -224,8 +266,7 @@ pub fn stress_divergence_into(
     stress_components(
         &op,
         0..grid.nx,
-        lambda,
-        mu,
+        lame,
         [&field.ux, &field.uy, &field.uz],
         [
             sxx.view_mut(),
@@ -270,7 +311,11 @@ pub(crate) fn stress_divergence_plane_strain_into(
     scratch: &mut ElasticStepScratch,
 ) {
     debug_assert_eq!(field.ux.shape()[2], 1);
-    validate_stress_divergence_shapes(grid, lambda, mu, field, scratch);
+    let lame = Lame::Field {
+        lambda: lambda.view(),
+        mu: mu.view(),
+    };
+    validate_stress_divergence_shapes(grid, &lame, field, scratch);
     let op = derivatives(grid);
     let ElasticStepScratch {
         sxx,
