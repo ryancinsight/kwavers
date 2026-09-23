@@ -192,7 +192,7 @@ fn test_staggered_divergence_uses_scratch_buffer() {
         }
     }
 
-    solver.compute_divergence_staggered().unwrap();
+    solver.compute_divergence_components_staggered().unwrap();
 
     // The staggered operator's divergence -- the adjoint of the gradient the
     // velocity update applies -- not a general backward difference. They differ
@@ -216,15 +216,9 @@ fn test_staggered_divergence_uses_scratch_buffer() {
         .divergence_into(Axis::Z, solver.fields.uz.view(), &mut dvz.view_mut())
         .expect("divergence shapes match the solver grid");
 
-    let mut expected = dvz.clone();
-    leto_ops::zip_mut_with(
-        expected.view_mut(),
-        (&dvx.view(), &dvy.view()),
-        |d, (dx_v, dy_v)| *d += *dx_v + *dy_v,
-    )
-    .expect("invariant: divergence field shapes asserted equal");
-
-    assert_eq!(solver.divergence_scratch, expected);
+    assert_eq!(solver.dvx_scratch, dvx);
+    assert_eq!(solver.dvy_scratch, dvy);
+    assert_eq!(solver.divergence_scratch, dvz);
 }
 
 /// One volume below the lane walker's parallel floor and one above it.
@@ -273,6 +267,36 @@ fn pressure_update_is_the_per_element_formula_to_the_bit() {
             kernel_at(&pressure, i).to_bits() == expected.to_bits()
         });
         assert!(same, "pressure update diverges at {shape:?}");
+    }
+}
+
+/// The components summed and applied in one pass are the two passes -- the
+/// accumulation, then the update from the sum -- to the bit.
+#[test]
+fn pressure_update_from_components_is_the_sum_then_the_update_to_the_bit() {
+    const DT: f64 = 3.1e-8;
+    for shape in KERNEL_SHAPES {
+        let (x, y, z) = (
+            kernel_field(shape, 1.0),
+            kernel_field(shape, 2.0),
+            kernel_field(shape, 4.0),
+        );
+        let rho_c_squared = kernel_field(shape, 5.0);
+        let initial = kernel_field(shape, 3.0);
+        let mut summed = z.clone();
+        super::accumulate_two_fields(&mut summed, &x, &y);
+        let mut expected = initial.clone();
+        super::apply_pressure_update(&mut expected, summed.view(), &rho_c_squared, DT);
+        let mut pressure = initial.clone();
+        super::apply_pressure_update_from_components(
+            &mut pressure,
+            [&x, &y, &z],
+            &rho_c_squared,
+            DT,
+        );
+        let same = (0..pressure.len())
+            .all(|i| kernel_at(&pressure, i).to_bits() == kernel_at(&expected, i).to_bits());
+        assert!(same, "fused pressure update diverges at {shape:?}");
     }
 }
 

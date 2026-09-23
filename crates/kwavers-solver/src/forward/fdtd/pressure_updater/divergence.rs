@@ -22,7 +22,7 @@ impl FdtdSolver {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    pub(crate) fn compute_divergence_staggered(&mut self) -> KwaversResult<()> {
+    pub(crate) fn compute_divergence_components_staggered(&mut self) -> KwaversResult<()> {
         self.leapfrog_operator.divergence_into(
             Axis::X,
             self.fields.ux.view(),
@@ -73,11 +73,6 @@ impl FdtdSolver {
             cpml.update_and_apply_v_gradient_correction(&mut self.divergence_scratch, 2);
         }
 
-        super::accumulate_two_fields(
-            &mut self.divergence_scratch,
-            &self.dvx_scratch,
-            &self.dvy_scratch,
-        );
         Ok(())
     }
 }

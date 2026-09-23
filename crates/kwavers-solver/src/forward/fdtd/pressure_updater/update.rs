@@ -82,8 +82,8 @@ impl FdtdSolver {
         }
 
         if self.config.staggered_grid {
-            self.compute_divergence_staggered()?;
-            self.apply_pressure_from_divergence(dt);
+            self.compute_divergence_components_staggered()?;
+            self.apply_pressure_from_components(dt);
         } else {
             // The same operator the velocity update uses. On a collocated grid
             // that is the point: one operator means the energy behaviour is
@@ -110,27 +110,27 @@ impl FdtdSolver {
                 cpml.update_and_apply_v_gradient_correction(&mut self.divergence_scratch, 2);
             }
 
-            super::accumulate_two_fields(
-                &mut self.divergence_scratch,
-                &self.dvx_scratch,
-                &self.dvy_scratch,
-            );
-
-            self.apply_pressure_from_divergence(dt);
+            self.apply_pressure_from_components(dt);
         }
         Ok(())
     }
 
-    /// Apply the pressure update from `divergence_scratch`, with the relaxation
-    /// term when absorption is configured.
+    /// Apply the pressure update from the three divergence components in
+    /// `dvx_scratch`, `dvy_scratch` and `divergence_scratch`, with the
+    /// relaxation term when absorption is configured.
     ///
     /// Both finite-difference branches converge here **after** the CPML
     /// gradient correction and the per-axis accumulation, so the memory
     /// variables integrate exactly the divergence the pressure does. Driving
     /// them from an uncorrected divergence would let the two drift apart inside
     /// the PML, where the correction is largest.
-    fn apply_pressure_from_divergence(&mut self, dt: f64) {
+    fn apply_pressure_from_components(&mut self, dt: f64) {
         if let Some(absorption) = self.absorption.as_mut() {
+            super::accumulate_two_fields(
+                &mut self.divergence_scratch,
+                &self.dvx_scratch,
+                &self.dvy_scratch,
+            );
             let divergence = self.divergence_scratch.view();
             let (modulus, relaxation) = absorption.accumulate(divergence, dt);
             super::apply_absorbing_pressure_update(
@@ -141,9 +141,15 @@ impl FdtdSolver {
                 dt,
             );
         } else {
-            Self::update_pressure_simd(
+            // Lossless, nothing else reads the summed divergence, so the sum
+            // rides the pressure update instead of costing a pass of its own.
+            super::apply_pressure_update_from_components(
                 &mut self.fields.p,
-                self.divergence_scratch.view(),
+                [
+                    &self.dvx_scratch,
+                    &self.dvy_scratch,
+                    &self.divergence_scratch,
+                ],
                 &self.rho_c_squared,
                 dt,
             );

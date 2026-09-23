@@ -233,6 +233,9 @@ impl FdtdSolver {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn update_velocity_staggered(&mut self, dt: f64) -> KwaversResult<()> {
+        if self.cpml_boundary.is_none() {
+            return self.update_velocity_staggered_fused(dt);
+        }
         self.leapfrog_operator.gradient_into(
             Axis::X,
             self.fields.p.view(),
@@ -259,6 +262,39 @@ impl FdtdSolver {
         update_velocity_from_gradient(&mut self.fields.ux, &self.dvx_scratch, rho_x, dt);
         update_velocity_from_gradient(&mut self.fields.uy, &self.dvy_scratch, rho_y, dt);
         update_velocity_from_gradient(&mut self.fields.uz, &self.divergence_scratch, rho_z, dt);
+        Ok(())
+    }
+
+    /// The staggered velocity update with each gradient fused into its
+    /// component's update: `v ← v − (Δt/ρ) G p` in one pass per component.
+    ///
+    /// Without a CPML nothing reads the gradient between its sweep and the
+    /// update, so it need not reach a grid: leto sweeps it a plane at a time
+    /// into a buffer that stays in cache, and the update reads it there. The
+    /// arithmetic is [`update_velocity_from_gradient`]'s on the same swept
+    /// values, so the velocities are unchanged to the bit. A CPML corrects
+    /// the swept gradients in place first, and keeps the separate passes.
+    fn update_velocity_staggered_fused(&mut self, dt: f64) -> KwaversResult<()> {
+        let [rho_x, rho_y, rho_z] = &self.staggered_density;
+        for (axis, velocity, density) in [
+            (Axis::X, &mut self.fields.ux, rho_x),
+            (Axis::Y, &mut self.fields.uy, rho_y),
+            (Axis::Z, &mut self.fields.uz, rho_z),
+        ] {
+            self.leapfrog_operator.map_gradient_into(
+                axis,
+                self.fields.p.view(),
+                [density.view()],
+                &mut velocity.view_mut(),
+                |gradient, [rho], velocity| {
+                    if rho > 1e-9 {
+                        velocity - dt / rho * gradient
+                    } else {
+                        velocity
+                    }
+                },
+            )?;
+        }
         Ok(())
     }
 }

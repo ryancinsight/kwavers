@@ -67,3 +67,71 @@ fn every_temporal_scheme_injects_each_velocity_source_once() {
         );
     }
 }
+
+/// Without a CPML the staggered velocity update fuses each gradient into
+/// its component's update; the velocities are the separate sweep and
+/// pointwise pass's to the bit, for every stencil order the solver offers.
+#[test]
+fn the_fused_velocity_update_is_the_sweep_then_the_pass_to_the_bit() {
+    for order in [2, 4, 6] {
+        let mut solver = super::make_solver(9, 1.0e-4, 1500.0, 1000.0, 0.5, order);
+        assert!(
+            solver.cpml_boundary.is_none(),
+            "the fused route needs no CPML"
+        );
+        let [nx, ny, nz] = solver.fields.p.shape();
+        solver.fields.p = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            ((i * 7 + j * 3 + k * 5) as f64 * 0.031).sin()
+        });
+        solver.fields.ux = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
+            ((i * 2 + j * 11 + k) as f64 * 0.017).cos()
+        });
+        let dt = solver.config.dt;
+        let expected = [
+            (
+                leto_ops::Axis::X,
+                &solver.fields.ux,
+                &solver.staggered_density[0],
+            ),
+            (
+                leto_ops::Axis::Y,
+                &solver.fields.uy,
+                &solver.staggered_density[1],
+            ),
+            (
+                leto_ops::Axis::Z,
+                &solver.fields.uz,
+                &solver.staggered_density[2],
+            ),
+        ]
+        .map(|(axis, velocity, density)| {
+            let mut gradient = Array3::zeros((nx, ny, nz));
+            solver
+                .leapfrog_operator
+                .gradient_into(axis, solver.fields.p.view(), &mut gradient.view_mut())
+                .expect("grid-shaped fields");
+            Array3::from_shape_fn((nx, ny, nz), |at| {
+                let rho = density[at];
+                if rho > 1e-9 {
+                    velocity[at] - dt / rho * gradient[at]
+                } else {
+                    velocity[at]
+                }
+            })
+        });
+        solver.update_velocity(dt).expect("velocity update");
+        for (component, want, got) in [
+            ("ux", &expected[0], &solver.fields.ux),
+            ("uy", &expected[1], &solver.fields.uy),
+            ("uz", &expected[2], &solver.fields.uz),
+        ] {
+            for (index, (a, b)) in want.iter().zip(got.iter()).enumerate() {
+                assert_eq!(
+                    a.to_bits(),
+                    b.to_bits(),
+                    "order {order}: {component} at flat {index}: {a} against {b}"
+                );
+            }
+        }
+    }
+}

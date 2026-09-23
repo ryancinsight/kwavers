@@ -55,6 +55,67 @@ pub(super) fn accumulate_two_fields(target: &mut Array3<f64>, x: &Array3<f64>, y
     }
 }
 
+/// `p −= Δt · ρc² · (dz + (dx + dy))`: the divergence components summed as
+/// [`accumulate_two_fields`] sums them and applied as
+/// [`apply_pressure_update`] applies the sum, in one pass. The values are the
+/// two passes' to the bit, since the sum is formed in the same order and
+/// used without the round trip through a stored field.
+pub(super) fn apply_pressure_update_from_components(
+    pressure: &mut Array3<f64>,
+    [x, y, z]: [&Array3<f64>; 3],
+    rho_c_squared: &Array3<f64>,
+    dt: f64,
+) {
+    let shape = pressure.shape();
+    for (name, actual) in [
+        ("x divergence", x.shape()),
+        ("y divergence", y.shape()),
+        ("z divergence", z.shape()),
+        ("rho*c^2", rho_c_squared.shape()),
+    ] {
+        assert_eq!(
+            actual, shape,
+            "invariant: FDTD {name} shape matches pressure field"
+        );
+    }
+    let [_, ny, nz] = shape;
+    if let (Some(pressure_values), Some(x), Some(y), Some(z), Some(rho)) = (
+        pressure.as_slice_mut(),
+        x.as_slice(),
+        y.as_slice(),
+        z.as_slice(),
+        rho_c_squared.as_slice(),
+    ) {
+        for_each_z_lane(
+            pressure_values,
+            [ny, nz],
+            5 * size_of::<f64>(),
+            |start, _, _, pressure_lane| {
+                let lane = start..start + nz;
+                let (x, y, z, rho) = (
+                    &x[lane.clone()],
+                    &y[lane.clone()],
+                    &z[lane.clone()],
+                    &rho[lane],
+                );
+                for (k, pressure_value) in pressure_lane.iter_mut().enumerate() {
+                    *pressure_value -= dt * rho[k] * (z[k] + (x[k] + y[k]));
+                }
+            },
+        );
+    } else {
+        for ((((pressure_value, &x), &y), &z), &rho) in pressure
+            .iter_mut()
+            .zip(x.iter())
+            .zip(y.iter())
+            .zip(z.iter())
+            .zip(rho_c_squared.iter())
+        {
+            *pressure_value -= dt * rho * (z + (x + y));
+        }
+    }
+}
+
 pub(super) fn apply_pressure_update(
     pressure: &mut Array3<f64>,
     divergence: ArrayView3<'_, f64>,
