@@ -3,7 +3,7 @@
 use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::stress::{
     stress_divergence_into, stress_divergence_plane_strain_into, stress_kick_into, DensityScale,
-    VelocityKick,
+    Lame, VelocityKick,
 };
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::{body_force, TimeIntegrator};
@@ -93,8 +93,15 @@ impl TimeIntegrator<'_> {
                 || DensityScale::Field(self.density.view()),
                 DensityScale::UniformReciprocal,
             );
+            let lame = self.uniform_lame.map_or_else(
+                || Lame::Field {
+                    lambda: self.lambda.view(),
+                    mu: self.mu.view(),
+                },
+                |(lambda, mu)| Lame::Uniform { lambda, mu },
+            );
             let kick = VelocityKick { scale, half_dt };
-            stress_kick_into(self.grid, self.lambda, self.mu, field, &kick, scratch);
+            stress_kick_into(self.grid, lame, field, &kick, scratch);
             return Ok(Evaluated::Kicked);
         }
         S::evaluate(self.grid, self.lambda, self.mu, field, scratch);

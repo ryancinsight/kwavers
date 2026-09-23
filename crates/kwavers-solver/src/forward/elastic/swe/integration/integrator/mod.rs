@@ -28,6 +28,8 @@ pub struct TimeIntegrator<'a> {
     pub(super) density: &'a leto::Array3<f64>,
     /// Reciprocal density when every cell has the same density.
     pub(super) uniform_inverse_density: Option<f64>,
+    /// `(λ, μ)` when the medium holds one pair everywhere.
+    pub(super) uniform_lame: Option<(f64, f64)>,
     pub(super) sigma_x: Array1<f64>,
     pub(super) sigma_y: Array1<f64>,
     pub(super) sigma_z: Array1<f64>,
@@ -52,20 +54,15 @@ impl<'a> TimeIntegrator<'a> {
         pml: &ElasticSwePMLBoundary,
     ) -> Self {
         let (sigma_x, sigma_y, sigma_z) = pml.axis_sigma_profiles(grid);
-        let density_values = density
-            .as_slice()
-            .expect("invariant: elastic density uses standard layout");
-        let uniform_inverse_density = density_values.split_first().and_then(|(&first, rest)| {
-            rest.iter()
-                .all(|&value| value == first)
-                .then(|| first.recip())
-        });
+        let uniform_inverse_density = uniform_value(density.view()).map(f64::recip);
+        let uniform_lame = uniform_value(lambda.view()).zip(uniform_value(mu.view()));
         Self {
             grid,
             lambda,
             mu,
             density,
             uniform_inverse_density,
+            uniform_lame,
             sigma_x,
             sigma_y,
             sigma_z,
@@ -80,6 +77,14 @@ impl<'a> TimeIntegrator<'a> {
     pub fn calculate_stable_timestep(&self, cfl_factor: f64) -> f64 {
         calculate_stable_timestep(self.grid, self.lambda, self.mu, self.density, cfl_factor)
     }
+}
+
+/// The value every element of `field` holds, or `None` when two differ or
+/// the field is empty. Reads in logical order, so any layout serves.
+fn uniform_value(field: leto::ArrayView3<'_, f64>) -> Option<f64> {
+    let mut values = field.iter().copied();
+    let first = values.next()?;
+    values.all(|value| value == first).then_some(first)
 }
 
 /// Calculate the CFL-limited time step without constructing PML profiles.
@@ -109,4 +114,31 @@ pub(crate) fn calculate_stable_timestep(
     let min_spacing = grid.dx.min(grid.dy).min(grid.dz);
     let cfl_dt = min_spacing / (3.0_f64.sqrt() * max_c);
     cfl_dt * cfl_factor
+}
+
+#[cfg(test)]
+mod tests {
+    use super::uniform_value;
+    use leto::Array3;
+
+    /// One value everywhere is found in any layout; a single differing
+    /// element, however late, rules it out; an empty field has none.
+    #[test]
+    fn a_field_is_uniform_only_when_every_element_matches() {
+        let constant = Array3::from_elem((4, 3, 5), 2.5e9);
+        assert_eq!(uniform_value(constant.view()), Some(2.5e9));
+        let transposed = constant.view().transpose([2, 1, 0]).expect("a permutation");
+        assert!(
+            transposed.as_slice().is_none(),
+            "the case needs a strided view"
+        );
+        assert_eq!(uniform_value(transposed), Some(2.5e9));
+        let mut late = constant.clone();
+        late[[3, 2, 4]] = f64::from_bits(2.5e9_f64.to_bits() + 1);
+        assert_eq!(uniform_value(late.view()), None);
+        assert_eq!(
+            uniform_value(Array3::from_elem((0, 3, 5), 1.0).view()),
+            None
+        );
+    }
 }

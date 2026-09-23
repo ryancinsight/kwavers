@@ -16,7 +16,9 @@ use super::step::{kick_then_drift, update_components, KickDriftRoute};
 use super::TimeIntegrator;
 use crate::forward::elastic::swe::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use crate::forward::elastic::swe::scratch::ElasticStepScratch;
-use crate::forward::elastic::swe::stress::{stress_kick_in_slabs, DensityScale, VelocityKick};
+use crate::forward::elastic::swe::stress::{
+    stress_kick_in_slabs, DensityScale, Lame, VelocityKick,
+};
 use crate::forward::elastic::swe::types::ElasticWaveField;
 use crate::phase_timing::PhaseTimer;
 use core::num::NonZeroUsize;
@@ -285,8 +287,6 @@ const SWEEP_TIMER: PhaseTimer = PhaseTimer {
 fn swe_kick_slab_sweep() {
     for n in [64, 72, 76, 80, 88, 92, 96, 128] {
         let grid = Grid::new(n, n, n, DX, DX, DX).expect("valid grid");
-        let lambda = Array3::from_elem([n; 3], LAMBDA);
-        let mu = Array3::from_elem([n; 3], MU);
         let mut state = State {
             field: ElasticWaveField::new(n, n, n),
             scratch: ElasticStepScratch::new(n, n, n),
@@ -307,8 +307,10 @@ fn swe_kick_slab_sweep() {
         let evaluate_in = |s: &mut State, planes: usize| {
             stress_kick_in_slabs(
                 &grid,
-                &lambda,
-                &mu,
+                Lame::Uniform {
+                    lambda: LAMBDA,
+                    mu: MU,
+                },
                 &mut s.field,
                 &VelocityKick {
                     scale: DensityScale::UniformReciprocal(reciprocal),

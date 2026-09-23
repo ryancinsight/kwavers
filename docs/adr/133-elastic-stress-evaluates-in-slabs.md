@@ -159,3 +159,9 @@ velocity-Verlet kick itself (decision 4) instead of storing three
 acceleration grids for the step to read back; 1.1x to 1.4x on the whole
 step across 64 to 128 cubed. The live-field count is unchanged: three
 velocities replace three accelerations.
+
+**2026-09-23 -- a uniform Lamé pair.** A medium holding one `(λ, μ)` pair
+passes the pair to the stress pass instead of two grids (`Lame::Uniform`),
+the same arithmetic on the same values: 4-9% on the step at 96 and 128
+cubed. The slab rule still counts the pair as two live fields; sized for
+twelve, the 128-cubed slab grew to 20 planes and measured no faster.
