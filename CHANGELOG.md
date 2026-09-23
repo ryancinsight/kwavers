@@ -4,6 +4,12 @@
 
 ### Changed
 
+- **[patch] The lossless staggered FDTD pressure update is one pass.** On a
+  Cartesian grid without a CPML or absorption, the three velocity
+  divergences are swept a row at a time into buffers that stay in cache and
+  applied to the pressure in the same pass (leto's `map_divergence_into`),
+  instead of written to three grids. The 64-cubed step is 238 -> 178-182 us
+  at order 2 and 276-280 -> 226-232 at order 4; values are bit-identical.
 - **[patch] The staggered FDTD step fuses its pointwise passes.** Without a
   CPML each velocity component's gradient is swept into a row buffer and
   applied in the same pass (leto's `map_gradient_into`), and on the lossless
