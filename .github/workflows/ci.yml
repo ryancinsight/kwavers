@@ -26,6 +26,12 @@ on:
     - cron: "37 3 * * *"
   workflow_dispatch:
 
+# Least-privilege default for every job below that does not declare its own
+# `permissions:` block (the reusable-workflow calls and the `changes` job,
+# which also needs `pull-requests: read`, keep their explicit overrides).
+permissions:
+  contents: read
+
 # A superseded run is cancelled rather than left queued. Without this a
 # branch that is pushed to repeatedly accumulates one full matrix per
 # push, and with several open pull requests that is what fills the queue.
@@ -39,6 +45,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: "0"
 
 jobs:
   # Whether this event touches anything the gate exists to check. The push
@@ -581,6 +588,81 @@ jobs:
 
       - name: GPU/CPU equivalence build check
         run: cargo check --locked -p kwavers-gpu --features gpu --lib
+
+  # Folded from the former standalone "Legacy Migration Audit (kwavers)"
+  # workflow (KW-CI-SINGLE-PIPELINE): same two xtask scans, same non-required
+  # status, now sharing this pipeline's checkout, toolchain, and cache instead
+  # of paying for a second workflow's setup on every push and pull request.
+  # Deliberately excluded from `ci-gate`'s `needs:` list, preserving the prior
+  # behavior where neither audit blocked branch protection.
+  legacy-migration-audit:
+    name: Audit legacy migration (xtask legacy-migration-audit)
+    needs: lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+
+      # Shared cache; rationale at the first use in this file.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers-dev
+          save-if: false
+
+      - name: Run xtask legacy-migration-audit
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo run -p xtask -- legacy-migration-audit 2>&1 | tee audit_log.txt
+
+      - name: Upload audit log on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: kwavers-legacy-migration-audit-log
+          path: audit_log.txt
+          if-no-files-found: warn
+
+  burn-migration-audit:
+    name: Audit Burn migration (xtask burn-migration-audit)
+    needs: lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers-dev
+          save-if: false
+
+      - name: Run xtask burn-migration-audit
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo run -p xtask -- burn-migration-audit 2>&1 | tee audit_log.txt
+
+      - name: Upload audit log on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: kwavers-burn-migration-audit-log
+          path: audit_log.txt
+          if-no-files-found: warn
 
   # Tier-3 heavy validations retain independent jobs because each workload
   # requires the serial 300-second Nextest contract. The ordinary NL-SWE
