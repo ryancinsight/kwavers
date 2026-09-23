@@ -49,3 +49,28 @@ pub fn last_level_cache_bytes() -> Option<usize> {
             .map(|level| level.size_bytes)
     })
 }
+
+/// Bytes of every cache instance past the first level the platform reports,
+/// summed, or `None` when it reports none.
+///
+/// A working set split across the workers can stay resident in their
+/// private second-level caches and the shared last level together, which
+/// is more than the last level alone. The sum is that capacity on a
+/// hierarchy whose last level does not duplicate the private levels; on
+/// one that does, it overstates the capacity by the private total.
+///
+/// Detected once, like [`last_level_cache_bytes`].
+#[must_use]
+pub fn cache_capacity_bytes() -> Option<usize> {
+    static BYTES: OnceLock<Option<usize>> = OnceLock::new();
+    *BYTES.get_or_init(|| {
+        let topology = detect_topology();
+        let levels = topology.cache_levels()?;
+        let past_first: usize = levels
+            .iter()
+            .filter(|level| level.level > 1)
+            .map(|level| level.size_bytes)
+            .sum();
+        (past_first > 0).then_some(past_first)
+    })
+}

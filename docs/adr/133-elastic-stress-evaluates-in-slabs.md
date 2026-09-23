@@ -1,13 +1,12 @@
-# ADR 133: The elastic stress evaluation runs in slabs
+# ADR 133: The elastic acceleration evaluates in slabs past the cache
 
-Status: Accepted (revised 2026-09-22; see the revision below)
+Status: Accepted (revised 2026-09-22; see the revision notes at the end)
 
 ## Context
 
-The three-dimensional elastic acceleration is a two-stage chain over whole
-grids: `stress_into` writes six stress components from the displacement
-field and the Lamé parameters, and the divergence pass reads those six and
-the density to write three accelerations.
+The three-dimensional elastic acceleration is a two-stage chain: six stress
+components from the displacement gradients and the Lamé parameters, then
+their divergence, scaled by the density, into three accelerations.
 
 Four fusion increments (#816, #817, #818, #819) removed every intermediate
 that was not required by the chain itself, taking the traffic per evaluation
@@ -26,119 +25,105 @@ where that costs:
 | 64 | 26.0 MiB | 316 us | 1.21 |
 | 96 | 87.8 MiB | 3576 us | 4.04 |
 
-The host's L3 is about 36 MB. While the live set fits, the chain runs at
-1.2 ns per cell; past it, 4.0. At 96 cubed the evaluation moves roughly
-245 MB in 3408 us -- about 72 GB/s, which is this machine's DRAM rate, not
-its cache rate. The six stress fields are 42 MB there: stage one writes them
-to DRAM and stage two reads them back.
-
-The fusions' own value moves with the regime, which is the same effect seen
-from the other side: the diagonal is 1.25x at 64 cubed and 1.73x at 96,
-while the three shears are 2.0x and 1.25x.
-
-kwavers runs production grids at 128 cubed and above, entirely in the second
-regime.
+While the live set is cache-resident the chain runs at 1.2 ns per cell;
+past it, 4.0. At 96 cubed the evaluation moves roughly 245 MB in 3408 us --
+about 72 GB/s, this machine's DRAM rate. The six stress fields are 42 MB
+there: stage one writes them to DRAM and stage two reads them back. kwavers
+runs production grids at 128 cubed and above, entirely in that regime.
 
 ## Decision
 
-Evaluate the chain in slabs of x-planes rather than whole grids, so a slab's
-stresses are produced and consumed while they are still in cache and never
-reach DRAM.
-
-A slab of `S` planes needs its stresses over `S + 4` planes, because the
-divergence's fourth-order stencil reaches two planes either side; those
-stresses in turn need displacement over `S + 8`. The implementation keeps a
-rolling window of stress planes rather than recomputing the halo per slab.
-
-`S` is chosen so the window fits L2 per worker: six stress components over
-`S + 4` planes of `N * N` f64.
+1. **Slabs through a stress window.** Past the caches the chain runs a slab
+   of x-planes at a time. A slab of `S` planes needs its stresses over
+   `S + 4` planes, since the divergence's fourth-order stencil reaches two
+   planes either side. Those planes live in a window -- the leading planes of
+   the scratch stress fields, reused for every slab -- so they are written
+   and read back while resident. Each slab slides the planes it shares with
+   the previous one to the front and computes only the rest, so no stress
+   plane is computed twice (`stress_acceleration_in_slabs`). It rests on
+   leto ADR 0032: fused passes over plane windows that take the stencil the
+   grid plane gives, so every acceleration is the whole-grid value to the
+   bit.
+2. **Selection** (`slab_height`). Whole-grid while the live fields -- 14,
+   or 15 with a density field -- fit every cache level past the first,
+   private and shared, summed (`cache_capacity_bytes`). Past that, the
+   largest slab whose window and the planes around it fit the shared last
+   level (`last_level_cache_bytes`), less the four planes the stencil
+   reaches, capped at the worker count, since each pass hands one plane to
+   a task. A platform reporting no caches stays whole-grid, as does scratch
+   whose stress fields are not C-contiguous, since the window slides its
+   planes as contiguous runs.
+3. **One stress pass.** All six stresses come from one pass over the nine
+   displacement gradients, where four passes -- the diagonal, then a shear
+   at a time -- read the displacement nine times.
 
 ## Consequences
 
-Expected: at 96 cubed the evaluation's DRAM traffic falls from about 245 MB
-to the inputs and outputs alone -- displacement, Lamé pair, density, three
-accelerations, roughly 63 MB -- which at the measured 72 GB/s is about
-875 us against 3408.
+Measured (release, fastest of paired repeats, `swe_acceleration_slab_sweep`,
+a 285K with 40 MiB of second-level caches, a 36 MiB last level and 24
+workers):
 
-Values must not change. Slabbing alters traversal order only; each output
-lane is still the same arithmetic over the same stencil neighbourhood, so
-the acceptance test is bitwise equality against the current kernels over the
-shapes the fused kernels already use, including shapes whose extent is not a
-multiple of the slab height.
+| N | live set | whole-grid | best slabs | ratio |
+|---|---|---|---|---|
+| 64 | 29 MB | 295-312 us | 411-419 (24 planes) | 0.7x |
+| 72 | 42 MB | 415-436 | 644-948 | < 1 |
+| 76 | 49 MB | 657-701 | 830-923 | < 1 |
+| 80 | 57 MB | 884-1236 | 928-1059 (16-32) | ~1x |
+| 96 | 99 MB | 2742-3113 | 1857-1904 (24) | 1.5x |
+| 128 | 235 MB | 9712-10677 | 5294-5634 (16) | 1.8x |
 
-Cost: the kernels stop being whole-grid passes over leto views and become a
-pipeline with a halo and a rolling buffer. That is a real increase in
-complexity, confined to the elastic stress module; leto's fused kernels are
-unchanged and keep serving whole-grid callers.
+At 72 and 76 cubed whole-grid won 29 of the 30 paired comparisons across
+three runs (on a host at 35-60% load from other processes, which the
+pairing absorbs and the absolute times do not), although the live set is
+past the last level: the private caches hold the rest. The selection
+therefore compares the live set with both levels together, which routes 72
+to 80 cubed whole-grid and 96 cubed and above to slabs. The slab height the rule gives, 24 planes at 96 cubed
+and 16 at 128, is the measured best of 8, 12, 16, 24 and 32 at each; which
+of the rule's two limits binds is what moves the optimum between them.
 
-Risk: the win is a hypothesis until measured. The stop condition, written
-before implementing, is the 96-cubed stress arm at least 2x faster than the
-current kernels at comparable host load, with 64-cubed no worse than the
-identical-code drift band. Below that, the complexity is not paid for and
-the slab path is dropped rather than kept beside the whole-grid one.
+The one stress pass is 169-175 -> 149-153 us at 64 cubed and 1621-1721 ->
+1420-1503 us at 96 cubed, on every path.
+
+Values do not change. Slabbing alters which planes are in flight, not the
+arithmetic: every acceleration is asserted equal to the whole-grid value
+for every slab height from one plane to past the plane count, under both
+density scales, on grids whose plane count no slab height divides.
+
+After a slabbed evaluation the scratch stress fields hold the last slab's
+window, not the grid's stress; `ElasticStepScratch` documents it.
+
+Cost: one driver function, one selection rule and leto's windowed pass,
+confined to the elastic stress module (`stress/slabs.rs`).
 
 ## Alternatives
 
-Leaving it whole-grid keeps the simpler kernels and accepts 4 ns per cell at
-production sizes.
+- **Whole-grid only** keeps the simpler kernel and accepts 4 ns per cell at
+  production sizes.
+- **Plane ranges over whole-grid stress arrays**, without a window. Measured
+  first: 1.28x at 96 cubed. Every line a slab wrote was last touched a step
+  earlier and paid a read for ownership and a write-back.
+- **Tiling all three axes.** The two contiguous axes are where the lane
+  writers vectorise; slabbing the outermost keeps them intact.
+- **Recomputing stresses per divergence** instead of storing them triples
+  the stencil work, which is the dominant term once traffic is minimised.
+- **Selecting against the last level alone.** Routes 70 to 79 cubed to
+  slabs, where whole-grid is measured faster.
 
-Tiling in all three axes rather than slabbing in one would cut the halo's
-share further, but the two contiguous axes are exactly where the lane
-writers vectorise; slabbing the outermost axis keeps those intact.
+## Revision notes
 
-Shrinking the live set by recomputing stresses per divergence instead of
-storing them triples the stencil work, which the measurements above show is
-already the dominant term once traffic is minimised.
+**2026-09-22 -- built, measured, below its own bar.** The Decision first
+chose the slab height to fit L2 per worker and set a stop condition: 96
+cubed at least 2x faster, or the slab path is dropped. Built through the
+reused window it reached 1.5x there, a miss recorded as one. It is kept on
+the production sizes the Context names: 1.8x at 128 cubed, with whole-grid
+wherever it is faster. What separates 1.5x from the ~2.6x cache-resident
+ceiling at 96 cubed is unattributed. The slab height became the last-level
+rule above, the measured best at 96 and 128 cubed.
 
-## Revision 2026-09-22 -- built, measured, and below its own bar
-
-**What was built.** The stress window of the Decision, implemented in the
-leading planes of the scratch stress fields: each slab slides the stress
-planes it still needs to the front, computes only the rest, then writes its
-accelerations (`stress_acceleration_in_slabs`). It rests on leto ADR 0032:
-fused passes over plane windows, with the stencil chosen by the grid plane,
-so every acceleration is the whole-grid value to the bit -- asserted for
-every slab height from one plane to past `nx`, under both density scales.
-The same leto change lets all six stresses come from one pass over the nine
-displacement gradients instead of four; that alone is 169-175 -> 149-153 us
-at 64 cubed and 1621-1721 -> 1420-1503 us at 96 cubed, on every path.
-
-**What was measured** (release, fastest of paired repeats,
-`swe_acceleration_slab_sweep`):
-
-| N | whole-grid | best slabs | ratio |
-|---|---|---|---|
-| 64 | 295-312 us | 411-419 (24 planes) | 0.7x |
-| 80 | 884-1236 | 928-1059 (16-24) | ~1x |
-| 96 | 2742-3113 | 1857-1904 (24) | 1.5x |
-| 128 | 9712-10677 | 5294-5634 (16) | 1.8x |
-
-**Against the stop condition.** The Risk section set 2x at 96 cubed as the
-bar below which the slab path is dropped. It reached 1.5x there. That is a
-miss, recorded as one.
-
-Two steps on the way were attributed rather than tuned. Restricting
-whole-grid stress arrays to a plane range first gave 1.28x: each slab wrote
-to lines last touched a step earlier and paid read-for-ownership and
-write-back, which the reused window removed (1.28x -> 1.5x). Cutting the
-regions per slab from five to two through the one-pass stress improved slab
-and whole-grid alike and left the ratio where it was. Row-granular tasks did
-not move the optimum. What remains between 1.5x and the ~2.6x
-cache-resident ceiling at 96 cubed (64 cubed runs at 1.15 ns per cell) is
-not attributed.
-
-**Why it is kept anyway.** The bar was set at 96 cubed from the traffic
-estimate in Consequences. The Context names 128 cubed and above as
-production, and there the path runs at 1.8x, with the whole-grid path
-retained wherever it is faster. The complexity is one driver function, one
-selection rule and leto's windowed pass, all bitwise-tested. The decision
-to keep it is a revision of this ADR's own bar, made after the numbers were
-seen, and open to reversal: if later work at production sizes shows the
-path not paying, it is deleted as the Risk section intended.
-
-**Selection.** Whole-grid while the live fields (14, or 15 with a density
-field) fit the last-level cache that themis reports; past it, the largest
-slab whose fields fit that cache, capped at the worker count. That picks
-24 planes at 96 cubed and 16 at 128 cubed, the measured best of
-8/12/16/24/32 at each. A platform reporting no cache size stays whole-grid.
-
+**2026-09-22 -- selection against both cache levels.** Review found the
+last-level threshold sent 70 to 79 cubed to slabs without measurement. The
+sweep then measured whole-grid ahead at 72 and 76 cubed and level at 80, so
+the threshold compares the live set with the private and shared levels
+together. On a hierarchy whose last level duplicates the private levels
+that sum overstates the capacity and keeps a band of sizes whole-grid where
+slabs would win -- slower, never different in value.

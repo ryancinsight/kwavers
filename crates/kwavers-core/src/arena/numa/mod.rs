@@ -25,7 +25,7 @@ pub use affinity::{set_thread_affinity, ThreadAffinity};
 pub use allocator::NumaAllocator;
 pub use memory::first_touch_memory_parallel;
 pub use policy::{CACHE_LINE_SIZE, PAGE_SIZE};
-pub use topology::{detect_topology, last_level_cache_bytes};
+pub use topology::{cache_capacity_bytes, detect_topology, last_level_cache_bytes};
 
 // Re-export the themis placement vocabulary (SSOT) so `arena::numa::*` keeps
 // resolving for existing callers without a hand-rolled stand-in.

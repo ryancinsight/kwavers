@@ -9,7 +9,7 @@ use super::divergence::{
 };
 use core::num::NonZeroUsize;
 use core::ops::Range;
-use kwavers_core::arena::last_level_cache_bytes;
+use kwavers_core::arena::{cache_capacity_bytes, last_level_cache_bytes};
 use kwavers_grid::Grid;
 use std::sync::OnceLock;
 
@@ -70,53 +70,61 @@ const LIVE_FIELDS: usize = 14;
 
 /// How many x-planes each slab of the acceleration evaluation covers.
 ///
-/// Whole-grid while the evaluation's live fields fit the last-level cache:
-/// then every intermediate is still resident when it is read back, and
-/// slabs only add passes. Past it, the largest slab whose window and the
-/// planes around it fit that cache, and no more than the worker count, since
-/// each pass hands one plane to a task.
+/// Whole-grid while the evaluation's live fields fit the caches -- every
+/// level past the first, private and shared: then every intermediate is
+/// still resident when it is read back, and slabs only add passes. Past
+/// them, the largest slab whose window and the planes around it fit the
+/// shared last-level cache, and no more than the worker count, since each
+/// pass hands one plane to a task.
 ///
 /// Measured through `swe_acceleration_slab_sweep` (release, fastest of 20
-/// paired repeats, 36 MB last-level cache, 24 workers): at 64 cubed every
-/// slab height is slower than whole-grid, at 80 cubed the best is level with
-/// it, at 96 cubed 24-plane slabs run 1857-1904 us against 2742-3113 (1.5x),
-/// and at 128 cubed 16-plane slabs run 5294-5634 us against 9712-10677
-/// (1.8x). The rule gives 24 planes at 96 cubed and 16 at 128, the measured
-/// best of 8, 12, 16, 24 and 32 at each; which of its two limits binds is
-/// what moves the optimum between them.
+/// paired repeats, 40 MiB of second-level caches, a 36 MiB last level, 24
+/// workers): at 64, 72 and 76 cubed every slab height is slower than
+/// whole-grid -- the last two past the last level alone, inside both levels
+/// -- at 80 cubed the best is level with it, at 96 cubed 24-plane slabs run
+/// 1857-1904 us against 2742-3113 (1.5x), and at 128 cubed 16-plane slabs
+/// run 5294-5634 us against 9712-10677 (1.8x). The rule gives 24 planes at
+/// 96 cubed and 16 at 128, the measured best of 8, 12, 16, 24 and 32 at
+/// each; which of its two limits binds is what moves the optimum between
+/// them.
 ///
 /// A platform reporting no cache size evaluates whole-grid, the route that
 /// wins whenever the fields fit.
 fn slab_planes(grid: &Grid, scale: &DensityScale<'_>) -> NonZeroUsize {
     let live = LIVE_FIELDS + usize::from(matches!(scale, DensityScale::Field(_)));
-    slab_height(
-        grid.nx,
-        grid.ny * grid.nz,
-        live,
-        last_level_cache_bytes(),
-        workers(),
-    )
+    let caches = cache_capacity_bytes()
+        .zip(last_level_cache_bytes())
+        .map(|(total, last_level)| Caches { total, last_level });
+    slab_height(grid.nx, grid.ny * grid.nz, live, caches, workers())
+}
+
+/// The cache capacities the slab rule reads, in bytes.
+struct Caches {
+    /// Every level past the first, private and shared.
+    total: usize,
+    /// The shared last level.
+    last_level: usize,
 }
 
 /// [`slab_planes`]'s rule on its inputs: a grid of `planes` x-planes of
-/// `plane_cells` cells each, `live` fields in flight, a last-level cache of
-/// `cache` bytes if the platform reports one, and `workers` threads.
-pub(super) fn slab_height(
+/// `plane_cells` cells each, `live` fields in flight, the platform's caches
+/// if it reports them, and `workers` threads.
+fn slab_height(
     planes: usize,
     plane_cells: usize,
     live: usize,
-    cache: Option<usize>,
+    caches: Option<Caches>,
     workers: usize,
 ) -> NonZeroUsize {
     let whole = NonZeroUsize::new(planes).unwrap_or(NonZeroUsize::MIN);
-    let Some(cache) = cache else {
+    let Some(Caches { total, last_level }) = caches else {
         return whole;
     };
     let per_plane = live * plane_cells * size_of::<f64>();
-    if per_plane.saturating_mul(planes) <= cache {
+    if per_plane.saturating_mul(planes) <= total {
         return whole;
     }
-    let fitting = (cache / per_plane.max(1)).saturating_sub(2 * STENCIL_REACH);
+    let fitting = (last_level / per_plane.max(1)).saturating_sub(2 * STENCIL_REACH);
     NonZeroUsize::new(fitting.min(workers))
         .unwrap_or(NonZeroUsize::MIN)
         .min(whole)
@@ -301,3 +309,6 @@ fn accelerations(
     }
     .expect("invariant: validated elastic fields share the grid shape");
 }
+
+#[cfg(test)]
+mod tests;
