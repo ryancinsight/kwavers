@@ -1,6 +1,6 @@
 //! PMUT scalar model bindings.
 
-use super::helpers::pmut;
+use super::py_convert::pmut;
 use aequitas::systems::si::units::{Hertz, Pascal, Watt};
 use pyo3::prelude::*;
 

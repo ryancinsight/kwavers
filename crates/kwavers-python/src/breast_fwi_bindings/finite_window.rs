@@ -1,6 +1,6 @@
 //! PyO3 conversion surface for finite-window PSTD Born prediction.
 
-use super::helpers::kwavers_to_py;
+use super::py_convert::kwavers_to_py;
 use super::PyMultiRowRingArray;
 use eunomia::Complex64;
 use kwavers_solver::inverse::fwi::frequency_domain::{

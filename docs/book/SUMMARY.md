@@ -32,7 +32,7 @@
 
 - [7. Transducer Arrays and Beamforming](beamforming_and_image_formation.md)
   - [Example: Phased Array Beamforming](examples/phased_array_beamforming.md)
-  - [Example: Adaptive Beamforming Refactored](examples/adaptive_beamforming_refactored.md)
+  - [Example: Adaptive Beamforming](examples/adaptive_beamforming.md)
   - [Example: Real-Time 3D Beamforming](examples/real_time_3d_beamforming.md)
 - [8. Sensors and Measurements](sensors_and_measurements.md)
   - [Example: Doppler Velocity Estimation](examples/doppler_velocity_estimation.md)

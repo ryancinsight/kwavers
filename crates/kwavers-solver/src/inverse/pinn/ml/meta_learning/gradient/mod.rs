@@ -38,4 +38,4 @@
 mod tests;
 
 /// Utility functions for gradient manipulation
-pub mod utils;
+pub mod norm;

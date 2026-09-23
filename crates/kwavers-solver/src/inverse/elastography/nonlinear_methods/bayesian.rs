@@ -4,7 +4,7 @@
 //! Posterior update: conjugate Gaussian (Gelman et al. 2013, §2.4).
 
 use super::super::config::NonlinearInversionConfig;
-use super::helpers::{a_landau, ba_from_beta_s, beta_s_from_amplitudes, shear_modulus};
+use super::analytical::{a_landau, ba_from_beta_s, beta_s_from_amplitudes, shear_modulus};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::NonlinearParameterMap;

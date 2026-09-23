@@ -6,8 +6,8 @@ use moirai_parallel::{
     for_each_chunk_pair_mut_enumerated_with, Adaptive,
 };
 
+use super::indexing::{linear, ricker};
 use super::types::{AcousticGrid, CheckpointSchedule, WavefieldRun};
-use super::utils::{linear, ricker};
 
 const WAVEFORM_FIELD_CHUNK: usize = 1024;
 
@@ -295,7 +295,7 @@ fn clear_fd_halo(field: &mut [f32], nx: usize, ny: usize) {
 #[cfg(test)]
 mod tests {
     use super::clear_fd_halo;
-    use crate::therapy::theranostic_guidance::waveform::utils::linear;
+    use crate::therapy::theranostic_guidance::waveform::indexing::linear;
 
     #[test]
     fn clear_fd_halo_preserves_interior_cells_only() {

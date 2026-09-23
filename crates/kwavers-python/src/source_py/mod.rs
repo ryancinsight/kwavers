@@ -1,9 +1,9 @@
 mod array;
 mod elastic;
-pub(crate) mod helpers;
+pub(crate) mod py_convert;
 mod velocity;
 
-pub(crate) use helpers::pressure_signal_to_matrix;
+pub(crate) use py_convert::pressure_signal_to_matrix;
 
 use leto::{Array2, Array3};
 use numpy::ndarray::Axis;
