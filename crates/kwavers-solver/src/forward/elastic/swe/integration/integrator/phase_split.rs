@@ -16,7 +16,7 @@ use super::step::{kick_then_drift, update_components, KickDriftRoute};
 use super::TimeIntegrator;
 use crate::forward::elastic::swe::boundary::{ElasticSwePMLBoundary, SwePmlConfig};
 use crate::forward::elastic::swe::scratch::ElasticStepScratch;
-use crate::forward::elastic::swe::stress::{stress_acceleration_in_slabs, DensityScale};
+use crate::forward::elastic::swe::stress::{stress_kick_in_slabs, DensityScale, VelocityKick};
 use crate::forward::elastic::swe::types::ElasticWaveField;
 use crate::phase_timing::PhaseTimer;
 use core::num::NonZeroUsize;
@@ -83,9 +83,16 @@ fn swe_step_phase_split() {
         }
     }
 
+    // Without a body force the evaluation kicks the velocities itself.
     let acceleration = |state: &mut State| {
         integrator
-            .compute_acceleration::<SpatialStress>(&state.field, &mut state.scratch, None, 0.0)
+            .compute_acceleration::<SpatialStress>(
+                &mut state.field,
+                &mut state.scratch,
+                None,
+                0.0,
+                0.5 * dt,
+            )
             .expect("acceleration");
     };
     let half_velocity = |state: &mut State| {
@@ -112,11 +119,6 @@ fn swe_step_phase_split() {
         } = &mut state.field;
         update_components::<SpatialStress>(ux, uy, uz, vx, vy, vz, dt);
     };
-    let updates = |state: &mut State| {
-        half_velocity(state);
-        displacement(state);
-        half_velocity(state);
-    };
     let damping = |state: &mut State| {
         integrator.apply_pml_damping_for::<SpatialStress>(&mut state.field, dt, &mut state.scratch);
     };
@@ -132,10 +134,8 @@ fn swe_step_phase_split() {
         // advance the field physically.
         |s| {
             acceleration(s);
-            half_velocity(s);
             displacement(s);
             acceleration(s);
-            half_velocity(s);
             damping(s);
         },
     );
@@ -225,7 +225,7 @@ fn swe_step_phase_split() {
         "the timed run stayed bounded: peak {peak}"
     );
 
-    let (update_total, damping_total) = TIMER.pair(&mut state, updates, damping);
+    let (drift_total, damping_total) = TIMER.pair(&mut state, displacement, damping);
 
     for (label, pick) in [
         (
@@ -235,14 +235,14 @@ fn swe_step_phase_split() {
         ("fastest", |p| p.fastest),
     ] {
         eprintln!(
-            "swe 64 cubed {label}: step {:.0} us; back to back {:.0} = 2 x acceleration {:.0} \
-             (stress {:.0} + assembly {:.0}) + updates {:.0} + damping {:.0}; rest of step {:.0}",
+            "swe 64 cubed {label}: step {:.0} us; back to back {:.0} = 2 x kick {:.0} \
+             (stress {:.0} + assembly {:.0}) + drift {:.0} + damping {:.0}; rest of step {:.0}",
             pick(step),
             pick(back_to_back),
             pick(acceleration_total),
             pick(stress),
             pick(acceleration_total) - pick(stress),
-            pick(update_total),
+            pick(drift_total),
             pick(damping_total),
             pick(step) - pick(back_to_back),
         );
@@ -260,6 +260,10 @@ fn swe_step_phase_split() {
     }
 }
 
+/// A half step, in seconds, of the order the CFL limit gives these grids;
+/// the sweep times traversals, which do not depend on it.
+const HALF_DT: f64 = 1.0e-7;
+
 /// Repeats per arm of the slab sweep: 23 evaluations of each route at each
 /// of eight sizes and five slab heights -- about 10 ms apiece at 128 cubed,
 /// which is half the total -- keep the whole sweep near 5 s, inside the test
@@ -270,7 +274,7 @@ const SWEEP_TIMER: PhaseTimer = PhaseTimer {
     warm: 3,
 };
 
-/// The acceleration evaluated whole against the same evaluation in slabs of
+/// The velocity kick evaluated whole against the same evaluation in slabs of
 /// x-planes through the stress window, at grid sizes either side of the
 /// last-level cache. Both write every plane of every output with the same
 /// arithmetic, so each pair differs only in which planes are in flight at
@@ -278,7 +282,7 @@ const SWEEP_TIMER: PhaseTimer = PhaseTimer {
 /// whole-grid form writes all of them before reading the first.
 #[test]
 #[ignore = "timing probe: run in release on a quiet host with --no-capture"]
-fn swe_acceleration_slab_sweep() {
+fn swe_kick_slab_sweep() {
     for n in [64, 72, 76, 80, 88, 92, 96, 128] {
         let grid = Grid::new(n, n, n, DX, DX, DX).expect("valid grid");
         let lambda = Array3::from_elem([n; 3], LAMBDA);
@@ -301,12 +305,15 @@ fn swe_acceleration_slab_sweep() {
         }
         let reciprocal = DENSITY_WATER_NOMINAL.recip();
         let evaluate_in = |s: &mut State, planes: usize| {
-            stress_acceleration_in_slabs(
+            stress_kick_in_slabs(
                 &grid,
                 &lambda,
                 &mu,
-                &s.field,
-                &DensityScale::UniformReciprocal(reciprocal),
+                &mut s.field,
+                &VelocityKick {
+                    scale: DensityScale::UniformReciprocal(reciprocal),
+                    half_dt: HALF_DT,
+                },
                 &mut s.scratch,
                 NonZeroUsize::new(planes).expect("a slab holds at least one plane"),
             );
@@ -318,7 +325,7 @@ fn swe_acceleration_slab_sweep() {
                 |s| evaluate_in(s, planes),
             );
             eprintln!(
-                "swe {n} cubed fastest: acceleration whole {:.0} us, in {planes}-plane slabs {:.0}",
+                "swe {n} cubed fastest: kick whole {:.0} us, in {planes}-plane slabs {:.0}",
                 whole.fastest, slabbed.fastest,
             );
         }

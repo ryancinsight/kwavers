@@ -2,7 +2,7 @@
 
 use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
-use super::acceleration::{PlaneStrainStress, SpatialStress, StressOperator};
+use super::acceleration::{Evaluated, PlaneStrainStress, SpatialStress, StressOperator};
 use super::{body_force, PreparedBodyForces, TimeIntegrator};
 use kwavers_core::arena::last_level_cache_bytes;
 use kwavers_core::error::KwaversResult;
@@ -29,8 +29,8 @@ impl TimeIntegrator<'_> {
         if let Some(body_force) = body_force {
             body_force::validate(body_force)?;
         }
-        self.integrate::<SpatialStress, _>(field, dt, scratch, |field, scratch, time| {
-            self.compute_acceleration::<SpatialStress>(field, scratch, body_force, time)
+        self.integrate::<SpatialStress, _>(field, dt, scratch, |field, scratch, time, half_dt| {
+            self.compute_acceleration::<SpatialStress>(field, scratch, body_force, time, half_dt)
         })
     }
 
@@ -46,9 +46,14 @@ impl TimeIntegrator<'_> {
         scratch: &mut ElasticStepScratch,
     ) -> KwaversResult<()> {
         debug_assert_eq!(field.uz.shape()[2], 1);
-        self.integrate::<PlaneStrainStress, _>(field, dt, scratch, |field, scratch, time| {
-            self.compute_acceleration::<PlaneStrainStress>(field, scratch, None, time)
-        })
+        self.integrate::<PlaneStrainStress, _>(
+            field,
+            dt,
+            scratch,
+            |field, scratch, time, half_dt| {
+                self.compute_acceleration::<PlaneStrainStress>(field, scratch, None, time, half_dt)
+            },
+        )
     }
 
     /// Perform one step with multiple simultaneous distributed body forces.
@@ -66,7 +71,7 @@ impl TimeIntegrator<'_> {
         for body_force in body_forces {
             body_force::validate(body_force)?;
         }
-        self.integrate::<SpatialStress, _>(field, dt, scratch, |field, scratch, time| {
+        self.integrate::<SpatialStress, _>(field, dt, scratch, |field, scratch, time, _| {
             self.compute_acceleration_with_body_forces(field, scratch, |i, j, k| {
                 let mut force = [0.0; 3];
                 for body_force in body_forces {
@@ -77,6 +82,7 @@ impl TimeIntegrator<'_> {
                 }
                 force
             })
+            .map(|()| Evaluated::Stored)
         })
     }
 
@@ -89,11 +95,12 @@ impl TimeIntegrator<'_> {
         scratch: &mut ElasticStepScratch,
     ) -> KwaversResult<()> {
         body_forces.validate_grid(self.grid)?;
-        self.integrate::<SpatialStress, _>(field, dt, scratch, |field, scratch, time| {
+        self.integrate::<SpatialStress, _>(field, dt, scratch, |field, scratch, time, _| {
             body_forces.update_time(time);
             self.compute_acceleration_with_body_forces(field, scratch, |i, j, k| {
                 body_forces.force_at(i, j, k)
             })
+            .map(|()| Evaluated::Stored)
         })
     }
 
@@ -106,30 +113,40 @@ impl TimeIntegrator<'_> {
     ) -> KwaversResult<()>
     where
         S: StressOperator,
-        F: FnMut(&ElasticWaveField, &mut ElasticStepScratch, f64) -> KwaversResult<()>,
+        F: FnMut(
+            &mut ElasticWaveField,
+            &mut ElasticStepScratch,
+            f64,
+            f64,
+        ) -> KwaversResult<Evaluated>,
     {
-        acceleration(field, scratch, field.time)?;
         let half_dt = 0.5 * dt;
+        let time = field.time;
+        match acceleration(field, scratch, time, half_dt)? {
+            Evaluated::Kicked => drift::<S>(field, dt),
+            Evaluated::Stored => {
+                let live = if S::IS_PLANE_STRAIN { 4 } else { 6 };
+                kick_then_drift::<S>(
+                    field,
+                    [&scratch.ax, &scratch.ay, &scratch.az],
+                    half_dt,
+                    dt,
+                    KickDriftRoute::for_live_set(field.vx.len(), live),
+                );
+            }
+        }
 
-        let live = if S::IS_PLANE_STRAIN { 4 } else { 6 };
-        kick_then_drift::<S>(
-            field,
-            [&scratch.ax, &scratch.ay, &scratch.az],
-            half_dt,
-            dt,
-            KickDriftRoute::for_live_set(field.vx.len(), live),
-        );
-
-        acceleration(field, scratch, field.time + dt)?;
-        update_components::<S>(
-            &mut field.vx,
-            &mut field.vy,
-            &mut field.vz,
-            &scratch.ax,
-            &scratch.ay,
-            &scratch.az,
-            half_dt,
-        );
+        if let Evaluated::Stored = acceleration(field, scratch, time + dt, half_dt)? {
+            update_components::<S>(
+                &mut field.vx,
+                &mut field.vy,
+                &mut field.vz,
+                &scratch.ax,
+                &scratch.ay,
+                &scratch.az,
+                half_dt,
+            );
+        }
         self.apply_pml_damping_for::<S>(field, dt, scratch);
         Ok(())
     }
@@ -220,15 +237,7 @@ pub(super) fn kick_then_drift<S: StressOperator>(
                     *vy += half_dt * ay;
                 },
             );
-            zip_mut_pair(
-                ux.view_mut(),
-                uy.view_mut(),
-                (vx.view(), vy.view()),
-                |ux, uy, (&vx, &vy)| {
-                    *ux += dt * vx;
-                    *uy += dt * vy;
-                },
-            );
+            update_components::<S>(ux, uy, uz, vx, vy, vz, dt);
             return;
         }
         zip_mut_many(
@@ -255,17 +264,7 @@ pub(super) fn kick_then_drift<S: StressOperator>(
                 *vz += half_dt * az;
             },
         );
-        zip_mut_triple(
-            ux.view_mut(),
-            uy.view_mut(),
-            uz.view_mut(),
-            (vx.view(), vy.view(), vz.view()),
-            |ux, uy, uz, (&vx, &vy, &vz)| {
-                *ux += dt * vx;
-                *uy += dt * vy;
-                *uz += dt * vz;
-            },
-        );
+        update_components::<S>(ux, uy, uz, vx, vy, vz, dt);
         return;
     }
     zip_mut_many(
@@ -287,6 +286,21 @@ pub(super) fn kick_then_drift<S: StressOperator>(
             *uz += dt * *vz;
         },
     );
+}
+
+/// The drift `u += dt · v`, after an evaluation that already kicked the
+/// velocities.
+fn drift<S: StressOperator>(field: &mut ElasticWaveField, dt: f64) {
+    let ElasticWaveField {
+        ux,
+        uy,
+        uz,
+        vx,
+        vy,
+        vz,
+        ..
+    } = field;
+    update_components::<S>(ux, uy, uz, vx, vy, vz, dt);
 }
 
 /// `x += scale · delta_x` and likewise for y and z; plane strain leaves the

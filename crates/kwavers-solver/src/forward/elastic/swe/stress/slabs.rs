@@ -1,11 +1,11 @@
-//! The acceleration of an elastic field, evaluated a slab of x-planes at a
-//! time through a stress window once its fields outgrow the caches
-//! (ADR 133).
+//! The velocity kick of an elastic field by its stress divergence,
+//! evaluated a slab of x-planes at a time through a stress window once its
+//! fields outgrow the caches (ADR 133).
 
 use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
 use super::divergence::{
-    derivatives, stress_components, validate_stress_divergence_shapes, DensityScale,
+    derivatives, stress_components, validate_stress_divergence_shapes, DensityScale, VelocityKick,
 };
 use core::num::NonZeroUsize;
 use core::ops::Range;
@@ -16,20 +16,22 @@ use std::sync::OnceLock;
 use leto::{Array3, ArrayView3};
 use leto_ops::{Axis, FiniteDifference3D, PlaneWindow, PlaneWindowMut};
 
-/// The accelerations of `field`: the stress divergence scaled by the density,
-/// written into `scratch`'s `ax`, `ay` and `az`.
+/// The half-step kick of `field`'s velocities by the acceleration its
+/// displacement gives: `v + half_dt · (∇·σ) / ρ`, per component.
 ///
-/// The scale rides the divergence pass. Computing the divergence into its own
-/// fields and scaling them afterwards costs a second pass over three grids --
-/// three reads and three writes, 24 MB at 64 cubed -- for arithmetic that is
-/// one operation per lane. Values are unchanged: the divergence is summed in
-/// x, y, z order and scaled exactly as the separate pass scaled it, and the
-/// intermediate is a value the separate pass stored and reloaded without
-/// rounding.
+/// The scale and the kick ride the divergence pass. Scaling the divergence
+/// in a pass of its own costs three grids written and read back; storing the
+/// acceleration for the kick to read costs three more, which past the
+/// caches is a write-allocate, a write-back and a read per field. Here each
+/// velocity is read and written once. Values are unchanged: the divergence
+/// is summed in x, y, z order, scaled, and added at `half_dt` in the order
+/// the separate passes took, and every intermediate is a value they stored
+/// and reloaded without rounding.
 ///
-/// `scratch`'s divergence fields are untouched here; the body-force route
-/// still writes and reads them, since `(divergence + force) / rho` is not the
-/// same rounding as scaling the divergence alone.
+/// `scratch`'s divergence and acceleration fields are untouched here; the
+/// body-force route still writes and reads them, since
+/// `(divergence + force) / rho` is not the same rounding as scaling the
+/// divergence alone.
 ///
 /// Scratch whose stress fields are not C-contiguous evaluates whole-grid,
 /// since the window slides its planes as contiguous runs.
@@ -37,20 +39,20 @@ use leto_ops::{Axis, FiniteDifference3D, PlaneWindow, PlaneWindowMut};
 /// # Panics
 ///
 /// Panics if any field or scratch shape differs from the grid's.
-pub(crate) fn stress_acceleration_into(
+pub(crate) fn stress_kick_into(
     grid: &Grid,
     lambda: &Array3<f64>,
     mu: &Array3<f64>,
-    field: &ElasticWaveField,
-    scale: &DensityScale<'_>,
+    field: &mut ElasticWaveField,
+    kick: &VelocityKick<'_>,
     scratch: &mut ElasticStepScratch,
 ) {
     let slab = if window_slides(scratch) {
-        slab_planes(grid, scale)
+        slab_planes(grid, &kick.scale)
     } else {
         NonZeroUsize::new(grid.nx).unwrap_or(NonZeroUsize::MIN)
     };
-    stress_acceleration_in_slabs(grid, lambda, mu, field, scale, scratch, slab);
+    stress_kick_in_slabs(grid, lambda, mu, field, kick, scratch, slab);
 }
 
 /// Whether the stress window can slide in `scratch`: it moves planes as
@@ -70,19 +72,19 @@ fn window_slides(scratch: &ElasticStepScratch) -> bool {
 
 /// Fields a slab keeps in flight per plane with a uniform density: the six
 /// stresses of the window, the three displacement components, the Lamé pair
-/// and the three accelerations. A density field adds one.
+/// and the three velocities. A density field adds one.
 const LIVE_FIELDS: usize = 14;
 
-/// How many x-planes each slab of the acceleration evaluation covers.
+/// How many x-planes each slab of the kick evaluation covers.
 ///
 /// Whole-grid while the evaluation's live fields fit the caches an even
 /// split across the workers keeps resident (`cache_capacity_bytes`): then
 /// every intermediate is still resident when it is read back, and slabs
-/// only add passes. Past them, the largest slab whose window and the planes around it fit the
-/// shared last-level cache, and no more than the worker count, since each
-/// pass hands one plane to a task.
+/// only add passes. Past them, the largest slab whose window and the planes
+/// around it fit the shared last-level cache, and no more than the worker
+/// count, since each pass hands one plane to a task.
 ///
-/// Measured through `swe_acceleration_slab_sweep` (release, fastest of 20
+/// Measured through `swe_kick_slab_sweep` (release, fastest of 20
 /// paired repeats, a 285K: 24 workers, 60 MiB held by an even split, a
 /// 36 MiB last level): at 64, 72 and 76 cubed every slab height is slower
 /// than whole-grid -- the last two past the last level alone -- at 80 cubed
@@ -145,12 +147,12 @@ fn workers() -> usize {
 
 /// Planes a fourth-order derivative reaches on either side of its own.
 ///
-/// A slab's accelerations at planes `start..end` read stresses on
+/// A slab's kick at planes `start..end` read stresses on
 /// `start - STENCIL_REACH..end + STENCIL_REACH`, so those stress planes must
 /// be held before the slab's divergence runs.
 const STENCIL_REACH: usize = 2;
 
-/// [`stress_acceleration_into`], evaluated `slab` x-planes at a time through
+/// [`stress_kick_into`], evaluated `slab` x-planes at a time through
 /// a stress window.
 ///
 /// The window is the leading planes of `scratch`'s six stress fields: each
@@ -165,7 +167,7 @@ const STENCIL_REACH: usize = 2;
 ///
 /// A `slab` of `nx` or more is one slab, and the window is then the whole of
 /// each stress field: the whole-grid evaluation. Either way every plane of
-/// every acceleration is the value the whole-grid evaluation writes, since
+/// every velocity is the value the whole-grid evaluation writes, since
 /// leto's windowed passes take the grid's stencil at each grid plane.
 ///
 /// After a slabbed evaluation the stress fields hold the last slab's window,
@@ -176,12 +178,12 @@ const STENCIL_REACH: usize = 2;
 /// Panics if any field or scratch shape differs from the grid's, or if
 /// `slab` is under the grid's plane count and a stress field is not
 /// C-contiguous.
-pub(crate) fn stress_acceleration_in_slabs(
+pub(crate) fn stress_kick_in_slabs(
     grid: &Grid,
     lambda: &Array3<f64>,
     mu: &Array3<f64>,
-    field: &ElasticWaveField,
-    scale: &DensityScale<'_>,
+    field: &mut ElasticWaveField,
+    kick: &VelocityKick<'_>,
     scratch: &mut ElasticStepScratch,
     slab: NonZeroUsize,
 ) {
@@ -194,11 +196,17 @@ pub(crate) fn stress_acceleration_in_slabs(
         sxy,
         sxz,
         syz,
-        ax,
-        ay,
-        az,
         ..
     } = scratch;
+    let ElasticWaveField {
+        ux,
+        uy,
+        uz,
+        vx,
+        vy,
+        vz,
+        ..
+    } = field;
     let mut stresses = [sxx, syy, szz, sxy, sxz, syz];
     let [nx, ny, nz] = [grid.nx, grid.ny, grid.nz];
     let plane = ny * nz;
@@ -223,7 +231,7 @@ pub(crate) fn stress_acceleration_in_slabs(
             fresh,
             lambda,
             mu,
-            field,
+            [&*ux, &*uy, &*uz],
             stresses.each_mut().map(|stress| {
                 stress
                     .slice_mut(&window)
@@ -231,7 +239,7 @@ pub(crate) fn stress_acceleration_in_slabs(
             }),
             needed.start,
         );
-        accelerations(
+        kick_velocities(
             &op,
             start..end,
             stresses.each_ref().map(|stress| {
@@ -240,32 +248,33 @@ pub(crate) fn stress_acceleration_in_slabs(
                     .expect("invariant: the window lies within the stress field")
             }),
             needed.start,
-            scale,
-            [&mut *ax, &mut *ay, &mut *az],
+            kick,
+            [&mut *vx, &mut *vy, &mut *vz],
         );
         held = needed;
     }
 }
 
-/// The accelerations on the grid planes `planes`: the divergence of the
-/// stress tensor, whose fields hold the grid planes from `origin` on, scaled
-/// by the density.
+/// The kick of the velocities on the grid planes `planes` by the divergence
+/// of the stress tensor, whose fields hold the grid planes from `origin` on,
+/// scaled by the density.
 ///
 /// One pass for all three. Taken separately they read nine stress lanes over
 /// six distinct fields -- `sxy`, `sxz` and `syz` each feed two of the three
 /// -- so each repeated field crossed the bus twice. Here every field is read
 /// once per output lane: at 96 cubed that is 70 MB against 105, and one pass
 /// rather than three.
-fn accelerations(
+fn kick_velocities(
     op: &FiniteDifference3D<f64>,
     planes: Range<usize>,
     [sxx, syy, szz, sxy, sxz, syz]: [ArrayView3<'_, f64>; 6],
     origin: usize,
-    scale: &DensityScale<'_>,
-    [ax, ay, az]: [&mut Array3<f64>; 3],
+    kick: &VelocityKick<'_>,
+    [vx, vy, vz]: [&mut Array3<f64>; 3],
 ) {
-    let grid_planes = ax.shape()[0];
-    let (mut x_out, mut y_out, mut z_out) = (ax.view_mut(), ay.view_mut(), az.view_mut());
+    let grid_planes = vx.shape()[0];
+    let half_dt = kick.half_dt;
+    let (mut x_out, mut y_out, mut z_out) = (vx.view_mut(), vy.view_mut(), vz.view_mut());
     let held = |stress| PlaneWindow::new(stress, origin);
     let terms = [
         (Axis::X, held(sxx)),
@@ -283,18 +292,18 @@ fn accelerations(
         PlaneWindowMut::whole(&mut y_out),
         PlaneWindowMut::whole(&mut z_out),
     ];
-    match scale {
+    match kick.scale {
         DensityScale::UniformReciprocal(reciprocal) => op.map_axis_derivatives_in_windows(
             grid_planes,
             planes,
             terms,
             [],
             destinations,
-            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [], _| {
+            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [], [x, y, z]| {
                 [
-                    ((xx + xy) + xz) * reciprocal,
-                    ((yx + yy) + yz) * reciprocal,
-                    ((zx + zy) + zz) * reciprocal,
+                    x + half_dt * (((xx + xy) + xz) * reciprocal),
+                    y + half_dt * (((yx + yy) + yz) * reciprocal),
+                    z + half_dt * (((zx + zy) + zz) * reciprocal),
                 ]
             },
         ),
@@ -302,13 +311,13 @@ fn accelerations(
             grid_planes,
             planes,
             terms,
-            [PlaneWindow::whole(*density)],
+            [PlaneWindow::whole(density)],
             destinations,
-            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [rho], _| {
+            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [rho], [x, y, z]| {
                 [
-                    ((xx + xy) + xz) / rho,
-                    ((yx + yy) + yz) / rho,
-                    ((zx + zy) + zz) / rho,
+                    x + half_dt * (((xx + xy) + xz) / rho),
+                    y + half_dt * (((yx + yy) + yz) / rho),
+                    z + half_dt * (((zx + zy) + zz) / rho),
                 ]
             },
         ),

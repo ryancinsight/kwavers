@@ -2,8 +2,8 @@
 
 use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::stress::{
-    stress_acceleration_into, stress_divergence_into, stress_divergence_plane_strain_into,
-    DensityScale,
+    stress_divergence_into, stress_divergence_plane_strain_into, stress_kick_into, DensityScale,
+    VelocityKick,
 };
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::{body_force, TimeIntegrator};
@@ -11,6 +11,15 @@ use kwavers_core::error::KwaversResult;
 use kwavers_core::traversal::{zip_mut_pair, zip_mut_triple, zip_mut_triple_indexed};
 use kwavers_grid::Grid;
 use leto::Array3;
+
+/// What one acceleration evaluation leaves for the step to apply.
+pub(super) enum Evaluated {
+    /// The accelerations are in the scratch fields; the kick is the
+    /// step's to apply.
+    Stored,
+    /// The evaluation has already kicked the velocities by half a step.
+    Kicked,
+}
 
 /// Compile-time stress operator selected once per propagation.
 pub(super) trait StressOperator {
@@ -62,16 +71,21 @@ impl StressOperator for PlaneStrainStress {
 }
 
 impl TimeIntegrator<'_> {
+    /// The acceleration of `field` at `time`, either stored in `scratch`'s
+    /// acceleration fields or already applied to the velocities as the
+    /// `half_dt` kick; the result says which.
     pub(super) fn compute_acceleration<S: StressOperator>(
         &self,
-        field: &ElasticWaveField,
+        field: &mut ElasticWaveField,
         scratch: &mut ElasticStepScratch,
         body_force: Option<&ElasticBodyForceConfig>,
         time: f64,
-    ) -> KwaversResult<()> {
-        // Without a body force the scale is one operation per lane, so it
-        // rides the divergence pass instead of costing a second pass over
-        // three grids. The full evaluation is the only one that fuses; the
+        half_dt: f64,
+    ) -> KwaversResult<Evaluated> {
+        // Without a body force the scale and the kick are two operations
+        // per lane, so they ride the divergence pass instead of costing a
+        // pass that stores three accelerations and one that reads them
+        // back. The full evaluation is the only one that fuses; the
         // plane-strain route keeps its own kernel, and `S::IS_PLANE_STRAIN`
         // resolves per instantiation, so neither carries the other's branch.
         if !S::IS_PLANE_STRAIN && body_force.is_none() {
@@ -79,8 +93,9 @@ impl TimeIntegrator<'_> {
                 || DensityScale::Field(self.density.view()),
                 DensityScale::UniformReciprocal,
             );
-            stress_acceleration_into(self.grid, self.lambda, self.mu, field, &scale, scratch);
-            return Ok(());
+            let kick = VelocityKick { scale, half_dt };
+            stress_kick_into(self.grid, self.lambda, self.mu, field, &kick, scratch);
+            return Ok(Evaluated::Kicked);
         }
         S::evaluate(self.grid, self.lambda, self.mu, field, scratch);
         let ElasticStepScratch {
@@ -118,7 +133,7 @@ impl TimeIntegrator<'_> {
                     },
                 );
             }
-            return Ok(());
+            return Ok(Evaluated::Stored);
         }
 
         let divergence = (div_x.view(), div_y.view(), div_z.view());
@@ -161,7 +176,7 @@ impl TimeIntegrator<'_> {
                 },
             );
         }
-        Ok(())
+        Ok(Evaluated::Stored)
     }
 
     pub(super) fn compute_acceleration_with_body_forces<F>(

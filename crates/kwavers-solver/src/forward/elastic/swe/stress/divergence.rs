@@ -124,6 +124,13 @@ pub(crate) enum DensityScale<'a> {
     Field(ArrayView3<'a, f64>),
 }
 
+/// A velocity-Verlet half-step kick: the stress divergence, scaled by the
+/// density into an acceleration, advances each velocity by `half_dt` of it.
+pub(crate) struct VelocityKick<'a> {
+    pub(crate) scale: DensityScale<'a>,
+    pub(crate) half_dt: f64,
+}
+
 /// The six stress components from the displacement field and the Lamé
 /// parameters, on the grid planes `planes`, written into destinations that
 /// hold the grid planes from `origin` on.
@@ -139,11 +146,11 @@ pub(super) fn stress_components(
     planes: Range<usize>,
     lambda: &Array3<f64>,
     mu: &Array3<f64>,
-    field: &ElasticWaveField,
+    displacement: [&Array3<f64>; 3],
     stresses: [ArrayViewMut3<'_, f64>; 6],
     origin: usize,
 ) {
-    let [ux, uy, uz] = [&field.ux, &field.uy, &field.uz].map(|u| PlaneWindow::whole(u.view()));
+    let [ux, uy, uz] = displacement.map(|u| PlaneWindow::whole(u.view()));
     let mut stresses = stresses;
     op.map_axis_derivatives_in_windows(
         lambda.shape()[0],
@@ -219,7 +226,7 @@ pub fn stress_divergence_into(
         0..grid.nx,
         lambda,
         mu,
-        field,
+        [&field.ux, &field.uy, &field.uz],
         [
             sxx.view_mut(),
             syy.view_mut(),

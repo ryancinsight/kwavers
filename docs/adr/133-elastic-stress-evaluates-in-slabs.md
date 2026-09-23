@@ -58,6 +58,12 @@ runs production grids at 128 cubed and above, entirely in that regime.
 3. **One stress pass.** All six stresses come from one pass over the nine
    displacement gradients, where four passes -- the diagonal, then a shear
    at a time -- read the displacement nine times.
+4. **The kick rides the acceleration pass.** Without a body force the
+   divergence pass does not store accelerations: it advances each velocity
+   by the half-step kick, `v + (dt/2) (∇·σ)/ρ`, reading the velocity as its
+   destination's held value (leto ADR 0032, decision 4). The step becomes
+   kick, drift, kick, damp; the body-force and plane-strain routes still
+   store accelerations for the step to apply.
 
 ## Consequences
 
@@ -90,6 +96,13 @@ of the rule's two limits binds is what moves the optimum between them.
 
 The one stress pass is 169-175 -> 149-153 us at 64 cubed and 1621-1721 ->
 1420-1503 us at 96 cubed, on every path.
+
+The kick in the pass writes each velocity once where storing accelerations
+wrote three grids, read them back in the kick, and again in the second
+kick: whole step, release, paired against a route with the stored
+traffic, 925-968 against 1028-1056 us at 64 cubed, 4452-5436 against
+6179-8272 at 96 and 16041-16782 against 20348-20954 at 128. The values are
+the separate passes' to the bit, asserted for every slab height.
 
 Values do not change. Slabbing alters which planes are in flight, not the
 arithmetic: every acceleration is asserted equal to the whole-grid value
@@ -139,3 +152,10 @@ smallest private share, which divides every measured size correctly. On a
 hierarchy whose last level duplicates the private levels it overstates the
 capacity and keeps a band of sizes whole-grid where slabs would win --
 slower, never different in value.
+
+**2026-09-22 -- the kick joins the pass.** With leto's fused passes handing
+`combine` each destination's held value, the acceleration pass applies the
+velocity-Verlet kick itself (decision 4) instead of storing three
+acceleration grids for the step to read back; 1.1x to 1.4x on the whole
+step across 64 to 128 cubed. The live-field count is unchanged: three
+velocities replace three accelerations.

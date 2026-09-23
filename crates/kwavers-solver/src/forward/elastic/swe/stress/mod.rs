@@ -41,9 +41,9 @@ mod slabs;
 mod tests;
 
 pub use divergence::{stress_divergence, stress_divergence_into};
-pub(crate) use divergence::{stress_divergence_plane_strain_into, DensityScale};
-pub(crate) use slabs::stress_acceleration_into;
+pub(crate) use divergence::{stress_divergence_plane_strain_into, DensityScale, VelocityKick};
+pub(crate) use slabs::stress_kick_into;
 
 // The slab sweep probe times slab heights the production rule does not pick.
 #[cfg(test)]
-pub(crate) use slabs::stress_acceleration_in_slabs;
+pub(crate) use slabs::stress_kick_in_slabs;
