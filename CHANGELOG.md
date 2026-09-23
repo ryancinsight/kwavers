@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **[patch] The staggered FDTD step fuses its pointwise passes.** Without a
+  CPML each velocity component's gradient is swept into a row buffer and
+  applied in the same pass (leto's `map_gradient_into`), and on the lossless
+  path the three divergence components are summed inside the pressure update
+  instead of a pass of their own. The 64-cubed step is 307-310 -> 236-238 us
+  at order 2 and 331-332 -> 277-279 at order 4; the velocity update alone is
+  1.7-2x faster at 96 and 128 cubed. Values are bit-identical.
 - **[patch] A uniform elastic medium keeps its Lamé fields out of the
   kick pass.** `TimeIntegrator` detects a medium holding one `(λ, μ)` pair,
   as it already did one density, and the stress pass reads the pair instead
