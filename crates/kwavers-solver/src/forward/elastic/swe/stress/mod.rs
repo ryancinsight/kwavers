@@ -36,13 +36,13 @@
 //!   divergence `(∇·σ)_x`, `(∇·σ)_y`, `(∇·σ)_z`.
 
 mod divergence;
+mod slabs;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use divergence::{stress_divergence_plane_strain_into, DensityScale};
 // The slab sweep probe times slab heights the production rule does not pick.
-#[cfg(test)]
-pub(crate) use divergence::stress_acceleration_in_slabs;
-pub(crate) use divergence::{
-    stress_acceleration_into, stress_divergence_plane_strain_into, DensityScale,
-};
 pub use divergence::{stress_divergence, stress_divergence_into};
+#[cfg(test)]
+pub(crate) use slabs::stress_acceleration_in_slabs;
+pub(crate) use slabs::stress_acceleration_into;

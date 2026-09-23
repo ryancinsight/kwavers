@@ -468,3 +468,30 @@ fn every_slab_size_gives_the_whole_grid_accelerations_bit_for_bit() {
         }
     }
 }
+
+/// The slab rule against its derivation, on the machine class it was
+/// measured on: a 36 MiB last-level cache and 24 workers.
+///
+/// - 64 cubed with 14 live fields is 29.4 MB and fits: whole-grid.
+/// - 96 cubed is 1,032,192 bytes a plane; the cache holds 36 planes, 32
+///   after the four the stencil reaches, and the worker count binds: 24.
+/// - 128 cubed is 1,835,008 bytes a plane; 20 fit, 16 after the reach, and
+///   the cache binds: 16. A density field makes it 15 live fields and 15.
+/// - No reported cache is whole-grid; a plane larger than the cache, or one
+///   worker, is one plane; a grid of no planes is still one.
+#[test]
+fn the_slab_height_is_the_cache_fit_less_the_reach_capped_by_the_workers() {
+    use super::slabs::slab_height;
+    const CACHE: Option<usize> = Some(36 << 20);
+    let height = |planes: usize, live: usize, cache: Option<usize>, workers: usize| {
+        slab_height(planes, planes * planes, live, cache, workers).get()
+    };
+    assert_eq!(height(64, 14, CACHE, 24), 64);
+    assert_eq!(height(96, 14, CACHE, 24), 24);
+    assert_eq!(height(128, 14, CACHE, 24), 16);
+    assert_eq!(height(128, 15, CACHE, 24), 15);
+    assert_eq!(height(128, 14, None, 24), 128);
+    assert_eq!(height(128, 14, Some(1 << 20), 24), 1);
+    assert_eq!(height(96, 14, CACHE, 1), 1);
+    assert_eq!(slab_height(0, 0, 14, CACHE, 24).get(), 1);
+}

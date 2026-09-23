@@ -42,6 +42,10 @@ use leto::{Array1, Array3};
 ///
 /// **Do not** construct inside the time loop — that defeats the purpose and
 /// restores the per-step allocation cost.
+///
+/// The stress fields hold the grid's stress after `stress_divergence_into`.
+/// After a step whose acceleration was evaluated in slabs (ADR 133) they hold
+/// only the last slab's window, in their leading planes.
 #[derive(Debug)]
 pub struct ElasticStepScratch {
     // --- Pass 1a: diagonal stress components ---
