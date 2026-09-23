@@ -290,7 +290,7 @@ fn accelerations(
             terms,
             [],
             destinations,
-            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], []| {
+            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [], _| {
                 [
                     ((xx + xy) + xz) * reciprocal,
                     ((yx + yy) + yz) * reciprocal,
@@ -304,7 +304,7 @@ fn accelerations(
             terms,
             [PlaneWindow::whole(*density)],
             destinations,
-            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [rho]| {
+            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [rho], _| {
                 [
                     ((xx + xy) + xz) / rho,
                     ((yx + yy) + yz) / rho,

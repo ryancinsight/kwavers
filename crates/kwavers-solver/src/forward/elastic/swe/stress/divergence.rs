@@ -90,7 +90,7 @@ fn shear(
         [(first_axis, first.view()), (second_axis, second.view())],
         [mu.view()],
         &mut shear.view_mut(),
-        |[a, b], [m]| m * (a + b),
+        |[a, b], [m], _| m * (a + b),
     )
     .expect("invariant: validated elastic fields share the grid shape");
 }
@@ -166,7 +166,7 @@ pub(super) fn stress_components(
         stresses
             .each_mut()
             .map(|stress| PlaneWindowMut::new(stress, origin)),
-        |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [la, mv]| {
+        |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [la, mv], _| {
             let la2mu = 2.0f64.mul_add(mv, la);
             [
                 la2mu.mul_add(xx, la * (yy + zz)),
