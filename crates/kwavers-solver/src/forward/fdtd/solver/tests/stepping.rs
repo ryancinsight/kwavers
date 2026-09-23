@@ -135,3 +135,51 @@ fn the_fused_velocity_update_is_the_sweep_then_the_pass_to_the_bit() {
         }
     }
 }
+
+/// Lossless, Cartesian and without a CPML, the staggered pressure update
+/// fuses its three divergences into one pass; the pressure is the separate
+/// sweeps and update's to the bit, for every stencil order the solver
+/// offers.
+#[test]
+fn the_fused_pressure_update_is_the_sweeps_then_the_update_to_the_bit() {
+    for order in [2, 4, 6] {
+        let mut solver = super::make_solver(9, 1.0e-4, 1500.0, 1000.0, 0.5, order);
+        assert!(solver.cpml_boundary.is_none() && solver.absorption.is_none());
+        let shape = solver.fields.p.shape();
+        let seeded = |a: usize, b: usize, c: usize, scale: f64| {
+            Array3::from_shape_fn(shape, |[i, j, k]| {
+                ((i * a + j * b + k * c) as f64 * scale).sin()
+            })
+        };
+        solver.fields.ux = seeded(7, 3, 5, 0.031);
+        solver.fields.uy = seeded(2, 11, 1, 0.017);
+        solver.fields.uz = seeded(5, 1, 13, 0.023);
+        solver.fields.p = seeded(3, 5, 7, 0.041);
+        let dt = solver.config.dt;
+        let swept = [
+            (leto_ops::Axis::X, &solver.fields.ux),
+            (leto_ops::Axis::Y, &solver.fields.uy),
+            (leto_ops::Axis::Z, &solver.fields.uz),
+        ]
+        .map(|(axis, component)| {
+            let mut divergence = Array3::zeros(shape);
+            solver
+                .leapfrog_operator
+                .divergence_into(axis, component.view(), &mut divergence.view_mut())
+                .expect("grid-shaped fields");
+            divergence
+        });
+        let expected = Array3::from_shape_fn(shape, |at| {
+            let [dx, dy, dz] = swept.each_ref().map(|d| d[at]);
+            solver.fields.p[at] - dt * solver.rho_c_squared[at] * (dz + (dx + dy))
+        });
+        solver.update_pressure(dt).expect("pressure update");
+        for (index, (a, b)) in expected.iter().zip(solver.fields.p.iter()).enumerate() {
+            assert_eq!(
+                a.to_bits(),
+                b.to_bits(),
+                "order {order}: p at flat {index}: {a} against {b}"
+            );
+        }
+    }
+}
