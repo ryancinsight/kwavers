@@ -44,14 +44,16 @@ jobs:
     # platform-specific wheel regression that only a non-Ubuntu leg would
     # catch is rare enough to belong on the drift backstop rather than on
     # every pull request's critical path (KW-CI-SINGLE-PIPELINE).
-    if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && (matrix.os == 'ubuntu-latest' || github.event_name != 'pull_request') }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: Base wheel (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # A job-level `if` cannot read the matrix context, so the pull-request
+        # narrowing is the row list itself.
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest", "windows-latest", "macos-latest"]') }}
     steps:
       - name: Checkout candidate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
