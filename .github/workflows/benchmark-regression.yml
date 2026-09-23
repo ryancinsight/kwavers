@@ -11,6 +11,7 @@ on:
       - '!crates/kwavers-python/**'
       - .github/actions/install-system-dependencies/**
       - .github/workflows/benchmark-regression.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,34 +20,34 @@ concurrency:
   group: benchmark-regression-${{ github.ref }}
   cancel-in-progress: true
 
-# Pull-request CI executes every benchmark once and proves merge-critical
-# executable identity. It runs no statistical timing: hosted shared runners
-# cannot supply controlled performance evidence, and the paired
-# phase-reversed Criterion instrument is a documented local procedure
-# (ADR 045, "Controlled local instrument").
-
+# Pull-request CI executes every benchmark once (`benchmark-smoke`) and proves
+# merge-critical registry completeness against the candidate alone. It runs no
+# statistical timing: hosted shared runners cannot supply controlled
+# performance evidence, and the paired phase-reversed Criterion instrument is
+# a documented local procedure (ADR 045, "Controlled local instrument").
+#
+# `benchmark-baseline-diff` used to run this same double-checkout comparison
+# on every pull request (KW-CI-SINGLE-PIPELINE). Its one signal is a
+# byte-identical-executable notice against the PR's base commit -- it never
+# fails the job (see the final step) -- so paying a second full compile of the
+# baseline revision on every pull request bought no additional gate, only
+# wall time. It now runs on demand via `workflow_dispatch`.
 jobs:
   benchmark-smoke:
-    if: ${{ github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: complete benchmark smoke
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       BENCH_TARGET_DIR: ${{ github.workspace }}/target
       CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
       PR_BENCH_TARGETS: performance_baseline critical_path_benchmarks simd_field_ops
     steps:
-      - name: Checkout baseline
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.event.pull_request.base.sha }}
-          path: kwavers-baseline
-          persist-credentials: false
-
       - name: Checkout candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: kwavers-candidate
           persist-credentials: false
 
@@ -82,36 +83,7 @@ jobs:
         shell: bash
         run: python3 kwavers-candidate/scripts/lockfile.py --check
 
-      - name: Align historical baseline workspace graph
-        shell: bash
-        run: |
-          set -euo pipefail
-          while IFS= read -r manifest; do
-            mkdir -p "kwavers-baseline/$(dirname "$manifest")"
-            cp "kwavers-candidate/$manifest" "kwavers-baseline/$manifest"
-          done < <(
-            git -C kwavers-candidate ls-files -- 'Cargo.toml' '**/Cargo.toml'
-          )
-          cp kwavers-candidate/Cargo.lock kwavers-baseline/Cargo.lock
-          cargo metadata \
-            --manifest-path kwavers-baseline/Cargo.toml \
-            --locked \
-            --format-version 1 \
-            --all-features \
-            > /dev/null
-
-      - name: Hold the candidate benchmark instrument constant
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf kwavers-baseline/crates/kwavers/benches
-          git -C kwavers-candidate archive HEAD crates/kwavers/benches \
-            | tar -x -C kwavers-baseline
-          diff --recursive --unified \
-            kwavers-baseline/crates/kwavers/benches \
-            kwavers-candidate/crates/kwavers/benches
-
-      - name: Validate complete benchmark registries
+      - name: Validate complete benchmark registry
         shell: bash
         run: |
           set -euo pipefail
@@ -179,7 +151,6 @@ jobs:
             fi
           }
 
-          validate_registry kwavers-baseline
           validate_registry kwavers-candidate
 
           if grep --recursive --line-number --extended-regexp \
@@ -213,6 +184,81 @@ jobs:
             --test || status=$?
           mv kwavers-measurement kwavers-candidate
           exit "$status"
+
+  # The double-checkout, double-compile diagnostic this workflow used to run
+  # on every pull request (see the header comment). It never fails: its only
+  # output is a `::notice::` naming which merge-critical benchmark executables
+  # changed, which is the cue that ADR 045's local paired measurement is
+  # warranted. On demand only.
+  benchmark-baseline-diff:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    name: benchmark executable identity vs base
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      BENCH_TARGET_DIR: ${{ github.workspace }}/target
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
+      PR_BENCH_TARGETS: performance_baseline critical_path_benchmarks simd_field_ops
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha || 'main' }}
+          path: kwavers-baseline
+          persist-credentials: false
+
+      - name: Checkout candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: kwavers-candidate
+          persist-credentials: false
+
+      - name: Install system dependencies
+        uses: ./kwavers-candidate/.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          shared-key: kwavers
+          workspaces: kwavers-candidate -> ../target
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Align historical baseline workspace graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r manifest; do
+            mkdir -p "kwavers-baseline/$(dirname "$manifest")"
+            cp "kwavers-candidate/$manifest" "kwavers-baseline/$manifest"
+          done < <(
+            git -C kwavers-candidate ls-files -- 'Cargo.toml' '**/Cargo.toml'
+          )
+          cp kwavers-candidate/Cargo.lock kwavers-baseline/Cargo.lock
+          cargo metadata \
+            --manifest-path kwavers-baseline/Cargo.toml \
+            --locked \
+            --format-version 1 \
+            --all-features \
+            > /dev/null
+
+      - name: Hold the candidate benchmark instrument constant
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf kwavers-baseline/crates/kwavers/benches
+          git -C kwavers-candidate archive HEAD crates/kwavers/benches \
+            | tar -x -C kwavers-baseline
+          diff --recursive --unified \
+            kwavers-baseline/crates/kwavers/benches \
+            kwavers-candidate/crates/kwavers/benches
 
       # Static evidence only. A byte-identical merge-critical executable
       # cannot contain a production-code performance difference; a differing
