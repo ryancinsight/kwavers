@@ -80,6 +80,10 @@ default_branch_base() {
 # worse than the base already found acceptable.
 touches_dependency_state=unknown
 pushed_tip=""
+# The range this push carries, for the local gate far below. Recorded here
+# because stdin reads once: the gate cannot re-read it.
+gate_tip=""
+gate_range_base=""
 if [ ! -t 0 ]; then
   touches_dependency_state=no
   zero="$(printf '0%.0s' $(seq 40))"
@@ -96,6 +100,10 @@ if [ ! -t 0 ]; then
       [ -z "$base" ] && { touches_dependency_state=unknown; break; }
     else
       base="$remote_sha"
+    fi
+    if [ -z "$gate_tip" ]; then
+      gate_tip="$local_sha"
+      gate_range_base="$base"
     fi
     if ! changed="$(git diff --name-only "$base" "$local_sha" 2>/dev/null)"; then
       touches_dependency_state=unknown
@@ -130,7 +138,13 @@ fi
 python_bin="${PYTHON:-}"
 if [ -z "$python_bin" ]; then
   for candidate in python3 python; do
-    if command -v "$candidate" >/dev/null 2>&1; then
+    # Probe the candidate, not just its presence on PATH: the WindowsApps
+    # python3.exe Store stub passes `command -v` and then fails to execute
+    # (rc 127), and selecting it makes every `"$python_bin" -c ...` below
+    # fail -- the workspace-membership pipeline in particular, which under
+    # `set -o pipefail` blocks the push with a diagnostic about cargo that
+    # the interpreter caused. Same probe as `.githooks/pre-commit`.
+    if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c 'import sys' >/dev/null 2>&1; then
       python_bin="$candidate"
       break
     fi
@@ -302,14 +316,28 @@ if ! command -v cargo >/dev/null 2>&1; then
   exit 0
 fi
 
-gate_base="$(default_branch_base HEAD || true)"
+# Select from the pushed range where git supplied one: `HEAD` is the
+# checkout's branch, which a plumbing push or a tree sitting on a peer's branch
+# makes the wrong revision to select from. A base the local repository cannot
+# resolve -- a remote tip never fetched here -- falls back rather than diffing
+# against nothing, which would read as "no Rust in the range" and skip the gate.
+if [ -n "$gate_range_base" ] \
+  && ! git rev-parse --verify --quiet "$gate_range_base^{commit}" >/dev/null 2>&1; then
+  gate_range_base=""
+fi
+gate_tip_rev="${gate_tip:-HEAD}"
+if [ -n "$gate_range_base" ]; then
+  gate_base="$gate_range_base"
+else
+  gate_base="$(default_branch_base "$gate_tip_rev" || true)"
+fi
 
 if [ -z "$gate_base" ]; then
   echo "pre-push: no upstream or remote default branch to diff against; local gate skipped" >&2
   exit 0
 fi
 
-gate_changed="$(git diff --name-only "$gate_base" HEAD 2>/dev/null || true)"
+gate_changed="$(git diff --name-only "$gate_base" "$gate_tip_rev" 2>/dev/null || true)"
 
 # Where cargo runs. A member's main tree runs inside the stack, so the gate
 # builds against the local working trees the overlay provides. A lane (a
