@@ -1,27 +1,29 @@
-//! Elastic stress tensor and its divergence, from whole-field derivative
-//! sweeps.
+//! Elastic stress tensor and its divergence, from fused derivative passes.
 //!
-//! Every derivative is one sweep of leto's fourth-order central operator
-//! (ADR 128) over a whole field; the stresses and the divergence are then
-//! assembled pointwise through [`kwavers_core::traversal`]. A point's value
-//! depends only on its own inputs, so each pass is race-free under the
-//! parallel traversals.
+//! Every derivative is leto's fourth-order central operator (ADR 128). The
+//! six stresses come from one fused pass over the nine displacement
+//! gradients and the Lamé parameters, and each divergence component from one
+//! pass summing three stress derivatives. A lane's outputs depend only on
+//! its own inputs and their stencil neighbourhoods, so each pass is
+//! race-free under leto's parallel traversal.
 //!
-//! Two scratch fields hold one derivative each between its sweep and the
-//! assembly that reads it. The normal strains need a third; they borrow the
-//! shear fields, which the shear pass overwrites right after.
+//! The plane-strain kernel keeps its sweeps: two scratch fields hold one
+//! derivative each between its sweep and the pointwise assembly that reads
+//! it.
 //!
 //! **Reference**: LeVeque (2002), "Finite Volume Methods for Hyperbolic
 //! Problems", §2.13 (stress-velocity formulation for elastic waves).
 
 use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
+use core::ops::Range;
 use kwavers_core::traversal::{zip_mut, zip_mut_pair};
 use kwavers_grid::Grid;
-use leto::{Array3, ArrayView3};
-use leto_ops::{Axis, FiniteDifference3D};
 
-fn validate_stress_divergence_shapes(
+use leto::{Array3, ArrayView3, ArrayViewMut3};
+use leto_ops::{Axis, FiniteDifference3D, PlaneWindow, PlaneWindowMut};
+
+pub(super) fn validate_stress_divergence_shapes(
     grid: &Grid,
     lambda: &Array3<f64>,
     mu: &Array3<f64>,
@@ -55,7 +57,7 @@ fn validate_stress_divergence_shapes(
 }
 
 /// Fourth-order central first derivatives on the grid's spacing.
-fn derivatives(grid: &Grid) -> FiniteDifference3D<f64> {
+pub(super) fn derivatives(grid: &Grid) -> FiniteDifference3D<f64> {
     FiniteDifference3D::central_fourth_order(grid.dx, grid.dy, grid.dz)
         .expect("invariant: a grid has positive spacing")
 }
@@ -88,7 +90,7 @@ fn shear(
         [(first_axis, first.view()), (second_axis, second.view())],
         [mu.view()],
         &mut shear.view_mut(),
-        |[a, b], [m]| m * (a + b),
+        |[a, b], [m], _| m * (a + b),
     )
     .expect("invariant: validated elastic fields share the grid shape");
 }
@@ -122,47 +124,68 @@ pub(crate) enum DensityScale<'a> {
     Field(ArrayView3<'a, f64>),
 }
 
+/// A velocity-Verlet half-step kick: the stress divergence, scaled by the
+/// density into an acceleration, advances each velocity by `half_dt` of it.
+pub(crate) struct VelocityKick<'a> {
+    pub(crate) scale: DensityScale<'a>,
+    pub(crate) half_dt: f64,
+}
+
 /// The six stress components from the displacement field and the Lamé
-/// parameters.
-fn stress_components(
+/// parameters, on the grid planes `planes`, written into destinations that
+/// hold the grid planes from `origin` on.
+///
+/// One pass over the nine displacement gradients writes all six. As four
+/// passes -- the diagonal, which reads all three normal strains, then one
+/// per shear -- the displacement components were read nine times and `μ`
+/// four, and each pass was its own parallel region. Each stress is the same
+/// arithmetic on the same derivatives either way, so the values are
+/// unchanged to the bit.
+pub(super) fn stress_components(
     op: &FiniteDifference3D<f64>,
+    planes: Range<usize>,
     lambda: &Array3<f64>,
     mu: &Array3<f64>,
-    field: &ElasticWaveField,
-    [sxx, syy, szz, sxy, sxz, syz]: [&mut Array3<f64>; 6],
+    displacement: [&Array3<f64>; 3],
+    stresses: [ArrayViewMut3<'_, f64>; 6],
+    origin: usize,
 ) {
-    // All three diagonal stresses read the same three normal strains, so one
-    // fused pass sweeps the strains once and writes the three: 16 MB of
-    // traffic at 64 cubed where sweeping them into the shear fields and
-    // combining afterwards moved 28 MB. The shear fields no longer hold
-    // strains on the way, so the shears below are their only writer.
-    let (mut xx, mut yy, mut zz) = (sxx.view_mut(), syy.view_mut(), szz.view_mut());
-    op.map_axis_derivatives_many(
+    let [ux, uy, uz] = displacement.map(|u| PlaneWindow::whole(u.view()));
+    let mut stresses = stresses;
+    op.map_axis_derivatives_in_windows(
+        lambda.shape()[0],
+        planes,
         [
-            (Axis::X, field.ux.view()),
-            (Axis::Y, field.uy.view()),
-            (Axis::Z, field.uz.view()),
+            (Axis::X, ux),
+            (Axis::Y, ux),
+            (Axis::Z, ux),
+            (Axis::X, uy),
+            (Axis::Y, uy),
+            (Axis::Z, uy),
+            (Axis::X, uz),
+            (Axis::Y, uz),
+            (Axis::Z, uz),
         ],
-        [lambda.view(), mu.view()],
-        [&mut xx, &mut yy, &mut zz],
-        |[exx, eyy, ezz], [la, mv]| {
+        [
+            PlaneWindow::whole(lambda.view()),
+            PlaneWindow::whole(mu.view()),
+        ],
+        stresses
+            .each_mut()
+            .map(|stress| PlaneWindowMut::new(stress, origin)),
+        |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [la, mv], _| {
             let la2mu = 2.0f64.mul_add(mv, la);
             [
-                la2mu.mul_add(exx, la * (eyy + ezz)),
-                la2mu.mul_add(eyy, la * (exx + ezz)),
-                la2mu.mul_add(ezz, la * (exx + eyy)),
+                la2mu.mul_add(xx, la * (yy + zz)),
+                la2mu.mul_add(yy, la * (xx + zz)),
+                la2mu.mul_add(zz, la * (xx + yy)),
+                mv * (xy + yx),
+                mv * (xz + zx),
+                mv * (yz + zy),
             ]
         },
     )
     .expect("invariant: validated elastic fields share the grid shape");
-
-    for (first, second, out) in [
-        ((Axis::Y, &field.ux), (Axis::X, &field.uy), &mut *sxy),
-        ((Axis::Z, &field.ux), (Axis::X, &field.uz), &mut *sxz),
-        ((Axis::Z, &field.uy), (Axis::Y, &field.uz), &mut *syz),
-    ] {
-        shear(op, first, second, mu, out);
-    }
 }
 
 /// Compute the elastic stress tensor divergence ∇·σ into pre-allocated
@@ -198,7 +221,22 @@ pub fn stress_divergence_into(
         ..
     } = scratch;
 
-    stress_components(&op, lambda, mu, field, [sxx, syy, szz, sxy, sxz, syz]);
+    stress_components(
+        &op,
+        0..grid.nx,
+        lambda,
+        mu,
+        [&field.ux, &field.uy, &field.uz],
+        [
+            sxx.view_mut(),
+            syy.view_mut(),
+            szz.view_mut(),
+            sxy.view_mut(),
+            sxz.view_mut(),
+            syz.view_mut(),
+        ],
+        0,
+    );
 
     for (stresses, out) in [
         ([&*sxx, &*sxy, &*sxz], div_x),
@@ -207,124 +245,6 @@ pub fn stress_divergence_into(
     ] {
         divergence(&op, stresses, out);
     }
-}
-
-/// The accelerations of `field`: the stress divergence scaled by the density,
-/// written into `scratch`'s `ax`, `ay` and `az`.
-///
-/// The scale rides the divergence pass. Computing the divergence into its own
-/// fields and scaling them afterwards costs a second pass over three grids --
-/// three reads and three writes, 24 MB at 64 cubed -- for arithmetic that is
-/// one operation per lane. Values are unchanged: the divergence is summed in
-/// x, y, z order and scaled exactly as the separate pass scaled it, and the
-/// intermediate is a value the separate pass stored and reloaded without
-/// rounding.
-///
-/// `scratch`'s divergence fields are untouched here; the body-force route
-/// still writes and reads them, since `(divergence + force) / rho` is not the
-/// same rounding as scaling the divergence alone.
-///
-/// # Panics
-///
-/// Panics if any field or scratch shape differs from the grid's.
-pub(crate) fn stress_acceleration_into(
-    grid: &Grid,
-    lambda: &Array3<f64>,
-    mu: &Array3<f64>,
-    field: &ElasticWaveField,
-    scale: &DensityScale<'_>,
-    scratch: &mut ElasticStepScratch,
-) {
-    stress_into(grid, lambda, mu, field, scratch);
-    let op = derivatives(grid);
-    let ElasticStepScratch {
-        sxx,
-        syy,
-        szz,
-        sxy,
-        sxz,
-        syz,
-        ax,
-        ay,
-        az,
-        ..
-    } = scratch;
-    // One pass for all three accelerations. Taken separately they read nine
-    // stress lanes over six distinct fields -- `sxy`, `sxz` and `syz` each
-    // feed two of the three -- so each repeated field crossed the bus twice.
-    // Here every field is read once per output lane: at 96 cubed that is
-    // 70 MB against 105, and one pass rather than three.
-    let (mut x_out, mut y_out, mut z_out) = (ax.view_mut(), ay.view_mut(), az.view_mut());
-    let terms = [
-        (Axis::X, sxx.view()),
-        (Axis::Y, sxy.view()),
-        (Axis::Z, sxz.view()),
-        (Axis::X, sxy.view()),
-        (Axis::Y, syy.view()),
-        (Axis::Z, syz.view()),
-        (Axis::X, sxz.view()),
-        (Axis::Y, syz.view()),
-        (Axis::Z, szz.view()),
-    ];
-    let destinations = [&mut x_out, &mut y_out, &mut z_out];
-    match scale {
-        DensityScale::UniformReciprocal(reciprocal) => op.map_axis_derivatives_many(
-            terms,
-            [],
-            destinations,
-            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], []| {
-                [
-                    ((xx + xy) + xz) * reciprocal,
-                    ((yx + yy) + yz) * reciprocal,
-                    ((zx + zy) + zz) * reciprocal,
-                ]
-            },
-        ),
-        DensityScale::Field(density) => op.map_axis_derivatives_many(
-            terms,
-            [*density],
-            destinations,
-            |[xx, xy, xz, yx, yy, yz, zx, zy, zz], [rho]| {
-                [
-                    ((xx + xy) + xz) / rho,
-                    ((yx + yy) + yz) / rho,
-                    ((zx + zy) + zz) / rho,
-                ]
-            },
-        ),
-    }
-    .expect("invariant: validated elastic fields share the grid shape");
-}
-
-/// The six stress components of `field`, written into `scratch`.
-///
-/// [`stress_divergence_into`] is this followed by the three divergences. A
-/// caller that scales the divergence -- the acceleration divides it by the
-/// density -- takes them apart, so the scale rides the divergence pass
-/// instead of costing a second one over three fields.
-///
-/// # Panics
-///
-/// Panics if any field or scratch shape differs from the grid's.
-pub(crate) fn stress_into(
-    grid: &Grid,
-    lambda: &Array3<f64>,
-    mu: &Array3<f64>,
-    field: &ElasticWaveField,
-    scratch: &mut ElasticStepScratch,
-) {
-    validate_stress_divergence_shapes(grid, lambda, mu, field, scratch);
-    let op = derivatives(grid);
-    let ElasticStepScratch {
-        sxx,
-        syy,
-        szz,
-        sxy,
-        sxz,
-        syz,
-        ..
-    } = scratch;
-    stress_components(&op, lambda, mu, field, [sxx, syy, szz, sxy, sxz, syz]);
 }
 
 /// Fill the in-plane stress divergence for a plane-strain field.

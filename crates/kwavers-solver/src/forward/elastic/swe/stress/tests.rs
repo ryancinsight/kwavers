@@ -3,7 +3,7 @@ use super::*;
 use kwavers_grid::Grid;
 use leto::Array3;
 
-fn from_shape_fn_fortran<F>(shape: [usize; 3], mut f: F) -> Array3<f64>
+pub(super) fn from_shape_fn_fortran<F>(shape: [usize; 3], mut f: F) -> Array3<f64>
 where
     F: FnMut([usize; 3]) -> f64,
 {

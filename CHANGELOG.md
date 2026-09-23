@@ -4,6 +4,17 @@
 
 ### Changed
 
+- **[patch] The elastic step evaluates its acceleration in slabs past the
+  caches and kicks the velocities in the same pass.** All six stresses come
+  from one fused pass (-12% on every path). Past what an even split across
+  the workers keeps resident, the stress-divergence chain runs a slab of
+  x-planes at a time through a reused stress window (ADR 133): 1.5x at 96
+  cubed and 1.8x at 128 on the evaluation. Without a body force the pass
+  advances each velocity by the half-step kick instead of storing
+  accelerations for the step to read back: the whole step is 1.1x faster at
+  64 cubed, about 1.4x at 96 and 1.25x at 128. Values are bit-identical.
+  `kwavers_core::arena::cache_capacity_bytes` reports the cache an even
+  split holds resident.
 - **[patch] The elastic stress divergence takes one fused pass.**
   `stress_divergence_into` summed three per-axis sweeps out of three scratch
   buffers; it now calls leto's `FiniteDifference3D::divergence_into`, which
