@@ -2,6 +2,7 @@
 
 use anyhow::Context as _;
 use coeus_core::MoiraiBackend;
+use kwavers_core::path::has_suffix_ignore_ascii_case;
 use leto::Array3;
 use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
 use ritk_io::format::png::native::PngSeriesReader as NativePngSeriesReader;
@@ -117,7 +118,7 @@ pub(crate) fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
         })?
     } else {
         let name = path.file_name().unwrap_or_default().to_string_lossy();
-        if !name.ends_with(".nii") && !name.ends_with(".nii.gz") {
+        if !has_suffix_ignore_ascii_case(&name, &[".nii", ".nii.gz"]) {
             anyhow::bail!(
                 "unrecognised format for '{}'; expected .nii/.nii.gz or a DICOM dir",
                 path.display()

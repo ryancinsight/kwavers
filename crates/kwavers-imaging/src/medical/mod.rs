@@ -43,6 +43,7 @@ pub use ct_loader::{CTImageLoader, CTMetadata};
 pub use dicom_loader::{DicomImageLoader, DicomMetadata, DicomModality};
 
 use kwavers_core::error::KwaversResult;
+use kwavers_core::path::has_suffix_ignore_ascii_case;
 use leto::Array3;
 
 /// Metadata common to all medical imaging formats
@@ -120,9 +121,9 @@ pub trait MedicalImageLoader: Send + Sync {
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 pub fn create_loader(path: &str) -> KwaversResult<Box<dyn MedicalImageLoader>> {
-    if path.ends_with(".nii") || path.ends_with(".nii.gz") {
+    if has_suffix_ignore_ascii_case(path, &[".nii", ".nii.gz"]) {
         Ok(Box::new(CTImageLoader::new()))
-    } else if path.ends_with(".dcm") || path.ends_with(".dicom") {
+    } else if has_suffix_ignore_ascii_case(path, &[".dcm", ".dicom"]) {
         Ok(Box::new(DicomImageLoader::new()))
     } else {
         Err(kwavers_core::error::KwaversError::InvalidInput(format!(
@@ -166,6 +167,26 @@ mod tests {
     #[test]
     fn test_loader_factory_dicom() {
         let _loader = create_loader("test.dcm").unwrap();
+    }
+
+    #[test]
+    fn loader_factory_ignores_extension_case() {
+        for path in ["scan.NII", "scan.Nii.Gz", "scan.nii.gz"] {
+            let loader = create_loader(path).expect("NIfTI extension in any case is supported");
+            assert_eq!(
+                loader.name(),
+                "CT (NIFTI)",
+                "{path} must route to the NIfTI loader"
+            );
+        }
+        for path in ["slice.DCM", "slice.Dicom"] {
+            let loader = create_loader(path).expect("DICOM extension in any case is supported");
+            assert_eq!(
+                loader.name(),
+                "DICOM",
+                "{path} must route to the DICOM loader"
+            );
+        }
     }
 
     #[test]
