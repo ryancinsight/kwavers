@@ -32,17 +32,23 @@
 #
 # Bypass deliberately:
 #
-#     SKIP_LOCKFILE_CHECK=1 git push   (lockfile section only)
 #     SKIP_LOCAL_GATE=1 git push       (fast gate section only)
+#
+# SKIP_LOCKFILE_CHECK is not honoured: a lock check that fails, or cannot
+# run, refuses the push either way. coeus's checker contract (scripts/tests/
+# test_hooks.py::test_skip_variable_cannot_hide_checker_failures) requires
+# that no variable can hide a checker failure, and this hook's own skip used
+# to exit 0 on an absent checker or interpreter -- hiding a failure exactly
+# as completely as a failure would. The accepted cost: an offline push with a
+# cold cargo cache now fails loudly instead of passing unverified.
 set -euo pipefail
 
-# SKIP_LOCKFILE_CHECK skips the lockfile section only; the code gate below
-# still runs. (Exiting here once skipped the gate too, so the bypass silently
-# skipped lint and tests as well.)
+# The lockfile section below still runs unconditionally; only the
+# no-manifest-in-range skip further down (evidence, not a bypass) can
+# shorten it.
 skip_lockfile=0
 if [ "${SKIP_LOCKFILE_CHECK:-0}" = "1" ]; then
-  echo "pre-push: lockfile check skipped by SKIP_LOCKFILE_CHECK" >&2
-  skip_lockfile=1
+  echo "pre-push: SKIP_LOCKFILE_CHECK is no longer honoured; running the lockfile check anyway" >&2
 fi
 
 # A managed worktree may be owned by a different filesystem account than the
@@ -173,15 +179,13 @@ if [ ! -f "$checker" ]; then
   # A guard that reports its own absence and lets the push through is the
   # absence. The code gate below would still have run, but the lock is what
   # this section is for, and an unverified lock is the failure it exists to
-  # stop -- so refuse here and name the one deliberate way through.
+  # stop -- so refuse here; there is no deliberate way through.
   rm -rf "$lock_export"
   echo "pre-push: scripts/lockfile.py not present; lockfile not verified" >&2
-  echo "pre-push: push anyway with SKIP_LOCKFILE_CHECK=1 git push" >&2
   exit 1
 elif [ -z "$python_bin" ]; then
   rm -rf "$lock_export"
   echo "pre-push: no python interpreter found; lockfile not verified" >&2
-  echo "pre-push: push anyway with SKIP_LOCKFILE_CHECK=1 git push" >&2
   exit 1
 elif ! (cd "$lock_export" && "$python_bin" "$checker" --check); then
   rm -rf "$lock_export"
@@ -195,7 +199,7 @@ strips the lock's git sources. Repair it with:
 
     python3 scripts/lockfile.py --regenerate
 
-then stage the result. To push anyway: SKIP_LOCKFILE_CHECK=1 git push
+then stage the result and push again.
 MESSAGE
   exit 1
 fi
@@ -213,8 +217,7 @@ if [ -f "$repo_root/deny.toml" ]; then
   if ! cargo deny --version >/dev/null 2>&1; then
     rm -rf "$lock_export"
     echo "pre-push: cargo-deny is not installed, so the dependency sources of this" >&2
-    echo "lock change are unverified. Install it (cargo install --locked cargo-deny)," >&2
-    echo "or push anyway with SKIP_LOCKFILE_CHECK=1 git push" >&2
+    echo "lock change are unverified. Install it: cargo install --locked cargo-deny" >&2
     exit 1
   fi
   if ! (cd "$lock_export" && cargo deny --locked check sources >&2); then
@@ -224,7 +227,7 @@ if [ -f "$repo_root/deny.toml" ]; then
 pre-push: the pushed Cargo.lock resolves a source deny.toml does not allow,
 so the CI supply-chain job would fail on this push. Allow the source in
 deny.toml (a first-party git source goes under [sources] allow-git) or drop
-the dependency. To push anyway: SKIP_LOCKFILE_CHECK=1 git push
+the dependency.
 MESSAGE
     exit 1
   fi

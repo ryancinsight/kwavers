@@ -21,14 +21,15 @@
 #
 #     git config core.hooksPath .githooks
 #
-# Bypass deliberately:
-#
-#     SKIP_LOCKFILE_CHECK=1 git commit
+# SKIP_LOCKFILE_CHECK is not honoured: a checker that fails, or cannot run,
+# refuses the commit either way. A checker contract (coeus
+# scripts/tests/test_hooks.py::test_skip_variable_cannot_hide_checker_failures)
+# requires that no variable can hide a checker failure, and a skip that exits
+# 0 without running anything hides it as completely as a failure would.
 set -euo pipefail
 
 if [ "${SKIP_LOCKFILE_CHECK:-0}" = "1" ]; then
-  echo "pre-commit: lockfile check skipped by SKIP_LOCKFILE_CHECK" >&2
-  exit 0
+  echo "pre-commit: SKIP_LOCKFILE_CHECK is no longer honoured; running the lockfile check anyway" >&2
 fi
 
 repo_root="$(git -c safe.directory="$PWD" rev-parse --show-toplevel)"
@@ -43,10 +44,9 @@ export GIT_CONFIG_VALUE_0="$repo_root"
 
 if [ ! -f "$checker" ]; then
   # A guard that reports its own absence and exits 0 is the absence: the
-  # commit lands unverified and the message scrolls past. Refuse instead,
-  # and name the one deliberate way through.
+  # commit lands unverified and the message scrolls past. Refuse instead;
+  # there is no deliberate way through (see SKIP_LOCKFILE_CHECK above).
   echo "pre-commit: scripts/lockfile.py not present; lockfile not verified" >&2
-  echo "pre-commit: commit anyway with SKIP_LOCKFILE_CHECK=1 git commit" >&2
   exit 1
 fi
 
@@ -67,7 +67,6 @@ fi
 
 if [ -z "$python_bin" ]; then
   echo "pre-commit: no python interpreter found; lockfile not verified" >&2
-  echo "pre-commit: commit anyway with SKIP_LOCKFILE_CHECK=1 git commit" >&2
   exit 1
 fi
 
