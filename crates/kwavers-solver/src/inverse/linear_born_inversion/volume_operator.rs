@@ -32,7 +32,7 @@
 //! the serial critical-path length.
 
 mod construction;
-mod helpers;
+mod geometry;
 mod kernel;
 mod operators;
 

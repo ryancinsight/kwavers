@@ -284,7 +284,7 @@ impl fmt::Display for ConservationSummary {
 }
 
 mod diagnostic;
-pub mod helpers;
+pub mod energy;
 #[cfg(test)]
 mod tests;
 mod tolerances;

@@ -16,7 +16,7 @@ use pyo3::types::PyDict;
 
 use super::array_config::PyMultiRowRingArray;
 use super::fwi_config::PyFrequencyDomainFwiConfig;
-use super::helpers::{kwavers_to_py, observations_from_stack};
+use super::py_convert::{kwavers_to_py, observations_from_stack};
 
 use crate::array_utils::{
     leto2_to_pyarray2, leto3_to_pyarray3, pyarray2_to_leto2, pyarray3_to_leto3, vec_to_pyarray1,

@@ -8,7 +8,7 @@
 //! - `array_config`   — `PyMultiRowRingArray` class
 //! - `fwi_config`     — `PyFrequencyDomainFwiConfig` class
 //! - `inversion`      — `PyFrequencyObservation` class + top-level FWI functions
-//! - `helpers`        — private parsing/conversion utilities
+//! - `py_convert`     — private parsing/conversion utilities
 //! - `dataset`, `diagnostics`, `direct_field`, `finite_window`,
 //!   `operator_equivalence`, `phantom`, `reduction` — domain submodules
 
@@ -19,10 +19,10 @@ mod diagnostics;
 mod direct_field;
 mod finite_window;
 mod fwi_config;
-mod helpers;
 mod inversion;
 mod operator_equivalence;
 mod phantom;
+mod py_convert;
 mod reduction;
 
 pub use array_config::PyMultiRowRingArray;

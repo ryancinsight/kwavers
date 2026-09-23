@@ -7,7 +7,7 @@ use pyo3::prelude::*;
 
 use crate::quantity_args::PyLength;
 
-use super::helpers::{kwavers_to_py, points_to_array};
+use super::py_convert::{kwavers_to_py, points_to_array};
 
 #[pyclass(name = "MultiRowRingArray", from_py_object)]
 #[derive(Clone)]

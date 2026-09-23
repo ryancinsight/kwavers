@@ -1,8 +1,8 @@
 # Example: Adaptive Beamforming
 
 **Crate**: `kwavers`  
-**Run**: `cargo run -p kwavers --example adaptive_beamforming_refactored`  
-**Source**: [`crates/kwavers/examples/adaptive_beamforming_refactored.rs`](../../../crates/kwavers/examples/adaptive_beamforming_refactored.rs)
+**Run**: `cargo run -p kwavers --example adaptive_beamforming`  
+**Source**: [`crates/kwavers/examples/adaptive_beamforming.rs`](../../../crates/kwavers/examples/adaptive_beamforming.rs)
 
 ## What This Example Demonstrates
 

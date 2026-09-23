@@ -1,5 +1,5 @@
 use super::MetaLearner;
-use crate::inverse::pinn::ml::meta_learning::gradient::utils::add_gradients;
+use crate::inverse::pinn::ml::meta_learning::gradient::norm::add_gradients;
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLoss;
 use crate::inverse::pinn::ml::meta_learning::types::PhysicsTask;
 use crate::inverse::pinn::ml::wave_equation_2d::SimpleOptimizer2D;
