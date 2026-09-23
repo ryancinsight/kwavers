@@ -261,10 +261,10 @@ fn swe_step_phase_split() {
 }
 
 /// Repeats per arm of the slab sweep: 23 evaluations of each route at each
-/// of four sizes and five slab heights -- at most about 8 ms apiece at 128
-/// cubed -- keep the whole sweep near 5 s, inside the test budget, while
-/// the fastest repeat still reads the same as the 200-repeat probe at 96
-/// cubed.
+/// of eight sizes and five slab heights -- about 10 ms apiece at 128 cubed,
+/// which is half the total -- keep the whole sweep near 5 s, inside the test
+/// budget, while the fastest repeat still reads the same as the 200-repeat
+/// probe at 96 cubed.
 const SWEEP_TIMER: PhaseTimer = PhaseTimer {
     repeats: 20,
     warm: 3,
@@ -279,7 +279,7 @@ const SWEEP_TIMER: PhaseTimer = PhaseTimer {
 #[test]
 #[ignore = "timing probe: run in release on a quiet host with --no-capture"]
 fn swe_acceleration_slab_sweep() {
-    for n in [64, 72, 76, 80, 96, 128] {
+    for n in [64, 72, 76, 80, 88, 92, 96, 128] {
         let grid = Grid::new(n, n, n, DX, DX, DX).expect("valid grid");
         let lambda = Array3::from_elem([n; 3], LAMBDA);
         let mu = Array3::from_elem([n; 3], MU);

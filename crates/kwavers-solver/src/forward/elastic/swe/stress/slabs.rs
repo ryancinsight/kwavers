@@ -1,6 +1,6 @@
 //! The acceleration of an elastic field, evaluated a slab of x-planes at a
-//! time through a stress window once its fields outgrow the last-level
-//! cache (ADR 133).
+//! time through a stress window once its fields outgrow the caches
+//! (ADR 133).
 
 use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
@@ -45,7 +45,18 @@ pub(crate) fn stress_acceleration_into(
     scale: &DensityScale<'_>,
     scratch: &mut ElasticStepScratch,
 ) {
-    let contiguous = [
+    let slab = if window_slides(scratch) {
+        slab_planes(grid, scale)
+    } else {
+        NonZeroUsize::new(grid.nx).unwrap_or(NonZeroUsize::MIN)
+    };
+    stress_acceleration_in_slabs(grid, lambda, mu, field, scale, scratch, slab);
+}
+
+/// Whether the stress window can slide in `scratch`: it moves planes as
+/// contiguous runs, which C-contiguous stress fields hold.
+fn window_slides(scratch: &ElasticStepScratch) -> bool {
+    [
         &scratch.sxx,
         &scratch.syy,
         &scratch.szz,
@@ -54,13 +65,7 @@ pub(crate) fn stress_acceleration_into(
         &scratch.syz,
     ]
     .iter()
-    .all(|stress| stress.as_slice().is_some());
-    let slab = if contiguous {
-        slab_planes(grid, scale)
-    } else {
-        NonZeroUsize::new(grid.nx).unwrap_or(NonZeroUsize::MIN)
-    };
-    stress_acceleration_in_slabs(grid, lambda, mu, field, scale, scratch, slab);
+    .all(|stress| stress.as_slice().is_some())
 }
 
 /// Fields a slab keeps in flight per plane with a uniform density: the six
@@ -70,18 +75,19 @@ const LIVE_FIELDS: usize = 14;
 
 /// How many x-planes each slab of the acceleration evaluation covers.
 ///
-/// Whole-grid while the evaluation's live fields fit the caches -- every
-/// level past the first, private and shared: then every intermediate is
-/// still resident when it is read back, and slabs only add passes. Past
-/// them, the largest slab whose window and the planes around it fit the
+/// Whole-grid while the evaluation's live fields fit the caches an even
+/// split across the workers keeps resident (`cache_capacity_bytes`): then
+/// every intermediate is still resident when it is read back, and slabs
+/// only add passes. Past them, the largest slab whose window and the planes around it fit the
 /// shared last-level cache, and no more than the worker count, since each
 /// pass hands one plane to a task.
 ///
 /// Measured through `swe_acceleration_slab_sweep` (release, fastest of 20
-/// paired repeats, 40 MiB of second-level caches, a 36 MiB last level, 24
-/// workers): at 64, 72 and 76 cubed every slab height is slower than
-/// whole-grid -- the last two past the last level alone, inside both levels
-/// -- at 80 cubed the best is level with it, at 96 cubed 24-plane slabs run
+/// paired repeats, a 285K: 24 workers, 60 MiB held by an even split, a
+/// 36 MiB last level): at 64, 72 and 76 cubed every slab height is slower
+/// than whole-grid -- the last two past the last level alone -- at 80 cubed
+/// the best is level with it, at 88 cubed 16-plane slabs run 1568-1609 us
+/// against 2017-2098, at 96 cubed 24-plane slabs run
 /// 1857-1904 us against 2742-3113 (1.5x), and at 128 cubed 16-plane slabs
 /// run 5294-5634 us against 9712-10677 (1.8x). The rule gives 24 planes at
 /// 96 cubed and 16 at 128, the measured best of 8, 12, 16, 24 and 32 at
@@ -100,7 +106,7 @@ fn slab_planes(grid: &Grid, scale: &DensityScale<'_>) -> NonZeroUsize {
 
 /// The cache capacities the slab rule reads, in bytes.
 struct Caches {
-    /// Every level past the first, private and shared.
+    /// What an even split across the workers keeps resident.
     total: usize,
     /// The shared last level.
     last_level: usize,

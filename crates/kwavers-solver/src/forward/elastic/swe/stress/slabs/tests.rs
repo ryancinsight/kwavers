@@ -1,6 +1,9 @@
 use super::super::super::{scratch::ElasticStepScratch, types::ElasticWaveField};
+use super::super::tests::from_shape_fn_fortran;
 use super::super::DensityScale;
-use super::{slab_height, stress_acceleration_in_slabs, stress_acceleration_into, Caches};
+use super::{
+    slab_height, stress_acceleration_in_slabs, stress_acceleration_into, window_slides, Caches,
+};
 use kwavers_grid::Grid;
 use leto::Array3;
 
@@ -73,15 +76,16 @@ fn every_slab_size_gives_the_whole_grid_accelerations_bit_for_bit() {
 }
 
 /// The slab rule against its derivation, on the machine class it was
-/// measured on: 40 MiB of second-level caches, a 36 MiB last level, and 24
-/// workers.
+/// measured on: 60 MiB held by an even split across 24 workers, a 36 MiB
+/// last level.
 ///
 /// - 72 and 80 cubed with 14 live fields are 41.8 MB and 57.3 MB: past the
-///   last level but inside the 76 MiB of both levels, so whole-grid. The
-///   sweep measured whole-grid ahead at 72 and 76 cubed and level at 80.
-/// - 96 cubed is 1,032,192 bytes a plane and 99 MB in all; the last level
-///   holds 36 planes, 32 after the four the stencil reaches, and the worker
-///   count binds: 24.
+///   last level, inside the split, so whole-grid -- measured ahead at 72
+///   and 76 cubed and level at 80.
+/// - 88 cubed is 76.3 MB, past the split: slabs, measured 1.3x ahead. Its
+///   plane is 867,328 bytes; the last level holds 43, 39 after the four the
+///   stencil reaches, and the worker count binds: 24.
+/// - 96 cubed is 1,032,192 bytes a plane: 36 fit, 32 after the reach, 24.
 /// - 128 cubed is 1,835,008 bytes a plane; 20 fit, 16 after the reach, and
 ///   the cache binds: 16. A density field makes it 15 live fields and 15.
 /// - No reported cache is whole-grid; a plane larger than the last level,
@@ -89,12 +93,13 @@ fn every_slab_size_gives_the_whole_grid_accelerations_bit_for_bit() {
 #[test]
 fn the_slab_height_is_the_cache_fit_less_the_reach_capped_by_the_workers() {
     let caches = |total: usize, last_level: usize| Some(Caches { total, last_level });
-    let host = || caches(76 << 20, 36 << 20);
+    let host = || caches(60 << 20, 36 << 20);
     let height = |planes: usize, live: usize, caches: Option<Caches>, workers: usize| {
         slab_height(planes, planes * planes, live, caches, workers).get()
     };
     assert_eq!(height(72, 14, host(), 24), 72);
     assert_eq!(height(80, 14, host(), 24), 80);
+    assert_eq!(height(88, 14, host(), 24), 24);
     assert_eq!(height(96, 14, host(), 24), 24);
     assert_eq!(height(128, 14, host(), 24), 16);
     assert_eq!(height(128, 15, host(), 24), 15);
@@ -103,4 +108,16 @@ fn the_slab_height_is_the_cache_fit_less_the_reach_capped_by_the_workers() {
     assert_eq!(height(128, 14, caches(1 << 20, 1 << 20), 24), 1);
     assert_eq!(height(96, 14, host(), 1), 1);
     assert_eq!(slab_height(0, 0, 14, host(), 24).get(), 1);
+}
+
+/// The window slides only through C-contiguous stress fields; one stress
+/// field in any other layout sends the evaluation whole-grid.
+#[test]
+fn a_stress_field_out_of_c_order_stops_the_window_sliding() {
+    let shape = [5, 4, 3];
+    let [nx, ny, nz] = shape;
+    let mut scratch = ElasticStepScratch::new(nx, ny, nz);
+    assert!(window_slides(&scratch));
+    scratch.sxz = from_shape_fn_fortran(shape, |_| 0.0);
+    assert!(!window_slides(&scratch));
 }

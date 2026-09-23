@@ -45,8 +45,10 @@ runs production grids at 128 cubed and above, entirely in that regime.
    grid plane gives, so every acceleration is the whole-grid value to the
    bit.
 2. **Selection** (`slab_height`). Whole-grid while the live fields -- 14,
-   or 15 with a density field -- fit every cache level past the first,
-   private and shared, summed (`cache_capacity_bytes`). Past that, the
+   or 15 with a density field -- fit what an even split across the
+   processors keeps resident (`cache_capacity_bytes`): the smallest
+   per-processor share of the private caches past the first level, times
+   the processor count, plus the shared last level. Past that, the
    largest slab whose window and the planes around it fit the shared last
    level (`last_level_cache_bytes`), less the four planes the stencil
    reaches, capped at the worker count, since each pass hands one plane to
@@ -60,8 +62,9 @@ runs production grids at 128 cubed and above, entirely in that regime.
 ## Consequences
 
 Measured (release, fastest of paired repeats, `swe_acceleration_slab_sweep`,
-a 285K with 40 MiB of second-level caches, a 36 MiB last level and 24
-workers):
+a 285K: 24 workers; 3 MiB of L2 per performance core and 4 MiB per cluster
+of four efficiency cores, so an even split holds 24 MiB there and 60 MiB
+with the 36 MiB last level). Each range spans the runs' fastest times:
 
 | N | live set | whole-grid | best slabs | ratio |
 |---|---|---|---|---|
@@ -69,15 +72,19 @@ workers):
 | 72 | 42 MB | 415-436 | 644-948 | < 1 |
 | 76 | 49 MB | 657-701 | 830-923 | < 1 |
 | 80 | 57 MB | 884-1236 | 928-1059 (16-32) | ~1x |
+| 88 | 76 MB | 2017-2098 | 1568-1609 (16-24) | 1.3x |
+| 92 | 87 MB | 2531-2699 | 1742-2154 (24-32) | 1.3x |
 | 96 | 99 MB | 2742-3113 | 1857-1904 (24) | 1.5x |
 | 128 | 235 MB | 9712-10677 | 5294-5634 (16) | 1.8x |
 
-At 72 and 76 cubed whole-grid won 29 of the 30 paired comparisons across
-three runs (on a host at 35-60% load from other processes, which the
-pairing absorbs and the absolute times do not), although the live set is
-past the last level: the private caches hold the rest. The selection
-therefore compares the live set with both levels together, which routes 72
-to 80 cubed whole-grid and 96 cubed and above to slabs. The slab height the rule gives, 24 planes at 96 cubed
+At 72 and 76 cubed whole-grid won its pair against every slab height in
+all three runs but one pair (76 cubed, 16 planes: 1115 against 1157 us, in
+a run whose whole-grid arms spread 666-1500 us); the host sat at 35-60%
+load from other processes, which the pairing absorbs and the absolute times
+do not. The live set there is past the last level, and the private caches
+hold the rest -- but only up to the even split's 60 MiB: at 88 cubed, 76 MB,
+slabs lead by 1.3x. The selection routes 80 cubed and below whole-grid and
+88 cubed and above to slabs, which every measured size agrees with. The slab height the rule gives, 24 planes at 96 cubed
 and 16 at 128, is the measured best of 8, 12, 16, 24 and 32 at each; which
 of the rule's two limits binds is what moves the optimum between them.
 
@@ -108,6 +115,9 @@ confined to the elastic stress module (`stress/slabs.rs`).
   the stencil work, which is the dominant term once traffic is minimised.
 - **Selecting against the last level alone.** Routes 70 to 79 cubed to
   slabs, where whole-grid is measured faster.
+- **Selecting against every cache level summed** (76 MiB here). Keeps 88
+  cubed whole-grid, where slabs are measured 1.3x faster: the efficiency
+  cores' 1 MiB share of their cluster's L2 overflows first.
 
 ## Revision notes
 
@@ -120,10 +130,12 @@ wherever it is faster. What separates 1.5x from the ~2.6x cache-resident
 ceiling at 96 cubed is unattributed. The slab height became the last-level
 rule above, the measured best at 96 and 128 cubed.
 
-**2026-09-22 -- selection against both cache levels.** Review found the
+**2026-09-22 -- selection against the even split.** Review found the
 last-level threshold sent 70 to 79 cubed to slabs without measurement. The
-sweep then measured whole-grid ahead at 72 and 76 cubed and level at 80, so
-the threshold compares the live set with the private and shared levels
-together. On a hierarchy whose last level duplicates the private levels
-that sum overstates the capacity and keeps a band of sizes whole-grid where
-slabs would win -- slower, never different in value.
+sweep measured whole-grid ahead at 72 and 76 cubed and level at 80; summing
+every cache level then kept 88 cubed whole-grid, where slabs lead 1.3x. The
+threshold is the capacity an even split keeps resident, bounded by the
+smallest private share, which divides every measured size correctly. On a
+hierarchy whose last level duplicates the private levels it overstates the
+capacity and keeps a band of sizes whole-grid where slabs would win --
+slower, never different in value.

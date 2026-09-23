@@ -1,15 +1,15 @@
-//! Elastic stress tensor and its divergence, from whole-field derivative
-//! sweeps.
+//! Elastic stress tensor and its divergence, from fused derivative passes.
 //!
-//! Every derivative is one sweep of leto's fourth-order central operator
-//! (ADR 128) over a whole field; the stresses and the divergence are then
-//! assembled pointwise through [`kwavers_core::traversal`]. A point's value
-//! depends only on its own inputs, so each pass is race-free under the
-//! parallel traversals.
+//! Every derivative is leto's fourth-order central operator (ADR 128). The
+//! six stresses come from one fused pass over the nine displacement
+//! gradients and the Lamé parameters, and each divergence component from one
+//! pass summing three stress derivatives. A lane's outputs depend only on
+//! its own inputs and their stencil neighbourhoods, so each pass is
+//! race-free under leto's parallel traversal.
 //!
-//! Two scratch fields hold one derivative each between its sweep and the
-//! assembly that reads it. The normal strains need a third; they borrow the
-//! shear fields, which the shear pass overwrites right after.
+//! The plane-strain kernel keeps its sweeps: two scratch fields hold one
+//! derivative each between its sweep and the pointwise assembly that reads
+//! it.
 //!
 //! **Reference**: LeVeque (2002), "Finite Volume Methods for Hyperbolic
 //! Problems", §2.13 (stress-velocity formulation for elastic waves).
