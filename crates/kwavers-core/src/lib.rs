@@ -4,6 +4,7 @@ pub mod arena;
 pub mod constants;
 pub mod error;
 pub mod log;
+pub mod path;
 /// Rejection assertions for the workspace's test modules.
 ///
 /// Gated behind `test-util` so the helpers never enter a default build.

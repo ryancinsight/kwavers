@@ -5,6 +5,7 @@
 use super::config::{DomainMediumParameters, LayerParameters, MediumType};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{ConfigError, KwaversResult};
+use kwavers_core::path::has_suffix_ignore_ascii_case;
 
 /// Specialized medium validator following Single Responsibility Principle  
 #[derive(Debug)]
@@ -215,7 +216,7 @@ impl MediumValidator {
         }
 
         // Validate tensor file format
-        if !tensor_file.ends_with(".ten") && !tensor_file.ends_with(".mat") {
+        if !has_suffix_ignore_ascii_case(tensor_file, &[".ten", ".mat"]) {
             return Err(ConfigError::InvalidValue {
                 parameter: "tensor_file".to_owned(),
                 value: tensor_file.to_owned(),
