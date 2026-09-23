@@ -9,11 +9,12 @@ on:
       - 'README.md'
       - 'gap_audit.md'
       - 'docs/**'
-  # No `paths-ignore` here: `Validate Clean Architecture` and `Layer Boundary
-  # Enforcement` are required checks, and a workflow filtered out by paths
-  # reports nothing at all, so a prose-only pull request could never satisfy
-  # them. The `changes` job below decides the same thing one step later, where
-  # a skipped required job counts as a success.
+  # No `paths-ignore` here: a workflow filtered out by paths reports nothing
+  # at all for its jobs, and `Architecture gate` is the sole required check
+  # this workflow contributes -- a prose-only pull request could never
+  # satisfy a required check that never runs. The `changes` job below decides
+  # the same thing one step later, where a skipped non-required job counts
+  # as a success and `Architecture gate` (`if: always()`) still runs.
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
     branches: [ main, develop ]
@@ -104,16 +105,78 @@ jobs:
     - name: Verify Windows process-tree termination
       run: python -m unittest discover -s scripts/tests -p test_integration_tests.py
 
-  architecture-validation:
+  # Every job below that compiles the workspace used to be its own job:
+  # `architecture-validation` (fmt/clippy/audit), `layer-boundary-checks`
+  # (no compile, but ran alongside them), `build-matrix` (five parallel
+  # feature-combination legs), `test-coverage`, `integration-suite`, and
+  # `documentation`. Each restored the same `kwavers-dev` cache and cold- or
+  # near-cold-built the same dependency graph independently. The account's
+  # repos share one runner concurrency pool, so job count per event -- not
+  # any single job's wall time -- is what drives queue time fleet-wide; a
+  # 14-job pull-request event from this file alone crowds out every other
+  # repo's queued work. Running the same checks as sequential steps over one
+  # warm target dir pays the dependency compile once instead of six times and
+  # collapses six job slots into one. See ADR/backlog entry for the measured
+  # before/after job counts.
+  architecture-checks:
     needs: changes
     if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
-    name: Validate Clean Architecture
+    name: Architecture checks
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Sum of the six merged jobs' worst-observed durations (fmt/clippy/audit
+    # ~6m, five feature builds ~35m before cache warmth from the earlier
+    # clippy compile, lib suite ~15m, integration suite ~12m, doc build
+    # ~12m); generous margin over the sequential total since these jobs no
+    # longer overlap in wall time the way they did as parallel legs.
+    timeout-minutes: 90
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    # Script-only, no compile: runs first so a layering violation fails fast
+    # before any toolchain install or build pays for it.
+    - name: Enforce crate layering
+      run: |
+        set -euo pipefail
+        # Each line is "<crate>: <crates it must not depend on>". The layering is
+        # foundation (core/math/grid/field/medium) < physics < solver < analysis
+        # and the application crates above it. Cargo already rejects a cycle;
+        # this catches a legal-but-wrong edge that inverts the layering.
+        #
+        # This replaces four greps over `src/domain/`, `src/physics/`,
+        # `src/solver/` and `src/analysis/`. None of those paths exist -- this
+        # is a `crates/*` workspace with no `src/` at all -- so every one of
+        # them counted zero matches and passed without enforcing anything. The
+        # missing-crate guard below is what stops that from recurring: a path
+        # that does not exist is a failure, never a pass.
+        RULES="
+        core: physics solver analysis simulation therapy driver
+        math: physics solver analysis simulation therapy driver
+        grid: physics solver analysis simulation therapy driver
+        field: physics solver analysis simulation therapy driver
+        medium: physics solver analysis simulation therapy driver
+        physics: solver analysis simulation therapy driver
+        solver: analysis simulation therapy driver
+        "
+        FAILED=0
+        echo "$RULES" | while read -r line; do
+          [ -z "$line" ] && continue
+          CRATE="${line%%:*}"
+          MANIFEST="crates/kwavers-$CRATE/Cargo.toml"
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::error::$MANIFEST does not exist -- the layering check cannot run against a path that is not there"
+            exit 1
+          fi
+          for FORBIDDEN in ${line#*:}; do
+            if grep -qE "^kwavers-$FORBIDDEN[[:space:]]*=" "$MANIFEST"; then
+              echo "::error::layering violation: kwavers-$CRATE depends on kwavers-$FORBIDDEN"
+              FAILED=1
+            fi
+          done
+          [ "$FAILED" -eq 0 ] || exit 1
+        done
+        echo "Crate layering holds."
 
     - name: Install system dependencies
       uses: ./.github/actions/install-system-dependencies
@@ -126,13 +189,17 @@ jobs:
         toolchain: 1.97.0
         components: rustfmt, clippy
 
+    - name: Install nextest
+      uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+      with:
+        tool: nextest
+
     # `Swatinem/rust-cache` rather than hand-rolled `actions/cache`:
     # it carries restore-keys, so a lockfile change degrades to a
     # partial restore instead of a total miss, and it prunes `target/`
     # so the repository stays inside the 10 GB cache budget instead of
-    # evicting its own entries. This broad dev-profile clippy job is the sole
-    # writer for future dev-profile runs; pull-request jobs independently
-    # restore the latest completed mainline cache.
+    # evicting its own entries. This job is the sole writer for future
+    # dev-profile runs; every job in this workflow shares this one restore.
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
         shared-key: kwavers-dev
@@ -182,125 +249,46 @@ jobs:
         cargo clippy --locked --workspace --all-targets
         cargo clippy --locked -p kwavers --all-targets --features full,pinn
 
+    # cargo-audit is informational only (both steps below are
+    # continue-on-error) -- it has never gated a pull request. Paying its
+    # advisory-database fetch and scan on every pull request bought no
+    # additional gate, only wall time, so it now runs on pushes to main only.
     - name: Install cargo-audit
+      if: github.event_name == 'push'
       uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
       with:
         tool: cargo-audit
       continue-on-error: true
 
     - name: Check for security vulnerabilities
+      if: github.event_name == 'push'
       run: cargo audit
       continue-on-error: true
 
-  layer-boundary-checks:
-    needs: changes
-    if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
-    name: Layer Boundary Enforcement
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Formerly the five-leg `build-matrix` matrix. Run sequentially against
+    # the one target dir this job already warmed with the clippy compile
+    # above, instead of five parallel jobs each restoring and rebuilding the
+    # same dependency graph from a shared cache independently.
+    - name: Build with minimal features
+      run: cargo build --locked -p kwavers --no-default-features --features minimal
 
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+    - name: Build with gpu features
+      run: cargo build --locked -p kwavers --no-default-features --features gpu
 
-    - name: Enforce crate layering
-      run: |
-        set -euo pipefail
-        # Each line is "<crate>: <crates it must not depend on>". The layering is
-        # foundation (core/math/grid/field/medium) < physics < solver < analysis
-        # and the application crates above it. Cargo already rejects a cycle;
-        # this catches a legal-but-wrong edge that inverts the layering.
-        #
-        # This replaces four greps over `src/domain/`, `src/physics/`,
-        # `src/solver/` and `src/analysis/`. None of those paths exist -- this
-        # is a `crates/*` workspace with no `src/` at all -- so every one of
-        # them counted zero matches and passed without enforcing anything. The
-        # missing-crate guard below is what stops that from recurring: a path
-        # that does not exist is a failure, never a pass.
-        RULES="
-        core: physics solver analysis simulation therapy driver
-        math: physics solver analysis simulation therapy driver
-        grid: physics solver analysis simulation therapy driver
-        field: physics solver analysis simulation therapy driver
-        medium: physics solver analysis simulation therapy driver
-        physics: solver analysis simulation therapy driver
-        solver: analysis simulation therapy driver
-        "
-        FAILED=0
-        echo "$RULES" | while read -r line; do
-          [ -z "$line" ] && continue
-          CRATE="${line%%:*}"
-          MANIFEST="crates/kwavers-$CRATE/Cargo.toml"
-          if [ ! -f "$MANIFEST" ]; then
-            echo "::error::$MANIFEST does not exist -- the layering check cannot run against a path that is not there"
-            exit 1
-          fi
-          for FORBIDDEN in ${line#*:}; do
-            if grep -qE "^kwavers-$FORBIDDEN[[:space:]]*=" "$MANIFEST"; then
-              echo "::error::layering violation: kwavers-$CRATE depends on kwavers-$FORBIDDEN"
-              FAILED=1
-            fi
-          done
-          [ "$FAILED" -eq 0 ] || exit 1
-        done
-        echo "Crate layering holds."
+    - name: Build with plotting features
+      run: cargo build --locked -p kwavers --no-default-features --features plotting
 
-  build-matrix:
-    needs: changes
-    if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
-    name: Build with Feature Combinations
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      matrix:
-        features:
-          - minimal
-          - gpu
-          - plotting
-          - pinn
-          - full
+    - name: Build with pinn features
+      run: cargo build --locked -p kwavers --no-default-features --features pinn
 
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-    - name: Install plotting benchmark dependencies
-      if: matrix.features == 'plotting'
-      uses: ./.github/actions/install-system-dependencies
-      with:
-        packages: libfontconfig1-dev
-
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-      with:
-        toolchain: 1.97.0
-
-    # Shared cache; rationale at the first use in this file. Without it every
-    # feature-combination leg cold-compiles the full dependency tree on each
-    # pull request; restoring the shared target/ makes the legs build only the
-    # kwavers crates their feature set actually changes.
-    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-      with:
-        shared-key: kwavers-dev
-        # The completed mainline architecture job is the sole dev-profile
-        # writer. Matrix consumers restore only.
-        save-if: false
-
-    - name: Build with ${{ matrix.features }} features
-      run: |
-        if [ "${{ matrix.features }}" == "minimal" ]; then
-          cargo build --locked -p kwavers --no-default-features --features minimal
-        elif [ "${{ matrix.features }}" == "full" ]; then
-          cargo build --locked -p kwavers --no-default-features --features full
-        else
-          cargo build --locked -p kwavers --no-default-features --features ${{ matrix.features }}
-        fi
+    - name: Build with full features
+      run: cargo build --locked -p kwavers --no-default-features --features full
 
     # Mainline keeps the dev-profile smoke as a selection-drift backstop.
     # Pull requests execute the complete optimized smoke once in the dedicated
     # benchmark-regression workflow instead of compiling both profiles.
     - name: Build every plotting-eligible Criterion target once
-      if: matrix.features == 'plotting' && github.event_name == 'push'
+      if: github.event_name == 'push'
       run: >-
         timeout --foreground --kill-after=30s 12m
         cargo bench --locked -p kwavers --no-default-features
@@ -308,55 +296,24 @@ jobs:
         --profile dev --no-run
 
     - name: Execute every plotting-eligible Criterion target once
-      if: matrix.features == 'plotting' && github.event_name == 'push'
+      if: github.event_name == 'push'
       run: >-
         timeout --foreground --kill-after=30s 8m
         cargo bench --locked -p kwavers --no-default-features
         --features plotting --benches --no-fail-fast
         --profile dev -- --test
 
-  test-coverage:
-    needs: changes
-    if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
-    name: Test Suite Coverage
-    runs-on: ubuntu-latest
-    # The lib suite and the integration baseline run as two parallel jobs so
-    # their ~20min executions overlap; the prior single job ran them serially
-    # and took 38m40s. Each keeps a finite cap tied to its own step.
-    timeout-minutes: 30
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-    - name: Install system dependencies
-      uses: ./.github/actions/install-system-dependencies
-      with:
-        packages: libfontconfig1-dev
-
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-      with:
-        toolchain: 1.97.0
-
-    - name: Install nextest
-      uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
-      with:
-        tool: nextest
-
-    # Same shared cache and dev-profile graph the feature-matrix jobs use;
-    # without it this job cold-compiles the whole workspace every run.
-    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-      with:
-        shared-key: kwavers-dev
-        save-if: false
-
+    # Formerly `test-coverage`, run in parallel with `integration-suite`
+    # below so their ~20-minute executions overlapped; the prior single job
+    # ran them serially and took 38m40s, which is why they were split. They
+    # are sequential again here because both need the same compiled
+    # dependency graph this job already warmed, and the fleet-wide job-count
+    # reduction from sharing one target dir outweighs the wall-time overlap
+    # a second parallel job bought.
     - name: Run workspace library tests
       env:
         # Two test processes keep the four-core hosted runner occupied while
         # bounding Rayon-backed kernels to four worker threads in aggregate.
-        # The prior single-process run left independent solver tests serialized
-        # and spent 9m43s executing an already-built suite.
         RAYON_NUM_THREADS: 2
       run: |
         # Full-wave solver tests share compute-heavy kernels. Two concurrent
@@ -386,81 +343,21 @@ jobs:
           echo "- Files: ${debug_files}"
         } | tee -a "$GITHUB_STEP_SUMMARY"
 
-  integration-suite:
-    needs: changes
-    if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
-    name: Integration Suite
-    runs-on: ubuntu-latest
-    # The integration baseline is the other ~20min half of the former
-    # test-coverage job; it runs in parallel with the lib suite above.
-    timeout-minutes: 30
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-    - name: Install system dependencies
-      uses: ./.github/actions/install-system-dependencies
-      with:
-        packages: libfontconfig1-dev
-
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-      with:
-        toolchain: 1.97.0
-
-    - name: Install nextest
-      uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
-      with:
-        tool: nextest
-
-    # Same shared cache: completed mainline architecture runs include these
-    # all-target integration binaries, so this job restores them when the
-    # source and feature graph match.
-    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-      with:
-        shared-key: kwavers-dev
-        save-if: false
-
-    # This replaces a four-name list of integration tests. The strict clippy
-    # step compiles all of them via --all-targets, but only those four ever ran.
-    # Multiple failures therefore went unnoticed, including two whose timestep
-    # exceeded the solver's own CFL limit. The script runs every integration
-    # test and enforces a committed baseline of known failures: a failure
-    # outside the list is a regression, and an entry that passes is stale and
-    # must be removed. The list may shrink, never grow. See ADR 124.
+    # Formerly `integration-suite`. This replaces a four-name list of
+    # integration tests. The strict clippy step compiles all of them via
+    # --all-targets, but only those four ever ran. Multiple failures
+    # therefore went unnoticed, including two whose timestep exceeded the
+    # solver's own CFL limit. The script runs every integration test and
+    # enforces a committed baseline of known failures: a failure outside the
+    # list is a regression, and an entry that passes is stale and must be
+    # removed. The list may shrink, never grow. See ADR 124.
     - name: Verify integration runner process bounds
       run: python -m unittest discover -s scripts/tests -p 'test_integration_tests.py'
 
     - name: Run integration tests against the failure baseline
       run: python scripts/integration_tests.py
 
-  documentation:
-    needs: changes
-    if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
-    name: Documentation Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-    - name: Install system dependencies
-      uses: ./.github/actions/install-system-dependencies
-      with:
-        packages: libfontconfig1-dev
-
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-      with:
-        toolchain: 1.97.0
-
-    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-      with:
-        shared-key: kwavers-dev
-        save-if: false
-
+    # Formerly `documentation`.
     - name: Build documentation
       run: |
         cargo doc --locked --workspace --exclude kwavers-python --no-deps
@@ -515,7 +412,7 @@ jobs:
     - name: Compile CUDA runtime provider
       run: cargo build --locked -p kwavers --no-default-features --features cuda-runtime
 
-  # The counterpart to `ci-gate`: one always-running check the branch can
+  # The counterpart to `CI gate`: one always-running check the branch can
   # require for every job in this workflow, whatever each one did.
   architecture-gate:
     name: Architecture gate
@@ -523,12 +420,7 @@ jobs:
     needs:
       - changes
       - integration-runner-windows
-      - architecture-validation
-      - layer-boundary-checks
-      - build-matrix
-      - test-coverage
-      - integration-suite
-      - documentation
+      - architecture-checks
       - cuda-runtime-build
     runs-on: ubuntu-latest
     timeout-minutes: 5
