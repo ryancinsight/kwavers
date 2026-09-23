@@ -3002,6 +3002,7 @@ dependencies = [
  "leto",
  "leto-ops",
  "log",
+ "mnemosyne-memory 0.7.0 (git+https://github.com/ryancinsight/Mnemosyne?rev=e8e825f482b3f6712765364254e484dd5f6e19f5)",
  "serde",
 ]
 
