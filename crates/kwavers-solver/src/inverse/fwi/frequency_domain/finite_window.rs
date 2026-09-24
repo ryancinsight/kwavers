@@ -170,6 +170,30 @@ fn simulate_transmit(
     receiver_stencils: &[Vec<GridWeight>],
     bin_config: super::cbs::PstdTemporalBinConfig,
 ) -> Vec<Complex64> {
+    simulate_transmit_first_order::<false>(
+        grid,
+        source_hat,
+        contrast,
+        theta_squared,
+        receiver_stencils,
+        bin_config,
+    )
+    .receivers
+}
+
+struct FirstOrderTransmitResult {
+    receivers: Vec<Complex64>,
+    accel_history: Option<Vec<Array3<Complex64>>>,
+}
+
+fn simulate_transmit_first_order<const STORE_ACCEL: bool>(
+    grid: GridSpec,
+    source_hat: &Array3<Complex64>,
+    contrast: &Array3<f64>,
+    theta_squared: &Array3<f64>,
+    receiver_stencils: &[Vec<GridWeight>],
+    bin_config: super::cbs::PstdTemporalBinConfig,
+) -> FirstOrderTransmitResult {
     let mut direct_prev_hat = Array3::<Complex64>::from_elem(
         [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
         Complex64::default(),
@@ -219,6 +243,11 @@ fn simulate_transmit(
         Complex64::default(),
     );
     let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_stencils.len()];
+    let mut accel_history = if STORE_ACCEL {
+        Some(Vec::with_capacity(bin_config.total_steps))
+    } else {
+        None
+    };
     let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
     let mut previous_signal = 0.0;
 
@@ -236,13 +265,38 @@ fn simulate_transmit(
 
         direct_next.assign(&direct_next_hat);
         ifft_3d_complex_inplace(&mut direct_next);
-        for (((dst, &next), &current), (&previous, &chi)) in scatter_source
-            .iter_mut()
-            .zip(direct_next.iter())
-            .zip(direct_curr.iter())
-            .zip(direct_prev.iter().zip(contrast.iter()))
-        {
-            *dst = -(next - current * 2.0 + previous) * chi;
+
+        if STORE_ACCEL {
+            let mut accel = Array3::<Complex64>::from_elem(
+                [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+                Complex64::default(),
+            );
+            for (((a, &next), &current), &previous) in accel
+                .iter_mut()
+                .zip(direct_next.iter())
+                .zip(direct_curr.iter())
+                .zip(direct_prev.iter())
+            {
+                *a = next - current * 2.0 + previous;
+            }
+            for (dst, (&accel_val, &chi)) in scatter_source
+                .iter_mut()
+                .zip(accel.iter().zip(contrast.iter()))
+            {
+                *dst = -accel_val * chi;
+            }
+            if let Some(history) = accel_history.as_mut() {
+                history.push(accel);
+            }
+        } else {
+            for (((dst, &next), &current), (&previous, &chi)) in scatter_source
+                .iter_mut()
+                .zip(direct_next.iter())
+                .zip(direct_curr.iter())
+                .zip(direct_prev.iter().zip(contrast.iter()))
+            {
+                *dst = -(next - current * 2.0 + previous) * chi;
+            }
         }
 
         fft_3d_complex_into(&scatter_source, &mut scatter_source_hat);
@@ -288,7 +342,10 @@ fn simulate_transmit(
     for pressure in &mut receivers {
         *pressure *= scale;
     }
-    receivers
+    FirstOrderTransmitResult {
+        receivers,
+        accel_history,
+    }
 }
 
 /// Accumulate objective and slowness gradient for all transmissions using the
@@ -426,140 +483,20 @@ fn simulate_transmit_with_accel(
     receiver_stencils: &[Vec<GridWeight>],
     bin_config: super::cbs::PstdTemporalBinConfig,
 ) -> (Vec<Complex64>, Vec<Array3<Complex64>>) {
-    let mut direct_prev_hat = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
+    let result = simulate_transmit_first_order::<true>(
+        grid,
+        source_hat,
+        contrast,
+        theta_squared,
+        receiver_stencils,
+        bin_config,
     );
-    let mut direct_curr_hat = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
-    );
-    let mut direct_next_hat = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
-    );
-    let mut direct_prev = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
-    );
-    let mut direct_curr = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
-    );
-    let mut direct_next = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
-    );
-    let mut scatter_prev_hat = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
-    );
-    let mut scatter_curr_hat = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
-    );
-    let mut scatter_next_hat = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
-    );
-    let mut scatter_next = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
-    );
-    let mut scatter_source = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
-    );
-    let mut scatter_source_hat = Array3::<Complex64>::from_elem(
-        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-        Complex64::default(),
-    );
-    let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_stencils.len()];
-    let mut accel_history: Vec<Array3<Complex64>> = Vec::with_capacity(bin_config.total_steps);
-    let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
-    let mut previous_signal = 0.0;
-
-    for step in 0..bin_config.total_steps {
-        let signal = (angular_step * step as f64).sin();
-        let source_scale = bin_config.source_gain * (signal - previous_signal);
-        for (((next, &current), &previous), (&theta, &source)) in direct_next_hat
-            .iter_mut()
-            .zip(direct_curr_hat.iter())
-            .zip(direct_prev_hat.iter())
-            .zip(theta_squared.iter().zip(source_hat.iter()))
-        {
-            *next = current * (2.0 - theta) - previous + source * source_scale;
-        }
-        direct_next.assign(&direct_next_hat);
-        ifft_3d_complex_inplace(&mut direct_next);
-
-        // accel[step] = p0[step+1] − 2·p0[step] + p0[step−1] (spatial domain).
-        let mut accel = Array3::<Complex64>::from_elem(
-            [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
-            Complex64::default(),
-        );
-        for (((a, &pn), &pc), &pp) in accel
-            .iter_mut()
-            .zip(direct_next.iter())
-            .zip(direct_curr.iter())
-            .zip(direct_prev.iter())
-        {
-            *a = pn - pc * 2.0 + pp;
-        }
-        accel_history.push(accel.clone());
-
-        for (((dst, &next), &current), (&previous, &chi)) in scatter_source
-            .iter_mut()
-            .zip(direct_next.iter())
-            .zip(direct_curr.iter())
-            .zip(direct_prev.iter().zip(contrast.iter()))
-        {
-            *dst = -(next - current * 2.0 + previous) * chi;
-        }
-        fft_3d_complex_into(&scatter_source, &mut scatter_source_hat);
-        for (((next, &current), &previous), (&theta, &source)) in scatter_next_hat
-            .iter_mut()
-            .zip(scatter_curr_hat.iter())
-            .zip(scatter_prev_hat.iter())
-            .zip(theta_squared.iter().zip(scatter_source_hat.iter()))
-        {
-            *next = current * (2.0 - theta) - previous + source;
-        }
-        scatter_next.assign(&scatter_next_hat);
-        ifft_3d_complex_inplace(&mut scatter_next);
-
-        if step >= bin_config.bin_start_step {
-            let phase = -angular_step * step as f64;
-            let demodulation = Complex64::new(phase.cos(), phase.sin());
-            let direct_data = direct_next
-                .as_slice()
-                .expect("Array3 over VecStorage is contiguous");
-            let scatter_data = scatter_next
-                .as_slice()
-                .expect("Array3 over VecStorage is contiguous");
-            for (dst, stencil) in receivers.iter_mut().zip(receiver_stencils.iter()) {
-                for weight in stencil {
-                    *dst += (direct_data[weight.linear_index] + scatter_data[weight.linear_index])
-                        * weight.weight
-                        * demodulation;
-                }
-            }
-        }
-
-        direct_prev_hat.assign(&direct_curr_hat);
-        direct_curr_hat.assign(&direct_next_hat);
-        direct_prev.assign(&direct_curr);
-        direct_curr.assign(&direct_next);
-        scatter_prev_hat.assign(&scatter_curr_hat);
-        scatter_curr_hat.assign(&scatter_next_hat);
-        previous_signal = signal;
-    }
-
-    let scale = 2.0 / (bin_config.total_steps - bin_config.bin_start_step) as f64;
-    for pressure in &mut receivers {
-        *pressure *= scale;
-    }
-    (receivers, accel_history)
+    (
+        result.receivers,
+        result
+            .accel_history
+            .expect("STORE_ACCEL=true always stores acceleration history"),
+    )
 }
 
 /// Adjoint backward PSTD pass.
