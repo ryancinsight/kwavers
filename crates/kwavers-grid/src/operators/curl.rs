@@ -1,6 +1,7 @@
 //! Curl operations module
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
+use super::{centered_first_derivative_sum, validate_vector_field_shapes};
 use crate::Grid;
 use eunomia::FloatElement;
 use kwavers_core::error::KwaversResult;
@@ -23,32 +24,7 @@ pub fn curl<T>(
 where
     T: FloatElement + Clone + Send + Sync + Default,
 {
-    let shape = vx.shape();
-    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-
-    // Validate grid compatibility and vector field consistency
-    if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(kwavers_core::error::KwaversError::Grid(
-            kwavers_core::error::GridError::DimensionMismatch {
-                expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
-                actual: format!("({}, {}, {})", nx, ny, nz),
-            },
-        ));
-    }
-
-    if vy.shape() != shape || vz.shape() != shape {
-        return Err(kwavers_core::error::KwaversError::Grid(
-            kwavers_core::error::GridError::DimensionMismatch {
-                expected: "Vector field components must have same dimensions".to_owned(),
-                actual: format!(
-                    "vx: {:?}, vy: {:?}, vz: {:?}",
-                    vx.shape(),
-                    vy.shape(),
-                    vz.shape()
-                ),
-            },
-        ));
-    }
+    let [nx, ny, nz] = validate_vector_field_shapes(vx, vy, vz, grid)?;
 
     let mut curl_x = Array3::<T>::zeros([nx, ny, nz]);
     let mut curl_y = Array3::<T>::zeros([nx, ny, nz]);
@@ -65,28 +41,24 @@ where
     for i in stencil_radius..nx - stencil_radius {
         for j in stencil_radius..ny - stencil_radius {
             for k in stencil_radius..nz - stencil_radius {
-                let mut dvz_dy = T::from_f64(0.0);
-                let mut dvy_dz = T::from_f64(0.0);
-                let mut dvx_dz = T::from_f64(0.0);
-                let mut dvz_dx = T::from_f64(0.0);
-                let mut dvy_dx = T::from_f64(0.0);
-                let mut dvx_dy = T::from_f64(0.0);
-
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-
-                    // For curl_x = ∂vz/∂y - ∂vy/∂z
-                    dvz_dy += coeff * (vz[[i, j + offset, k]] - vz[[i, j - offset, k]]);
-                    dvy_dz += coeff * (vy[[i, j, k + offset]] - vy[[i, j, k - offset]]);
-
-                    // For curl_y = ∂vx/∂z - ∂vz/∂x
-                    dvx_dz += coeff * (vx[[i, j, k + offset]] - vx[[i, j, k - offset]]);
-                    dvz_dx += coeff * (vz[[i + offset, j, k]] - vz[[i - offset, j, k]]);
-
-                    // For curl_z = ∂vy/∂x - ∂vx/∂y
-                    dvy_dx += coeff * (vy[[i + offset, j, k]] - vy[[i - offset, j, k]]);
-                    dvx_dy += coeff * (vx[[i, j + offset, k]] - vx[[i, j - offset, k]]);
-                }
+                let dvz_dy = centered_first_derivative_sum(&coeffs, |offset| {
+                    vz[[i, j + offset, k]] - vz[[i, j - offset, k]]
+                });
+                let dvy_dz = centered_first_derivative_sum(&coeffs, |offset| {
+                    vy[[i, j, k + offset]] - vy[[i, j, k - offset]]
+                });
+                let dvx_dz = centered_first_derivative_sum(&coeffs, |offset| {
+                    vx[[i, j, k + offset]] - vx[[i, j, k - offset]]
+                });
+                let dvz_dx = centered_first_derivative_sum(&coeffs, |offset| {
+                    vz[[i + offset, j, k]] - vz[[i - offset, j, k]]
+                });
+                let dvy_dx = centered_first_derivative_sum(&coeffs, |offset| {
+                    vy[[i + offset, j, k]] - vy[[i - offset, j, k]]
+                });
+                let dvx_dy = centered_first_derivative_sum(&coeffs, |offset| {
+                    vx[[i, j + offset, k]] - vx[[i, j - offset, k]]
+                });
 
                 curl_x[[i, j, k]] = dvz_dy * dy_inv - dvy_dz * dz_inv;
                 curl_y[[i, j, k]] = dvx_dz * dz_inv - dvz_dx * dx_inv;
