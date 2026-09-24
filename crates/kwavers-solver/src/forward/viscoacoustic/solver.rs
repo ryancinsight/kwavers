@@ -257,6 +257,33 @@ fn is_positive_finite(v: f64) -> bool {
 }
 
 impl ViscoacousticMemorySolver {
+    #[inline(always)]
+    fn update_velocity_half_step<const AXIS: usize>(
+        fft: &Fft3d,
+        k: &[f64],
+        pressure: &Array3<f64>,
+        cbuf: &mut LetoArray3<Complex64>,
+        grad: &mut Array3<f64>,
+        velocity: &mut Array3<f64>,
+        inv_rho: &Coeff,
+        dt: f64,
+    ) {
+        Self::axis_derivative(fft, k, AXIS, pressure, cbuf, grad);
+        match inv_rho {
+            Coeff::Uniform(ir) => {
+                for (v, &g) in velocity.iter_mut().zip(grad.iter()) {
+                    *v += -dt * ir * g;
+                }
+            }
+            Coeff::Field(inv_rho) => leto_ops::zip_mut_with(
+                velocity.view_mut(),
+                (&grad.view(), &inv_rho.view()),
+                |v, (&g, &ir)| *v += -dt * ir * g,
+            )
+            .expect("invariant: velocity update fields share grid shape"),
+        }
+    }
+
     /// Build from raw parameters: grid `(nx,ny,nz)` with spacings `(dx,dy,dz)`,
     /// time step `dt`, density `ρ`, equilibrium modulus `M_∞`, and relaxation
     /// arms `(ΔMₗ, τₗ)`. An empty arm list yields the lossless wave equation.
@@ -879,73 +906,40 @@ impl ViscoacousticMemorySolver {
             // scalar hoisted out of the flat pass (identical operations and
             // order to the grid fold over a constant field).
             if let Some(s) = slot_x {
-                Self::axis_derivative(
+                Self::update_velocity_half_step::<0>(
                     &self.fft,
                     &self.kx,
-                    0,
                     &self.p,
                     &mut self.cbuf,
                     &mut *buffers[s],
+                    &mut self.vx,
+                    &self.inv_rho,
+                    dt,
                 );
-                match &self.inv_rho {
-                    Coeff::Uniform(ir) => {
-                        for (v, &g) in self.vx.iter_mut().zip(buffers[s].iter()) {
-                            *v += -dt * ir * g;
-                        }
-                    }
-                    Coeff::Field(inv_rho) => leto_ops::zip_mut_with(
-                        self.vx.view_mut(),
-                        (&buffers[s].view(), &inv_rho.view()),
-                        |v, (&g, &ir)| *v += -dt * ir * g,
-                    )
-                    .expect("invariant: velocity-x update fields share grid shape"),
-                }
             }
             if let Some(s) = slot_y {
-                Self::axis_derivative(
+                Self::update_velocity_half_step::<1>(
                     &self.fft,
                     &self.ky,
-                    1,
                     &self.p,
                     &mut self.cbuf,
                     &mut *buffers[s],
+                    &mut self.vy,
+                    &self.inv_rho,
+                    dt,
                 );
-                match &self.inv_rho {
-                    Coeff::Uniform(ir) => {
-                        for (v, &g) in self.vy.iter_mut().zip(buffers[s].iter()) {
-                            *v += -dt * ir * g;
-                        }
-                    }
-                    Coeff::Field(inv_rho) => leto_ops::zip_mut_with(
-                        self.vy.view_mut(),
-                        (&buffers[s].view(), &inv_rho.view()),
-                        |v, (&g, &ir)| *v += -dt * ir * g,
-                    )
-                    .expect("invariant: velocity-y update fields share grid shape"),
-                }
             }
             if let Some(s) = slot_z {
-                Self::axis_derivative(
+                Self::update_velocity_half_step::<2>(
                     &self.fft,
                     &self.kz,
-                    2,
                     &self.p,
                     &mut self.cbuf,
                     &mut *buffers[s],
+                    &mut self.vz,
+                    &self.inv_rho,
+                    dt,
                 );
-                match &self.inv_rho {
-                    Coeff::Uniform(ir) => {
-                        for (v, &g) in self.vz.iter_mut().zip(buffers[s].iter()) {
-                            *v += -dt * ir * g;
-                        }
-                    }
-                    Coeff::Field(inv_rho) => leto_ops::zip_mut_with(
-                        self.vz.view_mut(),
-                        (&buffers[s].view(), &inv_rho.view()),
-                        |v, (&g, &ir)| *v += -dt * ir * g,
-                    )
-                    .expect("invariant: velocity-z update fields share grid shape"),
-                }
             }
 
             // 2. Dilatation rate D = ∇·v, staged into the same slots: the
