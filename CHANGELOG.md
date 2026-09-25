@@ -4,6 +4,22 @@
 
 ### Changed
 
+- **[patch] The unused `onnx-ir` workspace dependency is gone, and the `ritk-*`
+  pins move to the revision that dropped it.** Nothing in this workspace ever
+  named `onnx-ir` -- it was declared in `[workspace.dependencies]` and consumed
+  by no crate -- but `ritk-model` carried it transitively, and `onnx-ir` 0.20.1
+  depends on `burn-tensor`. That made `burn` reachable from this lock, against
+  the Atlas policy that Coeus is the only tensor stack. Removing the declaration
+  and moving the six `ritk-*` pins to `52a28c33` takes the lock from 685 to 641
+  packages and drops `burn-tensor`, `burn-backend`, `burn-std` and `onnx-ir`
+  outright; a third duplicate copy of the `mnemosyne` stack (`?rev=f532b0e`) goes
+  with them, leaving 24 first-party git sources where there were 26. The ritk
+  source revision is the only one that moves. No `ritk-*` API this workspace
+  calls changed across the 1158 commits, so the bump is source-compatible.
+  `xtask burn-migration-audit` now also reads the resolved graph, so a stack
+  reached only transitively can no longer pass it -- the manifest and source
+  scan it already ran is blind to exactly the route `burn` took, which is why it
+  stayed green while `burn-tensor` sat in the lock.
 - **[patch] The staggered FDTD step fuses its pointwise passes.** Without a
   CPML each velocity component's gradient is swept into a row buffer and
   applied in the same pass (leto's `map_gradient_into`), and on the lossless

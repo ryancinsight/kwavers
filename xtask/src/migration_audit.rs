@@ -2,6 +2,7 @@ use anyhow::{bail, Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 const BURN_MANIFEST_DEPS: &[&str] = &["burn", "burn-ndarray"];
 
@@ -18,6 +19,10 @@ const BURN_SOURCE_TOKENS: &[&str] = &[
     "BurnWave",
     "burn_wave_equation",
 ];
+
+/// The tensor stacks Coeus replaced. Coeus is the only tensor stack (Atlas
+/// policy, 2026-09-25), so these are denied outright, with no exemption.
+const FORBIDDEN_RUNTIME_STACKS: &[&str] = &["burn", "tch"];
 
 const LEGACY_MANIFEST_DEPS: &[&str] = &[
     "nalgebra",
@@ -206,6 +211,26 @@ pub(crate) fn print_burn_migration_audit(root: &Path) -> Result<()> {
         );
     }
 
+    let forbidden = resolved_forbidden_stacks(root)?;
+    println!();
+    println!(
+        "Resolved graph: packages from a forbidden tensor stack ({})",
+        forbidden.len()
+    );
+    for entry in &forbidden {
+        println!("  - {entry}");
+    }
+
+    if !forbidden.is_empty() {
+        bail!(
+            "{} resolved package(s) belong to a forbidden tensor stack. Coeus is the only \
+             tensor stack, so remove whatever dependency pulls them in. The manifest and \
+             source scan above cannot see a stack reached transitively, which is exactly how \
+             `burn` reached this workspace before.",
+            forbidden.len()
+        );
+    }
+
     Ok(())
 }
 
@@ -332,6 +357,64 @@ fn legacy_source_reference_count(text: &str) -> usize {
                 .count()
         })
         .sum()
+}
+
+/// The forbidden stack a resolved crate name belongs to, if any.
+///
+/// Matches the stack itself and its `stack-` prefixed crates, but not a
+/// lookalike that merely begins with the same letters.
+fn forbidden_stack(crate_name: &str) -> Option<&'static str> {
+    FORBIDDEN_RUNTIME_STACKS.iter().copied().find(|stack| {
+        crate_name == *stack
+            || crate_name
+                .strip_prefix(stack)
+                .is_some_and(|rest| rest.starts_with('-'))
+    })
+}
+
+/// Packages of a forbidden stack that the *resolved* graph contains.
+///
+/// The manifest and source scan below only sees a stack a workspace member
+/// names itself. A stack reached transitively leaves no such trace, which is how
+/// `burn` sat in this workspace's lock through
+/// `ritk-registration -> ritk-model -> onnx-ir -> burn-tensor` while the Burn
+/// allowlist stayed empty and this audit stayed green. Reading the resolved
+/// graph is what closes that gap, so the check asks `cargo tree` rather than
+/// scanning text.
+fn resolved_forbidden_stacks(root: &Path) -> Result<Vec<String>> {
+    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
+    let output = Command::new(cargo)
+        .args([
+            "tree",
+            "--locked",
+            "--workspace",
+            "--prefix",
+            "none",
+            "--format",
+            "{p}",
+        ])
+        .current_dir(root)
+        .output()
+        .context("failed to run `cargo tree` to inspect the resolved graph")?;
+    if !output.status.success() {
+        bail!(
+            "`cargo tree --locked --workspace` failed while checking for forbidden tensor \
+             stacks; the lock and manifests must agree before this audit can decide:\n{}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+
+    let mut found = BTreeSet::new();
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        let Some(name) = line.split_whitespace().next() else {
+            continue;
+        };
+        if let Some(stack) = forbidden_stack(name) {
+            found.insert(format!("{stack}: {name}"));
+        }
+    }
+
+    Ok(found.into_iter().collect())
 }
 
 pub(crate) fn scan_burn_migration_surface(root: &Path) -> Result<BurnMigrationReport> {
@@ -633,6 +716,19 @@ mod tests {
         );
 
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn forbidden_stack_matches_the_stack_and_its_crates_but_not_lookalikes() {
+        assert_eq!(forbidden_stack("burn"), Some("burn"));
+        assert_eq!(forbidden_stack("burn-tensor"), Some("burn"));
+        assert_eq!(forbidden_stack("burn-backend"), Some("burn"));
+        assert_eq!(forbidden_stack("tch"), Some("tch"));
+        assert_eq!(forbidden_stack("tch-rs"), Some("tch"));
+        assert_eq!(forbidden_stack("torch-sys"), None);
+        assert_eq!(forbidden_stack("burnaby"), None);
+        assert_eq!(forbidden_stack("combustion"), None);
+        assert_eq!(forbidden_stack("coeus-tensor"), None);
     }
 
     fn temp_root() -> PathBuf {

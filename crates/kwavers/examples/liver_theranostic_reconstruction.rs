@@ -274,14 +274,26 @@ fn load_liver_ct(ct_path: &str, seg_path: &str) -> Option<LiverPhantom> {
     let (vnx, vny, vnz) = (ct_dims[0], ct_dims[1], ct_dims[2]);
 
     // Convert f32 to f64 for kwavers computations
-    let ct_flat: Vec<f64> = ct_obj.data_vec().into_iter().map(f64::from).collect();
+    let ct_flat: Vec<f64> = ct_obj
+        .data_slice()
+        .ok()?
+        .iter()
+        .copied()
+        .map(f64::from)
+        .collect();
     let ct_vol = leto::Array3::from_shape_vec(ct_dims, ct_flat).ok()?;
 
     let seg_vol = {
         let seg_obj = reader.read(seg_path).ok()?;
         let seg_dims = seg_obj.shape();
         if seg_dims == ct_dims {
-            let seg_flat: Vec<f64> = seg_obj.data_vec().into_iter().map(f64::from).collect();
+            let seg_flat: Vec<f64> = seg_obj
+                .data_slice()
+                .ok()?
+                .iter()
+                .copied()
+                .map(f64::from)
+                .collect();
             leto::Array3::from_shape_vec(seg_dims, seg_flat).ok()
         } else {
             None
