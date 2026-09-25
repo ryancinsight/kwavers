@@ -1146,12 +1146,13 @@
   sound speed, pressure, and impedance through Aequitas SI quantities while
   preserving the existing scalar-facing APIs and closed-form value tests.
 
-- [patch] Consume Atlas graph `303bb513b47e8f096b0f0fd41db3302d4d071979`
-  with Mnemosyne PR #31's HBM/GDDR `TierSelection` repair, synchronized
-  Coeus/Leto/Hermes provider APIs, and complete package-manifest/lock
-  normalization for the merge-critical benchmark gate. Clean checkouts resolve
-  Aequitas from the canonical Git source, and historical-baseline metadata is
-  locked after every tracked package manifest is copied.
+- [patch] Consume the Atlas provider graph from
+  `codex/atlas-kwavers-provider-graph` (unmerged, no PR) with Mnemosyne PR
+  #31's HBM/GDDR `TierSelection` repair, synchronized Coeus/Leto/Hermes
+  provider APIs, and complete package-manifest/lock normalization for the
+  merge-critical benchmark gate. Clean checkouts resolve Aequitas from the
+  canonical Git source, and historical-baseline metadata is locked after every
+  tracked package manifest is copied.
 
 - [patch] Consume Atlas provider graph `c982fe0` and regenerate the locked
   Moirai and RITK dependency sets after PRs #83 and #49. Therapy tests return
