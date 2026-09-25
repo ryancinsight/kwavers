@@ -1,7 +1,6 @@
 #![doc = include_str!("../README.md")]
 
 pub mod conservation;
-pub mod distributed; // Multi-threaded pipeline optimization
 pub mod ml;
 pub mod performance;
 pub mod plotting;

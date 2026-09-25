@@ -312,6 +312,16 @@
   `test_plane_wave_boundary_injection_timing` monitors the window its
   assertion reads instead of 500 further steps.
 
+### Removed
+
+- **[major] `kwavers_analysis::distributed` is gone.** The task queue,
+  real-time scheduler and pipeline coordinator (`WorkQueue`,
+  `RealTimeScheduler`, `PipelineCoordinator`, `ThreadPoolConfig`,
+  `PoolMetrics`, `WorkItem`, `TaskPriority`, `TaskMetrics`) had no consumer
+  in the workspace or the stack. Data-parallel analysis runs on Moirai
+  directly; the unrelated `signal_processing::beamforming::neural::distributed`
+  module stays.
+
 ### Added
 
 - **[minor] Viscoacoustic sensor traces support fallible preallocation.**

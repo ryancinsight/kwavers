@@ -18,7 +18,6 @@ budget, an uncertainty interval, a performance profile, or a figure.
 | `ml` | Learned surrogates and uncertainty quantification |
 | `performance` | Timing, throughput, and roofline-style measurement harnesses |
 | `plotting` | Deterministic figure generation from result data |
-| `distributed` | Multi-threaded analysis pipeline scheduling |
 | `testing` | Shared harness utilities for value-semantic result assertions |
 
 Figures are generated from the data by committed plotting code, so a chapter figure or a
