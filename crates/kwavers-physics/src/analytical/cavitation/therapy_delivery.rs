@@ -527,7 +527,7 @@ pub fn cavitation_monitor_trace(
             .map_or(1.0, |distribution| distribution.sample(&mut rng));
         let measured = deterministic * jitter;
         signal.push(measured);
-        power_percent.push((pressure_pa / p_max_pa).powi(2) * 100.0);
+        power_percent.push(pressure_to_power_percent(pressure_pa, p_max_pa));
         pressure_pa = super::cavitation_controller_pressure(
             pressure_pa,
             measured,
@@ -540,14 +540,8 @@ pub fn cavitation_monitor_trace(
         );
     }
 
-    let time_s = (0..input.n_pulses).map(|i| i as f64 * dt_s).collect();
-    let cumulative_dose = super::cumulative_cavitation_dose(&signal, dt_s);
-    let final_dose = cumulative_dose.last().copied().unwrap_or(0.0);
-    let goal_dose = if final_dose > 0.0 {
-        input.goal_fraction * final_dose
-    } else {
-        1.0
-    };
+    let (time_s, cumulative_dose, goal_dose) =
+        finalize_monitor_trace(&signal, input.n_pulses, dt_s, input.goal_fraction);
 
     Some(CavitationMonitorTrace {
         time_s,
@@ -601,7 +595,7 @@ pub fn simulated_population_monitor_trace(
         stable.push(stable_signal);
         broadband.push(broadband_signal);
         signal.push(stable_signal + broadband_signal);
-        power_percent.push((pressure_pa / input.p_max_pa).powi(2) * 100.0);
+        power_percent.push(pressure_to_power_percent(pressure_pa, input.p_max_pa));
         pressure_pa = super::cavitation_controller_pressure(
             pressure_pa,
             stable_signal,
@@ -614,14 +608,8 @@ pub fn simulated_population_monitor_trace(
         );
     }
 
-    let time_s = (0..input.n_pulses).map(|i| i as f64 * dt_s).collect();
-    let cumulative_dose = super::cumulative_cavitation_dose(&signal, dt_s);
-    let final_dose = cumulative_dose.last().copied().unwrap_or(0.0);
-    let goal_dose = if final_dose > 0.0 {
-        input.goal_fraction * final_dose
-    } else {
-        1.0
-    };
+    let (time_s, cumulative_dose, goal_dose) =
+        finalize_monitor_trace(&signal, input.n_pulses, dt_s, input.goal_fraction);
 
     Some(SimulatedPopulationMonitorTrace {
         time_s,
@@ -852,6 +840,29 @@ pub fn raster_cavitation_pulsing(input: RasterPulsingInput<'_>) -> Option<Raster
         treatment_s,
         p_spot_pa,
     })
+}
+
+#[inline]
+fn pressure_to_power_percent(pressure_pa: f64, p_max_pa: f64) -> f64 {
+    (pressure_pa / p_max_pa).powi(2) * 100.0
+}
+
+#[inline]
+fn finalize_monitor_trace(
+    signal: &[f64],
+    n_pulses: usize,
+    dt_s: f64,
+    goal_fraction: f64,
+) -> (Vec<f64>, Vec<f64>, f64) {
+    let time_s = (0..n_pulses).map(|i| i as f64 * dt_s).collect();
+    let cumulative_dose = super::cumulative_cavitation_dose(signal, dt_s);
+    let final_dose = cumulative_dose.last().copied().unwrap_or(0.0);
+    let goal_dose = if final_dose > 0.0 {
+        goal_fraction * final_dose
+    } else {
+        1.0
+    };
+    (time_s, cumulative_dose, goal_dose)
 }
 
 fn validate_per_spot_input(input: PerSpotCavitationDoseInput<'_>) -> Option<()> {
