@@ -2,7 +2,7 @@
 
 use super::super::operator::SoundSpeedShiftOperator;
 use super::super::types::{ShiftPrior, SoundSpeedShiftConfig, SoundSpeedShiftWorkspace};
-use super::linear_algebra::dot;
+use kwavers_math::linear_algebra::NumericOps;
 
 pub(super) fn normal_apply(
     operator: &SoundSpeedShiftOperator,
@@ -70,7 +70,9 @@ pub(super) fn estimate_lipschitz(
             &mut workspace.row,
             &mut workspace.laplacian,
         );
-        eigenvalue = dot(&workspace.power_vector, &workspace.power_normal).abs();
+        eigenvalue = f64::dot_product(&workspace.power_vector, &workspace.power_normal)
+            .expect("invariant: the power pair shares one length")
+            .abs();
         let norm = workspace
             .power_normal
             .iter()

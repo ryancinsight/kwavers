@@ -13,6 +13,7 @@ use super::types::{Config, FrequencyObservation};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
+use kwavers_math::linear_algebra::NumericOps;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     complex_l2_objective, complex_source_scale, helmholtz_slowness_derivative,
 };
@@ -408,9 +409,20 @@ fn apply_tikhonov(
     }
 }
 
+/// Inner product `⟨a, b⟩` of two fields.
+///
+/// The reduction is [`NumericOps::dot_product`]'s, the kwavers-math scalar
+/// SSOT; this function is only the `Array3` → slice bridge. A non-contiguous
+/// view has no borrowed slice, so it keeps the element walk — the same
+/// left fold over the same C-order elements.
 #[must_use]
 pub(super) fn dot(a: &Array3<f64>, b: &Array3<f64>) -> f64 {
-    a.iter().zip(b.iter()).map(|(&x, &y)| x * y).sum()
+    match (a.as_slice(), b.as_slice()) {
+        (Some(a), Some(b)) => {
+            f64::dot_product(a, b).expect("invariant: two fields of one shape share a length")
+        }
+        _ => a.iter().zip(b.iter()).map(|(&x, &y)| x * y).sum(),
+    }
 }
 
 #[must_use]

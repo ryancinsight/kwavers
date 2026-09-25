@@ -3,6 +3,7 @@
 //! Geometry-neutral: consumes any [`VolumeOperator`] over an active voxel set,
 //! with regularization parameters drawn from [`LinearBornInversionConfig`].
 
+use kwavers_math::linear_algebra::NumericOps;
 use leto::Array3;
 use moirai_parallel::{for_each_chunk_mut_with_state, Adaptive};
 
@@ -114,7 +115,8 @@ impl StagePcgContext<'_> {
         );
         let mut z = self.precondition(&residual);
         let mut direction = z.clone();
-        let mut rz_old = dot(&residual, &z);
+        let mut rz_old = f64::dot_product(&residual, &z)
+            .expect("invariant: a residual and its preconditioned image share one length");
         let reg: RegCtx<'_> = (self.config, self.active, self.shape, self.active_index);
         let mut stage_objective = composite_objective(
             self.operator,
@@ -145,7 +147,8 @@ impl StagePcgContext<'_> {
                 self.row_norms,
                 self.config.regularization,
             );
-            let denom = dot(&direction, &normal_direction);
+            let denom = f64::dot_product(&direction, &normal_direction)
+                .expect("invariant: a direction and its normal image share one length");
             if denom <= 0.0 || !denom.is_finite() {
                 break;
             }
@@ -190,7 +193,8 @@ impl StagePcgContext<'_> {
             history.push(accepted_objective);
 
             z = self.precondition(&residual);
-            let rz_new = dot(&residual, &z);
+            let rz_new = f64::dot_product(&residual, &z)
+                .expect("invariant: a residual and its preconditioned image share one length");
             if rz_new <= 1.0e-24 || !rz_new.is_finite() {
                 break;
             }
@@ -211,10 +215,6 @@ impl StagePcgContext<'_> {
         apply_sobolev_preconditioner_3d(&mut out, self.active, self.shape, self.config);
         out
     }
-}
-
-fn dot(a: &[f64], b: &[f64]) -> f64 {
-    a.iter().zip(b).map(|(av, bv)| av * bv).sum()
 }
 
 fn composite_objective(
