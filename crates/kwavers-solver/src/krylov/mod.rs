@@ -17,6 +17,7 @@
 //! element system ([`crate::forward::bem`]) and the matrix-free Newton-Krylov
 //! coupler ([`crate::multiphysics::monolithic`]) both drive Athena through it.
 
+mod cg;
 mod config;
 mod report;
 mod restart;
@@ -24,6 +25,7 @@ mod restart;
 #[cfg(test)]
 mod tests;
 
+pub use cg::{solve_cg, CpuBackend, SliceOperator, SlicePreconditioner};
 pub use config::GMRESConfig;
 pub use report::GmresConvergenceInfo;
 pub use restart::KrylovWorkspace;

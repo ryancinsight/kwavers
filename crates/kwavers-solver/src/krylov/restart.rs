@@ -230,7 +230,7 @@ impl fmt::Debug for KrylovWorkspace {
 }
 
 /// Convert an Athena solve failure into kwavers' typed numerical vocabulary.
-fn solve_failure(error: &SolveError<LetoBackendError>) -> KwaversError {
+pub(super) fn solve_failure(error: &SolveError<LetoBackendError>) -> KwaversError {
     match error {
         SolveError::DimensionMismatch {
             context,
@@ -253,7 +253,7 @@ fn solve_failure(error: &SolveError<LetoBackendError>) -> KwaversError {
 }
 
 /// Convert a backend allocation or arithmetic failure into a typed error.
-fn backend_failure(operation: &str, error: &LetoBackendError) -> KwaversError {
+pub(super) fn backend_failure(operation: &str, error: &LetoBackendError) -> KwaversError {
     KwaversError::Numerical(NumericalError::SolverFailed {
         method: operation.to_owned(),
         reason: error.to_string(),
