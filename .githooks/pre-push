@@ -106,8 +106,17 @@ if [ ! -t 0 ]; then
       # range is empty, and a manifest-changing push skips the check.
       base="$(default_branch_base "$local_sha" || true)"
       [ -z "$base" ] && { touches_dependency_state=unknown; break; }
-    else
+    elif git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+      # Ordinary branch updates extend the remote tip, so only new commits
+      # enter the gate range.
       base="$remote_sha"
+    else
+      # Publication branches may be rebuilt from a newer default branch.
+      # Their previous tip is then outside the new history; gate the PR delta
+      # from the new tip's default-branch base rather than unrelated mainline
+      # changes between the two generated commits.
+      base="$(default_branch_base "$local_sha" || true)"
+      [ -z "$base" ] && { touches_dependency_state=unknown; break; }
     fi
     if [ -z "$gate_tip" ]; then
       gate_tip="$local_sha"
@@ -312,31 +321,46 @@ fi
 # only the stack holds them all. Citations are bounded by what the range's
 # base measures today (`--drift-base`), so a branch deleted elsewhere does
 # not refuse a push that cites nothing new.
+#
+# Git exports GIT_DIR to hooks -- an absolute path in a lane -- and a git or
+# checker process aimed at another repository inherits it and answers about
+# this checkout instead: from a hephaestus lane, the stack's `origin/HEAD`
+# resolved to hephaestus's own and the ratchet was skipped as unreachable.
+# Every such process runs through `outside_checkout`.
+outside_checkout() {
+  env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_PREFIX \
+    -u GIT_COMMON_DIR "$@"
+}
 stack_root="$(cd "$repo_root/../.." && pwd)"
-stack_top="$(git -C "$stack_root" rev-parse --show-toplevel 2>/dev/null || true)"
+stack_top="$(outside_checkout git -C "$stack_root" rev-parse --show-toplevel 2>/dev/null || true)"
 stack_baseline=""
 if [ -n "$stack_top" ] && [ "$(cd "$stack_top" && pwd)" = "$stack_root" ]; then
   for ref in origin/HEAD origin/main; do
-    stack_baseline="$(git -C "$stack_root" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
+    stack_baseline="$(outside_checkout git -C "$stack_root" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
     [ -n "$stack_baseline" ] && break
   done
 fi
-if [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
-  && git -C "$stack_root" cat-file -e "$stack_baseline:scripts/atlas-conformance.py" 2>/dev/null; then
+if [ ! -t 0 ] && [ -z "$gate_tip" ]; then
+  # Every ref git named was a deletion: there is no revision to judge, and
+  # `HEAD` is not something this push carries.
+  echo "pre-push: the push carries no commits; debt ratchet not needed" >&2
+elif [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
+  && outside_checkout git -C "$stack_root" cat-file -e "$stack_baseline:scripts/atlas-conformance.py" 2>/dev/null; then
   # The member is the registered directory sharing this checkout's object
   # store, so a lane (`worktrees/<repo>-<branch>`) resolves to its repository.
-  own_store="$(cd "$repo_root" && cd "$(git rev-parse --git-common-dir)" && pwd)"
+  own_store="$(cd "$repo_root" && cd "$(outside_checkout git rev-parse --git-common-dir)" && pwd)"
   conformance_member=""
   for candidate in "$stack_root/repos/${repo_root##*/}" "$stack_root"/repos/*; do
     [ -d "$candidate" ] || continue
     candidate_store="$(cd "$candidate" 2>/dev/null \
-      && cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd)" || continue
+      && cd "$(outside_checkout git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null \
+      && pwd)" || continue
     if [ "$candidate_store" = "$own_store" ]; then
       conformance_member="${candidate##*/}"
       break
     fi
   done
-  checker_cache="$(cd "$stack_root" && cd "$(git rev-parse --git-common-dir)" && pwd)/atlas-checker"
+  checker_cache="$(cd "$stack_root" && cd "$(outside_checkout git rev-parse --git-common-dir)" && pwd)/atlas-checker"
   checker_dir="$checker_cache/$stack_baseline"
   if [ -z "$conformance_member" ]; then
     echo "pre-push: not a registered stack member; debt ratchet not run" >&2
@@ -344,7 +368,7 @@ if [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
     if [ ! -f "$checker_dir/scripts/atlas-conformance.py" ]; then
       mkdir -p "$checker_cache"
       staging="$(mktemp -d "$checker_cache/.staging.XXXXXX")"
-      git -C "$stack_root" archive "$stack_baseline" scripts | tar -x -C "$staging"
+      outside_checkout git -C "$stack_root" archive "$stack_baseline" scripts | tar -x -C "$staging"
       # A concurrent push may have placed the same revision first; either
       # copy is the same content, so the rename losing is not an error.
       mv "$staging" "$checker_dir" 2>/dev/null || rm -rf "$staging"
@@ -366,7 +390,7 @@ if [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
       drift_args=()
       [ -n "$range_base" ] && drift_args=(--drift-base "$range_base")
       set +e
-      ATLAS_STACK_ROOT="$stack_root" "$python_bin" "$conformance_checker" check \
+      outside_checkout ATLAS_STACK_ROOT="$stack_root" "$python_bin" "$conformance_checker" check \
         --repo "$conformance_member" --member-path "$repo_root" \
         --member-revision "$range_rev" --baseline-rev "$stack_baseline" \
         "${drift_args[@]}" >&2
