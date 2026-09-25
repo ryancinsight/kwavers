@@ -48,6 +48,7 @@
 
 use crate::forward::lanes::{axis_index, for_each_z_lane, LaneAxis};
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use crate::forward::pstd::propagator::apply_axis_derivative_update;
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
@@ -171,12 +172,20 @@ fn update_velocity_fused(
                     LaneAxis::X | LaneAxis::Y => {
                         let p = pml[axis_index(axis, i, j, 0)];
                         for ((velocity, &gradient), &rho) in lane {
-                            *velocity = p * (p * *velocity - (dt / rho) * gradient);
+                            *velocity = apply_axis_derivative_update::<true>(
+                                *velocity,
+                                (dt / rho) * gradient,
+                                p,
+                            );
                         }
                     }
                     LaneAxis::Z => {
                         for (((velocity, &gradient), &rho), &p) in lane.zip(&pml[..nz]) {
-                            *velocity = p * (p * *velocity - (dt / rho) * gradient);
+                            *velocity = apply_axis_derivative_update::<true>(
+                                *velocity,
+                                (dt / rho) * gradient,
+                                p,
+                            );
                         }
                     }
                 }
@@ -190,8 +199,11 @@ fn update_velocity_fused(
         for j in 0..ny {
             for i in 0..nx {
                 let p = pml[axis_index(axis, i, j, k)];
-                velocity[[i, j, k]] =
-                    p * (p * velocity[[i, j, k]] - (dt / rho0[[i, j, k]]) * gradient[[i, j, k]]);
+                velocity[[i, j, k]] = apply_axis_derivative_update::<true>(
+                    velocity[[i, j, k]],
+                    (dt / rho0[[i, j, k]]) * gradient[[i, j, k]],
+                    p,
+                );
             }
         }
     }
@@ -221,7 +233,11 @@ fn update_velocity_unfused(
         rho0.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
-            *velocity -= (dt / rho_values[index]) * gradient_values[index];
+            *velocity = apply_axis_derivative_update::<false>(
+                *velocity,
+                (dt / rho_values[index]) * gradient_values[index],
+                1.0,
+            );
         });
         return;
     }
@@ -231,7 +247,11 @@ fn update_velocity_unfused(
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
-                velocity[[i, j, k]] -= (dt / rho0[[i, j, k]]) * gradient[[i, j, k]];
+                velocity[[i, j, k]] = apply_axis_derivative_update::<false>(
+                    velocity[[i, j, k]],
+                    (dt / rho0[[i, j, k]]) * gradient[[i, j, k]],
+                    1.0,
+                );
             }
         }
     }
@@ -292,7 +312,11 @@ fn update_axisymmetric_velocity_fused(
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
             let (i, k) = dense_indices_2(index, nr);
             let p = pml[as_pml_index(axis, i, k)];
-            *velocity = p * (p * *velocity - (dt / rho_values[index]) * gradient_values[index]);
+            *velocity = apply_axis_derivative_update::<true>(
+                *velocity,
+                (dt / rho_values[index]) * gradient_values[index],
+                p,
+            );
         });
         return;
     }
@@ -301,7 +325,11 @@ fn update_axisymmetric_velocity_fused(
     for k in 0..nr {
         for i in 0..nx {
             let p = pml[as_pml_index(axis, i, k)];
-            velocity[[i, k]] = p * (p * velocity[[i, k]] - (dt / rho0[[i, k]]) * gradient[[i, k]]);
+            velocity[[i, k]] = apply_axis_derivative_update::<true>(
+                velocity[[i, k]],
+                (dt / rho0[[i, k]]) * gradient[[i, k]],
+                p,
+            );
         }
     }
 }
@@ -329,7 +357,11 @@ fn update_axisymmetric_velocity_unfused(
         rho0.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
-            *velocity -= (dt / rho_values[index]) * gradient_values[index];
+            *velocity = apply_axis_derivative_update::<false>(
+                *velocity,
+                (dt / rho_values[index]) * gradient_values[index],
+                1.0,
+            );
         });
         return;
     }
@@ -337,7 +369,11 @@ fn update_axisymmetric_velocity_unfused(
     let [nx, nr] = velocity.shape();
     for k in 0..nr {
         for i in 0..nx {
-            velocity[[i, k]] -= (dt / rho0[[i, k]]) * gradient[[i, k]];
+            velocity[[i, k]] = apply_axis_derivative_update::<false>(
+                velocity[[i, k]],
+                (dt / rho0[[i, k]]) * gradient[[i, k]],
+                1.0,
+            );
         }
     }
 }
