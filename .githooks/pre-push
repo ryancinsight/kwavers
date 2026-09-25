@@ -249,6 +249,71 @@ fi
 # End of the lockfile section; the code gate below runs unconditionally.
 
 # ---------------------------------------------------------------------------
+# Stack tools: the artifact-budget checker, the secret scanner, the debt
+# ratchet, and the source identity checker are owned by the stack and run
+# from its fetched default branch (`origin/HEAD`, else `origin/main`), never
+# from the stack checkout. That checkout sits on whatever branch a peer left
+# there -- often one cut before a tool existed, or holding a dirty copy of
+# it -- and resolving tools from it skipped the secret scan as "not
+# reachable" and blocked registered members on a "missing" identity checker
+# that the default branch carried. The default's `scripts/` is extracted
+# once per revision into the stack's git directory. A standalone clone
+# outside the stack has no baseline, and each tool reports itself
+# unreachable.
+#
+# Git exports GIT_DIR to hooks -- an absolute path in a lane -- and a git or
+# checker process aimed at another repository inherits it and answers about
+# this checkout instead: from a hephaestus lane, the stack's `origin/HEAD`
+# resolved to hephaestus's own and the ratchet was skipped as unreachable.
+# Every such process runs through `outside_checkout`.
+outside_checkout() {
+  env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_PREFIX \
+    -u GIT_COMMON_DIR "$@"
+}
+stack_root="$(cd "$repo_root/../.." && pwd)"
+stack_top="$(outside_checkout git -C "$stack_root" rev-parse --show-toplevel 2>/dev/null || true)"
+stack_baseline=""
+conformance_member=""
+if [ -n "$stack_top" ] && [ "$(cd "$stack_top" && pwd)" = "$stack_root" ]; then
+  for ref in origin/HEAD origin/main; do
+    stack_baseline="$(outside_checkout git -C "$stack_root" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
+    [ -n "$stack_baseline" ] && break
+  done
+fi
+stack_scripts=""
+if [ -n "$stack_baseline" ] \
+  && outside_checkout git -C "$stack_root" cat-file -e "$stack_baseline:scripts" 2>/dev/null; then
+  checker_cache="$(cd "$stack_root" && cd "$(outside_checkout git rev-parse --git-common-dir)" && pwd)/atlas-checker"
+  checker_dir="$checker_cache/$stack_baseline"
+  if [ ! -d "$checker_dir/scripts" ]; then
+    mkdir -p "$checker_cache"
+    staging="$(mktemp -d "$checker_cache/.staging.XXXXXX")"
+    outside_checkout git -C "$stack_root" archive "$stack_baseline" scripts | tar -x -C "$staging"
+    # A concurrent push may have placed the same revision first; either
+    # copy is the same content, so the rename losing is not an error.
+    mv "$staging" "$checker_dir" 2>/dev/null || rm -rf "$staging"
+    if [ -n "$python_bin" ] && ! "$python_bin" - "$checker_cache" "$stack_baseline" <<'PY'
+import pathlib
+import shutil
+import sys
+import time
+root = pathlib.Path(sys.argv[1])
+keep = sys.argv[2]
+cutoff = time.time() - 3600
+for path in root.iterdir():
+    if path.is_dir() and path.name != keep and path.stat().st_mtime < cutoff:
+        shutil.rmtree(path)
+PY
+    then
+      echo "pre-push: could not prune old checker copies under $checker_cache" >&2
+    fi
+  fi
+  if [ -d "$checker_dir/scripts" ]; then
+    stack_scripts="$checker_dir/scripts"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Artifact budgets: PM boards under their line budget, tracked images under
 # their byte budget (scripts/atlas-artifact-budget.py, ratchet-to-budget: an
 # over-budget board may not grow, an oversized image may not be added or
@@ -276,7 +341,7 @@ fi
 range_args=()
 [ -n "$range_base" ] && range_args=(--base "$range_base")
 
-budget_checker="$repo_root/../../scripts/atlas-artifact-budget.py"
+budget_checker="${stack_scripts:+$stack_scripts/atlas-artifact-budget.py}"
 if [ -f "$budget_checker" ] && [ -n "$python_bin" ]; then
   if ! "$python_bin" "$budget_checker" check --root "$repo_root" --rev "$range_rev" "${range_args[@]}"; then
     echo "pre-push: BLOCKED -- a PM board grew past its line budget or a tracked" >&2
@@ -293,7 +358,7 @@ fi
 # published -- a rewritten history does not unpublish it -- so this is the one
 # check CI cannot stand in for: by the time a runner sees the push, the value
 # is already out. Same range as the budget check above.
-secret_checker="$repo_root/../../scripts/atlas-secret-scan.py"
+secret_checker="${stack_scripts:+$stack_scripts/atlas-secret-scan.py}"
 if [ -f "$secret_checker" ] && [ -n "$python_bin" ]; then
   if ! "$python_bin" "$secret_checker" check --root "$repo_root" --rev "$range_rev" "${range_args[@]}"; then
     echo "pre-push: BLOCKED -- the pushed range adds a credential. Remove it from" >&2
@@ -316,32 +381,12 @@ fi
 # branch or dirty. The checker and its baseline both come from the stack's
 # fetched default branch: the stack checkout sits on whatever branch a peer
 # left there, often one cut before this check existed, and its scripts would
-# then decide the verdict. That revision's `scripts/` is extracted once into
-# the stack's git directory and run with `ATLAS_STACK_ROOT` naming the live
-# stack, since cited hashes resolve against every member's object store and
-# only the stack holds them all. Citations are bounded by what the range's
-# base measures today (`--drift-base`), so a branch deleted elsewhere does
-# not refuse a push that cites nothing new.
-#
-# Git exports GIT_DIR to hooks -- an absolute path in a lane -- and a git or
-# checker process aimed at another repository inherits it and answers about
-# this checkout instead: from a hephaestus lane, the stack's `origin/HEAD`
-# resolved to hephaestus's own and the ratchet was skipped as unreachable.
-# Every such process runs through `outside_checkout`.
-outside_checkout() {
-  env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_PREFIX \
-    -u GIT_COMMON_DIR "$@"
-}
-stack_root="$(cd "$repo_root/../.." && pwd)"
-stack_top="$(outside_checkout git -C "$stack_root" rev-parse --show-toplevel 2>/dev/null || true)"
-stack_baseline=""
-conformance_member=""
-if [ -n "$stack_top" ] && [ "$(cd "$stack_top" && pwd)" = "$stack_root" ]; then
-  for ref in origin/HEAD origin/main; do
-    stack_baseline="$(outside_checkout git -C "$stack_root" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
-    [ -n "$stack_baseline" ] && break
-  done
-fi
+# then decide the verdict (Stack tools, above). The checker runs with
+# `ATLAS_STACK_ROOT` naming the live stack, since cited hashes resolve
+# against every member's object store and only the stack holds them all.
+# Citations are bounded by what the range's base measures today
+# (`--drift-base`), so a branch deleted elsewhere does not refuse a push
+# that cites nothing new.
 if [ ! -t 0 ] && [ -z "$gate_tip" ]; then
   # Every ref git named was a deletion: there is no revision to judge, and
   # `HEAD` is not something this push carries.
@@ -362,39 +407,14 @@ elif [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
       break
     fi
   done
-  checker_cache="$(cd "$stack_root" && cd "$(outside_checkout git rev-parse --git-common-dir)" && pwd)/atlas-checker"
-  checker_dir="$checker_cache/$stack_baseline"
   if [ -z "$conformance_member" ]; then
     echo "pre-push: not a registered stack member; debt ratchet not run" >&2
   else
-    if [ ! -f "$checker_dir/scripts/atlas-conformance.py" ]; then
-      mkdir -p "$checker_cache"
-      staging="$(mktemp -d "$checker_cache/.staging.XXXXXX")"
-      outside_checkout git -C "$stack_root" archive "$stack_baseline" scripts | tar -x -C "$staging"
-      # A concurrent push may have placed the same revision first; either
-      # copy is the same content, so the rename losing is not an error.
-      mv "$staging" "$checker_dir" 2>/dev/null || rm -rf "$staging"
-      if ! "$python_bin" - "$checker_cache" "$stack_baseline" <<'PY'
-import pathlib
-import shutil
-import sys
-import time
-root = pathlib.Path(sys.argv[1])
-keep = sys.argv[2]
-cutoff = time.time() - 3600
-for path in root.iterdir():
-    if path.is_dir() and path.name != keep and path.stat().st_mtime < cutoff:
-        shutil.rmtree(path)
-PY
-      then
-        echo "pre-push: could not prune old checker copies under $checker_cache" >&2
-      fi
-    fi
-    conformance_checker="$checker_dir/scripts/atlas-conformance.py"
+    conformance_checker="${stack_scripts:+$stack_scripts/atlas-conformance.py}"
     if [ ! -f "$conformance_checker" ]; then
       echo "pre-push: BLOCKED -- could not extract the stack's checker at ${stack_baseline:0:12}." >&2
       exit 1
-    elif ! grep -q ATLAS_STACK_ROOT "$checker_dir/scripts/atlas_stack.py"; then
+    elif ! grep -q ATLAS_STACK_ROOT "$stack_scripts/atlas_stack.py"; then
       # The stack's fetched default predates revision scans: fetch it.
       echo "pre-push: the stack's checker at ${stack_baseline:0:12} predates revision scans;" >&2
       echo "debt ratchet not run. Run: git -C $stack_root fetch origin" >&2
@@ -859,7 +879,7 @@ for package_name in $gate_packages; do
   gate_specs="$gate_specs -p $package_name"
 done
 
-identity_checker="$repo_root/../../scripts/atlas-build-identity.py"
+identity_checker="${stack_scripts:+$stack_scripts/atlas-build-identity.py}"
 identity_target_dir=""
 identity_target="${CARGO_BUILD_TARGET:-host}"
 identity_enabled=0
@@ -909,7 +929,6 @@ run_identity_step() {
     --ignore-path "$repo_root/Cargo.lock"
     "${identity_manifest_args[@]}"
     --
-    "${identity_cargo_manifest_args[@]}"
     "$@"
   )
   local verdict
@@ -992,7 +1011,7 @@ trap 'rm -f "$gate_log"; restore_gate_lock' EXIT INT TERM
 
 if [ "$identity_enabled" -eq 1 ]; then
   for package_name in $gate_packages; do
-    run_identity_step "$package_name" clippy cargo clippy -p "$package_name" --all-targets
+    run_identity_step "$package_name" clippy cargo clippy "${identity_cargo_manifest_args[@]}" -p "$package_name" --all-targets
   done
 else
   case "$(classify_gate_step "$gate_log" cargo clippy $gate_specs --all-targets)" in
@@ -1019,7 +1038,7 @@ fi
 if command -v cargo-nextest >/dev/null 2>&1; then
   if [ "$identity_enabled" -eq 1 ]; then
     for package_name in $gate_packages; do
-      run_identity_step "$package_name" tests cargo nextest run -p "$package_name"
+      run_identity_step "$package_name" tests cargo nextest run "${identity_cargo_manifest_args[@]}" -p "$package_name"
     done
   else
     case "$(classify_gate_step "$gate_log" cargo nextest run $gate_specs)" in
@@ -1052,7 +1071,7 @@ fi
 # packages are documented here the same way.
 if [ "$identity_enabled" -eq 1 ]; then
   for package_name in $gate_packages; do
-    run_identity_step "$package_name" rustdoc env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps -p "$package_name"
+    run_identity_step "$package_name" rustdoc env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps "${identity_cargo_manifest_args[@]}" -p "$package_name"
   done
 else
   case "$(classify_gate_step "$gate_log" env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps $gate_specs)" in
