@@ -422,7 +422,13 @@ mod fwi_demo {
             })
         });
 
-        let flat_f64 = obj.data_vec().into_iter().map(f64::from).collect();
+        let flat_f64 = obj
+            .data_slice()
+            .ok()?
+            .iter()
+            .copied()
+            .map(f64::from)
+            .collect();
         let leto_array = leto::Array3::from_shape_vec(shape, flat_f64).ok()?;
 
         Some(NiftiVolume {

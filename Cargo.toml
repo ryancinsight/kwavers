@@ -19,12 +19,12 @@ horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae" }
 # These repos carry their own [workspace], so Cargo resolves their internal
 # inheritance against THEIR roots â€” no path scaffolding needed here. SSOT: members
 # inherit via `{ workspace = true }`.
-ritk-core = { version = "0.10.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
-ritk-io = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
-ritk-image = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
-ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
-ritk-spatial = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
-ritk-registration = { version = "0.54.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7b9561ed00dddf236031351490ec55a37c70a026" }
+ritk-core = { version = "0.10.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
+ritk-io = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
+ritk-image = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
+ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
+ritk-spatial = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
+ritk-registration = { version = "0.54.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
 coeus-core = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-tensor = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-autograd = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
@@ -85,7 +85,6 @@ hex = "0.4"
 image = "0.24"
 jpeg-decoder = "0.3.2"
 tiff = "0.9"
-onnx-ir = "0.20.1"
 openjpeg-sys = "1.0"
 openjp2 = { version = "0.6.1", default-features = false, features = ["std"] }
 jpeg2k = { version = "0.10.1", default-features = false, features = ["openjp2"] }

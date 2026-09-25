@@ -64,7 +64,10 @@ pub(crate) fn load_ct_slice(
     }
 
     let values: Vec<f64> = object
-        .data_vec()
+        .data_slice()
+        .map_err(|error| {
+            KwaversError::InvalidInput(format!("CT NIfTI data is not contiguous: {error}"))
+        })?
         .iter()
         .map(|&value| value as f64)
         .collect();
