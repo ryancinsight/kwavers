@@ -384,9 +384,8 @@ fi
 # then decide the verdict (Stack tools, above). The checker runs with
 # `ATLAS_STACK_ROOT` naming the live stack, since cited hashes resolve
 # against every member's object store and only the stack holds them all.
-# Citations are bounded by what the range's base measures today
-# (`--drift-base`), so a branch deleted elsewhere does not refuse a push
-# that cites nothing new.
+# Citations resolve through default branches and tags only, so a branch
+# deleted elsewhere cannot refuse a push that cites nothing new.
 if [ ! -t 0 ] && [ -z "$gate_tip" ]; then
   # Every ref git named was a deletion: there is no revision to judge, and
   # `HEAD` is not something this push carries.
@@ -395,13 +394,11 @@ elif [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
   && outside_checkout git -C "$stack_root" cat-file -e "$stack_baseline:scripts/atlas-conformance.py" 2>/dev/null; then
   # The member is the registered directory sharing this checkout's object
   # store, so a lane (`worktrees/<repo>-<branch>`) resolves to its repository.
-  own_store="$(cd "$repo_root" && cd "$(outside_checkout git rev-parse --git-common-dir)" && pwd)"
+  own_store="$(outside_checkout git -C "$repo_root" rev-parse --path-format=absolute --git-common-dir)"
   conformance_member=""
   for candidate in "$stack_root/repos/${repo_root##*/}" "$stack_root"/repos/*; do
     [ -d "$candidate" ] || continue
-    candidate_store="$(cd "$candidate" 2>/dev/null \
-      && cd "$(outside_checkout git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null \
-      && pwd)" || continue
+    candidate_store="$(outside_checkout git -C "$candidate" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || continue
     if [ "$candidate_store" = "$own_store" ]; then
       conformance_member="${candidate##*/}"
       break
@@ -419,20 +416,18 @@ elif [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
       echo "pre-push: the stack's checker at ${stack_baseline:0:12} predates revision scans;" >&2
       echo "debt ratchet not run. Run: git -C $stack_root fetch origin" >&2
     else
-      drift_args=()
-      [ -n "$range_base" ] && drift_args=(--drift-base "$range_base")
       set +e
       outside_checkout ATLAS_STACK_ROOT="$stack_root" "$python_bin" "$conformance_checker" check \
         --repo "$conformance_member" --member-path "$repo_root" \
         --member-revision "$range_rev" --baseline-rev "$stack_baseline" \
-        "${drift_args[@]}" >&2
+        >&2
       conformance_status=$?
       set -e
       if [ "$conformance_status" -eq 1 ]; then
         echo "pre-push: BLOCKED -- the pushed revision raises a debt class above the" >&2
         echo "baseline atlas ${stack_baseline:0:12} records for $conformance_member." >&2
         echo "Fix the debt; never regenerate the baseline over it. Reproduce:" >&2
-        echo "  ATLAS_STACK_ROOT=$stack_root python $conformance_checker check --repo $conformance_member --member-path $repo_root --member-revision $range_rev --baseline-rev $stack_baseline ${drift_args[*]}" >&2
+        echo "  ATLAS_STACK_ROOT=$stack_root python $conformance_checker check --repo $conformance_member --member-path $repo_root --member-revision $range_rev --baseline-rev $stack_baseline" >&2
         exit 1
       elif [ "$conformance_status" -ne 0 ]; then
         echo "pre-push: BLOCKED -- the debt ratchet could not run (exit $conformance_status)." >&2
@@ -459,23 +454,12 @@ fi
 #
 # `cargo fmt` needs no dependency resolution; clippy and nextest do, and how
 # they resolve decides whether this gate is usable at all. Cargo finds the
-# stack's `[patch]` overlay by walking up from the working directory, so running
-# from a neutral directory with `--manifest-path` escapes it -- and with it the
-# shared target directory and every first-party dependency, which then resolve
-# to their git sources instead of the local trees. Nothing in the cache matches
-# and the gate rebuilds the world: measured at over ten minutes for a single
-# leaf crate, which is not a pre-push gate.
-#
-# So these run from the repository, inside the overlay, on the warm cache. The
-# cost is that cargo rewrites `Cargo.lock` as it goes -- stripping the git
-# sources CI needs -- which is the very corruption the guard above exists to
-# catch. The lock is therefore restored byte-for-byte afterwards, whatever it
-# held, so the gate cannot damage what it just verified.
-#
-# For the same reason nothing here passes `--locked`: under the overlay the lock
-# *must* change, so `--locked` would fail on resolution before reaching a line
-# of code. Lock correctness is the guard's job, checked from outside the
-# overlay; this gate's job is the code.
+# stack's `[patch]` overlay by walking up from the working directory. Main
+# trees keep using that warm overlay, while a linked lane exports the pushed
+# revision to a neutral directory. The export carries the committed
+# `Cargo.lock`, so the lane uses the exact standalone graph CI sees. Every
+# dependency-resolving lane command passes `--locked`; it must never
+# re-resolve the lane's overlay-flattened working lock to current git heads.
 #
 # Bypass deliberately:
 #
@@ -531,8 +515,13 @@ if [ -n "$gate_tip" ] && [ -n "$checkout_tip" ] && [ -n "$pushed_tip" ] \
     exit 1
   fi
 fi
+# The root Cargo.lock is the one path left out: the stack overlay rewrites it
+# on every build (derived state, not an edit), the lockfile check above reads
+# the pushed revision's lock, the source-identity build ignores it
+# (`--ignore-path`), and a lane gates with `--locked` against the committed
+# lock and restores the working one on exit.
 if [ -n "$gate_tip" ] && [ "$publication_push" -eq 0 ]; then
-  checkout_status="$(git status --porcelain=v1 --untracked-files=all)"
+  checkout_status="$(git status --porcelain=v1 --untracked-files=all -- . ':(exclude)Cargo.lock')"
   if [ -n "$checkout_status" ]; then
     echo "pre-push: BLOCKED -- checkout has uncommitted changes not present in the pushed revision" >&2
     echo "Commit or remove them before pushing; no artifact was accepted." >&2
@@ -566,6 +555,12 @@ fi
 # directory, which resolves the committed lock exactly as CI does.
 gate_cwd="$repo_root"
 gate_manifest=""
+gate_lock_arg=""
+cleanup_gate_cwd() {
+  if [ "$gate_cwd" != "$repo_root" ]; then
+    rm -rf "$gate_cwd" 2>/dev/null || true
+  fi
+}
 # `cargo fmt` finds no targets in a virtual manifest named by path, so a lane
 # names every member; in place it reads the workspace from the working
 # directory, and `--all` there would also reach the overlay's patched trees.
@@ -592,19 +587,19 @@ if [ "$(git rev-parse --git-dir)" != "$(git rev-parse --git-common-dir)" ]; then
       esac
     fi
     gate_cwd="$(mktemp -d "${TMPDIR:-/tmp}/pre-push-lane.XXXXXX")"
+    if ! git archive "$gate_tip_rev" | tar -x -C "$gate_cwd"; then
+      echo "pre-push: could not export $gate_tip_rev for the lane gate" >&2
+      cleanup_gate_cwd
+      exit 1
+    fi
     # Leading space: the reproduce lines render as `cargo doc --no-deps$gate_specs`,
     # and without it the flag joins the subcommand ("--no-deps--manifest-path").
-    gate_manifest=" --manifest-path $repo_root/Cargo.toml"
+    gate_manifest=" --manifest-path $gate_cwd/Cargo.toml"
     gate_fmt_scope="--all"
+    gate_lock_arg=" --locked"
     echo "pre-push: lane of an overlaid member; gating outside the stack overlay" >&2
   fi
 fi
-
-cleanup_gate_cwd() {
-  if [ "$gate_cwd" != "$repo_root" ]; then
-    rm -rf "$gate_cwd" 2>/dev/null || true
-  fi
-}
 
 if [ -z "$python_bin" ]; then
   echo "pre-push: no python interpreter found; Cargo workspace membership not verified" >&2
@@ -649,7 +644,7 @@ for package in metadata["packages"]:
         continue
     manifest = os.path.realpath(package["manifest_path"])
     relative = os.path.relpath(manifest, root).replace(os.sep, "/")
-    print(f"{relative}\t{package['"'"'name'"'"']}")' "$repo_root"
+    print(f"{relative}\t{package['"'"'name'"'"']}")' "$gate_cwd"
 )"; then
   echo "pre-push: cargo metadata could not establish workspace membership" >&2
   echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
@@ -669,7 +664,7 @@ while IFS= read -r changed_path; do
   package_dir=""
   excluded_manifest=""
   while [ "$owner_dir" != "." ] && [ "$owner_dir" != "/" ]; do
-    manifest="$repo_root/$owner_dir/Cargo.toml"
+    manifest="$gate_cwd/$owner_dir/Cargo.toml"
     if [ -f "$manifest" ]; then
       if grep -qE '^\[package\]' "$manifest" 2>/dev/null; then
         package_dir="$owner_dir"
@@ -700,14 +695,14 @@ while IFS= read -r changed_path; do
     continue
   fi
   if [ -z "$package_dir" ]; then
-    if [ -f "$repo_root/Cargo.toml" ] && grep -qE '^\[package\]' "$repo_root/Cargo.toml" 2>/dev/null; then
+    if [ -f "$gate_cwd/Cargo.toml" ] && grep -qE '^\[package\]' "$repo_root/Cargo.toml" 2>/dev/null; then
       package_dir="."
     else
       continue
     fi
   fi
-  manifest="$repo_root/$package_dir/Cargo.toml"
-  relative_manifest="${manifest#"$repo_root"/}"
+  manifest="$gate_cwd/$package_dir/Cargo.toml"
+  relative_manifest="${manifest#"$gate_cwd"/}"
   relative_manifest="${relative_manifest#./}"
   package_name="$(printf '%s\n' "$workspace_members" | awk -F '\t' -v manifest="$relative_manifest" '$1 == manifest { print $2; exit }')"
   if [ -z "$package_name" ]; then
@@ -814,7 +809,7 @@ classify_gate_step() {
   fi
 
   local root_normalised inside=0 outside=0 location foreign_crate=0
-  root_normalised="$(normalise_diagnostic_path "$repo_root")"
+  root_normalised="$(normalise_diagnostic_path "$gate_cwd")"
 
   # Only locations under an `error` header count. A crate that fails to compile
   # still emits warnings for whatever did compile, and counting those made the
@@ -984,14 +979,14 @@ fi
 # then failed CI on a `// SAFETY:` comment two lines above its block, because
 # nothing here ran the ratchet. It is text-only and fast, so it runs before the
 # compile steps; a member without the script has no ratchet to run.
-safety_ratchet="$repo_root/scripts/safety_ratchet.py"
+safety_ratchet="$gate_cwd/scripts/safety_ratchet.py"
 if [ -f "$safety_ratchet" ]; then
   if [ -z "$python_bin" ]; then
     echo "pre-push: scripts/safety_ratchet.py present but no python interpreter found" >&2
     echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
     exit 1
   fi
-  if ! (cd "$repo_root" && "$python_bin" scripts/safety_ratchet.py check >&2); then
+  if ! (cd "$gate_cwd" && "$python_bin" scripts/safety_ratchet.py check >&2); then
     cat >&2 <<'MESSAGE'
 
 pre-push: the SAFETY ratchet fails, so CI's workspace job would. Put a
@@ -1017,10 +1012,10 @@ trap 'rm -f "$gate_log"; restore_gate_lock' EXIT INT TERM
 
 if [ "$identity_enabled" -eq 1 ]; then
   for package_name in $gate_packages; do
-    run_identity_step "$package_name" clippy cargo clippy "${identity_cargo_manifest_args[@]}" -p "$package_name" --all-targets
+    run_identity_step "$package_name" clippy cargo clippy "${identity_cargo_manifest_args[@]}" -p "$package_name" --all-targets $gate_lock_arg
   done
 else
-  case "$(classify_gate_step "$gate_log" cargo clippy $gate_specs --all-targets)" in
+  case "$(classify_gate_step "$gate_log" cargo clippy $gate_specs$gate_lock_arg --all-targets)" in
     ours)
       cat >&2 <<MESSAGE
 
@@ -1028,7 +1023,7 @@ pre-push: clippy fails for$gate_packages, so the CI ratchet would.
 
 Reproduce:
 
-    cargo clippy$gate_specs --all-targets
+    cargo clippy$gate_specs$gate_lock_arg --all-targets
 
 To push anyway: SKIP_LOCAL_GATE=1 git push
 MESSAGE
@@ -1044,10 +1039,10 @@ fi
 if command -v cargo-nextest >/dev/null 2>&1; then
   if [ "$identity_enabled" -eq 1 ]; then
     for package_name in $gate_packages; do
-      run_identity_step "$package_name" tests cargo nextest run "${identity_cargo_manifest_args[@]}" -p "$package_name"
+      run_identity_step "$package_name" tests cargo nextest run "${identity_cargo_manifest_args[@]}" -p "$package_name" $gate_lock_arg
     done
   else
-    case "$(classify_gate_step "$gate_log" cargo nextest run $gate_specs)" in
+    case "$(classify_gate_step "$gate_log" cargo nextest run $gate_specs$gate_lock_arg)" in
       ours)
         cat >&2 <<MESSAGE
 
@@ -1055,7 +1050,7 @@ pre-push: tests fail for$gate_packages.
 
 Reproduce:
 
-    cargo nextest run$gate_specs
+    cargo nextest run$gate_specs$gate_lock_arg
 
 To push anyway: SKIP_LOCAL_GATE=1 git push
 MESSAGE
@@ -1077,10 +1072,10 @@ fi
 # packages are documented here the same way.
 if [ "$identity_enabled" -eq 1 ]; then
   for package_name in $gate_packages; do
-    run_identity_step "$package_name" rustdoc env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps "${identity_cargo_manifest_args[@]}" -p "$package_name"
+    run_identity_step "$package_name" rustdoc env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps "${identity_cargo_manifest_args[@]}" -p "$package_name" $gate_lock_arg
   done
 else
-  case "$(classify_gate_step "$gate_log" env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps $gate_specs)" in
+  case "$(classify_gate_step "$gate_log" env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps $gate_specs$gate_lock_arg)" in
     ours)
       cat >&2 <<MESSAGE
 
@@ -1088,7 +1083,7 @@ pre-push: rustdoc fails for$gate_packages, so the CI rustdoc shard would.
 
 Reproduce:
 
-    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps$gate_specs
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps$gate_specs$gate_lock_arg
 
 To push anyway: SKIP_LOCAL_GATE=1 git push
 MESSAGE
