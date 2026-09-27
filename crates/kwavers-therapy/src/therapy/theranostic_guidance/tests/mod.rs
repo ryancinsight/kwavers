@@ -3,6 +3,6 @@
 mod abdominal;
 mod brain;
 mod constants;
-mod helpers;
+mod guidance_fixtures;
 mod standing_wave;
 mod transmit_schedule;

@@ -33,9 +33,9 @@ mod deep_learning;
 mod feature_based;
 mod intensity_projection;
 mod maximum_likelihood;
+pub(crate) mod modality_alignment;
 mod pca;
 mod probabilistic;
-pub(crate) mod utils;
 pub(crate) mod weighted_average;
 
 use super::config::{FusionConfig, ImagingFusionMethod};

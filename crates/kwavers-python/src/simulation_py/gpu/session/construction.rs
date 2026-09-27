@@ -100,24 +100,6 @@ impl GpuPstdSession {
                     alpha_power,
                 )?;
 
-            if has_absorption {
-                let tau_max = absorb_tau_flat
-                    .iter()
-                    .cloned()
-                    .fold(0.0f32, |a, b| a.abs().max(b.abs()));
-                let eta_max = absorb_eta_flat
-                    .iter()
-                    .cloned()
-                    .fold(0.0f32, |a, b| a.abs().max(b.abs()));
-                let nabla2_max = absorb_nabla2_flat
-                    .iter()
-                    .cloned()
-                    .fold(0.0f32, |a, b| a.max(b));
-                eprintln!("[pykwavers-diag] GpuPstdSession absorbing=true: tau_max={tau_max:.3e}, eta_max={eta_max:.3e}, nabla2_max={nabla2_max:.3e}");
-            } else {
-                eprintln!("[pykwavers-diag] GpuPstdSession absorbing=false (lossless)");
-            }
-
             let (pml_x_3d, pml_y_3d, pml_z_3d, pml_sgx_3d, pml_sgy_3d, pml_sgz_3d) =
                 build_pml_arrays(pml_size_xyz, kgrid, c_ref, dt, nx, ny, nz)?;
 

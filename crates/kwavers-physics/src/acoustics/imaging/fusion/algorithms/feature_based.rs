@@ -1,4 +1,4 @@
-use super::utils::{classify_voxel_features, compute_robust_bounds};
+use super::modality_alignment::{classify_voxel_features, compute_robust_bounds};
 use super::MultiModalFusion;
 use crate::acoustics::imaging::fusion::registration::{self, RitkRegistrationEngine};
 use crate::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};

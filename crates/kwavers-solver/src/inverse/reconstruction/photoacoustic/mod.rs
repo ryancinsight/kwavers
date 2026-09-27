@@ -18,12 +18,12 @@
 mod algorithms;
 mod config;
 mod filters;
+mod forward_model;
 mod fourier;
 mod iterative;
 mod line_reconstruction;
 mod linear_algebra;
 mod time_reversal;
-mod utils;
 
 pub use algorithms::{PhotoacousticAlgorithm, PhotoacousticReconstructor};
 pub use config::ReconstructionPhotoacousticConfig;

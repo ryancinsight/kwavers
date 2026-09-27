@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use super::super::helpers::*;
+    use super::super::finite_difference::*;
     use kwavers_core::constants::tissue_thermal::THERMAL_DIFFUSIVITY_TISSUE;
     use leto::Array1;
     use std::f64::consts::PI;

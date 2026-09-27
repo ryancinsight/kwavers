@@ -3,9 +3,9 @@
 //! Physics in Rust; these thin wrappers expose the scalar models so the
 //! `ch33_cmut_vs_pmut.py` figure script can plot without re-implementing physics.
 
+mod binding_parsing;
 mod cmut;
 mod comparison;
-mod helpers;
 mod plate;
 mod pmut;
 

@@ -1,5 +1,5 @@
+mod autodiff_fixtures;
 mod first_deriv;
-mod helpers;
 mod property;
 mod second_deriv;
 

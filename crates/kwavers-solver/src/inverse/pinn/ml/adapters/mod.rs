@@ -100,8 +100,6 @@ pub mod electromagnetic;
 pub mod source;
 
 // Future adapters (to be implemented as needed)
-// pub mod medium;
-// pub mod boundary;
 
 pub use source::{
     adapt_sources, AdapterError, PinnAcousticSource, PinnSourceClass, PinnSourceFocalProperties,

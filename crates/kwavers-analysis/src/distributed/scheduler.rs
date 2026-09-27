@@ -86,7 +86,7 @@ impl RealTimeScheduler {
             ));
         }
 
-        let task_id = self.submitted.fetch_add(1, Ordering::SeqCst);
+        let task_id = self.submitted.fetch_add(1, Ordering::Relaxed);
         let item = WorkItem::new(task_id, priority, work, current_timestamp());
 
         self.add_item(item);
@@ -178,10 +178,10 @@ impl RealTimeScheduler {
 
         match result {
             Ok(()) => {
-                self.completed.fetch_add(1, Ordering::SeqCst);
+                self.completed.fetch_add(1, Ordering::Relaxed);
             }
             Err(_) => {
-                self.failed.fetch_add(1, Ordering::SeqCst);
+                self.failed.fetch_add(1, Ordering::Relaxed);
             }
         }
 

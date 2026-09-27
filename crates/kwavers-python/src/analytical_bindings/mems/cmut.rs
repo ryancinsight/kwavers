@@ -1,6 +1,6 @@
 //! CMUT scalar model bindings.
 
-use super::helpers::cmut;
+use super::binding_parsing::cmut;
 use aequitas::systems::si::units::{Hertz, Pascal, Volt, Watt};
 use pyo3::prelude::*;
 

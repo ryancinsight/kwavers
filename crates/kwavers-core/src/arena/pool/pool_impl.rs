@@ -104,7 +104,7 @@ impl BufferPool {
                 .compare_exchange(head, next, Ordering::Release, Ordering::Acquire)
             {
                 Ok(_) => {
-                    let new_allocated = self.allocated.fetch_add(1, Ordering::SeqCst) + 1;
+                    let new_allocated = self.allocated.fetch_add(1, Ordering::Relaxed) + 1;
 
                     let mut peak = self.peak_allocated.load(Ordering::Relaxed);
                     loop {
@@ -151,7 +151,7 @@ impl BufferPool {
                 .compare_exchange(head, node, Ordering::Release, Ordering::Acquire)
             {
                 Ok(_) => {
-                    self.allocated.fetch_sub(1, Ordering::SeqCst);
+                    self.allocated.fetch_sub(1, Ordering::Relaxed);
                     break;
                 }
                 Err(_) => continue,

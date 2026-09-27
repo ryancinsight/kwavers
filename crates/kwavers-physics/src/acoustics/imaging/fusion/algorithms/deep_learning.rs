@@ -37,8 +37,9 @@ const MIN_PRIOR: f64 = 1.0e-12;
 /// - Propagates any `KwaversError` returned by called functions.
 ///
 pub(crate) fn fuse_deep_learning(fusion: &MultiModalFusion) -> KwaversResult<FusedImageResult> {
-    let modalities = super::utils::sorted_modalities(fusion)?;
-    let dims = super::utils::common_registered_dims(&modalities, "DeepFusion attention")?;
+    let modalities = super::modality_alignment::sorted_modalities(fusion)?;
+    let dims =
+        super::modality_alignment::common_registered_dims(&modalities, "DeepFusion attention")?;
     let bounds = normalization_bounds(&modalities)?;
 
     let mut intensity_image = Array3::<f64>::zeros(dims);
@@ -98,8 +99,10 @@ pub(crate) fn fuse_deep_learning(fusion: &MultiModalFusion) -> KwaversResult<Fus
         tissue_properties: HashMap::new(),
         confidence_map,
         uncertainty_map,
-        registration_transforms: super::utils::identity_registration_transforms(&modalities),
-        modality_quality: super::utils::modality_quality_map(&modalities),
+        registration_transforms: super::modality_alignment::identity_registration_transforms(
+            &modalities,
+        ),
+        modality_quality: super::modality_alignment::modality_quality_map(&modalities),
         coordinates: generate_coordinate_arrays(dims, fusion.config.output_resolution),
     })
 }
@@ -115,7 +118,7 @@ fn normalization_bounds(
                     "DeepFusion attention requires finite intensity values; modality {name} contains non-finite data"
                 )));
             }
-            Ok(super::utils::compute_robust_bounds(&modality.data))
+            Ok(super::modality_alignment::compute_robust_bounds(&modality.data))
         })
         .collect()
 }

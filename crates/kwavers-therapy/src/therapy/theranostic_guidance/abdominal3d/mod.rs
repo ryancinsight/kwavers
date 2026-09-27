@@ -1,6 +1,6 @@
 pub(crate) mod bowl;
-pub(crate) mod helpers;
 pub(super) mod placement;
+pub(crate) mod placement_geometry;
 pub(super) mod types;
 
 pub use placement::plan_abdominal_array_placement;

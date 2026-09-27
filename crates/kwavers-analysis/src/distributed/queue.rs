@@ -159,7 +159,7 @@ impl WorkQueue {
             ));
         }
 
-        let task_id = self.scheduler.submitted.fetch_add(1, Ordering::SeqCst);
+        let task_id = self.scheduler.submitted.fetch_add(1, Ordering::Relaxed);
         let queued_at = current_timestamp();
         let item = WorkItem::new(task_id, priority, work, queued_at)
             .with_deadline(deadline_ms, queued_at)?;

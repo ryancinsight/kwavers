@@ -11,7 +11,7 @@ use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-use super::super::helpers::{
+use super::super::array_conversion::{
     metric_dict, placement_context_skin_gap, placement_dict, point_axis, points3_to_array,
 };
 use crate::array_utils::{leto2_to_pyarray2, vec_to_pyarray1};

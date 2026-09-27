@@ -1,7 +1,7 @@
 use super::super::geometry::Point3;
 use super::bowl::bowl_elements;
-use super::helpers::{distance_3d, keep_largest_connected_component_3d};
 use super::placement::plan_abdominal_array_placement;
+use super::placement_geometry::{distance_3d, keep_largest_connected_component_3d};
 use kwavers_core::test_support::assert_rejects;
 use leto::Array3;
 

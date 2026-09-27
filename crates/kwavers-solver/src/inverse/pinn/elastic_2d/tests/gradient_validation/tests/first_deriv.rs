@@ -1,4 +1,4 @@
-use super::helpers::{
+use super::autodiff_fixtures::{
     autodiff_gradient_x, autodiff_gradient_y, central_difference_x, central_difference_y,
 };
 use super::{FD_H_FIRST, REL_TOL_FIRST};

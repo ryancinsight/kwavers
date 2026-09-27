@@ -1,7 +1,7 @@
 //! Python bindings for same-device therapy/imaging inverse simulations.
 
 mod abdominal3d;
-mod helpers;
+mod array_conversion;
 mod inverse;
 mod nonlinear3d;
 mod standing_wave;

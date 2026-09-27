@@ -10,11 +10,11 @@ use leto::{Array3, ArrayView2};
 
 use super::config::ReconstructionPhotoacousticConfig;
 use super::filters::Filters;
+use super::forward_model::Utils;
 use super::fourier::FourierReconstructor;
 use super::iterative::{IterativeAlgorithm, IterativeMethods};
 use super::linear_algebra::PhotoacousticLinearSolver;
 use super::time_reversal::PhotoacousticTimeReversal;
-use super::utils::Utils;
 
 /// Photoacoustic reconstruction algorithms
 #[derive(Debug, Clone)]

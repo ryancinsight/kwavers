@@ -9,7 +9,7 @@
 #[cfg(test)]
 mod amr;
 #[cfg(test)]
-pub(crate) mod helpers;
+pub(crate) mod finite_difference;
 #[cfg(test)]
 mod mms;
 #[cfg(test)]
