@@ -225,7 +225,7 @@ fi
 # and the lock is rewritten -- so it runs on an export of the pushed revision
 # outside the stack, which is exactly what CI resolves. The working tree is
 # never touched.
-if [ -f "$repo_root/deny.toml" ]; then
+if [ -f "$lock_export/deny.toml" ]; then
   if ! cargo deny --version >/dev/null 2>&1; then
     rm -rf "$lock_export"
     echo "pre-push: cargo-deny is not installed, so the dependency sources of this" >&2
@@ -384,9 +384,8 @@ fi
 # then decide the verdict (Stack tools, above). The checker runs with
 # `ATLAS_STACK_ROOT` naming the live stack, since cited hashes resolve
 # against every member's object store and only the stack holds them all.
-# Citations are bounded by what the range's base measures today
-# (`--drift-base`), so a branch deleted elsewhere does not refuse a push
-# that cites nothing new.
+# Citations resolve through default branches and tags only, so a branch
+# deleted elsewhere cannot refuse a push that cites nothing new.
 if [ ! -t 0 ] && [ -z "$gate_tip" ]; then
   # Every ref git named was a deletion: there is no revision to judge, and
   # `HEAD` is not something this push carries.
@@ -395,13 +394,11 @@ elif [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
   && outside_checkout git -C "$stack_root" cat-file -e "$stack_baseline:scripts/atlas-conformance.py" 2>/dev/null; then
   # The member is the registered directory sharing this checkout's object
   # store, so a lane (`worktrees/<repo>-<branch>`) resolves to its repository.
-  own_store="$(cd "$repo_root" && cd "$(outside_checkout git rev-parse --git-common-dir)" && pwd)"
+  own_store="$(outside_checkout git -C "$repo_root" rev-parse --path-format=absolute --git-common-dir)"
   conformance_member=""
   for candidate in "$stack_root/repos/${repo_root##*/}" "$stack_root"/repos/*; do
     [ -d "$candidate" ] || continue
-    candidate_store="$(cd "$candidate" 2>/dev/null \
-      && cd "$(outside_checkout git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null \
-      && pwd)" || continue
+    candidate_store="$(outside_checkout git -C "$candidate" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || continue
     if [ "$candidate_store" = "$own_store" ]; then
       conformance_member="${candidate##*/}"
       break
@@ -419,20 +416,18 @@ elif [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
       echo "pre-push: the stack's checker at ${stack_baseline:0:12} predates revision scans;" >&2
       echo "debt ratchet not run. Run: git -C $stack_root fetch origin" >&2
     else
-      drift_args=()
-      [ -n "$range_base" ] && drift_args=(--drift-base "$range_base")
       set +e
       outside_checkout ATLAS_STACK_ROOT="$stack_root" "$python_bin" "$conformance_checker" check \
         --repo "$conformance_member" --member-path "$repo_root" \
         --member-revision "$range_rev" --baseline-rev "$stack_baseline" \
-        "${drift_args[@]}" >&2
+        >&2
       conformance_status=$?
       set -e
       if [ "$conformance_status" -eq 1 ]; then
         echo "pre-push: BLOCKED -- the pushed revision raises a debt class above the" >&2
         echo "baseline atlas ${stack_baseline:0:12} records for $conformance_member." >&2
         echo "Fix the debt; never regenerate the baseline over it. Reproduce:" >&2
-        echo "  ATLAS_STACK_ROOT=$stack_root python $conformance_checker check --repo $conformance_member --member-path $repo_root --member-revision $range_rev --baseline-rev $stack_baseline ${drift_args[*]}" >&2
+        echo "  ATLAS_STACK_ROOT=$stack_root python $conformance_checker check --repo $conformance_member --member-path $repo_root --member-revision $range_rev --baseline-rev $stack_baseline" >&2
         exit 1
       elif [ "$conformance_status" -ne 0 ]; then
         echo "pre-push: BLOCKED -- the debt ratchet could not run (exit $conformance_status)." >&2
@@ -457,25 +452,28 @@ fi
 # large member, and a gate that slow is a gate people bypass. The changed files
 # map to their packages and only those are linted and tested.
 #
-# `cargo fmt` needs no dependency resolution; clippy and nextest do, and how
-# they resolve decides whether this gate is usable at all. Cargo finds the
-# stack's `[patch]` overlay by walking up from the working directory, so running
-# from a neutral directory with `--manifest-path` escapes it -- and with it the
-# shared target directory and every first-party dependency, which then resolve
-# to their git sources instead of the local trees. Nothing in the cache matches
-# and the gate rebuilds the world: measured at over ten minutes for a single
-# leaf crate, which is not a pre-push gate.
+# Every step reads an export of the pushed revision, never the checkout. The
+# checkout is not the push: the stack commits through a private index onto an
+# item branch nobody checked out, and a shared tree holds a peer's branch and
+# uncommitted files. Gating the checkout judged that state -- ritk's fmt
+# failed on a peer's uncommitted layout modules -- and refusing a push whose
+# tip differed from it refused every private-index push.
 #
-# So these run from the repository, inside the overlay, on the warm cache. The
-# cost is that cargo rewrites `Cargo.lock` as it goes -- stripping the git
-# sources CI needs -- which is the very corruption the guard above exists to
-# catch. The lock is therefore restored byte-for-byte afterwards, whatever it
-# held, so the gate cannot damage what it just verified.
+# The export is `git archive <sha>^{tree}`: a tree, not the commit, so every
+# file takes the current time and no cached build of older content passes for
+# this content. It sits in a temporary directory outside the stack, because
+# inside it the stack's `[patch]` overlay redirects this member's packages to
+# its main tree beside the export's own copies ("package collision in the
+# lockfile"). Outside it the export resolves its committed `Cargo.lock`, so
+# every resolving step passes `--locked`, exactly as CI does. The rest of the
+# stack's cargo configuration still applies -- its profile keys hash every
+# shared artifact -- so each `.cargo/config.toml` above the member is copied,
+# `[patch]` tables removed, to the same nesting above the export, and the
+# stack's target directory is exported: the gate uses the one shared cache.
 #
-# For the same reason nothing here passes `--locked`: under the overlay the lock
-# *must* change, so `--locked` would fail on resolution before reaching a line
-# of code. Lock correctness is the guard's job, checked from outside the
-# overlay; this gate's job is the code.
+# The export is also a repository whose `HEAD` is the pushed commit, borrowing
+# this member's object store, so the source identity checker records the
+# pushed revision as the build's source -- never the checkout's `HEAD`.
 #
 # Bypass deliberately:
 #
@@ -503,46 +501,15 @@ if [ -n "$gate_range_base" ] \
   gate_range_base=""
 fi
 gate_tip_rev="${gate_tip:-HEAD}"
-checkout_tip="$(git rev-parse --verify --quiet HEAD^{commit} || true)"
-pushed_tip="$(git rev-parse --verify --quiet "$gate_tip_rev^{commit}" || true)"
-is_hook_publication() {
-  local publication_base="$1" publication_tip="$2" publication_parent publication_subject publication_paths
-  [ -n "$publication_base" ] || return 1
-  publication_parent="$(git rev-parse --verify --quiet "$publication_tip^" 2>/dev/null || true)"
-  [ "$publication_parent" = "$publication_base" ] || return 1
-  publication_subject="$(git show -s --format=%s "$publication_tip" 2>/dev/null || true)"
-  [ "$publication_subject" = "ci: Sync the stack-owned git hooks" ] || return 1
-  publication_paths="$(git diff --name-only "$publication_base" "$publication_tip" 2>/dev/null || true)"
-  [ -n "$publication_paths" ] || return 1
-  if printf '%s\n' "$publication_paths" | grep -qvE '^\.githooks/(pre-push|pre-commit)$'; then
-    return 1
-  fi
-  return 0
-}
-publication_push=0
-if [ -n "$gate_tip" ] && [ -n "$checkout_tip" ] && [ -n "$pushed_tip" ] \
-  && [ "$checkout_tip" != "$pushed_tip" ]; then
-  if is_hook_publication "${gate_range_base:-}" "$pushed_tip"; then
-    publication_push=1
-    echo "pre-push: canonical hook publication accepted from committed revision $pushed_tip" >&2
-  else
-    echo "pre-push: BLOCKED -- pushed revision $pushed_tip differs from checkout $checkout_tip" >&2
-    echo "Run the gate from a checkout of the pushed revision; no artifact was accepted." >&2
-    exit 1
-  fi
-fi
-if [ -n "$gate_tip" ] && [ "$publication_push" -eq 0 ]; then
-  checkout_status="$(git status --porcelain=v1 --untracked-files=all)"
-  if [ -n "$checkout_status" ]; then
-    echo "pre-push: BLOCKED -- checkout has uncommitted changes not present in the pushed revision" >&2
-    echo "Commit or remove them before pushing; no artifact was accepted." >&2
-    exit 1
-  fi
+gate_sha="$(git rev-parse --verify --quiet "$gate_tip_rev^{commit}" || true)"
+if [ -z "$gate_sha" ]; then
+  echo "pre-push: cannot resolve the pushed revision $gate_tip_rev" >&2
+  exit 1
 fi
 if [ -n "$gate_range_base" ]; then
   gate_base="$gate_range_base"
 else
-  gate_base="$(default_branch_base "$gate_tip_rev" || true)"
+  gate_base="$(default_branch_base "$gate_sha" || true)"
 fi
 
 if [ -z "$gate_base" ]; then
@@ -550,88 +517,83 @@ if [ -z "$gate_base" ]; then
   exit 0
 fi
 
-gate_changed="$(git diff --name-only "$gate_base" "$gate_tip_rev" 2>/dev/null || true)"
-if [ "$publication_push" -eq 1 ]; then
-  echo "pre-push: hook-only publication; no package gate needed" >&2
-  exit 0
-fi
-
-# Where cargo runs. A member's main tree runs inside the stack, so the gate
-# builds against the local working trees the overlay provides. A lane (a
-# linked worktree) cannot: the overlay patches this member's packages to its
-# main tree while the lane's workspace defines the same packages, and cargo
-# stops with "package collision in the lockfile" -- a moirai lane push was
-# refused that way as a clippy failure. A lane therefore runs from a directory
-# outside the stack, naming its manifest and the stack's shared target
-# directory, which resolves the committed lock exactly as CI does.
-gate_cwd="$repo_root"
-gate_manifest=""
-# `cargo fmt` finds no targets in a virtual manifest named by path, so a lane
-# names every member; in place it reads the workspace from the working
-# directory, and `--all` there would also reach the overlay's patched trees.
-gate_fmt_scope=""
-if [ "$(git rev-parse --git-dir)" != "$(git rev-parse --git-common-dir)" ]; then
-  overlay_config=""
-  search_dir="$(dirname "$repo_root")"
-  while [ "$search_dir" != "/" ] && [ "$search_dir" != "." ]; do
-    if [ -f "$search_dir/.cargo/config.toml" ]; then
-      overlay_config="$search_dir/.cargo/config.toml"
-      break
-    fi
-    parent="$(dirname "$search_dir")"
-    [ "$parent" = "$search_dir" ] && break
-    search_dir="$parent"
-  done
-  if [ -n "$overlay_config" ]; then
-    if [ -z "${CARGO_TARGET_DIR:-}" ]; then
-      stack_target="$(sed -n 's/^[[:space:]]*target-dir[[:space:]]*=[[:space:]]*"\(.*\)".*/\1/p' "$overlay_config" | head -1)"
-      case "$stack_target" in
-        "") ;;
-        /*|[A-Za-z]:*) export CARGO_TARGET_DIR="$stack_target" ;;
-        *) export CARGO_TARGET_DIR="$(dirname "$(dirname "$overlay_config")")/$stack_target" ;;
-      esac
-    fi
-    gate_cwd="$(mktemp -d "${TMPDIR:-/tmp}/pre-push-lane.XXXXXX")"
-    # Leading space: the reproduce lines render as `cargo doc --no-deps$gate_specs`,
-    # and without it the flag joins the subcommand ("--no-deps--manifest-path").
-    gate_manifest=" --manifest-path $repo_root/Cargo.toml"
-    gate_fmt_scope="--all"
-    echo "pre-push: lane of an overlaid member; gating outside the stack overlay" >&2
-  fi
-fi
-
-cleanup_gate_cwd() {
-  if [ "$gate_cwd" != "$repo_root" ]; then
-    rm -rf "$gate_cwd" 2>/dev/null || true
-  fi
-}
+gate_changed="$(git diff --name-only "$gate_base" "$gate_sha" 2>/dev/null || true)"
 
 if [ -z "$python_bin" ]; then
   echo "pre-push: no python interpreter found; Cargo workspace membership not verified" >&2
   echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
-  cleanup_gate_cwd
   exit 1
 fi
 
-gate_lock="$repo_root/Cargo.lock"
-gate_lock_backup=""
-if [ -f "$gate_lock" ]; then
-  gate_lock_backup="$(mktemp)"
-  cp -p "$gate_lock" "$gate_lock_backup"
+# The stack's cargo configuration, outermost first: cargo merges every
+# `.cargo/config.toml` above its working directory, the nearest winning.
+stack_configs=()
+search_dir="$(dirname "$repo_root")"
+while :; do
+  if [ -f "$search_dir/.cargo/config.toml" ]; then
+    stack_configs=("$search_dir/.cargo/config.toml" ${stack_configs[@]+"${stack_configs[@]}"})
+  fi
+  parent="$(dirname "$search_dir")"
+  [ "$parent" = "$search_dir" ] && break
+  search_dir="$parent"
+done
+
+# The shared target directory: the nearest config naming one, relative to the
+# directory holding its `.cargo`; the checkout's own `target/` otherwise.
+if [ -z "${CARGO_TARGET_DIR:-}" ]; then
+  gate_target=""
+  for (( config_index = ${#stack_configs[@]} - 1; config_index >= 0; config_index-- )); do
+    config="${stack_configs[$config_index]}"
+    configured="$(sed -n 's/^[[:space:]]*target-dir[[:space:]]*=[[:space:]]*"\(.*\)".*/\1/p' "$config" | head -1)"
+    [ -n "$configured" ] || continue
+    case "$configured" in
+      /*|[A-Za-z]:*) gate_target="$configured" ;;
+      *) gate_target="$(dirname "$(dirname "$config")")/$configured" ;;
+    esac
+    break
+  done
+  export CARGO_TARGET_DIR="${gate_target:-$repo_root/target}"
 fi
 
-restore_gate_lock() {
-  if [ -n "$gate_lock_backup" ] && [ -f "$gate_lock_backup" ]; then
-    if ! cmp -s "$gate_lock_backup" "$gate_lock" 2>/dev/null; then
-      cp -p "$gate_lock_backup" "$gate_lock" || true
-    fi
-    rm -f "$gate_lock_backup" || true
+gate_root="$(mktemp -d "${TMPDIR:-/tmp}/pre-push-gate.XXXXXX")"
+gate_log=""
+cleanup_gate() {
+  rm -rf "$gate_root" 2>/dev/null || true
+  if [ -n "$gate_log" ]; then
+    rm -f "$gate_log" 2>/dev/null || true
   fi
-  rm -f "${gate_log:-}" 2>/dev/null || true
-  cleanup_gate_cwd
 }
+trap cleanup_gate EXIT
+trap 'exit 130' INT TERM
 
-trap restore_gate_lock EXIT INT TERM
+gate_parent="$gate_root"
+for config in ${stack_configs[@]+"${stack_configs[@]}"}; do
+  mkdir -p "$gate_parent/.cargo"
+  awk '/^[[:space:]]*\[/ { skip = ($0 ~ /^[[:space:]]*\[[[:space:]]*patch[[:space:]]*[].]/) } !skip' \
+    "$config" > "$gate_parent/.cargo/config.toml"
+  gate_parent="$gate_parent/nested"
+done
+gate_export="$gate_parent/${repo_root##*/}"
+mkdir -p "$gate_export"
+if ! git archive "$gate_sha^{tree}" | tar -x -C "$gate_export"; then
+  echo "pre-push: could not export $gate_sha for the local gate" >&2
+  exit 1
+fi
+# The native spelling: cargo reports Windows paths, and Python reads a Git
+# Bash `/tmp/...` path as a directory on the current drive.
+gate_export="$(cd "$gate_export" && { pwd -W 2>/dev/null || pwd; })"
+object_store="$(git rev-parse --path-format=absolute --git-common-dir)/objects"
+if ! outside_checkout git init -q "$gate_export" \
+  || ! printf '%s\n' "$object_store" > "$gate_export/.git/objects/info/alternates" \
+  || ! outside_checkout git -C "$gate_export" update-ref HEAD "$gate_sha" \
+  || ! outside_checkout git -C "$gate_export" read-tree HEAD; then
+  echo "pre-push: could not record $gate_sha as the export's revision" >&2
+  exit 1
+fi
+
+# Leading space: the steps render as `cargo doc --no-deps$gate_specs`, and
+# without it the flag joins the subcommand ("--no-deps--manifest-path").
+gate_manifest=" --manifest-path $gate_export/Cargo.toml"
 
 # Cargo is the authority on which package manifests belong to this workspace.
 # A nested standalone manifest (cargo-fuzz is the common case) can legally use
@@ -639,7 +601,7 @@ trap restore_gate_lock EXIT INT TERM
 # `--no-deps` reads membership without resolving dependencies or changing the
 # lockfile. Each output record is `<repo-relative manifest><tab><package name>`.
 if ! workspace_members="$(
-  cd "$gate_cwd" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+  cd "$gate_export" && cargo metadata --no-deps --format-version 1 $gate_manifest |
     "$python_bin" -c 'import json, os, sys
 # LF records: text-mode stdout on Windows writes CRLF, and bash keeps the CR
 # in the package name, so a new-member push gated `helios-core<CR>` beside
@@ -653,11 +615,10 @@ for package in metadata["packages"]:
         continue
     manifest = os.path.realpath(package["manifest_path"])
     relative = os.path.relpath(manifest, root).replace(os.sep, "/")
-    print(f"{relative}\t{package['"'"'name'"'"']}")' "$repo_root"
+    print(f"{relative}\t{package['"'"'name'"'"']}")' "$gate_export"
 )"; then
   echo "pre-push: cargo metadata could not establish workspace membership" >&2
   echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
-  cleanup_gate_cwd
   exit 1
 fi
 
@@ -673,7 +634,7 @@ while IFS= read -r changed_path; do
   package_dir=""
   excluded_manifest=""
   while [ "$owner_dir" != "." ] && [ "$owner_dir" != "/" ]; do
-    manifest="$repo_root/$owner_dir/Cargo.toml"
+    manifest="$gate_export/$owner_dir/Cargo.toml"
     if [ -f "$manifest" ]; then
       if grep -qE '^\[package\]' "$manifest" 2>/dev/null; then
         package_dir="$owner_dir"
@@ -692,8 +653,8 @@ while IFS= read -r changed_path; do
     continue
   fi
   if [ -z "$package_dir" ] && [ "$changed_path" = "Cargo.toml" ] \
-    && [ -f "$repo_root/Cargo.toml" ] \
-    && grep -qE '^\[workspace\]' "$repo_root/Cargo.toml" 2>/dev/null; then
+    && [ -f "$gate_export/Cargo.toml" ] \
+    && grep -qE '^\[workspace\]' "$gate_export/Cargo.toml" 2>/dev/null; then
     while IFS=$'\t' read -r _workspace_manifest workspace_package; do
       [ -n "$workspace_package" ] || continue
       case " $gate_packages " in
@@ -704,14 +665,14 @@ while IFS= read -r changed_path; do
     continue
   fi
   if [ -z "$package_dir" ]; then
-    if [ -f "$repo_root/Cargo.toml" ] && grep -qE '^\[package\]' "$repo_root/Cargo.toml" 2>/dev/null; then
+    if [ -f "$gate_export/Cargo.toml" ] && grep -qE '^\[package\]' "$gate_export/Cargo.toml" 2>/dev/null; then
       package_dir="."
     else
       continue
     fi
   fi
-  manifest="$repo_root/$package_dir/Cargo.toml"
-  relative_manifest="${manifest#"$repo_root"/}"
+  manifest="$gate_export/$package_dir/Cargo.toml"
+  relative_manifest="${manifest#"$gate_export"/}"
   relative_manifest="${relative_manifest#./}"
   package_name="$(printf '%s\n' "$workspace_members" | awk -F '\t' -v manifest="$relative_manifest" '$1 == manifest { print $2; exit }')"
   if [ -z "$package_name" ]; then
@@ -739,25 +700,21 @@ The parent gate cannot verify it with a parent-workspace -p argument. Run that
 workspace's configured gate and commit its evidence, or push anyway with
 SKIP_LOCAL_GATE=1 git push.
 MESSAGE
-  cleanup_gate_cwd
   exit 1
 fi
 
 if [ -z "${gate_packages// /}" ]; then
   echo "pre-push: no package owns the changed files; local gate not needed" >&2
-  cleanup_gate_cwd
   exit 0
 fi
 
 # Run one gate step and say whose failure it was.
 #
-# The step runs inside the stack overlay, so its dependency graph is the local
-# working trees rather than the git sources CI resolves. When that graph is
-# broken -- a member whose version requirement lags its provider's, so the
-# overlay cannot patch it and one crate resolves to git while its dependencies
-# resolve local -- the step fails on a crate under `~/.cargo`, nowhere near the
-# push. Reporting that as "your clippy fails" is how a gate loses its
-# credibility and starts getting bypassed.
+# The step resolves the committed lock outside the overlay. When that graph is
+# broken -- a first-party git source CI cannot fetch either, or a lock that
+# does not resolve under `--locked` -- the step fails on a crate under
+# `~/.cargo`, nowhere near the push. Reporting that as "your clippy fails" is
+# how a gate loses its credibility and starts getting bypassed.
 #
 # The verdict defaults to 'ours' and only an affirmative case moves it. A
 # failing test emits no compile diagnostics at all, so "found nothing outside
@@ -793,13 +750,13 @@ normalise_diagnostic_path() {
 classify_gate_step() {
   local log="$1"
   shift
-  if (cd "$gate_cwd" && "$@" >"$log" 2>&1); then
+  if (cd "$gate_export" && "$@" >"$log" 2>&1); then
     echo ok
     return 0
   fi
 
-  # Two workspaces defining one package is the overlay meeting a lane, never
-  # the change: see the lane selection above `gate_specs`.
+  # Two workspaces defining one package is a `[patch]` overlay reaching the
+  # export, never the change: see where the export is built.
   if grep -q 'package collision in the lockfile' "$log"; then
     echo environment
     return 0
@@ -818,7 +775,7 @@ classify_gate_step() {
   fi
 
   local root_normalised inside=0 outside=0 location foreign_crate=0
-  root_normalised="$(normalise_diagnostic_path "$repo_root")"
+  root_normalised="$(normalise_diagnostic_path "$gate_export")"
 
   # Only locations under an `error` header count. A crate that fails to compile
   # still emits warnings for whatever did compile, and counting those made the
@@ -870,9 +827,8 @@ report_broken_graph() {
 
 pre-push: the $step step failed, but every diagnostic points outside this
 repository, so the local dependency graph is broken rather than this change.
-That is usually the stack overlay: a member whose requirement lags its
-provider stays git-sourced while its dependencies resolve locally, and the
-halves disagree.
+That is usually the committed lock: a git source this machine cannot fetch,
+or a lock that no longer resolves under --locked.
 
 The gate could not run, so this push is NOT verified. First diagnostic:
 
@@ -880,31 +836,29 @@ MESSAGE
   grep -m 1 -A 3 -E '^error' "$log" >&2 || true
   cat >&2 <<'MESSAGE'
 
-Check with `python scripts/atlas-stack-overlay.py check` at the stack root.
+Check with `python scripts/lockfile.py --check` in the member.
 MESSAGE
 }
 
-gate_specs="$gate_manifest"
+gate_package_specs=""
 for package_name in $gate_packages; do
-  gate_specs="$gate_specs -p $package_name"
+  gate_package_specs="$gate_package_specs -p $package_name"
 done
+gate_specs="$gate_manifest$gate_package_specs --locked"
+gate_reproduce="From a checkout of $gate_sha outside the stack overlay:"
 
 identity_checker="${stack_scripts:+$stack_scripts/atlas-build-identity.py}"
 identity_target_dir=""
 identity_target="${CARGO_BUILD_TARGET:-host}"
 identity_enabled=0
-identity_manifest_args=(--manifest "$repo_root/Cargo.toml")
-identity_cargo_manifest_args=()
-if [ -n "$gate_manifest" ]; then
-  identity_cargo_manifest_args=(--manifest-path "$repo_root/Cargo.toml")
-fi
+identity_cargo_manifest_args=(--manifest-path "$gate_export/Cargo.toml")
 if [ -f "$identity_checker" ]; then
   if [ -z "$python_bin" ]; then
     echo "pre-push: source identity checker is present but no python interpreter found" >&2
     exit 1
   fi
   if ! identity_target_dir="$(
-    cd "$gate_cwd" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+    cd "$gate_export" && cargo metadata --no-deps --format-version 1 $gate_manifest |
       "$python_bin" -c 'import json, sys
 value = json.load(sys.stdin).get("target_directory")
 if not isinstance(value, str) or not value:
@@ -928,16 +882,14 @@ run_identity_step() {
   local identity_command
   identity_command=(
     "$python_bin" "$identity_checker" run
-    --root "$repo_root"
+    --root "$gate_export"
     --package "$package_name"
     --target-dir "$identity_target_dir"
     --profile debug
     --target "$identity_target"
-    --manifest "$repo_root/Cargo.toml"
-    --command-cwd "$gate_cwd"
+    --manifest "$gate_export/Cargo.toml"
+    --command-cwd "$gate_export"
     --command-key "atlas-pre-push:$package_name"
-    --ignore-path "$repo_root/Cargo.lock"
-    "${identity_manifest_args[@]}"
     --
     "$@"
   )
@@ -973,12 +925,12 @@ echo "pre-push: gating${gate_packages}" >&2
 
 # Formatting is workspace-wide and near-instant, and its failure is the
 # cheapest one to find here rather than on a runner.
-if ! (cd "$gate_cwd" && cargo fmt $gate_fmt_scope $gate_manifest -- --check >/dev/null); then
-  cat >&2 <<'MESSAGE'
+if ! (cd "$gate_export" && cargo fmt --all $gate_manifest -- --check >/dev/null); then
+  cat >&2 <<MESSAGE
 
-pre-push: `cargo fmt --check` fails, so the architecture validation would.
+pre-push: \`cargo fmt --check\` fails on $gate_sha, so the architecture validation would.
 
-Run `cargo fmt` and stage the result. To push anyway: SKIP_LOCAL_GATE=1 git push
+Run \`cargo fmt\` and commit the result. To push anyway: SKIP_LOCAL_GATE=1 git push
 MESSAGE
   exit 1
 fi
@@ -988,14 +940,14 @@ fi
 # then failed CI on a `// SAFETY:` comment two lines above its block, because
 # nothing here ran the ratchet. It is text-only and fast, so it runs before the
 # compile steps; a member without the script has no ratchet to run.
-safety_ratchet="$repo_root/scripts/safety_ratchet.py"
+safety_ratchet="$gate_export/scripts/safety_ratchet.py"
 if [ -f "$safety_ratchet" ]; then
   if [ -z "$python_bin" ]; then
     echo "pre-push: scripts/safety_ratchet.py present but no python interpreter found" >&2
     echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
     exit 1
   fi
-  if ! (cd "$repo_root" && "$python_bin" scripts/safety_ratchet.py check >&2); then
+  if ! (cd "$gate_export" && "$python_bin" scripts/safety_ratchet.py check >&2); then
     cat >&2 <<'MESSAGE'
 
 pre-push: the SAFETY ratchet fails, so CI's workspace job would. Put a
@@ -1017,11 +969,10 @@ fi
 # pre-existing per-crate debt the ratchet exists to burn down, and a gate
 # that fails on debt you did not write is a gate that gets bypassed.
 gate_log="$(mktemp)"
-trap 'rm -f "$gate_log"; restore_gate_lock' EXIT INT TERM
 
 if [ "$identity_enabled" -eq 1 ]; then
   for package_name in $gate_packages; do
-    run_identity_step "$package_name" clippy cargo clippy "${identity_cargo_manifest_args[@]}" -p "$package_name" --all-targets
+    run_identity_step "$package_name" clippy cargo clippy "${identity_cargo_manifest_args[@]}" -p "$package_name" --all-targets --locked
   done
 else
   case "$(classify_gate_step "$gate_log" cargo clippy $gate_specs --all-targets)" in
@@ -1030,9 +981,9 @@ else
 
 pre-push: clippy fails for$gate_packages, so the CI ratchet would.
 
-Reproduce:
+$gate_reproduce
 
-    cargo clippy$gate_specs --all-targets
+    cargo clippy$gate_package_specs --all-targets --locked
 
 To push anyway: SKIP_LOCAL_GATE=1 git push
 MESSAGE
@@ -1048,7 +999,7 @@ fi
 if command -v cargo-nextest >/dev/null 2>&1; then
   if [ "$identity_enabled" -eq 1 ]; then
     for package_name in $gate_packages; do
-      run_identity_step "$package_name" tests cargo nextest run "${identity_cargo_manifest_args[@]}" -p "$package_name"
+      run_identity_step "$package_name" tests cargo nextest run "${identity_cargo_manifest_args[@]}" -p "$package_name" --locked
     done
   else
     case "$(classify_gate_step "$gate_log" cargo nextest run $gate_specs)" in
@@ -1057,9 +1008,9 @@ if command -v cargo-nextest >/dev/null 2>&1; then
 
 pre-push: tests fail for$gate_packages.
 
-Reproduce:
+$gate_reproduce
 
-    cargo nextest run$gate_specs
+    cargo nextest run$gate_package_specs --locked
 
 To push anyway: SKIP_LOCAL_GATE=1 git push
 MESSAGE
@@ -1081,7 +1032,7 @@ fi
 # packages are documented here the same way.
 if [ "$identity_enabled" -eq 1 ]; then
   for package_name in $gate_packages; do
-    run_identity_step "$package_name" rustdoc env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps "${identity_cargo_manifest_args[@]}" -p "$package_name"
+    run_identity_step "$package_name" rustdoc env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps "${identity_cargo_manifest_args[@]}" -p "$package_name" --locked
   done
 else
   case "$(classify_gate_step "$gate_log" env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps $gate_specs)" in
@@ -1090,9 +1041,9 @@ else
 
 pre-push: rustdoc fails for$gate_packages, so the CI rustdoc shard would.
 
-Reproduce:
+$gate_reproduce
 
-    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps$gate_specs
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps$gate_package_specs --locked
 
 To push anyway: SKIP_LOCAL_GATE=1 git push
 MESSAGE
