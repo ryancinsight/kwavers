@@ -3110,6 +3110,7 @@ dependencies = [
 name = "kwavers-receiver"
 version = "3.0.0"
 dependencies = [
+ "criterion",
  "eunomia",
  "kwavers-core",
  "kwavers-field",

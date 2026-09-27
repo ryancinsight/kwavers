@@ -1,7 +1,7 @@
 // recorder/complex/recorder.rs - Main recorder implementation
 
 use crate::sonoluminescence::{SonoluminescenceDetector, SonoluminescenceEvent};
-use crate::GridSensorSet;
+use crate::{GridSensorSet, SensorTraces};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_core::time::Time;
 use kwavers_field::indices::{BUBBLE_RADIUS_IDX, LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
@@ -25,9 +25,9 @@ pub struct Recorder {
     pub channels: RecordingChannels,
     pub fields_snapshots: Vec<(usize, Array4<f64>)>,
     pub snapshot_interval: usize,
-    pub pressure_sensor_data: Vec<Vec<f64>>,
-    pub light_sensor_data: Vec<Vec<f64>>,
-    pub temperature_sensor_data: Vec<Vec<f64>>,
+    pub pressure_sensor_data: SensorTraces,
+    pub light_sensor_data: SensorTraces,
+    pub temperature_sensor_data: SensorTraces,
     pub recorded_steps: Vec<f64>,
     pub time: Time,
 
@@ -60,41 +60,13 @@ impl Recorder {
     /// Get pressure data as Array2 for compatibility
     #[must_use]
     pub fn pressure_data(&self) -> Option<Array2<f64>> {
-        if self.pressure_sensor_data.is_empty() {
-            return None;
-        }
-
-        let n_time = self.pressure_sensor_data.len();
-        let n_sensors = self.pressure_sensor_data[0].len();
-        let mut data = Array2::zeros([n_sensors, n_time]);
-
-        for (t, sensor_data) in self.pressure_sensor_data.iter().enumerate() {
-            for (s, &value) in sensor_data.iter().enumerate() {
-                data[[s, t]] = value;
-            }
-        }
-
-        Some(data)
+        (!self.pressure_sensor_data.is_empty()).then(|| self.pressure_sensor_data.to_sensor_major())
     }
 
     /// Get light data as Array2 for compatibility
     #[must_use]
     pub fn light_data(&self) -> Option<Array2<f64>> {
-        if self.light_sensor_data.is_empty() {
-            return None;
-        }
-
-        let n_time = self.light_sensor_data.len();
-        let n_sensors = self.light_sensor_data[0].len();
-        let mut data = Array2::zeros([n_sensors, n_time]);
-
-        for (t, sensor_data) in self.light_sensor_data.iter().enumerate() {
-            for (s, &value) in sensor_data.iter().enumerate() {
-                data[[s, t]] = value;
-            }
-        }
-
-        Some(data)
+        (!self.light_sensor_data.is_empty()).then(|| self.light_sensor_data.to_sensor_major())
     }
 
     /// Create new recorder from configuration
@@ -112,15 +84,16 @@ impl Recorder {
             SonoluminescenceDetector::new(grid_shape, grid_spacing, cfg.clone())
         });
 
+        let n_sensors = sensor.len();
         Self {
             sensor,
             filename: config.filename,
             channels: config.channels,
             fields_snapshots: Vec::new(),
             snapshot_interval: config.snapshot_interval,
-            pressure_sensor_data: Vec::new(),
-            light_sensor_data: Vec::new(),
-            temperature_sensor_data: Vec::new(),
+            pressure_sensor_data: SensorTraces::new(n_sensors),
+            light_sensor_data: SensorTraces::new(n_sensors),
+            temperature_sensor_data: SensorTraces::new(n_sensors),
             recorded_steps: Vec::new(),
             time: time.clone(),
             cavitation_events: Vec::new(),
@@ -348,16 +321,14 @@ impl Recorder {
         for (i, &time) in self.recorded_steps.iter().enumerate() {
             write!(file, "{time:.6e}")?;
 
-            if self.channels.contains(RecorderChannel::Pressure)
-                && i < self.pressure_sensor_data.len()
-            {
-                for &val in &self.pressure_sensor_data[i] {
+            if self.channels.contains(RecorderChannel::Pressure) {
+                for val in self.pressure_sensor_data.step(i).unwrap_or_default() {
                     write!(file, "\t{val:.6e}")?;
                 }
             }
 
-            if self.channels.contains(RecorderChannel::Light) && i < self.light_sensor_data.len() {
-                for &val in &self.light_sensor_data[i] {
+            if self.channels.contains(RecorderChannel::Light) {
+                for val in self.light_sensor_data.step(i).unwrap_or_default() {
                     write!(file, "\t{val:.6e}")?;
                 }
             }

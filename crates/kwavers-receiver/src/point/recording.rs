@@ -5,11 +5,11 @@ use leto::ArrayView3;
 impl PointSensor {
     /// Record field values at all sensor locations for current timestep.
     pub fn record(&mut self, field: ArrayView3<f64>, _grid: &Grid, _time_step: usize) {
-        for (sensor_idx, interp) in self.interp_data.iter().enumerate() {
-            let value = interp.interpolate(field);
-            self.time_history[sensor_idx].push(value);
-        }
-        self.n_timesteps += 1;
+        self.time_history.push_step(
+            self.interp_data
+                .iter()
+                .map(|interp| interp.interpolate(field)),
+        );
     }
 
     /// Get maximum absolute pressure at specific sensor.
@@ -18,12 +18,13 @@ impl PointSensor {
     ///
     #[must_use]
     pub fn max_pressure(&self, sensor_idx: usize) -> Option<f64> {
-        self.time_history.get(sensor_idx).and_then(|history| {
-            history
-                .iter()
-                .map(|v| v.abs())
-                .max_by(|a, b| a.total_cmp(b))
-        })
+        if sensor_idx >= self.time_history.n_sensors() {
+            return None;
+        }
+        self.time_history
+            .sensor(sensor_idx)
+            .map(f64::abs)
+            .max_by(f64::total_cmp)
     }
 
     /// Get RMS pressure at specific sensor.
@@ -33,13 +34,15 @@ impl PointSensor {
     /// ```
     #[must_use]
     pub fn rms_pressure(&self, sensor_idx: usize) -> Option<f64> {
-        self.time_history.get(sensor_idx).map(|history| {
-            if history.is_empty() {
-                return 0.0;
-            }
-            let sum_squares: f64 = history.iter().map(|v| v * v).sum();
-            (sum_squares / (history.len() as f64)).sqrt()
-        })
+        if sensor_idx >= self.time_history.n_sensors() {
+            return None;
+        }
+        let n_steps = self.time_history.n_steps();
+        if n_steps == 0 {
+            return Some(0.0);
+        }
+        let sum_squares: f64 = self.time_history.sensor(sensor_idx).map(|v| v * v).sum();
+        Some((sum_squares / (n_steps as f64)).sqrt())
     }
 
     /// Export time history to CSV format.
@@ -55,16 +58,10 @@ impl PointSensor {
         }
         csv.push('\n');
 
-        for t in 0..self.n_timesteps {
+        for (t, row) in self.time_history.steps().enumerate() {
             csv.push_str(&format!("{:.6e}", (t as f64) * dt));
-            for sensor_idx in 0..self.n_sensors() {
-                if let Some(history) = self.time_history.get(sensor_idx) {
-                    if let Some(&value) = history.get(t) {
-                        csv.push_str(&format!(",{:.6e}", value));
-                    } else {
-                        csv.push_str(",0.0");
-                    }
-                }
+            for value in row {
+                csv.push_str(&format!(",{:.6e}", value));
             }
             csv.push('\n');
         }
