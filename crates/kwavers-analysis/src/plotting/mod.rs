@@ -207,15 +207,17 @@ mod plotting_impl {
         }
 
         // Generate time points based on snapshot interval and data length
-        let num_points = recorder.pressure_sensor_data[0].len();
+        let traces = &recorder.pressure_sensor_data;
+        let num_points = traces.n_steps();
         let dt = 1e-6; // Default time step, should be configurable in future
         let time_points: Vec<f64> = (0..num_points).map(|i| i as f64 * dt).collect();
 
         let mut plot = Plot::new();
 
         // Plot each sensor's pressure evolution
-        for (sensor_idx, pressure_data) in recorder.pressure_sensor_data.iter().enumerate() {
-            let trace = Scatter::new(time_points.clone(), pressure_data.clone())
+        for sensor_idx in 0..traces.n_sensors() {
+            let pressure_data: Vec<f64> = traces.sensor(sensor_idx).collect();
+            let trace = Scatter::new(time_points.clone(), pressure_data)
                 .mode(Mode::Lines)
                 .name(format!("Sensor {}", sensor_idx));
             plot.add_trace(trace);
@@ -231,7 +233,7 @@ mod plotting_impl {
         info!(
             "Plot saved to {} with {} sensors",
             filename,
-            recorder.pressure_sensor_data.len()
+            traces.n_sensors()
         );
     }
 }

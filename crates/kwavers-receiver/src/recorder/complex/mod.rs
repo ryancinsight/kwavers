@@ -4,3 +4,6 @@ pub mod recorder;
 mod trait_impl;
 
 pub use recorder::Recorder;
+
+#[cfg(test)]
+mod tests;

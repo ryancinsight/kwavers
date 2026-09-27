@@ -39,6 +39,7 @@ mod recording;
 #[cfg(test)]
 mod tests;
 
+use crate::SensorTraces;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use leto::{Array1, Array2, ArrayView3};
@@ -182,8 +183,7 @@ impl InterpolationData {
 pub struct PointSensor {
     pub(super) locations: Vec<[f64; 3]>,
     pub(super) interp_data: Vec<InterpolationData>,
-    pub(super) time_history: Vec<Vec<f64>>,
-    pub(super) n_timesteps: usize,
+    pub(super) time_history: SensorTraces,
 }
 
 impl PointSensor {
@@ -220,37 +220,29 @@ impl PointSensor {
             })
             .collect();
 
-        let time_history = vec![Vec::new(); n_sensors];
+        let time_history = SensorTraces::new(n_sensors);
 
         Ok(Self {
             locations: config.locations,
             interp_data,
             time_history,
-            n_timesteps: 0,
         })
     }
 
     /// Get time history for specific sensor as 1D array.
     #[must_use]
     pub fn time_history(&self, sensor_idx: usize) -> Option<Array1<f64>> {
-        self.time_history
-            .get(sensor_idx)
-            .and_then(|history| Array1::from_vec([history.len()], history.clone()).ok())
+        if sensor_idx >= self.time_history.n_sensors() {
+            return None;
+        }
+        let trace: Vec<f64> = self.time_history.sensor(sensor_idx).collect();
+        Array1::from_vec([trace.len()], trace).ok()
     }
 
     /// Get all time histories as 2D array [n_sensors × n_timesteps].
     #[must_use]
     pub fn all_time_histories(&self) -> Array2<f64> {
-        let n_sensors = self.locations.len();
-        let n_timesteps = self.n_timesteps;
-
-        let mut histories = Array2::<f64>::zeros([n_sensors, n_timesteps]);
-        for (i, history) in self.time_history.iter().enumerate() {
-            for (j, &value) in history.iter().enumerate() {
-                histories[[i, j]] = value;
-            }
-        }
-        histories
+        self.time_history.to_sensor_major()
     }
 
     #[must_use]
@@ -265,13 +257,10 @@ impl PointSensor {
 
     #[must_use]
     pub fn n_timesteps(&self) -> usize {
-        self.n_timesteps
+        self.time_history.n_steps()
     }
 
     pub fn clear(&mut self) {
-        for history in &mut self.time_history {
-            history.clear();
-        }
-        self.n_timesteps = 0;
+        self.time_history.clear();
     }
 }

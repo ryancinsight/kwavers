@@ -9,6 +9,7 @@ use log::info;
 use super::super::config::RecorderChannel;
 use super::super::traits::RecorderTrait;
 use super::recorder::Recorder;
+use crate::{GridSensorSet, SensorTraces};
 
 impl RecorderTrait for Recorder {
     fn initialize(&mut self, grid: &Grid) -> KwaversResult<()> {
@@ -37,13 +38,13 @@ impl RecorderTrait for Recorder {
         self.recorded_steps.reserve(expected_steps);
 
         if self.channels.contains(RecorderChannel::Pressure) {
-            self.pressure_sensor_data.reserve(expected_steps);
+            self.pressure_sensor_data.reserve_steps(expected_steps);
         }
         if self.channels.contains(RecorderChannel::Light) {
-            self.light_sensor_data.reserve(expected_steps);
+            self.light_sensor_data.reserve_steps(expected_steps);
         }
         if self.channels.contains(RecorderChannel::Temperature) {
-            self.temperature_sensor_data.reserve(expected_steps);
+            self.temperature_sensor_data.reserve_steps(expected_steps);
         }
 
         Ok(())
@@ -53,74 +54,29 @@ impl RecorderTrait for Recorder {
         let time = step as f64 * self.time.dt;
         self.recorded_steps.push(time);
 
-        if self.channels.contains(RecorderChannel::Pressure) {
-            let pressure_field = fields
-                .index_axis::<3>(0, PRESSURE_IDX)
-                .map_err(|e| {
-                    KwaversError::InternalError(format!("pressure axis slice failed: {e}"))
-                })?
-                .to_contiguous();
-            let sensor_data = self.sensor.sample(&pressure_field);
-            let sensor_data: Vec<f64> = sensor_data
-                .into_iter()
-                .enumerate()
-                .map(|(idx, v)| {
-                    v.ok_or_else(|| {
-                        KwaversError::Validation(ValidationError::ConstraintViolation {
-                            message: format!(
-                                "Recorder sampled None for pressure at sensor index {idx}"
-                            ),
-                        })
-                    })
-                })
-                .collect::<KwaversResult<Vec<f64>>>()?;
-            self.pressure_sensor_data.push(sensor_data);
-        }
-
-        if self.channels.contains(RecorderChannel::Light) {
-            let light_field = fields
-                .index_axis::<3>(0, LIGHT_IDX)
-                .map_err(|e| KwaversError::InternalError(format!("light axis slice failed: {e}")))?
-                .to_contiguous();
-            let sensor_data = self.sensor.sample(&light_field);
-            let sensor_data: Vec<f64> = sensor_data
-                .into_iter()
-                .enumerate()
-                .map(|(idx, v)| {
-                    v.ok_or_else(|| {
-                        KwaversError::Validation(ValidationError::ConstraintViolation {
-                            message: format!(
-                                "Recorder sampled None for light at sensor index {idx}"
-                            ),
-                        })
-                    })
-                })
-                .collect::<KwaversResult<Vec<f64>>>()?;
-            self.light_sensor_data.push(sensor_data);
-        }
-
-        if self.channels.contains(RecorderChannel::Temperature) {
-            let temp_field = fields
-                .index_axis::<3>(0, TEMPERATURE_IDX)
-                .map_err(|e| {
-                    KwaversError::InternalError(format!("temperature axis slice failed: {e}"))
-                })?
-                .to_contiguous();
-            let sensor_data = self.sensor.sample(&temp_field);
-            let sensor_data: Vec<f64> = sensor_data
-                .into_iter()
-                .enumerate()
-                .map(|(idx, v)| {
-                    v.ok_or_else(|| {
-                        KwaversError::Validation(ValidationError::ConstraintViolation {
-                            message: format!(
-                                "Recorder sampled None for temperature at sensor index {idx}"
-                            ),
-                        })
-                    })
-                })
-                .collect::<KwaversResult<Vec<f64>>>()?;
-            self.temperature_sensor_data.push(sensor_data);
+        for (channel, field_idx, name, traces) in [
+            (
+                RecorderChannel::Pressure,
+                PRESSURE_IDX,
+                "pressure",
+                &mut self.pressure_sensor_data,
+            ),
+            (
+                RecorderChannel::Light,
+                LIGHT_IDX,
+                "light",
+                &mut self.light_sensor_data,
+            ),
+            (
+                RecorderChannel::Temperature,
+                TEMPERATURE_IDX,
+                "temperature",
+                &mut self.temperature_sensor_data,
+            ),
+        ] {
+            if self.channels.contains(channel) {
+                record_channel(&self.sensor, fields, field_idx, name, traces)?;
+            }
         }
 
         self.record_fields(fields, step, time)?;
@@ -134,4 +90,31 @@ impl RecorderTrait for Recorder {
         self.save_data()?;
         Ok(())
     }
+}
+
+/// Sample one field channel at every sensor and append the row to `traces`.
+fn record_channel(
+    sensor: &GridSensorSet,
+    fields: &Array4<f64>,
+    field_idx: usize,
+    name: &str,
+    traces: &mut SensorTraces,
+) -> KwaversResult<()> {
+    let field = fields
+        .index_axis::<3>(0, field_idx)
+        .map_err(|e| KwaversError::InternalError(format!("{name} axis slice failed: {e}")))?
+        .to_contiguous();
+    traces.try_push_step(
+        sensor
+            .sample(&field)
+            .into_iter()
+            .enumerate()
+            .map(|(idx, v)| {
+                v.ok_or_else(|| {
+                    KwaversError::Validation(ValidationError::ConstraintViolation {
+                        message: format!("Recorder sampled None for {name} at sensor index {idx}"),
+                    })
+                })
+            }),
+    )
 }
