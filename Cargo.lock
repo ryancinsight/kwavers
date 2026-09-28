@@ -79,7 +79,7 @@ dependencies = [
 [[package]]
 name = "aequitas-python"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/aequitas#38baa96dfde05df3e1cd6b817daa712f6d02ff1a"
+source = "git+https://github.com/ryancinsight/aequitas#73cb44b96c186fd2cc1e3fde08682b4c82638967"
 dependencies = [
  "aequitas",
  "pyo3",
@@ -3298,7 +3298,7 @@ checksum = "7a79a3332a6609480d7d0c9eab957bca6b455b91bb84e66d19f5ff66294b85b8"
 [[package]]
 name = "leto"
 version = "0.43.0"
-source = "git+https://github.com/ryancinsight/leto.git#ce8eceb6f7a808a92f688be4124d3211760b1ad3"
+source = "git+https://github.com/ryancinsight/leto.git#b4079d1f666abc7727742524b0995cf57c156cb8"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -3310,7 +3310,7 @@ dependencies = [
 [[package]]
 name = "leto-ops"
 version = "0.43.0"
-source = "git+https://github.com/ryancinsight/leto.git#ce8eceb6f7a808a92f688be4124d3211760b1ad3"
+source = "git+https://github.com/ryancinsight/leto.git#b4079d1f666abc7727742524b0995cf57c156cb8"
 dependencies = [
  "eunomia",
  "hermes-simd",

@@ -4,6 +4,14 @@
 
 ### Changed
 
+- **[patch] The lossless staggered FDTD pressure update is one pass.** On a
+  Cartesian grid without a CPML or absorption, the three velocity
+  divergences are swept a row at a time into buffers that stay in cache and
+  applied to the pressure in the same pass (leto's `map_divergence_into`),
+  instead of written to three grids. Values are bit-identical. The
+  `fdtd_step_64_cubed` bench read 25-30% lower at orders 2 and 4 across five
+  alternating pairs, on a host held at 100% load by other builds, so the
+  absolute step times of those runs are not a baseline.
 - **[patch] The unused `onnx-ir` workspace dependency is gone, and the `ritk-*`
   pins move to the revision that dropped it.** Nothing in this workspace ever
   named `onnx-ir` -- it was declared in `[workspace.dependencies]` and consumed

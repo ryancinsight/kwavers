@@ -5,6 +5,7 @@ use leto::Array3 as LetoArray3;
 use leto::{Array3, ArrayView3};
 
 use super::super::solver::{FdtdGpuAccelerator, FdtdSolver};
+use crate::geometry::SolverGeometry;
 
 use leto_ops::Axis;
 
@@ -82,6 +83,12 @@ impl FdtdSolver {
         }
 
         if self.config.staggered_grid {
+            if self.cpml_boundary.is_none()
+                && self.absorption.is_none()
+                && self.config.geometry != SolverGeometry::CylindricalAS
+            {
+                return self.update_pressure_staggered_fused(dt);
+            }
             self.compute_divergence_components_staggered()?;
             self.apply_pressure_from_components(dt);
         } else {
@@ -112,6 +119,32 @@ impl FdtdSolver {
 
             self.apply_pressure_from_components(dt);
         }
+        Ok(())
+    }
+
+    /// The lossless Cartesian staggered pressure update as one pass:
+    /// `p −= Δt·ρc²·(dz + (dx + dy))`, the three divergences swept a row at a
+    /// time into buffers that stay in cache.
+    ///
+    /// Nothing else reads a divergence component here -- no CPML corrects
+    /// them, no relaxation memory integrates their sum, no cylindrical term
+    /// is added to one -- so none has to reach a grid. Each is the sum
+    /// [`Self::compute_divergence_components_staggered`] forms, term for term,
+    /// and the update is [`super::apply_pressure_update_from_components`]'s
+    /// arithmetic, so the pressure is unchanged to the bit.
+    fn update_pressure_staggered_fused(&mut self, dt: f64) -> KwaversResult<()> {
+        self.leapfrog_operator.map_divergence_into(
+            [
+                self.fields.ux.view(),
+                self.fields.uy.view(),
+                self.fields.uz.view(),
+            ],
+            [self.rho_c_squared.view()],
+            &mut self.fields.p.view_mut(),
+            |[dx, dy, dz], [rho_c_squared], pressure| {
+                pressure - dt * rho_c_squared * (dz + (dx + dy))
+            },
+        )?;
         Ok(())
     }
 
