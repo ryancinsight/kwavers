@@ -2,8 +2,9 @@
 
 use super::super::operator::SoundSpeedShiftOperator;
 use super::super::types::{SoundSpeedShiftConfig, SoundSpeedShiftWorkspace};
-use super::linear_algebra::{axpy, dot};
+use super::linear_algebra::axpy;
 use super::normal::{normal_apply, objective};
+use kwavers_math::linear_algebra::NumericOps;
 
 pub(super) fn solve_dense_pcg(
     operator: &SoundSpeedShiftOperator,
@@ -26,7 +27,10 @@ pub(super) fn solve_dense_pcg_with_diagonal(
     workspace.prepare(operator.rows(), operator.cols());
     debug_assert_eq!(normal_diagonal.len(), operator.cols());
     operator.t_matvec(data, &mut workspace.rhs);
-    let rhs_norm = dot(&workspace.rhs, &workspace.rhs).sqrt().max(f64::EPSILON);
+    let rhs_norm = f64::dot_product(&workspace.rhs, &workspace.rhs)
+        .expect("invariant: solver vectors share one length")
+        .sqrt()
+        .max(f64::EPSILON);
     workspace.diagonal.copy_from_slice(normal_diagonal);
     for value in &mut workspace.diagonal {
         *value = (*value + config.tikhonov_weight).max(f64::EPSILON);
@@ -60,7 +64,8 @@ pub(super) fn solve_dense_pcg_with_diagonal(
     workspace
         .direction
         .copy_from_slice(&workspace.preconditioned);
-    let mut rz_old = dot(&workspace.residual, &workspace.preconditioned);
+    let mut rz_old = f64::dot_product(&workspace.residual, &workspace.preconditioned)
+        .expect("invariant: solver vectors share one length");
     workspace.objective_history.clear();
     workspace.objective_history.push(objective(
         operator,
@@ -80,7 +85,8 @@ pub(super) fn solve_dense_pcg_with_diagonal(
             &mut workspace.row,
             &mut workspace.laplacian,
         );
-        let denom = dot(&workspace.direction, &workspace.normal_direction);
+        let denom = f64::dot_product(&workspace.direction, &workspace.normal_direction)
+            .expect("invariant: solver vectors share one length");
         if denom <= f64::EPSILON {
             break;
         }
@@ -95,7 +101,8 @@ pub(super) fn solve_dense_pcg_with_diagonal(
         {
             *zv = *rv / *diagonal;
         }
-        let rz_new = dot(&workspace.residual, &workspace.preconditioned);
+        let rz_new = f64::dot_product(&workspace.residual, &workspace.preconditioned)
+            .expect("invariant: solver vectors share one length");
         workspace.objective_history.push(objective(
             operator,
             &workspace.solution,

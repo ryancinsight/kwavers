@@ -22,6 +22,7 @@
 use super::super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
+use kwavers_math::linear_algebra::NumericOps;
 use leto::Array3;
 use leto_ops::application::optimization::LbfgsMemory;
 
@@ -118,7 +119,9 @@ impl FwiProcessor {
 
             // Search direction d = −H·g (steepest descent on the first step).
             let dir = mem.direction(&g);
-            let gd = dot(&g, &dir); // directional derivative; < 0 for a descent dir
+            let gd = f64::dot_product(&g, &dir)
+                .expect("invariant: a direction has the gradient's length");
+            // directional derivative; < 0 for a descent dir
             if gd >= 0.0 {
                 log::info!(
                     "FWI(L-BFGS) iter {iteration}: non-descent direction (gᵀd={gd:.3e}); stopping"
@@ -225,11 +228,6 @@ impl FwiProcessor {
             })
         })
     }
-}
-
-#[inline]
-fn dot(a: &[f64], b: &[f64]) -> f64 {
-    a.iter().zip(b).map(|(x, y)| x * y).sum()
 }
 
 #[inline]
