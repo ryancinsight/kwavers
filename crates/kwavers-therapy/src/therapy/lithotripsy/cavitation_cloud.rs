@@ -560,12 +560,13 @@ impl CavitationCloudDynamics {
                 params,
                 driving,
                 time,
+                &cells,
                 &g,
                 &rates,
                 under_relaxation,
             ),
             CouplingScheme::ImplicitDirect => {
-                self.direct_coupling(solver, params, driving, time, &g, &rates, &apply_g)
+                self.direct_coupling(solver, params, driving, time, &cells, &g, &rates, &apply_g)
             }
             CouplingScheme::ImplicitIterative => {
                 self.iterative_coupling(solver, params, driving, time, &cells, &rates)
@@ -589,11 +590,11 @@ impl CavitationCloudDynamics {
         params: &BubbleParameters,
         driving: &Array3<f64>,
         time: f64,
+        cells: &[([usize; 3], [f64; 3], f64, f64)],
         g: &Array2<f64>,
         rates: &[f64],
         under_relaxation: f64,
     ) -> Vec<f64> {
-        let cells = self.active_cells();
         let n = cells.len();
         let omega = under_relaxation.clamp(1e-3, 1.0);
         let scale = driving.iter().fold(0.0_f64, |m, &p| m.max(p.abs())) + params.p0;
@@ -664,13 +665,13 @@ impl CavitationCloudDynamics {
         params: &BubbleParameters,
         driving: &Array3<f64>,
         time: f64,
+        cells: &[([usize; 3], [f64; 3], f64, f64)],
         g: &Array2<f64>,
         rates: &[f64],
         apply_g: &dyn Fn(&[f64]) -> Vec<f64>,
     ) -> Vec<f64> {
-        let cells = self.active_cells();
         let n = cells.len();
-        let (c, d) = Self::affine_coeffs(solver, params, &cells, rates, time);
+        let (c, d) = Self::affine_coeffs(solver, params, cells, rates, time);
         // M = I − D·G ; e = c + D·p_ext.
         let mut m = Array2::<f64>::eye(n);
         let mut e = Array1::<f64>::zeros(n);
@@ -685,7 +686,7 @@ impl CavitationCloudDynamics {
             Err(_) => {
                 // Singular/ill-posed system: surface via the fallback path (a damped
                 // fixed point), never silent zeros.
-                self.fixed_point_coupling(solver, params, driving, time, g, rates, 0.5)
+                self.fixed_point_coupling(solver, params, driving, time, cells, g, rates, 0.5)
             }
         }
     }
@@ -734,7 +735,7 @@ impl CavitationCloudDynamics {
             g_s
         } else {
             let g = self.coupling_matrix(cells);
-            self.fixed_point_coupling(solver, params, driving, time, &g, rates, 0.5)
+            self.fixed_point_coupling(solver, params, driving, time, cells, &g, rates, 0.5)
         }
     }
 
