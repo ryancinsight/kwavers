@@ -8,21 +8,16 @@ use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
-use crate::thermal::response::{checked_cem43_increments, CelsiusStorage};
-use kwavers_core::traversal::zip_mut;
+use crate::thermal::response::{CelsiusStorage, Cem43Accumulator};
 
 /// Thermal dose calculator using cumulative equivalent minutes at 43°C (CEM43)
+///
+/// A thin typed wrapper over the shared [`Cem43Accumulator`]: it accumulates
+/// every voxel (no minimum-temperature mask) and keeps no running-maximum
+/// state, so the peak dose is evaluated on demand.
 #[derive(Debug)]
 pub struct ThermalCEM43Grid {
-    /// Cumulative thermal dose (CEM43 minutes)
-    dose: Array3<f64>,
-    /// Reusable checked increments preserve failure atomicity without
-    /// allocating in the update path.
-    increments: Array3<f64>,
-    /// Grid dimensions
-    nx: usize,
-    ny: usize,
-    nz: usize,
+    accumulator: Cem43Accumulator<CelsiusStorage, 0>,
 }
 
 impl ThermalCEM43Grid {
@@ -30,11 +25,7 @@ impl ThermalCEM43Grid {
     #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
-            dose: Array3::zeros([nx, ny, nz]),
-            increments: Array3::zeros([nx, ny, nz]),
-            nx,
-            ny,
-            nz,
+            accumulator: Cem43Accumulator::new([nx, ny, nz]),
         }
     }
 
@@ -45,7 +36,7 @@ impl ThermalCEM43Grid {
     /// Returns [`KwaversError::DimensionMismatch`] when `temperature` does not
     /// have the same shape as this dose grid.
     pub fn update(&mut self, temperature: &Array3<f64>, dt: Time<f64>) -> KwaversResult<()> {
-        let dose_shape = self.dose.shape();
+        let dose_shape = self.accumulator.shape();
         let temperature_shape = temperature.shape();
         if dose_shape != temperature_shape {
             return Err(KwaversError::DimensionMismatch(format!(
@@ -53,51 +44,40 @@ impl ThermalCEM43Grid {
             )));
         }
 
-        checked_cem43_increments::<CelsiusStorage, _>(
-            self.increments.view_mut(),
-            temperature.view(),
-            dt,
-            |_| true,
-        )?;
-
-        zip_mut(
-            self.dose.view_mut(),
-            self.increments.view(),
-            |dose, &increment| *dose += increment,
-        );
-        Ok(())
+        self.accumulator.accumulate(temperature, dt, |_| true, None)
     }
 
     /// Get cumulative thermal dose
     #[must_use]
     pub fn get_dose(&self) -> &Array3<f64> {
-        &self.dose
+        self.accumulator.dose()
     }
 
     /// Get maximum thermal dose
     #[must_use]
     pub fn get_max_dose(&self) -> f64 {
-        self.dose.iter().fold(0.0_f64, |a, &b| a.max(b))
+        self.accumulator
+            .dose()
+            .iter()
+            .fold(0.0_f64, |a, &b| a.max(b))
     }
 
     /// Get thermal dose at specific point
     #[must_use]
     pub fn get_dose_at(&self, i: usize, j: usize, k: usize) -> f64 {
-        self.dose[[i, j, k]]
+        self.accumulator.dose_at(i, j, k)
     }
 
     /// Check if thermal dose exceeds threshold for tissue damage
     /// Returns fraction of volume exceeding threshold
     #[must_use]
     pub fn fraction_above_threshold(&self, threshold: f64) -> f64 {
-        let count = self.dose.iter().filter(|&&d| d > threshold).count();
-        count as f64 / (self.nx * self.ny * self.nz) as f64
+        self.accumulator.fraction_above(threshold)
     }
 
     /// Reset dose accumulation
     pub fn reset(&mut self) {
-        self.dose.fill(0.0);
-        self.increments.fill(0.0);
+        self.accumulator.reset();
     }
 }
 

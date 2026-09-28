@@ -9,8 +9,7 @@ use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
-use crate::thermal::response::{checked_cem43_increments, KelvinStorage};
-use kwavers_core::traversal::zip_mut;
+use crate::thermal::response::{Cem43Accumulator, KelvinStorage};
 
 /// Kwavers-owned thermal-dose policy thresholds.
 pub mod thresholds {
@@ -28,12 +27,13 @@ pub mod thresholds {
 
 /// Accumulates the CEM43 thermal dose (cumulative equivalent minutes at 43 °C)
 /// per voxel over a heating history, tracking the running maximum.
+///
+/// A thin typed wrapper over the shared [`Cem43Accumulator`]: it masks voxels at
+/// or below body temperature and records the time at which the peak dose is
+/// first reached.
 #[derive(Debug)]
 pub struct ThermalDoseCalculator {
-    cumulative_dose: Array3<f64>,
-    increments: Array3<f64>,
-    max_dose: f64,
-    max_dose_time: Time<f64>,
+    accumulator: Cem43Accumulator<KelvinStorage, 0>,
 }
 
 impl ThermalDoseCalculator {
@@ -41,10 +41,7 @@ impl ThermalDoseCalculator {
     #[must_use]
     pub fn new(shape: (usize, usize, usize)) -> Self {
         Self {
-            cumulative_dose: Array3::zeros(shape),
-            increments: Array3::zeros(shape),
-            max_dose: 0.0,
-            max_dose_time: Time::from_base(0.0),
+            accumulator: Cem43Accumulator::new([shape.0, shape.1, shape.2]),
         }
     }
     /// Update dose.
@@ -59,49 +56,36 @@ impl ThermalDoseCalculator {
     ) -> KwaversResult<()> {
         use thresholds::MIN_DOSE_TEMPERATURE_C;
 
-        checked_cem43_increments::<KelvinStorage, _>(
-            self.increments.view_mut(),
-            temperature.view(),
+        self.accumulator.accumulate(
+            temperature,
             dt,
             |temp_kelvin| temp_kelvin - KELVIN_OFFSET_C > MIN_DOSE_TEMPERATURE_C,
-        )?;
-        zip_mut(
-            self.cumulative_dose.view_mut(),
-            self.increments.view(),
-            |dose, &increment| *dose += increment,
-        );
-
-        let updated_max = self.cumulative_dose.iter().copied().fold(0.0_f64, f64::max);
-        if updated_max > self.max_dose {
-            self.max_dose = updated_max;
-            self.max_dose_time = current_time;
-        }
-
-        Ok(())
+            Some(current_time),
+        )
     }
 
     /// Per-voxel accumulated CEM43 thermal dose in equivalent minutes at 43 °C.
     #[must_use]
     pub fn get_dose(&self) -> &Array3<f64> {
-        &self.cumulative_dose
+        self.accumulator.dose()
     }
 
     /// Peak per-voxel CEM43 dose reached so far.
     #[must_use]
     pub fn max_dose(&self) -> f64 {
-        self.max_dose
+        self.accumulator.max_dose()
     }
 
     /// Simulation time in seconds at which the peak dose was reached.
     #[must_use]
     pub fn max_dose_time(&self) -> Time<f64> {
-        self.max_dose_time
+        self.accumulator.max_time()
     }
 
     /// Boolean mask of voxels whose accumulated dose meets `threshold_cem43`.
     #[must_use]
     pub fn check_damage_threshold(&self, threshold_cem43: f64) -> Array3<bool> {
-        self.cumulative_dose.mapv(|dose| dose >= threshold_cem43)
+        self.accumulator.dose().mapv(|dose| dose >= threshold_cem43)
     }
 
     /// Fraction of voxels exceeding the irreversible-necrosis CEM43 threshold.
@@ -109,9 +93,10 @@ impl ThermalDoseCalculator {
     pub fn necrosis_fraction(&self) -> f64 {
         use thresholds::NECROSIS_THRESHOLD_CEM43;
 
-        let total_points = self.cumulative_dose.len() as f64;
+        let total_points = self.accumulator.dose().len() as f64;
         let necrosed_points = self
-            .cumulative_dose
+            .accumulator
+            .dose()
             .iter()
             .filter(|&&dose| dose >= NECROSIS_THRESHOLD_CEM43)
             .count() as f64;
@@ -124,9 +109,10 @@ impl ThermalDoseCalculator {
     pub fn damage_fraction(&self) -> f64 {
         use thresholds::DAMAGE_THRESHOLD_CEM43;
 
-        let total_points = self.cumulative_dose.len() as f64;
+        let total_points = self.accumulator.dose().len() as f64;
         let damaged_points = self
-            .cumulative_dose
+            .accumulator
+            .dose()
             .iter()
             .filter(|&&dose| dose >= DAMAGE_THRESHOLD_CEM43)
             .count() as f64;
@@ -137,10 +123,7 @@ impl ThermalDoseCalculator {
     /// Clear the accumulated dose and reset the running maximum (reuse the
     /// calculator for a fresh heating history).
     pub fn reset(&mut self) {
-        self.cumulative_dose.fill(0.0);
-        self.increments.fill(0.0);
-        self.max_dose = 0.0;
-        self.max_dose_time = Time::from_base(0.0);
+        self.accumulator.reset();
     }
 }
 

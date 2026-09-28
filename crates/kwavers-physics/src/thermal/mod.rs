@@ -17,12 +17,17 @@ pub mod coupling;
 pub mod diffusion;
 pub mod perfusion;
 pub mod properties;
-pub(crate) mod response;
+pub mod response;
 pub mod thermal_dose;
 
 pub use ablation::{AblationField, AblationKinetics, AblationState};
 pub use coupling::{AcousticHeatingSource, TemperatureCoefficients, ThermalAcousticCoupling};
 pub use diffusion::ThermalDiffusionConfig;
+pub use response::{
+    cem43_equivalent_minutes, cem43_rate_per_minute, cem43_reference_celsius,
+    checked_cem43_increments, CelsiusStorage, Cem43Accumulator, KelvinStorage,
+    StoredTemperatureScale,
+};
 pub use thermal_dose::ThermalCEM43Grid;
 
 // Re-export canonical domain type

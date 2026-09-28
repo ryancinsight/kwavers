@@ -63,22 +63,18 @@
 //! - Hasgall et al. (2022). IT'IS database v4.1. doi:10.13099/VIP21000-04-1.
 //! - Duck, F. A. (1990). Physical Properties of Tissue. Academic Press.
 
-use leto::Array3;
-use std::sync::Mutex;
-
-use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
-use asclepius::response::thermal::Cem43;
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::constants::fundamental::DENSITY_WATER;
 use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
-use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
-use kwavers_core::constants::thermodynamic::{
-    KELVIN_OFFSET_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
-};
+use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use kwavers_core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN};
 use kwavers_core::constants::tissue_thermal::{
     SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_BRAIN_WHITE,
 };
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
+use leto::Array3;
+
+use kwavers_physics::thermal::response::{checked_cem43_increments, CelsiusStorage};
 
 use kwavers_core::traversal::{zip_mut, zip_mut_pair, zip_mut_triple};
 
@@ -238,40 +234,14 @@ pub fn transcranial_pennes_thermal_dose(
                 *nt = t + dt_s * (kap.mul_add(l, hr) - pc * (t - baseline_c));
             },
         );
-        let law = Cem43::<f64>::canonical();
-        let step = Time::from_base(dt_s);
-        let failure = Mutex::new(None);
-        zip_mut(
+        // Delegate the per-voxel CEM43 increments to the shared Sapareto-Dewey
+        // accumulator scaffold (failure atomic: dose is untouched on rejection).
+        checked_cem43_increments::<CelsiusStorage, _>(
             cem43_increment.view_mut(),
             new_temp.view(),
-            |increment, &temperature_c| match law.increment(
-                ThermodynamicTemperature::from_base(temperature_c + KELVIN_OFFSET_C),
-                step,
-            ) {
-                Ok(exposure) => {
-                    *increment = exposure.get().into_base() / SECONDS_PER_MINUTE;
-                }
-                Err(source) => {
-                    *increment = 0.0;
-                    let mut first = failure
-                        .lock()
-                        .expect("invariant: response failure lock is never held across a panic");
-                    if first.is_none() {
-                        *first = Some(source);
-                    }
-                }
-            },
-        );
-        if let Some(source) = failure
-            .into_inner()
-            .map_err(|_| KwaversError::ConcurrencyError {
-                message: "transcranial response failure lock was poisoned".to_string(),
-            })?
-        {
-            return Err(KwaversError::InvalidInput(format!(
-                "transcranial CEM43 observation is invalid: {source}"
-            )));
-        }
+            Time::from_base(dt_s),
+            |_| true,
+        )?;
         temp = new_temp;
 
         // Update peak temperature and accumulate CEM43.
