@@ -3,7 +3,6 @@
 //! This module defines the common interfaces, traits, and configurations
 //! for all solver implementations in Kwavers.
 
-// pub mod config; // Consolidated into crate::config
 pub mod factory;
 pub mod pinn_beamforming;
 pub mod progress;

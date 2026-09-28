@@ -56,7 +56,6 @@ pub mod operators;
 pub mod symplectic;
 
 // Integration and transforms to be implemented in future phases
-// pub mod transforms;
 
 // Re-export commonly used traits for convenience
 pub use operators::{Interpolator, SpectralOperatorTrait};

@@ -93,7 +93,6 @@ pub use properties::extract_tissue_properties;
 pub use kwavers_imaging::fusion::{
     AffineTransform, FusedImageResult, FusionConfig, ImagingFusionMethod,
 };
-// pub use types::RegisteredModality; // Made crate-public only - use types module directly
 
 #[cfg(test)]
 mod tests;

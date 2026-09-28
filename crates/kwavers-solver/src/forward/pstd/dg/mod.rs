@@ -13,9 +13,7 @@ pub mod flux;
 pub mod matrices;
 pub mod quadrature;
 pub mod shock_capturing;
-// pub mod shock_detector; // Deleted
 pub mod spectral_solver;
-// pub mod tests; // Deleted
 pub mod traits;
 
 // Re-exports for convenience

@@ -46,7 +46,6 @@
 #![deny(missing_docs)]
 
 pub mod equations; // Electromagnetic wave equation specifications
-                   // pub mod optics; // Moved to physics::optics
 pub mod photoacoustic;
 pub mod plasmonics;
 

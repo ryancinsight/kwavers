@@ -26,7 +26,6 @@ pub mod viscoelastic;
 pub mod viscous;
 pub mod wrapper;
 
-// pub mod simulation_config;
 pub mod builder;
 pub mod validation_simulation;
 
@@ -35,14 +34,13 @@ pub use absorption::{AbsorptionTissueType, PowerLawAbsorption};
 pub use anisotropic::{
     AnisotropicStiffnessTensor, AnisotropyType, ChristoffelEquation, MuscleFiberModel,
 };
+pub use builder::MediumBuilder;
 pub use config::{DomainMediumParameters, InterfaceTypeParameters, LayerParameters, MediumType};
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
 pub use heterogeneous::CtMediumBuilder;
 pub use homogeneous::HomogeneousMedium;
 pub use material_fields::MaterialFields;
 pub use optical_map::{Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
-// pub use simulation_config::MediumConfig;
-pub use builder::MediumBuilder;
 pub use validation_simulation::MediumValidator;
 
 // Re-export new modular traits
