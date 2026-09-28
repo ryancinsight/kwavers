@@ -568,6 +568,29 @@ pub fn ivus_vessel_phantom(
     })
 }
 
+/// Inputs for [`ivus_therapy_pressure_field`].
+///
+/// Borrows its arrays rather than owning them, like every other `*Input` in
+/// this module, so a caller sampling on the same grid pays one allocation in
+/// total instead of one per call.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IvusTherapyPressureFieldInput<'a> {
+    /// Radius from catheter center `m`, one per sample.
+    pub radius_m: &'a [f64],
+    /// Polar angle `rad`, same length as [`Self::radius_m`].
+    pub theta_rad: &'a [f64],
+    /// Radius of the catheter itself `m`; samples inside it score zero.
+    pub catheter_radius_m: f64,
+    /// Sector-focused peak pressure `Pa`.
+    pub peak_pressure_pa: f64,
+    /// Central azimuth of the therapy sector `rad`.
+    pub therapy_azimuth_rad: f64,
+    /// Angular width of the therapy sector `rad`; must be positive.
+    pub sector_width_rad: f64,
+    /// Radial attenuation length `m`; must be positive.
+    pub attenuation_length_m: f64,
+}
+
 /// IVUS therapy pressure field for a sector-focused intravascular source.
 ///
 /// The model applies a Gaussian angular aperture and exponential radial decay:
@@ -582,16 +605,18 @@ pub fn ivus_vessel_phantom(
 /// Returns an error when arrays differ in length or when any scalar/sample is
 /// non-finite. `sector_width_rad` and `attenuation_length_m` must be positive;
 /// `catheter_radius_m` and `peak_pressure_pa` must be non-negative.
-#[allow(clippy::too_many_arguments)]
 pub fn ivus_therapy_pressure_field(
-    radius_m: &[f64],
-    theta_rad: &[f64],
-    catheter_radius_m: f64,
-    peak_pressure_pa: f64,
-    therapy_azimuth_rad: f64,
-    sector_width_rad: f64,
-    attenuation_length_m: f64,
+    input: IvusTherapyPressureFieldInput<'_>,
 ) -> Result<Vec<f64>, String> {
+    let IvusTherapyPressureFieldInput {
+        radius_m,
+        theta_rad,
+        catheter_radius_m,
+        peak_pressure_pa,
+        therapy_azimuth_rad,
+        sector_width_rad,
+        attenuation_length_m,
+    } = input;
     if radius_m.len() != theta_rad.len() {
         return Err(format!(
             "radius_m length {} must match theta_rad length {}",
@@ -930,15 +955,15 @@ pub fn ivus_therapy_fields(
     delivery_radial_center_m: f64,
     delivery_radial_width_m: f64,
 ) -> Result<IvusTherapyFields, String> {
-    let pressure_pa = ivus_therapy_pressure_field(
+    let pressure_pa = ivus_therapy_pressure_field(IvusTherapyPressureFieldInput {
         radius_m,
         theta_rad,
         catheter_radius_m,
-        therapy_pressure_pa,
+        peak_pressure_pa: therapy_pressure_pa,
         therapy_azimuth_rad,
-        therapy_sector_width_rad,
-        pressure_attenuation_length_m,
-    )?;
+        sector_width_rad: therapy_sector_width_rad,
+        attenuation_length_m: pressure_attenuation_length_m,
+    })?;
     let response = ivus_therapy_response(
         &pressure_pa,
         radius_m,
@@ -1667,9 +1692,16 @@ mod tests {
         let radius = [catheter, catheter + decay, catheter + decay];
         let theta = [azimuth, azimuth, azimuth + width];
 
-        let pressure =
-            ivus_therapy_pressure_field(&radius, &theta, catheter, peak, azimuth, width, decay)
-                .unwrap();
+        let pressure = ivus_therapy_pressure_field(IvusTherapyPressureFieldInput {
+            radius_m: &radius,
+            theta_rad: &theta,
+            catheter_radius_m: catheter,
+            peak_pressure_pa: peak,
+            therapy_azimuth_rad: azimuth,
+            sector_width_rad: width,
+            attenuation_length_m: decay,
+        })
+        .unwrap();
 
         assert_eq!(pressure[0], 0.0);
         assert!((pressure[1] - peak / std::f64::consts::E).abs() < 1.0e-9);
@@ -1678,14 +1710,40 @@ mod tests {
 
     #[test]
     fn ivus_therapy_pressure_field_rejects_invalid_inputs() {
-        let err = ivus_therapy_pressure_field(&[1.0], &[], 0.0, 1.0, 0.0, 1.0, 1.0).unwrap_err();
+        let err = ivus_therapy_pressure_field(IvusTherapyPressureFieldInput {
+            radius_m: &[1.0],
+            theta_rad: &[],
+            catheter_radius_m: 0.0,
+            peak_pressure_pa: 1.0,
+            therapy_azimuth_rad: 0.0,
+            sector_width_rad: 1.0,
+            attenuation_length_m: 1.0,
+        })
+        .unwrap_err();
         assert!(err.contains("radius_m length"));
 
-        let err =
-            ivus_therapy_pressure_field(&[f64::NAN], &[0.0], 0.0, 1.0, 0.0, 1.0, 1.0).unwrap_err();
+        let err = ivus_therapy_pressure_field(IvusTherapyPressureFieldInput {
+            radius_m: &[f64::NAN],
+            theta_rad: &[0.0],
+            catheter_radius_m: 0.0,
+            peak_pressure_pa: 1.0,
+            therapy_azimuth_rad: 0.0,
+            sector_width_rad: 1.0,
+            attenuation_length_m: 1.0,
+        })
+        .unwrap_err();
         assert!(err.contains("radius_m[0] must be finite"));
 
-        let err = ivus_therapy_pressure_field(&[1.0], &[0.0], 0.0, 1.0, 0.0, 0.0, 1.0).unwrap_err();
+        let err = ivus_therapy_pressure_field(IvusTherapyPressureFieldInput {
+            radius_m: &[1.0],
+            theta_rad: &[0.0],
+            catheter_radius_m: 0.0,
+            peak_pressure_pa: 1.0,
+            therapy_azimuth_rad: 0.0,
+            sector_width_rad: 0.0,
+            attenuation_length_m: 1.0,
+        })
+        .unwrap_err();
         assert!(err.contains("sector_width_rad"));
     }
 
@@ -2072,9 +2130,16 @@ mod tests {
         )
         .unwrap();
 
-        let pressure =
-            ivus_therapy_pressure_field(&radius, &theta, 0.55e-3, 1.0e6, -0.72, 0.50, 3.2e-3)
-                .unwrap();
+        let pressure = ivus_therapy_pressure_field(IvusTherapyPressureFieldInput {
+            radius_m: &radius,
+            theta_rad: &theta,
+            catheter_radius_m: 0.55e-3,
+            peak_pressure_pa: 1.0e6,
+            therapy_azimuth_rad: -0.72,
+            sector_width_rad: 0.50,
+            attenuation_length_m: 3.2e-3,
+        })
+        .unwrap();
         let response = ivus_therapy_response(
             &pressure,
             &radius,

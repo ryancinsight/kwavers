@@ -36,15 +36,15 @@ pub fn ivus_therapy_pressure_field(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let pressure = py
         .detach(|| {
-            imaging::ivus_therapy_pressure_field(
-                radius,
-                theta,
+            imaging::ivus_therapy_pressure_field(imaging::IvusTherapyPressureFieldInput {
+                radius_m: radius,
+                theta_rad: theta,
                 catheter_radius_m,
                 peak_pressure_pa,
                 therapy_azimuth_rad,
                 sector_width_rad,
                 attenuation_length_m,
-            )
+            })
         })
         .map_err(PyValueError::new_err)?;
     Ok(pressure.to_pyarray(py).unbind())
