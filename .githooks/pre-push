@@ -249,33 +249,62 @@ if [ -z "$python_bin" ]; then
 fi
 
 # export_revision <sha> <dir>: <dir> becomes a checkout of <sha> in a
-# repository of its own that borrows this member's object store. A checkout,
-# not `git archive | tar`: Git Bash tar refused a dangling or forward in-tree
-# symlink and deep-copied a directory link pointing outside the tree, where a
-# checkout writes links as links (as files where `core.symlinks` is false)
-# and never follows one. Its index carries stat data, so the identity
-# checker's `git diff HEAD` compares stats instead of re-hashing the tree.
+# repository of its own that borrows this member's object store, so the
+# identity checker reads the pushed commit as its `HEAD`.
+#
+# The files are written by `read-tree -u` run in the member itself, against
+# the export's index and work tree: the member is where a partial clone's
+# promisor remote lives, so blobs it never fetched are fetched on demand (the
+# export repository alone refused every tree with such a blob: 13 of 28
+# members are `blob:none`). `core.longpaths` lets a deep path exceed 260
+# characters on Windows (kwavers carries 159-character paths), and sparse
+# checkout is off so the whole tree is written. A checkout, not `git archive
+# | tar`: links are written as links (as files where `core.symlinks` is
+# false) and never followed. Run against an existing export, `--reset -u`
+# rewrites only the files that differ, so unchanged files keep their times
+# and cargo's fingerprints stay fresh; files the tree does not track are
+# removed. The index carries stat data, so the identity checker's
+# `git diff HEAD` compares stats instead of re-hashing the tree.
 export_revision() {
-  local sha="$1" directory="$2" objects
+  local sha="$1" directory="$2" member_git objects
+  member_git="$(git rev-parse --absolute-git-dir)" || return 1
   objects="$(git rev-parse --path-format=absolute --git-common-dir)/objects" || return 1
-  outside_checkout git init -q "$directory" \
-    && printf '%s\n' "$objects" > "$directory/.git/objects/info/alternates" \
+  if [ ! -d "$directory/.git" ]; then
+    mkdir -p "$directory" && outside_checkout git init -q "$directory" || return 1
+  fi
+  printf '%s\n' "$objects" > "$directory/.git/objects/info/alternates" \
+    && outside_checkout git -C "$directory" config core.longpaths true \
+    && GIT_DIR="$member_git" GIT_WORK_TREE="$directory" GIT_INDEX_FILE="$directory/.git/index" \
+      git -c core.longpaths=true -c core.sparseCheckout=false read-tree -u --reset "$sha" \
     && outside_checkout git -C "$directory" update-ref HEAD "$sha" \
-    && outside_checkout git -C "$directory" reset -q --hard HEAD
+    && outside_checkout git -C "$directory" clean -ffdxq
 }
 
-# Exports a killed push left behind: older than an hour, and their owner
-# (the `.pre-push-owner` pid) no longer running. A killed run cannot remove
-# its own; ritk's leaked exports reached 1.5 GB each.
+# Exports a killed push left behind (ritk's reached 1.5 GB each). A directory
+# naming its owner (`.pre-push-owner`) goes only once that pid is gone. One
+# naming none was written by an older hook that records no owner and may
+# still be building in it -- a run can take most of an hour -- so it goes only
+# after a day.
 if [ -n "$python_bin" ]; then
-  for stale in "$tmp_base"/pre-push-lock.* "$tmp_base"/pre-push-gate.*; do
-    [ -d "$stale" ] || continue
-    "$python_bin" -c 'import os, sys, time; sys.exit(time.time() - os.path.getmtime(sys.argv[1]) < 3600)' "$stale" || continue
+  for stale in "$tmp_base"/pre-push-lock.* "$tmp_base"/pre-push-gate.* "$tmp_base"/pl.* "$tmp_base"/pg.* "$tmp_base"/pg-log.*; do
+    [ -e "$stale" ] || continue
     stale_owner="$(cat "$stale/.pre-push-owner" 2>/dev/null || true)"
-    if [ -n "$stale_owner" ] && kill -0 "$stale_owner" 2>/dev/null; then
-      continue
+    if [ -n "$stale_owner" ]; then
+      kill -0 "$stale_owner" 2>/dev/null && continue
+    else
+      "$python_bin" -c 'import os, sys, time; sys.exit(time.time() - os.path.getmtime(sys.argv[1]) < 86400)' "$stale" || continue
     fi
     rm -rf "$stale" 2>/dev/null || true
+  done
+  # A checkout's reusable export (see the gate below) outlives its runs by
+  # design; one no run has claimed for a week belongs to a checkout that is
+  # gone, and goes unless a live run holds its lock.
+  for stable in "$tmp_base"/pg-??????????; do
+    [ -d "$stable" ] || continue
+    holder="$(cat "$stable.lock/pid" 2>/dev/null || true)"
+    [ -n "$holder" ] && kill -0 "$holder" 2>/dev/null && continue
+    "$python_bin" -c 'import os, sys, time; sys.exit(time.time() - os.path.getmtime(sys.argv[1]) < 7 * 86400)' "$stable" || continue
+    rm -rf "$stable" "$stable.lock" 2>/dev/null || true
   done
 fi
 
@@ -289,7 +318,7 @@ if [ "$skip_lockfile" = "0" ]; then
 # wrong state either way. The dependency-source check below reads the same
 # export.
 lock_rev="${pushed_tip:-${gate_tip:-HEAD}}"
-new_run_temp lock_root pre-push-lock
+new_run_temp lock_root pl
 lock_export="$lock_root/tree"
 if ! export_revision "$(git rev-parse --verify "$lock_rev^{commit}")" "$lock_export"; then
   echo "pre-push: could not export $lock_rev for the lockfile check" >&2
@@ -402,21 +431,31 @@ if [ -n "$stack_baseline" ] \
         checker_dir="$staging"
       fi
     fi
-    if [ -n "$python_bin" ] && ! "$python_bin" - "$checker_cache" "$stack_baseline" <<'PY'
-import pathlib
-import shutil
-import sys
-import time
-root = pathlib.Path(sys.argv[1])
-keep = sys.argv[2]
-cutoff = time.time() - 3600
-for path in root.iterdir():
-    if path.is_dir() and path.name != keep and path.stat().st_mtime < cutoff:
-        shutil.rmtree(path)
-PY
-    then
-      echo "pre-push: could not prune old checker copies under $checker_cache" >&2
-    fi
+  fi
+  # A run marks the copy it uses for its whole lifetime, and a copy is pruned
+  # only once it is an hour old and no live run marks it: pruning by age
+  # alone deleted copies that running gates were still reading.
+  checker_users="$checker_cache/.users"
+  mkdir -p "$checker_users"
+  checker_marker="$checker_users/${checker_dir##*/}.$$"
+  : > "$checker_marker"
+  run_temps+=("$checker_marker")
+  if [ -n "$python_bin" ]; then
+    for copy in "$checker_cache"/*/; do
+      copy="${copy%/}"
+      [ "$copy" = "$checker_dir" ] && continue
+      "$python_bin" -c 'import os, sys, time; sys.exit(time.time() - os.path.getmtime(sys.argv[1]) < 3600)' "$copy" || continue
+      copy_in_use=0
+      for user in "$checker_users/${copy##*/}".*; do
+        [ -f "$user" ] || continue
+        if kill -0 "${user##*.}" 2>/dev/null; then
+          copy_in_use=1
+        else
+          rm -f "$user"
+        fi
+      done
+      [ "$copy_in_use" -eq 0 ] && rm -rf "$copy"
+    done
   fi
   if [ -d "$checker_dir/scripts" ]; then
     stack_scripts="$checker_dir/scripts"
@@ -644,7 +683,39 @@ while :; do
   search_dir="$parent"
 done
 
-new_run_temp gate_root pre-push-gate
+# The export lives at one short path per checkout, reused run after run:
+# cargo fingerprints a package by its path, so a new directory per push
+# rebuilt every workspace package (hermes: 419 s for a re-push of one sha,
+# 567 s cold), and a short root keeps deep paths under Windows' limit. A run
+# claims it with a lock naming its pid; while a live run holds it, this run
+# builds in a temporary export instead of waiting, and a dead holder's lock
+# is taken over.
+gate_key="$(printf '%s' "$repo_root" | git hash-object --stdin | cut -c1-10)"
+gate_root="$tmp_base/pg-$gate_key"
+claim_gate_root() {
+  local staged="$gate_root.lock.$$"
+  mkdir -p "$staged" && printf '%s\n' "$$" > "$staged/pid" || return 1
+  if mv -T "$staged" "$gate_root.lock" 2>/dev/null; then
+    run_temps+=("$gate_root.lock")
+    return 0
+  fi
+  rm -rf "$staged"
+  return 1
+}
+if ! claim_gate_root; then
+  gate_holder="$(cat "$gate_root.lock/pid" 2>/dev/null || true)"
+  if [ -n "$gate_holder" ] && ! kill -0 "$gate_holder" 2>/dev/null; then
+    rm -rf "$gate_root.lock"
+  fi
+  if ! claim_gate_root; then
+    echo "pre-push: the checkout's export is in use by pid ${gate_holder:-?}; building in a fresh one" >&2
+    new_run_temp gate_root pg
+  fi
+fi
+mkdir -p "$gate_root"
+# Its age is the time since a run last claimed it (the week-long sweep above).
+touch "$gate_root"
+gate_root="$(cd "$gate_root" && { pwd -W 2>/dev/null || pwd; })"
 gate_log=""
 
 # Mirror each config above the export without its `[patch]` table, and find
@@ -705,8 +776,11 @@ for config in sys.argv[2:]:
         target = str(chosen if chosen.is_absolute() else source.parent.parent / chosen)
     lines = []
     table([], data, lines)
-    (parent / '.cargo').mkdir(parents=True)
-    (parent / '.cargo' / 'config.toml').write_bytes(('\n'.join(lines) + '\n').encode())
+    (parent / '.cargo').mkdir(parents=True, exist_ok=True)
+    mirrored = parent / '.cargo' / 'config.toml'
+    content = ('\n'.join(lines) + '\n').encode()
+    if not mirrored.is_file() or mirrored.read_bytes() != content:
+        mirrored.write_bytes(content)
     parent = parent / 'nested'
 print(parent)
 print(target)
@@ -723,9 +797,14 @@ fi
 gate_export="$gate_parent/${repo_root##*/}"
 mkdir -p "$gate_export"
 gate_export="$(cd "$gate_export" && { pwd -W 2>/dev/null || pwd; })"
+# A reused export a killed run left half-written can refuse the update;
+# it is only a cache, so it is rebuilt once from nothing.
 if ! export_revision "$gate_sha" "$gate_export"; then
-  echo "pre-push: could not export $gate_sha for the local gate" >&2
-  exit 1
+  rm -rf "$gate_export" && mkdir -p "$gate_export"
+  if ! export_revision "$gate_sha" "$gate_export"; then
+    echo "pre-push: could not export $gate_sha for the local gate" >&2
+    exit 1
+  fi
 fi
 
 # Leading space: the steps render as `cargo doc --no-deps$gate_specs`, and
@@ -1105,8 +1184,8 @@ fi
 # without extra flags: adding `-D warnings` here would fail on the
 # pre-existing per-crate debt the ratchet exists to burn down, and a gate
 # that fails on debt you did not write is a gate that gets bypassed.
-new_run_temp gate_log_dir pre-push-gate
-gate_log="$gate_log_dir/gate.log"
+gate_log="$(mktemp "$tmp_base/pg-log.XXXXXX")"
+run_temps+=("$gate_log")
 
 if [ "$identity_enabled" -eq 1 ]; then
   for package_name in $gate_packages; do
@@ -1137,10 +1216,10 @@ fi
 if command -v cargo-nextest >/dev/null 2>&1; then
   if [ "$identity_enabled" -eq 1 ]; then
     for package_name in $gate_packages; do
-      run_identity_step "$package_name" tests cargo nextest run "${identity_cargo_manifest_args[@]}" -p "$package_name" --locked
+      run_identity_step "$package_name" tests cargo nextest run "${identity_cargo_manifest_args[@]}" -p "$package_name" --locked --no-tests=pass
     done
   else
-    case "$(classify_gate_step "$gate_log" cargo nextest run $gate_specs)" in
+    case "$(classify_gate_step "$gate_log" cargo nextest run $gate_specs --no-tests=pass)" in
       ours)
         cat >&2 <<MESSAGE
 
@@ -1148,7 +1227,7 @@ pre-push: tests fail for$gate_packages.
 
 $gate_reproduce
 
-    cargo nextest run$gate_package_specs --locked
+    cargo nextest run$gate_package_specs --locked --no-tests=pass
 
 To push anyway: SKIP_LOCAL_GATE=1 git push
 MESSAGE
