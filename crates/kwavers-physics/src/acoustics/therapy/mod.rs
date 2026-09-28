@@ -23,9 +23,6 @@ pub mod sonogenetics;
 
 // Re-exports
 pub use cavitation::{CavitationDetectionMethod, TherapyCavitationDetector};
-// pub use metrics::TreatmentMetrics; // Moved to domain
-// pub use modalities::{TherapyMechanism, TherapyModality}; // Moved to domain
-// pub use parameters::TherapyParameters; // Moved to domain
 
 // Note: TherapyCalculator has moved to crate::simulation::therapy::calculator
 // Domain types are in kwavers_physics::therapy

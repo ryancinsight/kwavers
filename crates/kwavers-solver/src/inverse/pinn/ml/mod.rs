@@ -251,11 +251,6 @@ pub use uncertainty_quantification::{
     PinnUncertaintyMethod, UncertaintyStats,
 };
 
-// #[cfg(feature = "pinn")]
-// pub use advanced_architectures::{
-//     ResNetPINN1D, ResNetPINN2D, FourierFeatures, MultiScaleFeatures, PhysicsAttention, ResNetPINNConfig
-// };
-
 // Placeholder when pinn feature is not enabled
 #[cfg(not(feature = "pinn"))]
 #[derive(Debug)]
