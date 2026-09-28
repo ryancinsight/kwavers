@@ -979,23 +979,48 @@ pub fn ivus_therapy_fields(
 /// `rf(r, theta) = backscatter(x,y) * exp(-2 alpha(x,y) f_MHz (r-r_catheter))
 ///                 + A_ring exp(-((r-r_catheter) / w_ring)^2)`.
 ///
+/// Inputs for [`ivus_polar_bmode_rf`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IvusPolarBmodeRfInput<'a> {
+    /// Cartesian phantom x coordinate `m`.
+    pub x_m: &'a [f64],
+    /// Cartesian phantom y coordinate `m`, same length as [`Self::x_m`].
+    pub y_m: &'a [f64],
+    /// Normalized backscatter amplitude per phantom sample.
+    pub backscatter: &'a [f64],
+    /// Attenuation `[dB/(cm MHz)]` per phantom sample.
+    pub attenuation_db_cm_mhz: &'a [f64],
+    /// Radial axis of the polar output `m`.
+    pub r_axis_m: &'a [f64],
+    /// Angular axis of the polar output `rad`.
+    pub theta_axis_rad: &'a [f64],
+    /// Radius of the catheter itself `m`.
+    pub catheter_radius_m: f64,
+    /// Imaging frequency `Hz`; must be positive.
+    pub frequency_hz: f64,
+    /// Amplitude of the ring-down artefact, non-negative.
+    pub ring_amplitude: f64,
+    /// Radial width of the ring-down artefact `m`; must be positive.
+    pub ring_width_m: f64,
+}
+
 /// # Errors
 ///
 /// Returns an error when phantom arrays do not form the same square grid, when
 /// axes/scalars are invalid, or when any numeric sample is non-finite.
-#[allow(clippy::too_many_arguments)]
-pub fn ivus_polar_bmode_rf(
-    x_m: &[f64],
-    y_m: &[f64],
-    backscatter: &[f64],
-    attenuation_db_cm_mhz: &[f64],
-    r_axis_m: &[f64],
-    theta_axis_rad: &[f64],
-    catheter_radius_m: f64,
-    frequency_hz: f64,
-    ring_amplitude: f64,
-    ring_width_m: f64,
-) -> Result<Vec<f64>, String> {
+pub fn ivus_polar_bmode_rf(input: IvusPolarBmodeRfInput<'_>) -> Result<Vec<f64>, String> {
+    let IvusPolarBmodeRfInput {
+        x_m,
+        y_m,
+        backscatter,
+        attenuation_db_cm_mhz,
+        r_axis_m,
+        theta_axis_rad,
+        catheter_radius_m,
+        frequency_hz,
+        ring_amplitude,
+        ring_width_m,
+    } = input;
     let n = square_grid_len(x_m.len())?;
     if y_m.len() != x_m.len()
         || backscatter.len() != x_m.len()
@@ -1230,7 +1255,7 @@ pub fn ivus_bmode_image(
         return Err("r_axis_m and theta_axis_rad must not be empty".to_owned());
     }
 
-    let rf = ivus_polar_bmode_rf(
+    let rf = ivus_polar_bmode_rf(IvusPolarBmodeRfInput {
         x_m,
         y_m,
         backscatter,
@@ -1241,7 +1266,7 @@ pub fn ivus_bmode_image(
         frequency_hz,
         ring_amplitude,
         ring_width_m,
-    )?;
+    })?;
     let mut envelope = vec![0.0; rf.len()];
     for col in 0..n_theta {
         let line = Array1::from_shape_fn([n_r], |[row]| rf[row * n_theta + col]);
@@ -1767,18 +1792,18 @@ mod tests {
         let radius = [1.0e-3, 1.55e-3];
         let theta = [0.0];
 
-        let rf = ivus_polar_bmode_rf(
-            &x,
-            &y,
-            &backscatter,
-            &attenuation,
-            &radius,
-            &theta,
-            1.0e-3,
-            20.0e6,
-            0.10,
-            0.22e-3,
-        )
+        let rf = ivus_polar_bmode_rf(IvusPolarBmodeRfInput {
+            x_m: &x,
+            y_m: &y,
+            backscatter: &backscatter,
+            attenuation_db_cm_mhz: &attenuation,
+            r_axis_m: &radius,
+            theta_axis_rad: &theta,
+            catheter_radius_m: 1.0e-3,
+            frequency_hz: 20.0e6,
+            ring_amplitude: 0.10,
+            ring_width_m: 0.22e-3,
+        })
         .unwrap();
 
         assert_eq!(rf[0], 4.0 + 0.10);
@@ -1790,33 +1815,33 @@ mod tests {
 
     #[test]
     fn ivus_polar_bmode_rf_rejects_invalid_inputs() {
-        let err = ivus_polar_bmode_rf(
-            &[0.0, 1.0],
-            &[0.0, 1.0],
-            &[1.0, 1.0],
-            &[0.0, 0.0],
-            &[1.0],
-            &[0.0],
-            0.0,
-            1.0,
-            0.0,
-            1.0,
-        )
+        let err = ivus_polar_bmode_rf(IvusPolarBmodeRfInput {
+            x_m: &[0.0, 1.0],
+            y_m: &[0.0, 1.0],
+            backscatter: &[1.0, 1.0],
+            attenuation_db_cm_mhz: &[0.0, 0.0],
+            r_axis_m: &[1.0],
+            theta_axis_rad: &[0.0],
+            catheter_radius_m: 0.0,
+            frequency_hz: 1.0,
+            ring_amplitude: 0.0,
+            ring_width_m: 1.0,
+        })
         .unwrap_err();
         assert!(err.contains("square grid"));
 
-        let err = ivus_polar_bmode_rf(
-            &[0.0, 0.0, 1.0, 1.0],
-            &[0.0, 1.0, 0.0, 1.0],
-            &[1.0, f64::NAN, 1.0, 1.0],
-            &[0.0, 0.0, 0.0, 0.0],
-            &[1.0],
-            &[0.0],
-            0.0,
-            1.0,
-            0.0,
-            1.0,
-        )
+        let err = ivus_polar_bmode_rf(IvusPolarBmodeRfInput {
+            x_m: &[0.0, 0.0, 1.0, 1.0],
+            y_m: &[0.0, 1.0, 0.0, 1.0],
+            backscatter: &[1.0, f64::NAN, 1.0, 1.0],
+            attenuation_db_cm_mhz: &[0.0, 0.0, 0.0, 0.0],
+            r_axis_m: &[1.0],
+            theta_axis_rad: &[0.0],
+            catheter_radius_m: 0.0,
+            frequency_hz: 1.0,
+            ring_amplitude: 0.0,
+            ring_width_m: 1.0,
+        })
         .unwrap_err();
         assert!(err.contains("backscatter[1]"));
     }
