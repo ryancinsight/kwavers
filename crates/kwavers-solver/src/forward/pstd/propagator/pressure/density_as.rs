@@ -1,4 +1,5 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use crate::forward::pstd::propagator::apply_axis_derivative_update;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array2, ArrayView2, ArrayViewMut2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
@@ -92,7 +93,11 @@ fn update_axisymmetric_density_fused(
         enumerate_mut_with::<Adaptive, _, _>(density_values, |index, density| {
             let (i, k) = dense_indices(index, nr);
             let p = pml[pml_index(axis, i, k)];
-            *density = p * (p * *density - dt * coef_values[index] * div_values[index]);
+            *density = apply_axis_derivative_update::<true>(
+                *density,
+                dt * coef_values[index] * div_values[index],
+                p,
+            );
         });
         return;
     }
@@ -101,8 +106,11 @@ fn update_axisymmetric_density_fused(
     for k in 0..nr {
         for i in 0..nx {
             let p = pml[pml_index(axis, i, k)];
-            density[[i, k]] =
-                p * (p * density[[i, k]] - dt * coefficient[[i, k]] * divergence[[i, k]]);
+            density[[i, k]] = apply_axis_derivative_update::<true>(
+                density[[i, k]],
+                dt * coefficient[[i, k]] * divergence[[i, k]],
+                p,
+            );
         }
     }
 }
@@ -130,7 +138,11 @@ fn update_axisymmetric_density_unfused(
         coefficient.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(density_values, |index, density| {
-            *density -= dt * coef_values[index] * div_values[index];
+            *density = apply_axis_derivative_update::<false>(
+                *density,
+                dt * coef_values[index] * div_values[index],
+                1.0,
+            );
         });
         return;
     }
@@ -138,7 +150,11 @@ fn update_axisymmetric_density_unfused(
     let [nx, nr] = density.shape();
     for k in 0..nr {
         for i in 0..nx {
-            density[[i, k]] -= dt * coefficient[[i, k]] * divergence[[i, k]];
+            density[[i, k]] = apply_axis_derivative_update::<false>(
+                density[[i, k]],
+                dt * coefficient[[i, k]] * divergence[[i, k]],
+                1.0,
+            );
         }
     }
 }

@@ -3,6 +3,7 @@
 
 use super::coefficient::DenseRealField;
 use crate::forward::lanes::{axis_index, for_each_z_lane, LaneAxis};
+use crate::forward::pstd::propagator::apply_axis_derivative_update;
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
@@ -43,12 +44,20 @@ pub(super) fn update_density_fused(
                     LaneAxis::X | LaneAxis::Y => {
                         let p = pml[axis_index(axis, i, j, 0)];
                         for ((density, &coefficient), &divergence) in lane {
-                            *density = p * (p * *density - dt * coefficient * divergence);
+                            *density = apply_axis_derivative_update::<true>(
+                                *density,
+                                dt * coefficient * divergence,
+                                p,
+                            );
                         }
                     }
                     LaneAxis::Z => {
                         for (((density, &coefficient), &divergence), &p) in lane.zip(&pml[..nz]) {
-                            *density = p * (p * *density - dt * coefficient * divergence);
+                            *density = apply_axis_derivative_update::<true>(
+                                *density,
+                                dt * coefficient * divergence,
+                                p,
+                            );
                         }
                     }
                 }
@@ -62,9 +71,11 @@ pub(super) fn update_density_fused(
         for j in 0..ny {
             for i in 0..nx {
                 let p = pml[axis_index(axis, i, j, k)];
-                density[[i, j, k]] = p
-                    * (p * density[[i, j, k]]
-                        - dt * coefficient.value(i, j, k) * divergence[[i, j, k]]);
+                density[[i, j, k]] = apply_axis_derivative_update::<true>(
+                    density[[i, j, k]],
+                    dt * coefficient.value(i, j, k) * divergence[[i, j, k]],
+                    p,
+                );
             }
         }
     }
@@ -93,7 +104,11 @@ pub(super) fn update_density_unfused(
         coefficient.as_dense_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(density_values, |index, density| {
-            *density -= dt * coef_values[index] * div_values[index];
+            *density = apply_axis_derivative_update::<false>(
+                *density,
+                dt * coef_values[index] * div_values[index],
+                1.0,
+            );
         });
         return;
     }
@@ -102,7 +117,11 @@ pub(super) fn update_density_unfused(
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
-                density[[i, j, k]] -= dt * coefficient.value(i, j, k) * divergence[[i, j, k]];
+                density[[i, j, k]] = apply_axis_derivative_update::<false>(
+                    density[[i, j, k]],
+                    dt * coefficient.value(i, j, k) * divergence[[i, j, k]],
+                    1.0,
+                );
             }
         }
     }
