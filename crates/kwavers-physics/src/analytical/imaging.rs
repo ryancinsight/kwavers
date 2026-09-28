@@ -1273,28 +1273,66 @@ pub fn ivus_bmode_image(
     })
 }
 
+/// Inputs for [`ivus_chapter_metrics`].
+///
+/// The three masks the metrics are computed over are kept as separate fields
+/// rather than a shared mask type: the therapy functions that *do* share all
+/// five masks get one, and a two-of-five overlap is not a reason to invent a
+/// type this function would only half-use.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IvusChapterMetricsInput<'a> {
+    /// Cartesian phantom x coordinate `m`.
+    pub x_m: &'a [f64],
+    /// Cartesian phantom y coordinate `m`, same length as [`Self::x_m`].
+    pub y_m: &'a [f64],
+    /// Lumen mask, one flag per phantom sample.
+    pub lumen_mask: &'a [bool],
+    /// External elastic lamina mask, same length as [`Self::lumen_mask`].
+    pub eel_mask: &'a [bool],
+    /// Plaque mask, same length as [`Self::lumen_mask`].
+    pub plaque_mask: &'a [bool],
+    /// Cartesian B-mode image the display metrics are read from.
+    pub bmode_cartesian: &'a [f64],
+    /// Tissue sound speed [m/s]; must be positive.
+    pub sound_speed_m_s: f64,
+    /// Imaging frequency [Hz]; must be positive.
+    pub imaging_frequency_hz: f64,
+    /// Therapy frequency [Hz]; must be positive.
+    pub therapy_frequency_hz: f64,
+    /// B-mode display dynamic range [dB]; must be positive.
+    pub bmode_dynamic_range_db: f64,
+    /// Mechanical index of the therapy pulse [-].
+    pub therapy_mechanical_index: f64,
+    /// Peak adiabatic temperature rise [K].
+    pub therapy_peak_delta_t_c: f64,
+    /// Target to off-target deposition ratio [-].
+    pub therapy_target_to_offtarget_deposition_ratio: f64,
+}
+
 /// Compute Chapter 30 IVUS scalar metrics from Rust-owned fields.
 ///
 /// # Errors
 ///
 /// Returns an error when grid arrays are inconsistent, masks are empty, scalar
 /// frequencies/sound speed are invalid, or any B-mode sample is non-finite.
-#[allow(clippy::too_many_arguments)]
 pub fn ivus_chapter_metrics(
-    x_m: &[f64],
-    y_m: &[f64],
-    lumen_mask: &[bool],
-    eel_mask: &[bool],
-    plaque_mask: &[bool],
-    bmode_cartesian: &[f64],
-    sound_speed_m_s: f64,
-    imaging_frequency_hz: f64,
-    therapy_frequency_hz: f64,
-    bmode_dynamic_range_db: f64,
-    therapy_mechanical_index: f64,
-    therapy_peak_delta_t_c: f64,
-    therapy_target_to_offtarget_deposition_ratio: f64,
+    input: IvusChapterMetricsInput<'_>,
 ) -> Result<IvusChapterMetrics, String> {
+    let IvusChapterMetricsInput {
+        x_m,
+        y_m,
+        lumen_mask,
+        eel_mask,
+        plaque_mask,
+        bmode_cartesian,
+        sound_speed_m_s,
+        imaging_frequency_hz,
+        therapy_frequency_hz,
+        bmode_dynamic_range_db,
+        therapy_mechanical_index,
+        therapy_peak_delta_t_c,
+        therapy_target_to_offtarget_deposition_ratio,
+    } = input;
     let len = x_m.len();
     if len < 4 {
         return Err("phantom grid must contain at least four samples".to_owned());
@@ -1923,9 +1961,21 @@ mod tests {
         let plaque = [false, true, false, false];
         let bmode = [0.20, 0.70, 0.50, 0.10];
 
-        let metrics = ivus_chapter_metrics(
-            &x, &y, &lumen, &eel, &plaque, &bmode, 1540.0, 20.0e6, 1.5e6, 60.0, 0.25, 0.04, 101.0,
-        )
+        let metrics = ivus_chapter_metrics(IvusChapterMetricsInput {
+            x_m: &x,
+            y_m: &y,
+            lumen_mask: &lumen,
+            eel_mask: &eel,
+            plaque_mask: &plaque,
+            bmode_cartesian: &bmode,
+            sound_speed_m_s: 1540.0,
+            imaging_frequency_hz: 20.0e6,
+            therapy_frequency_hz: 1.5e6,
+            bmode_dynamic_range_db: 60.0,
+            therapy_mechanical_index: 0.25,
+            therapy_peak_delta_t_c: 0.04,
+            therapy_target_to_offtarget_deposition_ratio: 101.0,
+        })
         .unwrap();
 
         assert!((metrics.imaging_wavelength_um - 77.0).abs() < 1.0e-12);
@@ -1942,21 +1992,21 @@ mod tests {
 
     #[test]
     fn ivus_chapter_metrics_rejects_empty_masks() {
-        let err = ivus_chapter_metrics(
-            &[-1.0e-3, -1.0e-3, 1.0e-3, 1.0e-3],
-            &[-1.0e-3, 1.0e-3, -1.0e-3, 1.0e-3],
-            &[false, false, false, false],
-            &[true, true, true, true],
-            &[true, false, false, false],
-            &[0.0, 0.0, 0.0, 0.0],
-            1540.0,
-            20.0e6,
-            1.5e6,
-            60.0,
-            0.25,
-            0.04,
-            101.0,
-        )
+        let err = ivus_chapter_metrics(IvusChapterMetricsInput {
+            x_m: &[-1.0e-3, -1.0e-3, 1.0e-3, 1.0e-3],
+            y_m: &[-1.0e-3, 1.0e-3, -1.0e-3, 1.0e-3],
+            lumen_mask: &[false, false, false, false],
+            eel_mask: &[true, true, true, true],
+            plaque_mask: &[true, false, false, false],
+            bmode_cartesian: &[0.0, 0.0, 0.0, 0.0],
+            sound_speed_m_s: 1540.0,
+            imaging_frequency_hz: 20.0e6,
+            therapy_frequency_hz: 1.5e6,
+            bmode_dynamic_range_db: 60.0,
+            therapy_mechanical_index: 0.25,
+            therapy_peak_delta_t_c: 0.04,
+            therapy_target_to_offtarget_deposition_ratio: 101.0,
+        })
         .unwrap_err();
         assert!(err.contains("lumen and plaque masks"));
     }
