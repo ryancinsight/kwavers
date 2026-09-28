@@ -105,12 +105,34 @@ impl HomogeneousMedium {
         medium
     }
 
-    /// Create a soft tissue medium for elastography simulations
+    /// Create a soft tissue medium for elastography simulations.
     ///
-    /// λ = Eν/((1+ν)(1-2ν)), μ = E/(2(1+ν))
+    /// The `(E, ν) → (λ, μ)` identity (`λ = Eν/((1+ν)(1-2ν))`,
+    /// `μ = E/(2(1+ν))`) is delegated to
+    /// [`crate::properties::ElasticPropertyData::try_from_engineering`], which
+    /// routes it through `proteus::elastic::IsotropicModuli` — the same provider
+    /// `elastic_homogeneous` and `set_lame_parameters` use.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `poisson_ratio` is outside the non-auxetic range `[0, 0.5)`
+    /// (the provider admits the auxetic regime `ν < 0`; this constructor keeps
+    /// the non-auxetic contract its previous inline formula assumed), or if
+    /// `youngs_modulus` is not finite and positive.
     pub fn soft_tissue(youngs_modulus: f64, poisson_ratio: f64, grid: &Grid) -> Self {
         let density = DENSITY_TISSUE;
         let sound_speed = SOUND_SPEED_TISSUE;
+
+        assert!(
+            (0.0..0.5).contains(&poisson_ratio),
+            "soft_tissue requires a non-auxetic Poisson ratio in [0, 0.5), got {poisson_ratio}"
+        );
+        let elastic = crate::properties::ElasticPropertyData::try_from_engineering(
+            density,
+            youngs_modulus,
+            poisson_ratio,
+        )
+        .expect("soft_tissue requires a finite positive Young's modulus");
 
         let mut medium = Self::new(density, sound_speed, 0.01, 0.1, grid);
         let shape = [grid.nx, grid.ny, grid.nz];
@@ -119,9 +141,8 @@ impl HomogeneousMedium {
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
 
-        let nu = poisson_ratio;
-        medium.lame_lambda = youngs_modulus * nu / ((1.0 + nu) * 2.0f64.mul_add(-nu, 1.0));
-        medium.lame_mu = youngs_modulus / (2.0 * (1.0 + nu));
+        medium.lame_lambda = elastic.lambda;
+        medium.lame_mu = elastic.mu;
 
         // Approximate soft tissue as water viscosity (1.002e-3 Pa·s) — SSOT VISCOSITY_WATER.
         medium.viscosity = VISCOSITY_WATER;

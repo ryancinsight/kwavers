@@ -97,14 +97,21 @@ impl AbsorptionTissueProperties {
         thermal: f64,
         heat_cap: f64,
     ) -> Self {
-        // Calculate Lamé parameters from sound speed and density
-        // For soft tissue, assume Poisson's ratio of 0.499 (nearly incompressible)
+        // Derive the Lamé pair from the bulk modulus. The `(E, ν) → (λ, μ)`
+        // identity is delegated to the canonical elastic-property constructor
+        // (which routes through `proteus::elastic::IsotropicModuli`); soft
+        // tissue is modelled as nearly incompressible with ν = 0.499.
         let bulk_modulus = density * sound_speed * sound_speed;
         let poisson_ratio = 0.499;
         let youngs_modulus = 3.0 * bulk_modulus * 2.0f64.mul_add(-poisson_ratio, 1.0);
-        let lame_lambda = youngs_modulus * poisson_ratio
-            / ((1.0 + poisson_ratio) * 2.0f64.mul_add(-poisson_ratio, 1.0));
-        let lame_mu = youngs_modulus / (2.0 * (1.0 + poisson_ratio));
+        let elastic = crate::properties::ElasticPropertyData::try_from_engineering(
+            density,
+            youngs_modulus,
+            poisson_ratio,
+        )
+        .expect("absorption tissue: derived (E, ν) lie inside the provider domain");
+        let lame_lambda = elastic.lambda;
+        let lame_mu = elastic.mu;
 
         Self {
             alpha_0: alpha,
