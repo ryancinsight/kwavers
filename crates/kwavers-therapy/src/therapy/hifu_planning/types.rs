@@ -1,7 +1,5 @@
 use crate::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::therapy::domain_types::ClinicalTherapyParameters;
-use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
-use asclepius::response::thermal::Cem43;
 use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
@@ -12,6 +10,9 @@ use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use kwavers_core::constants::{MHZ_TO_HZ, SECONDS_PER_MINUTE};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_physics::acoustics::analysis::calculate_mechanical_index;
+use kwavers_physics::thermal::response::{
+    cem43_equivalent_minutes, cem43_rate_per_minute, cem43_reference_celsius,
+};
 use std::f64::consts::PI;
 
 /// HIFU transducer configuration.
@@ -240,26 +241,10 @@ impl FocalSpotDoseEstimate {
         let delta_t = (heating_rate_c_per_s / PERFUSION_RATE)
             * (1.0 - (-PERFUSION_RATE * treatment_duration_s).exp());
         let peak_temperature_c = BODY_TEMPERATURE_C + delta_t;
-        let law = Cem43::<f64>::canonical();
-        let temperature = ThermodynamicTemperature::from_base(
-            peak_temperature_c + kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C,
-        );
-        let duration = Time::from_base(treatment_duration_s);
-        let dose_rate = law.rate(temperature).map_err(|source| {
-            KwaversError::InvalidInput(format!("focal-spot CEM43 rate is invalid: {source}"))
-        })?;
-        let cem43 = law
-            .increment(temperature, duration)
-            .map_err(|source| {
-                KwaversError::InvalidInput(format!(
-                    "focal-spot CEM43 observation is invalid: {source}"
-                ))
-            })?
-            .get()
-            .into_base()
-            / SECONDS_PER_MINUTE;
-        let time_to_dose_s = if temperature >= law.reference() {
-            THERMAL_DOSE_THRESHOLD * SECONDS_PER_MINUTE / dose_rate.into_base()
+        let dose_rate = cem43_rate_per_minute(peak_temperature_c)?;
+        let cem43 = cem43_equivalent_minutes(peak_temperature_c, treatment_duration_s)?;
+        let time_to_dose_s = if peak_temperature_c >= cem43_reference_celsius() {
+            THERMAL_DOSE_THRESHOLD * SECONDS_PER_MINUTE / dose_rate
         } else {
             f64::INFINITY
         };
