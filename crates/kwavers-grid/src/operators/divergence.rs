@@ -1,6 +1,7 @@
 //! Divergence operations module
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
+use super::stencil::{centered_first_derivative_sum, validate_vector_field_shapes};
 use crate::Grid;
 use eunomia::FloatElement;
 use kwavers_core::error::KwaversResult;
@@ -23,32 +24,7 @@ pub fn divergence<T>(
 where
     T: FloatElement + Clone + Send + Sync + Default,
 {
-    let shape = vx.shape();
-    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-
-    // Validate grid compatibility and vector field consistency
-    if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(kwavers_core::error::KwaversError::Grid(
-            kwavers_core::error::GridError::DimensionMismatch {
-                expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
-                actual: format!("({}, {}, {})", nx, ny, nz),
-            },
-        ));
-    }
-
-    if vy.shape() != shape || vz.shape() != shape {
-        return Err(kwavers_core::error::KwaversError::Grid(
-            kwavers_core::error::GridError::DimensionMismatch {
-                expected: "Vector field components must have same dimensions".to_owned(),
-                actual: format!(
-                    "vx: {:?}, vy: {:?}, vz: {:?}",
-                    vx.shape(),
-                    vy.shape(),
-                    vz.shape()
-                ),
-            },
-        ));
-    }
+    let [nx, ny, nz] = validate_vector_field_shapes(vx, vy, vz, grid)?;
 
     let mut divergence = Array3::<T>::zeros([nx, ny, nz]);
     let coeffs = FDCoefficients::first_derivative::<T>(order);
@@ -62,27 +38,15 @@ where
     for i in stencil_radius..nx - stencil_radius {
         for j in stencil_radius..ny - stencil_radius {
             for k in stencil_radius..nz - stencil_radius {
-                let mut div_x = T::from_f64(0.0);
-                let mut div_y = T::from_f64(0.0);
-                let mut div_z = T::from_f64(0.0);
-
-                // ∂vx/∂x
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    div_x += coeff * (vx[[i + offset, j, k]] - vx[[i - offset, j, k]]);
-                }
-
-                // ∂vy/∂y
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    div_y += coeff * (vy[[i, j + offset, k]] - vy[[i, j - offset, k]]);
-                }
-
-                // ∂vz/∂z
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    div_z += coeff * (vz[[i, j, k + offset]] - vz[[i, j, k - offset]]);
-                }
+                let div_x = centered_first_derivative_sum(&coeffs, |offset| {
+                    vx[[i + offset, j, k]] - vx[[i - offset, j, k]]
+                });
+                let div_y = centered_first_derivative_sum(&coeffs, |offset| {
+                    vy[[i, j + offset, k]] - vy[[i, j - offset, k]]
+                });
+                let div_z = centered_first_derivative_sum(&coeffs, |offset| {
+                    vz[[i, j, k + offset]] - vz[[i, j, k - offset]]
+                });
 
                 divergence[[i, j, k]] = div_x * dx_inv + div_y * dy_inv + div_z * dz_inv;
             }
