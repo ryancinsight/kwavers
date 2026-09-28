@@ -7,7 +7,7 @@ use super::super::{
     TheranosticInverseConfig, WaveformMisfit, THERANOSTIC_ELASTIC_SHEAR_MODEL,
     THERANOSTIC_INVERSE_MODEL_FAMILY, THERANOSTIC_WAVEFORM_MODEL,
 };
-use super::helpers::{
+use super::guidance_fixtures::{
     connected_mask_components, distance_2d, nearest_mask_distance_m, skin_normal_projection_2d,
     skin_normal_projection_3d,
 };

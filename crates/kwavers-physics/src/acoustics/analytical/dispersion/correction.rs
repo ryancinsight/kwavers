@@ -46,9 +46,9 @@ impl DispersionAnalysis {
             DispersionMethod::FDTD(dt) => 1.0 / (1.0 + Self::fdtd_dispersion(k, grid.dx, dt, c)),
             DispersionMethod::PSTD(order) => 1.0 / (1.0 + Self::pstd_dispersion(k, grid.dx, order)),
             DispersionMethod::FDTD3D { .. } | DispersionMethod::PSTD3D { .. } => {
-                eprintln!(
-                    "Warning: Using 1D apply_correction with 3D method. \
-                     Use apply_correction_3d for proper 3D dispersion handling."
+                log::warn!(
+                    "Using 1D apply_correction with a 3D method; \
+                     use apply_correction_3d for proper 3D dispersion handling"
                 );
                 return;
             }

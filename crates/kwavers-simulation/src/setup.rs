@@ -84,7 +84,4 @@ impl SimulationSetup {
     // Helper to create CoreSimulation from components if needed?
     // CoreSimulation takes reference to Medium.
     // User code flow:
-    // let config = ...
-    // let components = SimulationSetup::setup(&config)?;
-    // let simulation = CoreSimulation::new(components.grid.clone(), &*components.medium, components.sources, ...)?;
 }

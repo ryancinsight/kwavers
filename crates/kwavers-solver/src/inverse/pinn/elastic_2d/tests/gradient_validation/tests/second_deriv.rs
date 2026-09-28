@@ -1,4 +1,4 @@
-use super::helpers::{autodiff_second_derivative_xx, second_difference_xx};
+use super::autodiff_fixtures::{autodiff_second_derivative_xx, second_difference_xx};
 use super::{FD_H_SECOND, REL_TOL_SECOND};
 use crate::inverse::elastic_2d::Config;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;

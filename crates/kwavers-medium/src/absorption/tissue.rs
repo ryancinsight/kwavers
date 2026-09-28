@@ -401,10 +401,8 @@ impl TissueAbsorption {
 /// density [kg/m³])` for a tissue type, from the canonical tissue table.
 #[must_use]
 pub fn tissue_thermal_properties(t: AbsorptionTissueType) -> (f64, f64, f64) {
-    let map = tissue_properties();
-    let p = map
+    let p = TISSUE_PROPERTIES
         .get(&t)
-        .copied()
-        .unwrap_or_else(|| map[&AbsorptionTissueType::SoftTissue]);
+        .unwrap_or(&TISSUE_PROPERTIES[&AbsorptionTissueType::SoftTissue]);
     (p.specific_heat, p.thermal_conductivity, p.density)
 }

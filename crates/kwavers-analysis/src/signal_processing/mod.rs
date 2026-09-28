@@ -199,9 +199,6 @@ pub use beamforming::{
 pub use kwavers_signal::FrequencyFilter;
 
 // Future re-exports (will be populated as modules are implemented)
-// pub use beamforming::{Beamformer, MinimumVariance, MUSIC};
-// pub use localization::{Localizer, AcousticLocalizationConfig, Trilateration};
-// pub use pam::{PassiveAcousticMapper, PAMConfig};
 
 #[cfg(test)]
 mod tests {
