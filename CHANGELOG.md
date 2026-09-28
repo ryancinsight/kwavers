@@ -312,6 +312,16 @@
   `test_plane_wave_boundary_injection_timing` monitors the window its
   assertion reads instead of 500 further steps.
 
+### Removed
+
+- **[major] `kwavers_analysis::distributed` is gone.** The task queue,
+  real-time scheduler and pipeline coordinator (`WorkQueue`,
+  `RealTimeScheduler`, `PipelineCoordinator`, `ThreadPoolConfig`,
+  `PoolMetrics`, `WorkItem`, `TaskPriority`, `TaskMetrics`) had no consumer
+  in the workspace or the stack. Data-parallel analysis runs on Moirai
+  directly; the unrelated `signal_processing::beamforming::neural::distributed`
+  module stays.
+
 ### Added
 
 - **[minor] Viscoacoustic sensor traces support fallible preallocation.**
@@ -883,14 +893,6 @@
   dedicated book page linked from the media chapter and example index. The
   example catalog no longer links to four deleted programs or instructs readers
   to replace the repository-pinned Rust toolchain.
-
-- **Distributed scheduling:** `WorkQueue::wait_all` now waits for both queued
-  and executing tasks. Workers block on scheduler state notification instead of
-  polling, and task completion claims are released on success, error, or
-  unwind. Deadline construction rejects timestamp overflow with the existing
-  typed invalid-input error. Focused distributed Nextest passes 17/17; the
-  locked local gate remains blocked by the Atlas development overlay's derived
-  lock rewrite pending hosted verification.
 
 - **Breaking sonoluminescence surface:** Dimensioned emission now exposes
   typed Aequitas blackbody and bremsstrahlung components and excludes the
