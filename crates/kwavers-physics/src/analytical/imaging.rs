@@ -783,26 +783,97 @@ pub fn ivus_microbubble_delivery_fraction(
 ///
 /// Returns an error when array lengths differ, physical scalars are invalid, or
 /// any sample is non-finite.
-#[allow(clippy::too_many_arguments)]
+/// The five vessel-wall tissue masks, one flag per sample.
+///
+/// Factored out because [`ivus_therapy_response`] and
+/// [`ivus_therapy_fields`] take **all five** — 14 of 17 and 14 of 21 of their
+/// parameters respectively. `ivus_chapter_metrics` takes three and is
+/// deliberately left with named fields: a type it would only half-use is
+/// speculative generality, not consolidation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IvusTissueMasks<'a> {
+    /// External elastic lamina boundary mask.
+    pub eel_mask: &'a [bool],
+    /// Lumen mask.
+    pub lumen_mask: &'a [bool],
+    /// Fibrous-cap mask.
+    pub fibrous_cap_mask: &'a [bool],
+    /// Lipid-core mask.
+    pub lipid_mask: &'a [bool],
+    /// Plaque mask.
+    pub plaque_mask: &'a [bool],
+}
+
+/// The therapy-dose scalars shared by the two IVUS therapy kernels.
+///
+/// Every field here is validated inside the kernel that consumes it, not here,
+/// so that each function's `Err` messages stay attached to the function that
+/// produces them — the tests assert on those strings.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IvusTherapyDose {
+    /// Radius of the catheter itself `m`.
+    pub catheter_radius_m: f64,
+    /// Therapy frequency [Hz].
+    pub therapy_frequency_hz: f64,
+    /// Duty cycle in `[0, 1]`.
+    pub therapy_duty_cycle: f64,
+    /// Sonication duration `s`.
+    pub therapy_sonication_s: f64,
+    /// Tissue density [kg/m^3].
+    pub density_kg_m3: f64,
+    /// Tissue sound speed [m/s].
+    pub sound_speed_m_s: f64,
+    /// Tissue specific heat [J/(kg K)].
+    pub specific_heat_j_kg_k: f64,
+}
+
+/// Inputs for [`ivus_therapy_response`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IvusTherapyResponseInput<'a> {
+    /// Acoustic pressure [Pa], one per sample.
+    pub pressure_pa: &'a [f64],
+    /// Radius from catheter center `m`, same length as [`Self::pressure_pa`].
+    pub radius_m: &'a [f64],
+    /// Attenuation `[dB/(cm MHz)]`, same length as [`Self::pressure_pa`].
+    pub attenuation_db_cm_mhz: &'a [f64],
+    /// The five vessel-wall tissue masks.
+    pub masks: IvusTissueMasks<'a>,
+    /// Therapy-dose scalars.
+    pub dose: IvusTherapyDose,
+    /// Radial centre of the delivery band `m`.
+    pub delivery_radial_center_m: f64,
+    /// Radial width of the delivery band `m`.
+    pub delivery_radial_width_m: f64,
+}
+
 pub fn ivus_therapy_response(
-    pressure_pa: &[f64],
-    radius_m: &[f64],
-    attenuation_db_cm_mhz: &[f64],
-    eel_mask: &[bool],
-    lumen_mask: &[bool],
-    fibrous_cap_mask: &[bool],
-    lipid_mask: &[bool],
-    plaque_mask: &[bool],
-    catheter_radius_m: f64,
-    therapy_frequency_hz: f64,
-    therapy_duty_cycle: f64,
-    therapy_sonication_s: f64,
-    density_kg_m3: f64,
-    sound_speed_m_s: f64,
-    specific_heat_j_kg_k: f64,
-    delivery_radial_center_m: f64,
-    delivery_radial_width_m: f64,
+    input: IvusTherapyResponseInput<'_>,
 ) -> Result<IvusTherapyResponse, String> {
+    let IvusTherapyResponseInput {
+        pressure_pa,
+        radius_m,
+        attenuation_db_cm_mhz,
+        masks:
+            IvusTissueMasks {
+                eel_mask,
+                lumen_mask,
+                fibrous_cap_mask,
+                lipid_mask,
+                plaque_mask,
+            },
+        dose:
+            IvusTherapyDose {
+                catheter_radius_m,
+                therapy_frequency_hz,
+                therapy_duty_cycle,
+                therapy_sonication_s,
+                density_kg_m3,
+                sound_speed_m_s,
+                specific_heat_j_kg_k,
+            },
+        delivery_radial_center_m,
+        delivery_radial_width_m,
+    } = input;
     let len = pressure_pa.len();
     if radius_m.len() != len
         || attenuation_db_cm_mhz.len() != len
@@ -928,33 +999,71 @@ pub fn ivus_therapy_response(
 /// intensity, absorption-weighted temperature rise, delivery fraction, and
 /// scalar safety/targeting metrics.
 ///
+/// Inputs for [`ivus_therapy_fields`].
+///
+/// The five masks and the seven dose scalars are the same
+/// [`IvusTissueMasks`] and [`IvusTherapyDose`] the response kernel takes; what
+/// stays here is what is specific to this one — a polar grid, the sector
+/// geometry, and the delivery window.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IvusTherapyFieldsInput<'a> {
+    /// Radius from catheter center `m`, one per sample.
+    pub radius_m: &'a [f64],
+    /// Polar angle `rad`, same length as [`Self::radius_m`].
+    pub theta_rad: &'a [f64],
+    /// Attenuation `[dB/(cm MHz)]`, same length as [`Self::radius_m`].
+    pub attenuation_db_cm_mhz: &'a [f64],
+    /// The five vessel-wall tissue masks.
+    pub masks: IvusTissueMasks<'a>,
+    /// Therapy-dose scalars.
+    pub dose: IvusTherapyDose,
+    /// Sector-focused peak pressure [Pa].
+    pub therapy_pressure_pa: f64,
+    /// Central azimuth of the therapy sector `rad`.
+    pub therapy_azimuth_rad: f64,
+    /// Angular width of the therapy sector `rad`.
+    pub therapy_sector_width_rad: f64,
+    /// Radial attenuation length of the pressure field `m`.
+    pub pressure_attenuation_length_m: f64,
+    /// Radial centre of the delivery band `m`.
+    pub delivery_radial_center_m: f64,
+    /// Radial width of the delivery band `m`.
+    pub delivery_radial_width_m: f64,
+}
+
 /// # Errors
 ///
 /// Returns an error when pressure-field or response validation fails.
-#[allow(clippy::too_many_arguments)]
-pub fn ivus_therapy_fields(
-    radius_m: &[f64],
-    theta_rad: &[f64],
-    attenuation_db_cm_mhz: &[f64],
-    eel_mask: &[bool],
-    lumen_mask: &[bool],
-    fibrous_cap_mask: &[bool],
-    lipid_mask: &[bool],
-    plaque_mask: &[bool],
-    catheter_radius_m: f64,
-    therapy_pressure_pa: f64,
-    therapy_azimuth_rad: f64,
-    therapy_sector_width_rad: f64,
-    pressure_attenuation_length_m: f64,
-    therapy_frequency_hz: f64,
-    therapy_duty_cycle: f64,
-    therapy_sonication_s: f64,
-    density_kg_m3: f64,
-    sound_speed_m_s: f64,
-    specific_heat_j_kg_k: f64,
-    delivery_radial_center_m: f64,
-    delivery_radial_width_m: f64,
-) -> Result<IvusTherapyFields, String> {
+pub fn ivus_therapy_fields(input: IvusTherapyFieldsInput<'_>) -> Result<IvusTherapyFields, String> {
+    let IvusTherapyFieldsInput {
+        radius_m,
+        theta_rad,
+        attenuation_db_cm_mhz,
+        masks:
+            IvusTissueMasks {
+                eel_mask,
+                lumen_mask,
+                fibrous_cap_mask,
+                lipid_mask,
+                plaque_mask,
+            },
+        dose:
+            IvusTherapyDose {
+                catheter_radius_m,
+                therapy_frequency_hz,
+                therapy_duty_cycle,
+                therapy_sonication_s,
+                density_kg_m3,
+                sound_speed_m_s,
+                specific_heat_j_kg_k,
+            },
+        therapy_pressure_pa,
+        therapy_azimuth_rad,
+        therapy_sector_width_rad,
+        pressure_attenuation_length_m,
+        delivery_radial_center_m,
+        delivery_radial_width_m,
+    } = input;
     let pressure_pa = ivus_therapy_pressure_field(IvusTherapyPressureFieldInput {
         radius_m,
         theta_rad,
@@ -964,15 +1073,14 @@ pub fn ivus_therapy_fields(
         sector_width_rad: therapy_sector_width_rad,
         attenuation_length_m: pressure_attenuation_length_m,
     })?;
-    let response = ivus_therapy_response(
-        &pressure_pa,
-        radius_m,
-        attenuation_db_cm_mhz,
+    let masks = IvusTissueMasks {
         eel_mask,
         lumen_mask,
         fibrous_cap_mask,
         lipid_mask,
         plaque_mask,
+    };
+    let dose = IvusTherapyDose {
         catheter_radius_m,
         therapy_frequency_hz,
         therapy_duty_cycle,
@@ -980,9 +1088,16 @@ pub fn ivus_therapy_fields(
         density_kg_m3,
         sound_speed_m_s,
         specific_heat_j_kg_k,
+    };
+    let response = ivus_therapy_response(IvusTherapyResponseInput {
+        pressure_pa: &pressure_pa,
+        radius_m,
+        attenuation_db_cm_mhz,
+        masks,
+        dose,
         delivery_radial_center_m,
         delivery_radial_width_m,
-    )?;
+    })?;
 
     Ok(IvusTherapyFields {
         pressure_pa,
@@ -1004,23 +1119,48 @@ pub fn ivus_therapy_fields(
 /// `rf(r, theta) = backscatter(x,y) * exp(-2 alpha(x,y) f_MHz (r-r_catheter))
 ///                 + A_ring exp(-((r-r_catheter) / w_ring)^2)`.
 ///
+/// Inputs for [`ivus_polar_bmode_rf`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IvusPolarBmodeRfInput<'a> {
+    /// Cartesian phantom x coordinate `m`.
+    pub x_m: &'a [f64],
+    /// Cartesian phantom y coordinate `m`, same length as [`Self::x_m`].
+    pub y_m: &'a [f64],
+    /// Normalized backscatter amplitude per phantom sample.
+    pub backscatter: &'a [f64],
+    /// Attenuation `[dB/(cm MHz)]` per phantom sample.
+    pub attenuation_db_cm_mhz: &'a [f64],
+    /// Radial axis of the polar output `m`.
+    pub r_axis_m: &'a [f64],
+    /// Angular axis of the polar output `rad`.
+    pub theta_axis_rad: &'a [f64],
+    /// Radius of the catheter itself `m`.
+    pub catheter_radius_m: f64,
+    /// Imaging frequency `Hz`; must be positive.
+    pub frequency_hz: f64,
+    /// Amplitude of the ring-down artefact, non-negative.
+    pub ring_amplitude: f64,
+    /// Radial width of the ring-down artefact `m`; must be positive.
+    pub ring_width_m: f64,
+}
+
 /// # Errors
 ///
 /// Returns an error when phantom arrays do not form the same square grid, when
 /// axes/scalars are invalid, or when any numeric sample is non-finite.
-#[allow(clippy::too_many_arguments)]
-pub fn ivus_polar_bmode_rf(
-    x_m: &[f64],
-    y_m: &[f64],
-    backscatter: &[f64],
-    attenuation_db_cm_mhz: &[f64],
-    r_axis_m: &[f64],
-    theta_axis_rad: &[f64],
-    catheter_radius_m: f64,
-    frequency_hz: f64,
-    ring_amplitude: f64,
-    ring_width_m: f64,
-) -> Result<Vec<f64>, String> {
+pub fn ivus_polar_bmode_rf(input: IvusPolarBmodeRfInput<'_>) -> Result<Vec<f64>, String> {
+    let IvusPolarBmodeRfInput {
+        x_m,
+        y_m,
+        backscatter,
+        attenuation_db_cm_mhz,
+        r_axis_m,
+        theta_axis_rad,
+        catheter_radius_m,
+        frequency_hz,
+        ring_amplitude,
+        ring_width_m,
+    } = input;
     let n = square_grid_len(x_m.len())?;
     if y_m.len() != x_m.len()
         || backscatter.len() != x_m.len()
@@ -1255,7 +1395,7 @@ pub fn ivus_bmode_image(
         return Err("r_axis_m and theta_axis_rad must not be empty".to_owned());
     }
 
-    let rf = ivus_polar_bmode_rf(
+    let rf = ivus_polar_bmode_rf(IvusPolarBmodeRfInput {
         x_m,
         y_m,
         backscatter,
@@ -1266,7 +1406,7 @@ pub fn ivus_bmode_image(
         frequency_hz,
         ring_amplitude,
         ring_width_m,
-    )?;
+    })?;
     let mut envelope = vec![0.0; rf.len()];
     for col in 0..n_theta {
         let line = Array1::from_shape_fn([n_r], |[row]| rf[row * n_theta + col]);
@@ -1298,28 +1438,66 @@ pub fn ivus_bmode_image(
     })
 }
 
+/// Inputs for [`ivus_chapter_metrics`].
+///
+/// The three masks the metrics are computed over are kept as separate fields
+/// rather than a shared mask type: the therapy functions that *do* share all
+/// five masks get one, and a two-of-five overlap is not a reason to invent a
+/// type this function would only half-use.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IvusChapterMetricsInput<'a> {
+    /// Cartesian phantom x coordinate `m`.
+    pub x_m: &'a [f64],
+    /// Cartesian phantom y coordinate `m`, same length as [`Self::x_m`].
+    pub y_m: &'a [f64],
+    /// Lumen mask, one flag per phantom sample.
+    pub lumen_mask: &'a [bool],
+    /// External elastic lamina mask, same length as [`Self::lumen_mask`].
+    pub eel_mask: &'a [bool],
+    /// Plaque mask, same length as [`Self::lumen_mask`].
+    pub plaque_mask: &'a [bool],
+    /// Cartesian B-mode image the display metrics are read from.
+    pub bmode_cartesian: &'a [f64],
+    /// Tissue sound speed [m/s]; must be positive.
+    pub sound_speed_m_s: f64,
+    /// Imaging frequency [Hz]; must be positive.
+    pub imaging_frequency_hz: f64,
+    /// Therapy frequency [Hz]; must be positive.
+    pub therapy_frequency_hz: f64,
+    /// B-mode display dynamic range [dB]; must be positive.
+    pub bmode_dynamic_range_db: f64,
+    /// Mechanical index of the therapy pulse [-].
+    pub therapy_mechanical_index: f64,
+    /// Peak adiabatic temperature rise [K].
+    pub therapy_peak_delta_t_c: f64,
+    /// Target to off-target deposition ratio [-].
+    pub therapy_target_to_offtarget_deposition_ratio: f64,
+}
+
 /// Compute Chapter 30 IVUS scalar metrics from Rust-owned fields.
 ///
 /// # Errors
 ///
 /// Returns an error when grid arrays are inconsistent, masks are empty, scalar
 /// frequencies/sound speed are invalid, or any B-mode sample is non-finite.
-#[allow(clippy::too_many_arguments)]
 pub fn ivus_chapter_metrics(
-    x_m: &[f64],
-    y_m: &[f64],
-    lumen_mask: &[bool],
-    eel_mask: &[bool],
-    plaque_mask: &[bool],
-    bmode_cartesian: &[f64],
-    sound_speed_m_s: f64,
-    imaging_frequency_hz: f64,
-    therapy_frequency_hz: f64,
-    bmode_dynamic_range_db: f64,
-    therapy_mechanical_index: f64,
-    therapy_peak_delta_t_c: f64,
-    therapy_target_to_offtarget_deposition_ratio: f64,
+    input: IvusChapterMetricsInput<'_>,
 ) -> Result<IvusChapterMetrics, String> {
+    let IvusChapterMetricsInput {
+        x_m,
+        y_m,
+        lumen_mask,
+        eel_mask,
+        plaque_mask,
+        bmode_cartesian,
+        sound_speed_m_s,
+        imaging_frequency_hz,
+        therapy_frequency_hz,
+        bmode_dynamic_range_db,
+        therapy_mechanical_index,
+        therapy_peak_delta_t_c,
+        therapy_target_to_offtarget_deposition_ratio,
+    } = input;
     let len = x_m.len();
     if len < 4 {
         return Err("phantom grid must contain at least four samples".to_owned());
@@ -1825,18 +2003,18 @@ mod tests {
         let radius = [1.0e-3, 1.55e-3];
         let theta = [0.0];
 
-        let rf = ivus_polar_bmode_rf(
-            &x,
-            &y,
-            &backscatter,
-            &attenuation,
-            &radius,
-            &theta,
-            1.0e-3,
-            20.0e6,
-            0.10,
-            0.22e-3,
-        )
+        let rf = ivus_polar_bmode_rf(IvusPolarBmodeRfInput {
+            x_m: &x,
+            y_m: &y,
+            backscatter: &backscatter,
+            attenuation_db_cm_mhz: &attenuation,
+            r_axis_m: &radius,
+            theta_axis_rad: &theta,
+            catheter_radius_m: 1.0e-3,
+            frequency_hz: 20.0e6,
+            ring_amplitude: 0.10,
+            ring_width_m: 0.22e-3,
+        })
         .unwrap();
 
         assert_eq!(rf[0], 4.0 + 0.10);
@@ -1848,33 +2026,33 @@ mod tests {
 
     #[test]
     fn ivus_polar_bmode_rf_rejects_invalid_inputs() {
-        let err = ivus_polar_bmode_rf(
-            &[0.0, 1.0],
-            &[0.0, 1.0],
-            &[1.0, 1.0],
-            &[0.0, 0.0],
-            &[1.0],
-            &[0.0],
-            0.0,
-            1.0,
-            0.0,
-            1.0,
-        )
+        let err = ivus_polar_bmode_rf(IvusPolarBmodeRfInput {
+            x_m: &[0.0, 1.0],
+            y_m: &[0.0, 1.0],
+            backscatter: &[1.0, 1.0],
+            attenuation_db_cm_mhz: &[0.0, 0.0],
+            r_axis_m: &[1.0],
+            theta_axis_rad: &[0.0],
+            catheter_radius_m: 0.0,
+            frequency_hz: 1.0,
+            ring_amplitude: 0.0,
+            ring_width_m: 1.0,
+        })
         .unwrap_err();
         assert!(err.contains("square grid"));
 
-        let err = ivus_polar_bmode_rf(
-            &[0.0, 0.0, 1.0, 1.0],
-            &[0.0, 1.0, 0.0, 1.0],
-            &[1.0, f64::NAN, 1.0, 1.0],
-            &[0.0, 0.0, 0.0, 0.0],
-            &[1.0],
-            &[0.0],
-            0.0,
-            1.0,
-            0.0,
-            1.0,
-        )
+        let err = ivus_polar_bmode_rf(IvusPolarBmodeRfInput {
+            x_m: &[0.0, 0.0, 1.0, 1.0],
+            y_m: &[0.0, 1.0, 0.0, 1.0],
+            backscatter: &[1.0, f64::NAN, 1.0, 1.0],
+            attenuation_db_cm_mhz: &[0.0, 0.0, 0.0, 0.0],
+            r_axis_m: &[1.0],
+            theta_axis_rad: &[0.0],
+            catheter_radius_m: 0.0,
+            frequency_hz: 1.0,
+            ring_amplitude: 0.0,
+            ring_width_m: 1.0,
+        })
         .unwrap_err();
         assert!(err.contains("backscatter[1]"));
     }
@@ -1981,9 +2159,21 @@ mod tests {
         let plaque = [false, true, false, false];
         let bmode = [0.20, 0.70, 0.50, 0.10];
 
-        let metrics = ivus_chapter_metrics(
-            &x, &y, &lumen, &eel, &plaque, &bmode, 1540.0, 20.0e6, 1.5e6, 60.0, 0.25, 0.04, 101.0,
-        )
+        let metrics = ivus_chapter_metrics(IvusChapterMetricsInput {
+            x_m: &x,
+            y_m: &y,
+            lumen_mask: &lumen,
+            eel_mask: &eel,
+            plaque_mask: &plaque,
+            bmode_cartesian: &bmode,
+            sound_speed_m_s: 1540.0,
+            imaging_frequency_hz: 20.0e6,
+            therapy_frequency_hz: 1.5e6,
+            bmode_dynamic_range_db: 60.0,
+            therapy_mechanical_index: 0.25,
+            therapy_peak_delta_t_c: 0.04,
+            therapy_target_to_offtarget_deposition_ratio: 101.0,
+        })
         .unwrap();
 
         assert!((metrics.imaging_wavelength_um - 77.0).abs() < 1.0e-12);
@@ -2000,21 +2190,21 @@ mod tests {
 
     #[test]
     fn ivus_chapter_metrics_rejects_empty_masks() {
-        let err = ivus_chapter_metrics(
-            &[-1.0e-3, -1.0e-3, 1.0e-3, 1.0e-3],
-            &[-1.0e-3, 1.0e-3, -1.0e-3, 1.0e-3],
-            &[false, false, false, false],
-            &[true, true, true, true],
-            &[true, false, false, false],
-            &[0.0, 0.0, 0.0, 0.0],
-            1540.0,
-            20.0e6,
-            1.5e6,
-            60.0,
-            0.25,
-            0.04,
-            101.0,
-        )
+        let err = ivus_chapter_metrics(IvusChapterMetricsInput {
+            x_m: &[-1.0e-3, -1.0e-3, 1.0e-3, 1.0e-3],
+            y_m: &[-1.0e-3, 1.0e-3, -1.0e-3, 1.0e-3],
+            lumen_mask: &[false, false, false, false],
+            eel_mask: &[true, true, true, true],
+            plaque_mask: &[true, false, false, false],
+            bmode_cartesian: &[0.0, 0.0, 0.0, 0.0],
+            sound_speed_m_s: 1540.0,
+            imaging_frequency_hz: 20.0e6,
+            therapy_frequency_hz: 1.5e6,
+            bmode_dynamic_range_db: 60.0,
+            therapy_mechanical_index: 0.25,
+            therapy_peak_delta_t_c: 0.04,
+            therapy_target_to_offtarget_deposition_ratio: 101.0,
+        })
         .unwrap_err();
         assert!(err.contains("lumen and plaque masks"));
     }
@@ -2030,25 +2220,29 @@ mod tests {
         let lipid = [false, false];
         let plaque = [false, true];
 
-        let response = ivus_therapy_response(
-            &pressure,
-            &radius,
-            &attenuation,
-            &eel,
-            &lumen,
-            &cap,
-            &lipid,
-            &plaque,
-            0.55e-3,
-            2.0e6,
-            0.25,
-            0.50,
-            1000.0,
-            1500.0,
-            4000.0,
-            1.75e-3,
-            1.2e-3,
-        )
+        let response = ivus_therapy_response(IvusTherapyResponseInput {
+            pressure_pa: &pressure,
+            radius_m: &radius,
+            attenuation_db_cm_mhz: &attenuation,
+            masks: IvusTissueMasks {
+                eel_mask: &eel,
+                lumen_mask: &lumen,
+                fibrous_cap_mask: &cap,
+                lipid_mask: &lipid,
+                plaque_mask: &plaque,
+            },
+            dose: IvusTherapyDose {
+                catheter_radius_m: 0.55e-3,
+                therapy_frequency_hz: 2.0e6,
+                therapy_duty_cycle: 0.25,
+                therapy_sonication_s: 0.50,
+                density_kg_m3: 1000.0,
+                sound_speed_m_s: 1500.0,
+                specific_heat_j_kg_k: 4000.0,
+            },
+            delivery_radial_center_m: 1.75e-3,
+            delivery_radial_width_m: 1.2e-3,
+        })
         .unwrap();
 
         let intensity = 1.0e12 / (2.0 * 1000.0 * 1500.0);
@@ -2071,25 +2265,29 @@ mod tests {
 
     #[test]
     fn ivus_therapy_response_rejects_missing_target() {
-        let err = ivus_therapy_response(
-            &[1.0],
-            &[1.0e-3],
-            &[1.0],
-            &[true],
-            &[false],
-            &[false],
-            &[false],
-            &[false],
-            0.5e-3,
-            2.0e6,
-            0.25,
-            0.5,
-            1000.0,
-            1500.0,
-            4000.0,
-            1.0e-3,
-            1.0e-3,
-        )
+        let err = ivus_therapy_response(IvusTherapyResponseInput {
+            pressure_pa: &[1.0],
+            radius_m: &[1.0e-3],
+            attenuation_db_cm_mhz: &[1.0],
+            masks: IvusTissueMasks {
+                eel_mask: &[true],
+                lumen_mask: &[false],
+                fibrous_cap_mask: &[false],
+                lipid_mask: &[false],
+                plaque_mask: &[false],
+            },
+            dose: IvusTherapyDose {
+                catheter_radius_m: 0.5e-3,
+                therapy_frequency_hz: 2.0e6,
+                therapy_duty_cycle: 0.25,
+                therapy_sonication_s: 0.5,
+                density_kg_m3: 1000.0,
+                sound_speed_m_s: 1500.0,
+                specific_heat_j_kg_k: 4000.0,
+            },
+            delivery_radial_center_m: 1.0e-3,
+            delivery_radial_width_m: 1.0e-3,
+        })
         .unwrap_err();
         assert!(err.contains("target mask"));
     }
@@ -2105,29 +2303,33 @@ mod tests {
         let lipid = [false, false, false];
         let plaque = [false, false, true];
 
-        let fields = ivus_therapy_fields(
-            &radius,
-            &theta,
-            &attenuation,
-            &eel,
-            &lumen,
-            &cap,
-            &lipid,
-            &plaque,
-            0.55e-3,
-            1.0e6,
-            -0.72,
-            0.50,
-            3.2e-3,
-            2.0e6,
-            0.25,
-            0.50,
-            1000.0,
-            1500.0,
-            4000.0,
-            1.75e-3,
-            1.2e-3,
-        )
+        let fields = ivus_therapy_fields(IvusTherapyFieldsInput {
+            radius_m: &radius,
+            theta_rad: &theta,
+            attenuation_db_cm_mhz: &attenuation,
+            masks: IvusTissueMasks {
+                eel_mask: &eel,
+                lumen_mask: &lumen,
+                fibrous_cap_mask: &cap,
+                lipid_mask: &lipid,
+                plaque_mask: &plaque,
+            },
+            dose: IvusTherapyDose {
+                catheter_radius_m: 0.55e-3,
+                therapy_frequency_hz: 2.0e6,
+                therapy_duty_cycle: 0.25,
+                therapy_sonication_s: 0.50,
+                density_kg_m3: 1000.0,
+                sound_speed_m_s: 1500.0,
+                specific_heat_j_kg_k: 4000.0,
+            },
+            therapy_pressure_pa: 1.0e6,
+            therapy_azimuth_rad: -0.72,
+            therapy_sector_width_rad: 0.50,
+            pressure_attenuation_length_m: 3.2e-3,
+            delivery_radial_center_m: 1.75e-3,
+            delivery_radial_width_m: 1.2e-3,
+        })
         .unwrap();
 
         let pressure = ivus_therapy_pressure_field(IvusTherapyPressureFieldInput {
@@ -2140,25 +2342,29 @@ mod tests {
             attenuation_length_m: 3.2e-3,
         })
         .unwrap();
-        let response = ivus_therapy_response(
-            &pressure,
-            &radius,
-            &attenuation,
-            &eel,
-            &lumen,
-            &cap,
-            &lipid,
-            &plaque,
-            0.55e-3,
-            2.0e6,
-            0.25,
-            0.50,
-            1000.0,
-            1500.0,
-            4000.0,
-            1.75e-3,
-            1.2e-3,
-        )
+        let response = ivus_therapy_response(IvusTherapyResponseInput {
+            pressure_pa: &pressure,
+            radius_m: &radius,
+            attenuation_db_cm_mhz: &attenuation,
+            masks: IvusTissueMasks {
+                eel_mask: &eel,
+                lumen_mask: &lumen,
+                fibrous_cap_mask: &cap,
+                lipid_mask: &lipid,
+                plaque_mask: &plaque,
+            },
+            dose: IvusTherapyDose {
+                catheter_radius_m: 0.55e-3,
+                therapy_frequency_hz: 2.0e6,
+                therapy_duty_cycle: 0.25,
+                therapy_sonication_s: 0.50,
+                density_kg_m3: 1000.0,
+                sound_speed_m_s: 1500.0,
+                specific_heat_j_kg_k: 4000.0,
+            },
+            delivery_radial_center_m: 1.75e-3,
+            delivery_radial_width_m: 1.2e-3,
+        })
         .unwrap();
 
         assert_eq!(fields.pressure_pa, pressure);
@@ -2175,29 +2381,33 @@ mod tests {
 
     #[test]
     fn ivus_therapy_fields_rejects_missing_target() {
-        let err = ivus_therapy_fields(
-            &[1.0e-3],
-            &[0.0],
-            &[1.0],
-            &[true],
-            &[false],
-            &[false],
-            &[false],
-            &[false],
-            0.5e-3,
-            1.0e6,
-            0.0,
-            0.5,
-            1.0e-3,
-            2.0e6,
-            0.25,
-            0.5,
-            1000.0,
-            1500.0,
-            4000.0,
-            1.0e-3,
-            1.0e-3,
-        )
+        let err = ivus_therapy_fields(IvusTherapyFieldsInput {
+            radius_m: &[1.0e-3],
+            theta_rad: &[0.0],
+            attenuation_db_cm_mhz: &[1.0],
+            masks: IvusTissueMasks {
+                eel_mask: &[true],
+                lumen_mask: &[false],
+                fibrous_cap_mask: &[false],
+                lipid_mask: &[false],
+                plaque_mask: &[false],
+            },
+            dose: IvusTherapyDose {
+                catheter_radius_m: 0.5e-3,
+                therapy_frequency_hz: 2.0e6,
+                therapy_duty_cycle: 0.25,
+                therapy_sonication_s: 0.5,
+                density_kg_m3: 1000.0,
+                sound_speed_m_s: 1500.0,
+                specific_heat_j_kg_k: 4000.0,
+            },
+            therapy_pressure_pa: 1.0e6,
+            therapy_azimuth_rad: 0.0,
+            therapy_sector_width_rad: 0.5,
+            pressure_attenuation_length_m: 1.0e-3,
+            delivery_radial_center_m: 1.0e-3,
+            delivery_radial_width_m: 1.0e-3,
+        })
         .unwrap_err();
         assert!(err.contains("target mask"));
     }

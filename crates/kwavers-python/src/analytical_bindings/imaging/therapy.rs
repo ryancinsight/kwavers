@@ -175,25 +175,29 @@ pub fn ivus_therapy_response<'py>(
 
     let response = py
         .detach(|| {
-            imaging::ivus_therapy_response(
-                pressure,
-                radius,
-                attenuation,
-                eel,
-                lumen,
-                cap,
-                lipid,
-                plaque,
-                catheter_radius_m,
-                therapy_frequency_hz,
-                therapy_duty_cycle,
-                therapy_sonication_s,
-                density_kg_m3,
-                sound_speed_m_s,
-                specific_heat_j_kg_k,
+            imaging::ivus_therapy_response(imaging::IvusTherapyResponseInput {
+                pressure_pa: pressure,
+                radius_m: radius,
+                attenuation_db_cm_mhz: attenuation,
+                masks: imaging::IvusTissueMasks {
+                    eel_mask: eel,
+                    lumen_mask: lumen,
+                    fibrous_cap_mask: cap,
+                    lipid_mask: lipid,
+                    plaque_mask: plaque,
+                },
+                dose: imaging::IvusTherapyDose {
+                    catheter_radius_m,
+                    therapy_frequency_hz,
+                    therapy_duty_cycle,
+                    therapy_sonication_s,
+                    density_kg_m3,
+                    sound_speed_m_s,
+                    specific_heat_j_kg_k,
+                },
                 delivery_radial_center_m,
                 delivery_radial_width_m,
-            )
+            })
         })
         .map_err(PyValueError::new_err)?;
 
@@ -290,29 +294,33 @@ pub fn ivus_therapy_fields<'py>(
 
     let fields = py
         .detach(|| {
-            imaging::ivus_therapy_fields(
-                radius,
-                theta,
-                attenuation,
-                eel,
-                lumen,
-                cap,
-                lipid,
-                plaque,
-                catheter_radius_m,
+            imaging::ivus_therapy_fields(imaging::IvusTherapyFieldsInput {
+                radius_m: radius,
+                theta_rad: theta,
+                attenuation_db_cm_mhz: attenuation,
+                masks: imaging::IvusTissueMasks {
+                    eel_mask: eel,
+                    lumen_mask: lumen,
+                    fibrous_cap_mask: cap,
+                    lipid_mask: lipid,
+                    plaque_mask: plaque,
+                },
+                dose: imaging::IvusTherapyDose {
+                    catheter_radius_m,
+                    therapy_frequency_hz,
+                    therapy_duty_cycle,
+                    therapy_sonication_s,
+                    density_kg_m3,
+                    sound_speed_m_s,
+                    specific_heat_j_kg_k,
+                },
                 therapy_pressure_pa,
                 therapy_azimuth_rad,
                 therapy_sector_width_rad,
                 pressure_attenuation_length_m,
-                therapy_frequency_hz,
-                therapy_duty_cycle,
-                therapy_sonication_s,
-                density_kg_m3,
-                sound_speed_m_s,
-                specific_heat_j_kg_k,
                 delivery_radial_center_m,
                 delivery_radial_width_m,
-            )
+            })
         })
         .map_err(PyValueError::new_err)?;
 

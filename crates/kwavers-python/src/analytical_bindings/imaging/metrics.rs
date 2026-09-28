@@ -60,13 +60,13 @@ pub fn ivus_chapter_metrics<'py>(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let metrics = py
         .detach(|| {
-            imaging::ivus_chapter_metrics(
-                x,
-                y,
-                lumen,
-                eel,
-                plaque,
-                bmode,
+            imaging::ivus_chapter_metrics(imaging::IvusChapterMetricsInput {
+                x_m: x,
+                y_m: y,
+                lumen_mask: lumen,
+                eel_mask: eel,
+                plaque_mask: plaque,
+                bmode_cartesian: bmode,
                 sound_speed_m_s,
                 imaging_frequency_hz,
                 therapy_frequency_hz,
@@ -74,7 +74,7 @@ pub fn ivus_chapter_metrics<'py>(
                 therapy_mechanical_index,
                 therapy_peak_delta_t_c,
                 therapy_target_to_offtarget_deposition_ratio,
-            )
+            })
         })
         .map_err(PyValueError::new_err)?;
 
