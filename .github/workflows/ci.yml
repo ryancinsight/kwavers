@@ -9,6 +9,7 @@ on:
       - 'README.md'
       - 'gap_audit.md'
       - 'docs/**'
+      - '.githooks/**'
   # No `paths-ignore` here, deliberately. Every job below reports a check this
   # branch requires, and a workflow filtered out by paths reports nothing at
   # all — so a pull request touching only prose can never satisfy them and is
@@ -88,11 +89,13 @@ jobs:
             echo "code=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # Prose and the git hooks change no build or test outcome: the hooks
+          # run on a developer's machine, and no job here executes them.
           code=false
           while IFS= read -r path; do
             [ -n "$path" ] || continue
             case "$path" in
-              backlog.md|CHANGELOG.md|README.md|gap_audit.md|docs/*) ;;
+              backlog.md|CHANGELOG.md|README.md|gap_audit.md|docs/*|.githooks/*) ;;
               *) code=true ;;
             esac
           done <<< "$changed"
