@@ -48,6 +48,7 @@
 
 use crate::forward::lanes::{axis_index, for_each_z_lane, LaneAxis};
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
+use crate::forward::pstd::propagator::apply_axis_derivative_update;
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
@@ -171,12 +172,20 @@ fn update_velocity_fused(
                     LaneAxis::X | LaneAxis::Y => {
                         let p = pml[axis_index(axis, i, j, 0)];
                         for ((velocity, &gradient), &rho) in lane {
-                            *velocity = p * (p * *velocity - (dt / rho) * gradient);
+                            *velocity = apply_axis_derivative_update::<true>(
+                                *velocity,
+                                (dt / rho) * gradient,
+                                p,
+                            );
                         }
                     }
                     LaneAxis::Z => {
                         for (((velocity, &gradient), &rho), &p) in lane.zip(&pml[..nz]) {
-                            *velocity = p * (p * *velocity - (dt / rho) * gradient);
+                            *velocity = apply_axis_derivative_update::<true>(
+                                *velocity,
+                                (dt / rho) * gradient,
+                                p,
+                            );
                         }
                     }
                 }
@@ -190,8 +199,11 @@ fn update_velocity_fused(
         for j in 0..ny {
             for i in 0..nx {
                 let p = pml[axis_index(axis, i, j, k)];
-                velocity[[i, j, k]] =
-                    p * (p * velocity[[i, j, k]] - (dt / rho0[[i, j, k]]) * gradient[[i, j, k]]);
+                velocity[[i, j, k]] = apply_axis_derivative_update::<true>(
+                    velocity[[i, j, k]],
+                    (dt / rho0[[i, j, k]]) * gradient[[i, j, k]],
+                    p,
+                );
             }
         }
     }
@@ -221,7 +233,11 @@ fn update_velocity_unfused(
         rho0.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
-            *velocity -= (dt / rho_values[index]) * gradient_values[index];
+            *velocity = apply_axis_derivative_update::<false>(
+                *velocity,
+                (dt / rho_values[index]) * gradient_values[index],
+                1.0,
+            );
         });
         return;
     }
@@ -231,10 +247,41 @@ fn update_velocity_unfused(
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
-                velocity[[i, j, k]] -= (dt / rho0[[i, j, k]]) * gradient[[i, j, k]];
+                velocity[[i, j, k]] = apply_axis_derivative_update::<false>(
+                    velocity[[i, j, k]],
+                    (dt / rho0[[i, j, k]]) * gradient[[i, j, k]],
+                    1.0,
+                );
             }
         }
     }
+}
+
+#[inline(always)]
+fn update_cartesian_velocity_axis<const FUSED: bool>(
+    fft: &impl Fft3dInOutExt,
+    grad_k: &mut Array3<Complex64>,
+    pressure_k: &Array3<Complex64>,
+    kappa: &Array3<f64>,
+    shift: &Array1<Complex64>,
+    gradient: &mut Array3<f64>,
+    velocity: &mut Array3<f64>,
+    rho0: ArrayView3<'_, f64>,
+    axis: LaneAxis,
+    dt: f64,
+    pml: Option<&[f64]>,
+) -> KwaversResult<()> {
+    apply_shifted_kappa(grad_k, pressure_k, kappa, shift, axis);
+    fft.inverse_c2r_into(grad_k, gradient);
+    if FUSED {
+        let pml = pml.ok_or_else(|| {
+            KwaversError::InternalError("missing PML factors in fused velocity path".into())
+        })?;
+        update_velocity_fused(velocity, gradient, rho0, pml, axis, dt);
+    } else {
+        update_velocity_unfused(velocity, gradient, rho0, dt);
+    }
+    Ok(())
 }
 
 fn update_axisymmetric_velocity_fused(
@@ -265,7 +312,11 @@ fn update_axisymmetric_velocity_fused(
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
             let (i, k) = dense_indices_2(index, nr);
             let p = pml[as_pml_index(axis, i, k)];
-            *velocity = p * (p * *velocity - (dt / rho_values[index]) * gradient_values[index]);
+            *velocity = apply_axis_derivative_update::<true>(
+                *velocity,
+                (dt / rho_values[index]) * gradient_values[index],
+                p,
+            );
         });
         return;
     }
@@ -274,7 +325,11 @@ fn update_axisymmetric_velocity_fused(
     for k in 0..nr {
         for i in 0..nx {
             let p = pml[as_pml_index(axis, i, k)];
-            velocity[[i, k]] = p * (p * velocity[[i, k]] - (dt / rho0[[i, k]]) * gradient[[i, k]]);
+            velocity[[i, k]] = apply_axis_derivative_update::<true>(
+                velocity[[i, k]],
+                (dt / rho0[[i, k]]) * gradient[[i, k]],
+                p,
+            );
         }
     }
 }
@@ -302,7 +357,11 @@ fn update_axisymmetric_velocity_unfused(
         rho0.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
-            *velocity -= (dt / rho_values[index]) * gradient_values[index];
+            *velocity = apply_axis_derivative_update::<false>(
+                *velocity,
+                (dt / rho_values[index]) * gradient_values[index],
+                1.0,
+            );
         });
         return;
     }
@@ -310,7 +369,11 @@ fn update_axisymmetric_velocity_unfused(
     let [nx, nr] = velocity.shape();
     for k in 0..nr {
         for i in 0..nx {
-            velocity[[i, k]] -= (dt / rho0[[i, k]]) * gradient[[i, k]];
+            velocity[[i, k]] = apply_axis_derivative_update::<false>(
+                velocity[[i, k]],
+                (dt / rho0[[i, k]]) * gradient[[i, k]],
+                1.0,
+            );
         }
     }
 }
@@ -396,63 +459,62 @@ impl PSTDSolver {
             let pml_vx = pml_exp.vel_x.as_slice().ok_or_else(|| {
                 KwaversError::InternalError("pml_vel_x must be contiguous".into())
             })?;
-            update_velocity_fused(
+            update_cartesian_velocity_axis::<true>(
+                self.fft.as_ref(),
+                &mut self.grad_k,
+                &self.p_k,
+                &self.kappa,
+                &self.ddx_k_shift_pos,
+                &mut self.dpx,
                 &mut self.fields.ux,
-                &self.dpx,
                 rho0,
-                pml_vx,
                 LaneAxis::X,
                 dt,
-            );
+                Some(pml_vx),
+            )?;
 
             // Y-direction — PML factor indexed by j (middle index).
             if has_y {
-                apply_shifted_kappa(
+                let pml_vy = pml_exp.vel_y.as_slice().ok_or_else(|| {
+                    KwaversError::InternalError("pml_vel_y must be contiguous".into())
+                })?;
+                // Reuse dpx for y-gradient IFFT (Opt-12): x-axis update has completed;
+                // dpx is free to overwrite before y-axis update reads it.
+                update_cartesian_velocity_axis::<true>(
+                    self.fft.as_ref(),
                     &mut self.grad_k,
                     &self.p_k,
                     &self.kappa,
                     &self.ddy_k_shift_pos,
-                    LaneAxis::Y,
-                );
-                // Reuse dpx for y-gradient IFFT (Opt-12): x-axis update has completed;
-                // dpx is free to overwrite before y-axis update reads it.
-                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
-                let pml_vy = pml_exp.vel_y.as_slice().ok_or_else(|| {
-                    KwaversError::InternalError("pml_vel_y must be contiguous".into())
-                })?;
-                update_velocity_fused(
+                    &mut self.dpx,
                     &mut self.fields.uy,
-                    &self.dpx,
                     rho0,
-                    pml_vy,
                     LaneAxis::Y,
                     dt,
-                );
+                    Some(pml_vy),
+                )?;
             }
 
             // Z-direction — PML factor indexed by k (innermost index).
             // ddz has length nz_c (truncated in construction).
             if has_z {
-                apply_shifted_kappa(
+                // Reuse dpx for z-gradient IFFT (Opt-12): y-axis update has completed.
+                let pml_vz = pml_exp.vel_z.as_slice().ok_or_else(|| {
+                    KwaversError::InternalError("pml_vel_z must be contiguous".into())
+                })?;
+                update_cartesian_velocity_axis::<true>(
+                    self.fft.as_ref(),
                     &mut self.grad_k,
                     &self.p_k,
                     &self.kappa,
                     &self.ddz_k_shift_pos,
-                    LaneAxis::Z,
-                );
-                // Reuse dpx for z-gradient IFFT (Opt-12): y-axis update has completed.
-                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
-                let pml_vz = pml_exp.vel_z.as_slice().ok_or_else(|| {
-                    KwaversError::InternalError("pml_vel_z must be contiguous".into())
-                })?;
-                update_velocity_fused(
+                    &mut self.dpx,
                     &mut self.fields.uz,
-                    &self.dpx,
                     rho0,
-                    pml_vz,
                     LaneAxis::Z,
                     dt,
-                );
+                    Some(pml_vz),
+                )?;
             }
         } else {
             // ── Fallback path: explicit pre/post PML passes (Dirichlet bypass or
@@ -460,57 +522,54 @@ impl PSTDSolver {
             self.apply_pml_to_velocity()?; // pre: pml * u_old
 
             // X-direction
-            apply_shifted_kappa(
+            update_cartesian_velocity_axis::<false>(
+                self.fft.as_ref(),
                 &mut self.grad_k,
                 &self.p_k,
                 &self.kappa,
                 &self.ddx_k_shift_pos,
-                LaneAxis::X,
-            );
-            self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
-            update_velocity_unfused(
+                &mut self.dpx,
                 &mut self.fields.ux,
-                &self.dpx,
                 self.materials.rho0.view(),
+                LaneAxis::X,
                 dt,
-            );
+                None,
+            )?;
 
             // Y-direction
             if has_y {
-                apply_shifted_kappa(
+                // Reuse dpx for y-gradient IFFT (Opt-12): x-axis update has completed.
+                update_cartesian_velocity_axis::<false>(
+                    self.fft.as_ref(),
                     &mut self.grad_k,
                     &self.p_k,
                     &self.kappa,
                     &self.ddy_k_shift_pos,
-                    LaneAxis::Y,
-                );
-                // Reuse dpx for y-gradient IFFT (Opt-12): x-axis update has completed.
-                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
-                update_velocity_unfused(
+                    &mut self.dpx,
                     &mut self.fields.uy,
-                    &self.dpx,
                     self.materials.rho0.view(),
+                    LaneAxis::Y,
                     dt,
-                );
+                    None,
+                )?;
             }
 
             // Z-direction
             if has_z {
-                apply_shifted_kappa(
+                // Reuse dpx for z-gradient IFFT (Opt-12): y-axis update has completed.
+                update_cartesian_velocity_axis::<false>(
+                    self.fft.as_ref(),
                     &mut self.grad_k,
                     &self.p_k,
                     &self.kappa,
                     &self.ddz_k_shift_pos,
-                    LaneAxis::Z,
-                );
-                // Reuse dpx for z-gradient IFFT (Opt-12): y-axis update has completed.
-                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
-                update_velocity_unfused(
+                    &mut self.dpx,
                     &mut self.fields.uz,
-                    &self.dpx,
                     self.materials.rho0.view(),
+                    LaneAxis::Z,
                     dt,
-                );
+                    None,
+                )?;
             }
 
             self.apply_pml_to_velocity()?; // post: pml * (pml*u_old - dt/rho*grad_p)
