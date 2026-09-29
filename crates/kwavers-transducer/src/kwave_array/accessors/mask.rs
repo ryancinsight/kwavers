@@ -39,13 +39,11 @@ impl KWaveArray {
                     position,
                     width,
                     height,
-                    length,
+                    length: _,
                     euler_xyz_deg,
                 } => {
                     let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
-                    Self::rasterize_rect(
-                        &mut mask, grid, pos_eff, *width, *height, *length, euler_eff,
-                    );
+                    Self::rasterize_rect(&mut mask, grid, pos_eff, *width, *height, euler_eff);
                 }
                 ElementShape::Disc {
                     position,
@@ -161,12 +159,12 @@ impl KWaveArray {
                     position,
                     width,
                     height,
-                    length,
+                    length: _,
                     euler_xyz_deg,
                 } => {
                     let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
                     Self::rasterize_rect_weighted(
-                        &mut mask, grid, pos_eff, *width, *height, *length, euler_eff,
+                        &mut mask, grid, pos_eff, *width, *height, euler_eff,
                     );
                 }
                 ElementShape::Annulus {

@@ -29,14 +29,12 @@ use leto::Array3;
 impl KWaveArray {
     // ─── Rect ──────────────────────────────────────────────────────────────
 
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_rect(
         mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         width: f64,
         height: f64,
-        length: f64,
         euler_xyz_deg: (f64, f64, f64),
     ) {
         let x_vec = grid.x_coordinates();
@@ -63,17 +61,14 @@ impl KWaveArray {
                 );
             },
         );
-        let _ = length;
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_rect_weighted(
         mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         width: f64,
         height: f64,
-        length: f64,
         euler_xyz_deg: (f64, f64, f64),
     ) {
         let x_vec = grid.x_coordinates();
@@ -100,7 +95,6 @@ impl KWaveArray {
                 );
             },
         );
-        let _ = length;
     }
 
     /// Emit the canonical rectangle integration lattice used by k-wave-python.
