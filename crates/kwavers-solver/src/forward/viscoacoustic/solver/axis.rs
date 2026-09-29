@@ -1,6 +1,6 @@
 //! Allocation-free pseudospectral derivatives for viscoacoustic stepping.
 
-use super::ViscoacousticMemorySolver;
+use super::{ViscoacousticGrid, ViscoacousticMemorySolver};
 use crate::forward::lanes::for_each_x_plane;
 use kwavers_math::fft::{
     fft_3d_axis_complex_inplace, ifft_3d_axis_complex_inplace, Complex64, Fft3d,
@@ -39,13 +39,7 @@ pub(super) fn reference_solver(
         })
         .collect();
     ViscoacousticMemorySolver::assemble(
-        nx,
-        ny,
-        nz,
-        dx,
-        dy,
-        dz,
-        dt,
+        ViscoacousticGrid::new(nx, ny, nz, dx, dy, dz, dt),
         super::Coeff::Field(inv_rho),
         super::Coeff::Field(m_inf),
         arm_fields,
@@ -237,13 +231,7 @@ mod tests {
     fn check_singleton_axis(shape: [usize; 3], axis: usize) {
         let [nx, ny, nz] = shape;
         let mut solver = ViscoacousticMemorySolver::new(
-            nx,
-            ny,
-            nz,
-            1.0e-4,
-            1.0e-4,
-            1.0e-4,
-            1.0e-8,
+            ViscoacousticGrid::new(nx, ny, nz, 1.0e-4, 1.0e-4, 1.0e-4, 1.0e-8),
             1_000.0,
             2.25e9,
             &[],
@@ -301,13 +289,7 @@ mod tests {
         for shape in [[8, 6, 5], [7, 4, 3], [37, 29, 31]] {
             let [nx, ny, nz] = shape;
             let mut solver = ViscoacousticMemorySolver::new(
-                nx,
-                ny,
-                nz,
-                1.0e-4,
-                1.0e-4,
-                1.0e-4,
-                1.0e-8,
+                ViscoacousticGrid::new(nx, ny, nz, 1.0e-4, 1.0e-4, 1.0e-4, 1.0e-8),
                 1_000.0,
                 2.25e9,
                 &[],
@@ -366,13 +348,7 @@ mod tests {
     #[test]
     fn singleton_axis_isolates_non_finite_samples_without_touching_scratch() {
         let mut solver = ViscoacousticMemorySolver::new(
-            4,
-            1,
-            1,
-            1.0e-4,
-            1.0e-4,
-            1.0e-4,
-            1.0e-8,
+            ViscoacousticGrid::new(4, 1, 1, 1.0e-4, 1.0e-4, 1.0e-4, 1.0e-8),
             1_000.0,
             2.25e9,
             &[],
@@ -409,13 +385,7 @@ mod tests {
     #[test]
     fn storage_omits_inactive_axes() {
         let solver_1d = ViscoacousticMemorySolver::new(
-            8,
-            1,
-            1,
-            1.0e-4,
-            1.0e-4,
-            1.0e-4,
-            1.0e-8,
+            ViscoacousticGrid::new(8, 1, 1, 1.0e-4, 1.0e-4, 1.0e-4, 1.0e-8),
             1_000.0,
             2.25e9,
             &[],
@@ -430,13 +400,7 @@ mod tests {
         assert_eq!(solver_1d.kx.len(), 8);
 
         let solver_2d = ViscoacousticMemorySolver::new(
-            8,
-            4,
-            1,
-            1.0e-4,
-            1.0e-4,
-            1.0e-4,
-            1.0e-8,
+            ViscoacousticGrid::new(8, 4, 1, 1.0e-4, 1.0e-4, 1.0e-4, 1.0e-8),
             1_000.0,
             2.25e9,
             &[],
@@ -447,13 +411,7 @@ mod tests {
         assert!(solver_2d.kz.is_empty());
 
         let solver_3d = ViscoacousticMemorySolver::new(
-            4,
-            4,
-            4,
-            1.0e-4,
-            1.0e-4,
-            1.0e-4,
-            1.0e-8,
+            ViscoacousticGrid::new(4, 4, 4, 1.0e-4, 1.0e-4, 1.0e-4, 1.0e-8),
             1_000.0,
             2.25e9,
             &[],
@@ -484,13 +442,9 @@ mod tests {
         ];
         for (shape, mask) in cases {
             let solver = ViscoacousticMemorySolver::new(
-                shape[0],
-                shape[1],
-                shape[2],
-                1.0e-4,
-                1.0e-4,
-                1.0e-4,
-                1.0e-8,
+                ViscoacousticGrid::new(
+                    shape[0], shape[1], shape[2], 1.0e-4, 1.0e-4, 1.0e-4, 1.0e-8,
+                ),
                 1_000.0,
                 2.25e9,
                 &[],
@@ -508,13 +462,7 @@ mod tests {
     #[test]
     fn step_without_active_axes_keeps_pressure_bitwise_constant() {
         let mut solver = ViscoacousticMemorySolver::new(
-            1,
-            1,
-            1,
-            1.0e-4,
-            1.0e-4,
-            1.0e-4,
-            1.0e-8,
+            ViscoacousticGrid::new(1, 1, 1, 1.0e-4, 1.0e-4, 1.0e-4, 1.0e-8),
             1_000.0,
             2.25e9,
             &[(1.5e8, 3.2e-7)],
@@ -574,13 +522,7 @@ mod tests {
             let [nx, ny, nz] = *shape;
             let (dx, dy, dz) = (1.0e-4_f64, 1.0e-4, 1.0e-4);
             let mut candidate = ViscoacousticMemorySolver::new(
-                nx,
-                ny,
-                nz,
-                dx,
-                dy,
-                dz,
-                DT,
+                ViscoacousticGrid::new(nx, ny, nz, dx, dy, dz, DT),
                 1_000.0,
                 2.25e9,
                 &[(1.5e8, 3.2e-7), (8.0e7, 8.0e-8)],

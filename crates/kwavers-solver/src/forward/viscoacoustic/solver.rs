@@ -256,6 +256,62 @@ fn is_positive_finite(v: f64) -> bool {
     v.is_finite() && v > 0.0
 }
 
+/// The uniform Cartesian grid a viscoacoustic solve runs on.
+///
+/// Every constructor on [`ViscoacousticMemorySolver`] needs the same seven
+/// numbers, and passing them positionally put them ahead of the material
+/// parameters — so a caller writing `new(64, 64, 64, dx, dy, dz, dt, rho,
+/// m_inf, &arms)` could not tell which spacing was which without counting.
+/// The grid is one concept and the constructors now take it as one value.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ViscoacousticGrid {
+    /// Cells along `x`.
+    pub nx: usize,
+    /// Cells along `y`.
+    pub ny: usize,
+    /// Cells along `z`.
+    pub nz: usize,
+    /// Cell size along `x`, `m`.
+    pub dx: f64,
+    /// Cell size along `y`, `m`.
+    pub dy: f64,
+    /// Cell size along `z`, `m`.
+    pub dz: f64,
+    /// Time step, `s`.
+    pub dt: f64,
+}
+
+impl ViscoacousticGrid {
+    /// Build a grid from its cell counts, spacings and time step.
+    ///
+    /// Seven numbers — at, not over, clippy's threshold — so this needs no
+    /// suppression. A grid genuinely is seven scalars; splitting it further
+    /// would be the same arity problem one level down.
+    #[must_use]
+    pub const fn new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64, dt: f64) -> Self {
+        Self {
+            nx,
+            ny,
+            nz,
+            dx,
+            dy,
+            dz,
+            dt,
+        }
+    }
+
+    /// Whether the cell counts and spacings are all positive and finite.
+    fn is_valid(&self) -> bool {
+        self.nx > 0
+            && self.ny > 0
+            && self.nz > 0
+            && is_positive_finite(self.dx)
+            && is_positive_finite(self.dy)
+            && is_positive_finite(self.dz)
+            && is_positive_finite(self.dt)
+    }
+}
+
 impl ViscoacousticMemorySolver {
     #[inline(always)]
     fn update_velocity_half_step<const AXIS: usize>(
@@ -291,19 +347,22 @@ impl ViscoacousticMemorySolver {
     /// - Any zero dimension, non-finite or non-positive
     ///   `dx`/`dy`/`dz`/`dt`/`ρ`/`M_∞`, or a non-finite or non-positive arm
     ///   parameter (`NaN` and infinity are rejected before any allocation).
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
-        nx: usize,
-        ny: usize,
-        nz: usize,
-        dx: f64,
-        dy: f64,
-        dz: f64,
-        dt: f64,
+        grid: ViscoacousticGrid,
         rho: f64,
         m_inf: f64,
         arms: &[(f64, f64)],
     ) -> KwaversResult<Self> {
+        let ViscoacousticGrid {
+            nx,
+            ny,
+            nz,
+            dx,
+            dy,
+            dz,
+            dt,
+        } = grid;
+
         if nx == 0
             || ny == 0
             || nz == 0
@@ -340,13 +399,7 @@ impl ViscoacousticMemorySolver {
             .map(|&(dm, tau)| build_uniform_arm(dm, tau, dt))
             .collect();
         Ok(Self::assemble(
-            nx,
-            ny,
-            nz,
-            dx,
-            dy,
-            dz,
-            dt,
+            ViscoacousticGrid::new(nx, ny, nz, dx, dy, dz, dt),
             Coeff::Uniform(1.0 / rho),
             Coeff::Uniform(m_inf),
             arm_fields,
@@ -368,19 +421,22 @@ impl ViscoacousticMemorySolver {
     ///   `ρ`/`M_∞`/`τ` element, a negative or non-finite `ΔM` element, or a
     ///   non-finite or non-positive grid/spacing/`dt` (rejection happens
     ///   before any allocation).
-    #[allow(clippy::too_many_arguments)]
     pub fn new_heterogeneous(
-        nx: usize,
-        ny: usize,
-        nz: usize,
-        dx: f64,
-        dy: f64,
-        dz: f64,
-        dt: f64,
+        grid: ViscoacousticGrid,
         rho: &Array3<f64>,
         m_inf: &Array3<f64>,
         arms: &[(Array3<f64>, Array3<f64>)],
     ) -> KwaversResult<Self> {
+        let ViscoacousticGrid {
+            nx,
+            ny,
+            nz,
+            dx,
+            dy,
+            dz,
+            dt,
+        } = grid;
+
         let shape = [nx, ny, nz];
         let ok_shape = |a: &Array3<f64>| a.shape() == shape;
         if nx == 0
@@ -423,13 +479,7 @@ impl ViscoacousticMemorySolver {
             .map(|(dm, tau)| build_arm(dm, tau, dt))
             .collect();
         Ok(Self::assemble(
-            nx,
-            ny,
-            nz,
-            dx,
-            dy,
-            dz,
-            dt,
+            ViscoacousticGrid::new(nx, ny, nz, dx, dy, dz, dt),
             inv_rho,
             Coeff::Field(m_inf.clone()),
             arm_fields,
@@ -448,20 +498,23 @@ impl ViscoacousticMemorySolver {
     /// axis is the exact positive-zero identity — so the two are bitwise
     /// comparable, and the injected reference is test-local, not a public
     /// constructor surface.
-    #[allow(clippy::too_many_arguments)]
     fn assemble(
-        nx: usize,
-        ny: usize,
-        nz: usize,
-        dx: f64,
-        dy: f64,
-        dz: f64,
-        dt: f64,
+        grid: ViscoacousticGrid,
         inv_rho: Coeff,
         m_inf: Coeff,
         arms: Vec<Arm>,
         axes: ActiveAxes,
     ) -> Self {
+        let ViscoacousticGrid {
+            nx,
+            ny,
+            nz,
+            dx,
+            dy,
+            dz,
+            dt,
+        } = grid;
+
         let shape = (nx, ny, nz);
         // M_U(x) = M_∞(x) + Σ ΔMₗ(x); recover ΔMₗ = −gain / (τ(1−decay)) = −gain·inv_tau/(1−decay).
         // A uniform base with uniform arms stays scalar; anything per-voxel
@@ -678,25 +731,23 @@ impl ViscoacousticMemorySolver {
         m_inf: f64,
         arms: &[(f64, f64)],
     ) -> KwaversResult<Self> {
-        Self::new(n, 1, 1, dx, 1.0, 1.0, dt, rho, m_inf, arms)
+        Self::new(
+            ViscoacousticGrid::new(n, 1, 1, dx, 1.0, 1.0, dt),
+            rho,
+            m_inf,
+            arms,
+        )
     }
 
     /// Build from a [`GeneralizedMaxwellModel`] (its `M_∞`, arms, and density)
     /// plus the grid and time step.
     /// # Errors
     /// - Propagates [`Self::new`] validation failures.
-    #[allow(clippy::too_many_arguments)]
     pub fn from_generalized_maxwell(
         model: &GeneralizedMaxwellModel,
-        nx: usize,
-        ny: usize,
-        nz: usize,
-        dx: f64,
-        dy: f64,
-        dz: f64,
-        dt: f64,
+        grid: ViscoacousticGrid,
     ) -> KwaversResult<Self> {
-        Self::new(
+        let ViscoacousticGrid {
             nx,
             ny,
             nz,
@@ -704,6 +755,10 @@ impl ViscoacousticMemorySolver {
             dy,
             dz,
             dt,
+        } = grid;
+
+        Self::new(
+            ViscoacousticGrid::new(nx, ny, nz, dx, dy, dz, dt),
             model.density(),
             model.equilibrium_modulus(),
             model.arms(),
@@ -728,15 +783,8 @@ impl ViscoacousticMemorySolver {
     /// # Errors
     /// - Field shape ≠ grid, non-positive `ρ`/`c`, negative `α`, a band the fit
     ///   rejects, or `n_arms == 0`.
-    #[allow(clippy::too_many_arguments)]
     pub fn from_power_law_fields(
-        nx: usize,
-        ny: usize,
-        nz: usize,
-        dx: f64,
-        dy: f64,
-        dz: f64,
-        dt: f64,
+        grid: ViscoacousticGrid,
         rho: &Array3<f64>,
         c: &Array3<f64>,
         alpha_np_m: &Array3<f64>,
@@ -746,6 +794,16 @@ impl ViscoacousticMemorySolver {
         n_arms: usize,
         f_ref: f64,
     ) -> KwaversResult<Self> {
+        let ViscoacousticGrid {
+            nx,
+            ny,
+            nz,
+            dx,
+            dy,
+            dz,
+            dt,
+        } = grid;
+
         let shape = [nx, ny, nz];
         // Finite-and-positive: a bare `v > 0.0` admits `NaN`/`+∞` (both
         // compare false against zero), and a non-finite phase velocity or
@@ -769,13 +827,7 @@ impl ViscoacousticMemorySolver {
         let arms = fit.arm_fields();
 
         Self::new_heterogeneous(
-            nx,
-            ny,
-            nz,
-            dx,
-            dy,
-            dz,
-            dt,
+            ViscoacousticGrid::new(nx, ny, nz, dx, dy, dz, dt),
             rho,
             fit.equilibrium_modulus(),
             &arms,

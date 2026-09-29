@@ -2,7 +2,7 @@
 //! complex dispersion relation `ρω² = M(ω)|k|²` of the generalized-Maxwell
 //! medium, in 1-D, 2-D, and 3-D.
 
-use super::ViscoacousticMemorySolver;
+use super::{ViscoacousticGrid, ViscoacousticMemorySolver};
 use kwavers_core::error::KwaversError;
 use kwavers_core::test_support::assert_invalid_input;
 use kwavers_math::fft::Complex64;
@@ -108,8 +108,13 @@ fn decay_matches_dispersion_2d_diagonal() {
     let dx = 1.0e-4;
     let dt = 1.2e-8;
     for &m in &[4.0, 6.0] {
-        let mut solver =
-            ViscoacousticMemorySolver::new(n, n, 1, dx, dx, dx, dt, RHO, M_INF, &ARMS).unwrap();
+        let mut solver = ViscoacousticMemorySolver::new(
+            ViscoacousticGrid::new(n, n, 1, dx, dx, dx, dt),
+            RHO,
+            M_INF,
+            &ARMS,
+        )
+        .unwrap();
         let kc = TAU * m / (n as f64 * dx);
         let kmag = kc * 2.0_f64.sqrt();
         let p0 = Array3::from_shape_fn((n, n, 1), |[i, j, _]| {
@@ -138,8 +143,13 @@ fn decay_matches_dispersion_3d_diagonal() {
     let dx = 1.5e-4;
     let dt = 1.5e-8;
     let m = 2.0;
-    let mut solver =
-        ViscoacousticMemorySolver::new(n, n, n, dx, dx, dx, dt, RHO, M_INF, &ARMS).unwrap();
+    let mut solver = ViscoacousticMemorySolver::new(
+        ViscoacousticGrid::new(n, n, n, dx, dx, dx, dt),
+        RHO,
+        M_INF,
+        &ARMS,
+    )
+    .unwrap();
     let kc = TAU * m / (n as f64 * dx);
     let kmag = kc * 3.0_f64.sqrt();
     let p0 = Array3::from_shape_fn((n, n, n), |[i, j, k]| {
@@ -166,8 +176,13 @@ fn lossless_3d_no_secular_energy_drift() {
     let n = 24;
     let dx = 1.5e-4;
     let dt = 1.5e-8;
-    let mut solver =
-        ViscoacousticMemorySolver::new(n, n, n, dx, dx, dx, dt, RHO, M_INF, &[]).unwrap();
+    let mut solver = ViscoacousticMemorySolver::new(
+        ViscoacousticGrid::new(n, n, n, dx, dx, dx, dt),
+        RHO,
+        M_INF,
+        &[],
+    )
+    .unwrap();
     let kc = TAU * 2.0 / (n as f64 * dx);
     let p0 = Array3::from_shape_fn((n, n, n), |[i, j, k]| {
         (kc * (i as f64 + j as f64 + k as f64) * dx).cos()
@@ -246,9 +261,13 @@ fn heterogeneous_interface_reflects_with_analytical_coefficient() {
 
     let rho = Array3::from_elem([n, 1, 1], RHO);
     let m_inf = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| if i < interface { m_a } else { m_b });
-    let mut s =
-        ViscoacousticMemorySolver::new_heterogeneous(n, 1, 1, dx, 1.0, 1.0, dt, &rho, &m_inf, &[])
-            .unwrap();
+    let mut s = ViscoacousticMemorySolver::new_heterogeneous(
+        ViscoacousticGrid::new(n, 1, 1, dx, 1.0, 1.0, dt),
+        &rho,
+        &m_inf,
+        &[],
+    )
+    .unwrap();
     s.enable_absorbing_layer(64, 2.0e6).unwrap(); // absorb the leftward half + transmitted wave
 
     // Zero-velocity Gaussian at x0=128 (region A) splits into ± halves of
@@ -304,7 +323,15 @@ fn power_law_medium_reproduces_target_absorption() {
         let alpha_f = Array3::from_elem([n, 1, 1], alpha_target);
         let y_f = Array3::from_elem([n, 1, 1], y);
         let mut s = ViscoacousticMemorySolver::from_power_law_fields(
-            n, 1, 1, dx, 1.0, 1.0, dt, &rho_f, &c_f, &alpha_f, &y_f, 1.0e5, 2.0e6, 6, f_ref,
+            ViscoacousticGrid::new(n, 1, 1, dx, 1.0, 1.0, dt),
+            &rho_f,
+            &c_f,
+            &alpha_f,
+            &y_f,
+            1.0e5,
+            2.0e6,
+            6,
+            f_ref,
         )
         .unwrap();
 
@@ -365,7 +392,15 @@ fn heterogeneous_exponent_halves_decay_independently() {
     // The construction must succeed and yield one shared arm set covering both
     // exponents; a per-voxel τ grid would be a different (and unusable) shape.
     let s = ViscoacousticMemorySolver::from_power_law_fields(
-        n, 1, 1, dx, 1.0, 1.0, dt, &rho_f, &c_f, &alpha_f, &y_f, 1.0e5, 2.0e6, 6, f_ref,
+        ViscoacousticGrid::new(n, 1, 1, dx, 1.0, 1.0, dt),
+        &rho_f,
+        &c_f,
+        &alpha_f,
+        &y_f,
+        1.0e5,
+        2.0e6,
+        6,
+        f_ref,
     )
     .unwrap();
     assert!(s.unrelaxed_speed() > 1500.0);
@@ -374,13 +409,7 @@ fn heterogeneous_exponent_halves_decay_independently() {
     // same heterogeneous fit inputs, must reproduce its own exponent.
     for (alpha, gamma) in [(alpha_soft, gamma_soft), (alpha_stiff, gamma_stiff)] {
         let mut half = ViscoacousticMemorySolver::from_power_law_fields(
-            n,
-            1,
-            1,
-            dx,
-            1.0,
-            1.0,
-            dt,
+            ViscoacousticGrid::new(n, 1, 1, dx, 1.0, 1.0, dt),
             &rho_f,
             &c_f,
             &Array3::from_elem([n, 1, 1], alpha),
@@ -463,9 +492,13 @@ fn construction_validates_and_accepts_model() {
     use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
 
     assert!(ViscoacousticMemorySolver::new_1d(0, 1e-4, 1e-8, RHO, M_INF, &[]).is_err());
-    assert!(
-        ViscoacousticMemorySolver::new(8, 8, 0, 1e-4, 1e-4, 1e-4, 1e-8, RHO, M_INF, &[]).is_err()
-    );
+    assert!(ViscoacousticMemorySolver::new(
+        ViscoacousticGrid::new(8, 8, 0, 1e-4, 1e-4, 1e-4, 1e-8),
+        RHO,
+        M_INF,
+        &[]
+    )
+    .is_err());
     assert!(ViscoacousticMemorySolver::new_1d(64, -1.0, 1e-8, RHO, M_INF, &[]).is_err());
     assert!(
         ViscoacousticMemorySolver::new_1d(64, 1e-4, 1e-8, RHO, M_INF, &[(-1.0, 1e-7)]).is_err()
@@ -474,7 +507,8 @@ fn construction_validates_and_accepts_model() {
     let model =
         GeneralizedMaxwellModel::power_law(M_INF, 2.0e8, 1.0e5, 2.0e6, 6, 1.3, RHO).unwrap();
     let solver = ViscoacousticMemorySolver::from_generalized_maxwell(
-        &model, 16, 16, 16, 1e-4, 1e-4, 1e-4, 1e-8,
+        &model,
+        ViscoacousticGrid::new(16, 16, 16, 1e-4, 1e-4, 1e-4, 1e-8),
     )
     .expect("model-backed solver");
     assert!(solver.unrelaxed_speed() > (M_INF / RHO).sqrt());
@@ -629,7 +663,12 @@ const NEG_ZERO: f64 = -0.0;
 #[test]
 fn finite_domain_rejects_non_finite_and_non_positive_scalars() {
     let valid = |dx: f64, dy: f64, dz: f64, dt: f64, rho: f64, m_inf: f64| {
-        ViscoacousticMemorySolver::new(8, 1, 1, dx, dy, dz, dt, rho, m_inf, &ARMS)
+        ViscoacousticMemorySolver::new(
+            ViscoacousticGrid::new(8, 1, 1, dx, dy, dz, dt),
+            rho,
+            m_inf,
+            &ARMS,
+        )
     };
     // Baseline: the valid vector is accepted.
     valid(1.0e-4, 1.0, 1.0, 1.0e-8, RHO, M_INF)
@@ -686,13 +725,7 @@ fn finite_domain_rejects_non_finite_field_elements() {
         let mut bad_rho = Array3::from_elem(shape, RHO);
         bad_rho[[3, 0, 0]] = v;
         let r = ViscoacousticMemorySolver::new_heterogeneous(
-            n,
-            1,
-            1,
-            1.0e-4,
-            1.0,
-            1.0,
-            1.0e-8,
+            ViscoacousticGrid::new(n, 1, 1, 1.0e-4, 1.0, 1.0, 1.0e-8),
             &bad_rho,
             &ones,
             &[],
@@ -705,13 +738,7 @@ fn finite_domain_rejects_non_finite_field_elements() {
         let mut bad_m = Array3::from_elem(shape, M_INF);
         bad_m[[3, 0, 0]] = v;
         let r = ViscoacousticMemorySolver::new_heterogeneous(
-            n,
-            1,
-            1,
-            1.0e-4,
-            1.0,
-            1.0,
-            1.0e-8,
+            ViscoacousticGrid::new(n, 1, 1, 1.0e-4, 1.0, 1.0, 1.0e-8),
             &ones,
             &bad_m,
             &[],
@@ -726,13 +753,7 @@ fn finite_domain_rejects_non_finite_field_elements() {
         bad_tau[[3, 0, 0]] = v;
         let dm = Array3::from_elem(shape, 1.5e8);
         let r = ViscoacousticMemorySolver::new_heterogeneous(
-            n,
-            1,
-            1,
-            1.0e-4,
-            1.0,
-            1.0,
-            1.0e-8,
+            ViscoacousticGrid::new(n, 1, 1, 1.0e-4, 1.0, 1.0, 1.0e-8),
             &ones,
             &ones,
             &[(dm, bad_tau)],
@@ -745,13 +766,7 @@ fn finite_domain_rejects_non_finite_field_elements() {
     // ΔM field admits exactly zero (lossless voxel) but not negative.
     let dm_zero = Array3::from_elem(shape, 0.0);
     let r = ViscoacousticMemorySolver::new_heterogeneous(
-        n,
-        1,
-        1,
-        1.0e-4,
-        1.0,
-        1.0,
-        1.0e-8,
+        ViscoacousticGrid::new(n, 1, 1, 1.0e-4, 1.0, 1.0, 1.0e-8),
         &ones,
         &ones,
         &[(dm_zero.clone(), ones.clone())],
@@ -760,13 +775,7 @@ fn finite_domain_rejects_non_finite_field_elements() {
     let mut dm_neg = dm_zero;
     dm_neg[[2, 0, 0]] = -1.0;
     let r = ViscoacousticMemorySolver::new_heterogeneous(
-        n,
-        1,
-        1,
-        1.0e-4,
-        1.0,
-        1.0,
-        1.0e-8,
+        ViscoacousticGrid::new(n, 1, 1, 1.0e-4, 1.0, 1.0, 1.0e-8),
         &ones.clone(),
         &ones.clone(),
         &[(dm_neg, ones)],

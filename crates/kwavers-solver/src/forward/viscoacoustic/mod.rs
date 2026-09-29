@@ -47,4 +47,4 @@ mod solver;
 #[cfg(test)]
 mod tests;
 
-pub use solver::ViscoacousticMemorySolver;
+pub use solver::{ViscoacousticGrid, ViscoacousticMemorySolver};

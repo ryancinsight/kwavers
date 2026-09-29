@@ -11,7 +11,7 @@ use kwavers_solver::forward::elastic::swe::{
 };
 use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
 use kwavers_solver::forward::pstd::PSTDSolver;
-use kwavers_solver::forward::viscoacoustic::ViscoacousticMemorySolver;
+use kwavers_solver::forward::viscoacoustic::{ViscoacousticGrid, ViscoacousticMemorySolver};
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::{CollocationSampler, CollocationSamplingStrategy};
 use kwavers_source::GridSource;
@@ -337,13 +337,7 @@ fn warm_construction_matches_inactive_axis_storage_oracle() {
         let [nx, ny, nz] = shape;
         let build = || {
             ViscoacousticMemorySolver::new(
-                nx,
-                ny,
-                nz,
-                1.0e-4,
-                1.0e-4,
-                1.0e-4,
-                DT,
+                ViscoacousticGrid::new(nx, ny, nz, 1.0e-4, 1.0e-4, 1.0e-4, DT),
                 1_000.0,
                 2.25e9,
                 &[],
@@ -454,13 +448,7 @@ fn warm_homogeneous_construction_matches_uniform_coefficient_oracle() {
         .collect();
     let build_heterogeneous = || {
         ViscoacousticMemorySolver::new_heterogeneous(
-            N,
-            1,
-            1,
-            1.0e-4,
-            1.0,
-            1.0,
-            DT,
+            ViscoacousticGrid::new(N, 1, 1, 1.0e-4, 1.0, 1.0, DT),
             &rho,
             &m_inf,
             &arm_fields,
