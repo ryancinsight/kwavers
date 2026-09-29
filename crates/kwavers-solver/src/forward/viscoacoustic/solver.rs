@@ -299,17 +299,6 @@ impl ViscoacousticGrid {
             dt,
         }
     }
-
-    /// Whether the cell counts and spacings are all positive and finite.
-    fn is_valid(&self) -> bool {
-        self.nx > 0
-            && self.ny > 0
-            && self.nz > 0
-            && is_positive_finite(self.dx)
-            && is_positive_finite(self.dy)
-            && is_positive_finite(self.dz)
-            && is_positive_finite(self.dt)
-    }
 }
 
 impl ViscoacousticMemorySolver {
