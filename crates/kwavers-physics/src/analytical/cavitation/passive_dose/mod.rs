@@ -59,6 +59,7 @@ pub use spectrum::{
     hann_windowed_power_spectrum, keller_miksis_pcd_controller_trace, keller_miksis_pcd_spectrum,
     pcd_band_signals, KellerMiksisPcdControllerTrace, KellerMiksisPcdSpectrum, PcdBandSignals,
 };
+pub use spectrum::{KellerMiksisDiscretization, KellerMiksisDrive, KellerMiksisMedium};
 #[allow(unused_imports)]
 // Re-exported through the parent cavitation API for PyO3 input construction.
 pub use volume_spectrum::{

@@ -96,19 +96,25 @@ pub fn keller_miksis_pcd_spectrum<'py>(
     sound_speed_m_s: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
     let spectrum = cavitation::keller_miksis_pcd_spectrum(
-        r0_m,
-        p_ac_pa,
-        drive_frequency_hz,
-        n_cycles,
-        n_per_cycle,
-        discard_cycles,
-        p0_pa,
-        rho,
-        sigma,
-        mu,
-        kappa,
-        vapor_pressure_pa,
-        sound_speed_m_s,
+        cavitation::KellerMiksisMedium {
+            rho,
+            sigma,
+            mu,
+            kappa,
+            vapor_pressure_pa,
+            sound_speed_m_s,
+        },
+        cavitation::KellerMiksisDrive {
+            r0_m,
+            p_ac_pa,
+            drive_frequency_hz,
+            p0_pa,
+        },
+        cavitation::KellerMiksisDiscretization {
+            n_cycles,
+            n_per_cycle,
+            discard_cycles,
+        },
     )
     .map_err(PyValueError::new_err)?;
 

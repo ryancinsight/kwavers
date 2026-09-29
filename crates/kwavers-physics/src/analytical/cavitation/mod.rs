@@ -37,10 +37,11 @@ pub use passive_dose::{
     simulate_bubble_emission, simulate_coated_bubble_emission, simulate_population_emission,
     van_cittert_zernike_coherence, volume_emission_spectrum, volume_emission_sweep,
     BubbleDriveConfig, BubbleEmissionTrace, CavitationBandEnergies, CavitationEmissionRegime,
-    CavitationTherapeuticWindow, KellerMiksisPcdControllerTrace, KellerMiksisPcdSpectrum,
-    PassiveCavitationDoseFixture, PcdBandSignals, PopulationEmission, PopulationEmissionInput,
-    PopulationEmissionSweep, PopulationEmissionSweepInput, PopulationMedium, PopulationShell,
-    ShellDriveConfig, VolumeEmissionSpectrum, VolumeEmissionSpectrumInput, VolumeEmissionSweep,
+    CavitationTherapeuticWindow, KellerMiksisDiscretization, KellerMiksisDrive, KellerMiksisMedium,
+    KellerMiksisPcdControllerTrace, KellerMiksisPcdSpectrum, PassiveCavitationDoseFixture,
+    PcdBandSignals, PopulationEmission, PopulationEmissionInput, PopulationEmissionSweep,
+    PopulationEmissionSweepInput, PopulationMedium, PopulationShell, ShellDriveConfig,
+    VolumeEmissionSpectrum, VolumeEmissionSpectrumInput, VolumeEmissionSweep,
     VolumeEmissionSweepInput, VolumeSpectrumMedium,
 };
 pub use power_spectrum::{bubble_power_spectrum, period_doubling_ratio};

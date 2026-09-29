@@ -145,6 +145,50 @@ pub fn pcd_band_signals(
     Ok(signals)
 }
 
+/// The bubble-medium material properties of a Keller-Miksis model.
+///
+/// Six scalars that are one physical concept, and which the solver, its
+/// wall-velocity kernel, and its input validation all need identically.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct KellerMiksisMedium {
+    /// Gas density [kg/m^3].
+    pub rho: f64,
+    /// Surface tension [N/m].
+    pub sigma: f64,
+    /// Dynamic viscosity [Pa.s].
+    pub mu: f64,
+    /// Thermal conductivity [W/(m.K)].
+    pub kappa: f64,
+    /// Vapour pressure at drive temperature [Pa].
+    pub vapor_pressure_pa: f64,
+    /// Sound speed of the surrounding liquid [m/s].
+    pub sound_speed_m_s: f64,
+}
+
+/// The drive and initial state of a Keller-Miksis oscillation.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct KellerMiksisDrive {
+    /// Equilibrium bubble radius [m].
+    pub r0_m: f64,
+    /// Acoustic drive amplitude [Pa].
+    pub p_ac_pa: f64,
+    /// Drive frequency [Hz].
+    pub drive_frequency_hz: f64,
+    /// Initial pressure amplitude [Pa].
+    pub p0_pa: f64,
+}
+
+/// How a Keller-Miksis oscillation is sampled in time.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct KellerMiksisDiscretization {
+    /// Cycles integrated per call.
+    pub n_cycles: usize,
+    /// Samples per cycle.
+    pub n_per_cycle: usize,
+    /// Leading cycles discarded before sampling.
+    pub discard_cycles: usize,
+}
+
 /// Compute a normalized PCD spectrum from a Keller-Miksis wall-velocity trace.
 ///
 /// The Rust path owns the Hann window, FFT, band integration, and dB
@@ -153,36 +197,51 @@ pub fn pcd_band_signals(
 /// # Errors
 ///
 /// Returns an error if any physical, sampling, or band-power input is invalid.
-#[allow(clippy::too_many_arguments)]
 pub fn keller_miksis_pcd_spectrum(
-    r0_m: f64,
-    p_ac_pa: f64,
-    drive_frequency_hz: f64,
-    n_cycles: usize,
-    n_per_cycle: usize,
-    discard_cycles: usize,
-    p0_pa: f64,
-    rho: f64,
-    sigma: f64,
-    mu: f64,
-    kappa: f64,
-    vapor_pressure_pa: f64,
-    sound_speed_m_s: f64,
+    medium: KellerMiksisMedium,
+    drive: KellerMiksisDrive,
+    discretization: KellerMiksisDiscretization,
 ) -> Result<KellerMiksisPcdSpectrum, String> {
-    let (rdot, dt_s, discard_samples) = keller_miksis_wall_velocity(
-        r0_m,
-        p_ac_pa,
-        drive_frequency_hz,
-        n_cycles,
-        n_per_cycle,
-        discard_cycles,
-        p0_pa,
+    let KellerMiksisMedium {
         rho,
         sigma,
         mu,
         kappa,
         vapor_pressure_pa,
         sound_speed_m_s,
+    } = medium;
+    let KellerMiksisDrive {
+        r0_m,
+        p_ac_pa,
+        drive_frequency_hz,
+        p0_pa,
+    } = drive;
+    let KellerMiksisDiscretization {
+        n_cycles,
+        n_per_cycle,
+        discard_cycles,
+    } = discretization;
+
+    let (rdot, dt_s, discard_samples) = keller_miksis_wall_velocity(
+        KellerMiksisMedium {
+            rho,
+            sigma,
+            mu,
+            kappa,
+            vapor_pressure_pa,
+            sound_speed_m_s,
+        },
+        KellerMiksisDrive {
+            r0_m,
+            p_ac_pa,
+            drive_frequency_hz,
+            p0_pa,
+        },
+        KellerMiksisDiscretization {
+            n_cycles,
+            n_per_cycle,
+            discard_cycles,
+        },
     )?;
     let signal = rdot
         .get(discard_samples..)
@@ -258,19 +317,25 @@ pub fn keller_miksis_pcd_controller_trace(
 
     for pulse in 0..n_pulses {
         let spectrum = keller_miksis_pcd_spectrum(
-            r0_m,
-            pressure_pa,
-            drive_frequency_hz,
-            n_cycles_per_pulse,
-            n_per_cycle,
-            discard_cycles,
-            p0_pa,
-            rho,
-            sigma,
-            mu,
-            kappa,
-            vapor_pressure_pa,
-            sound_speed_m_s,
+            KellerMiksisMedium {
+                rho,
+                sigma,
+                mu,
+                kappa,
+                vapor_pressure_pa,
+                sound_speed_m_s,
+            },
+            KellerMiksisDrive {
+                r0_m,
+                p_ac_pa: pressure_pa,
+                drive_frequency_hz,
+                p0_pa,
+            },
+            KellerMiksisDiscretization {
+                n_cycles: n_cycles_per_pulse,
+                n_per_cycle,
+                discard_cycles,
+            },
         )?;
 
         pulse_index.push((pulse + 1) as f64);
@@ -372,36 +437,51 @@ fn pcd_spectrum_from_signal(
     Ok((freq, psd, signals))
 }
 
-#[allow(clippy::too_many_arguments)]
 fn keller_miksis_wall_velocity(
-    r0_m: f64,
-    p_ac_pa: f64,
-    drive_frequency_hz: f64,
-    n_cycles: usize,
-    n_per_cycle: usize,
-    discard_cycles: usize,
-    p0_pa: f64,
-    rho: f64,
-    sigma: f64,
-    mu: f64,
-    kappa: f64,
-    vapor_pressure_pa: f64,
-    sound_speed_m_s: f64,
+    medium: KellerMiksisMedium,
+    drive: KellerMiksisDrive,
+    discretization: KellerMiksisDiscretization,
 ) -> Result<(Vec<f64>, f64, usize), String> {
-    validate_keller_miksis_inputs(
-        r0_m,
-        p_ac_pa,
-        drive_frequency_hz,
-        n_cycles,
-        n_per_cycle,
-        discard_cycles,
-        p0_pa,
+    let KellerMiksisMedium {
         rho,
         sigma,
         mu,
         kappa,
         vapor_pressure_pa,
         sound_speed_m_s,
+    } = medium;
+    let KellerMiksisDrive {
+        r0_m,
+        p_ac_pa,
+        drive_frequency_hz,
+        p0_pa,
+    } = drive;
+    let KellerMiksisDiscretization {
+        n_cycles,
+        n_per_cycle,
+        discard_cycles,
+    } = discretization;
+
+    validate_keller_miksis_inputs(
+        KellerMiksisMedium {
+            rho,
+            sigma,
+            mu,
+            kappa,
+            vapor_pressure_pa,
+            sound_speed_m_s,
+        },
+        KellerMiksisDrive {
+            r0_m,
+            p_ac_pa,
+            drive_frequency_hz,
+            p0_pa,
+        },
+        KellerMiksisDiscretization {
+            n_cycles,
+            n_per_cycle,
+            discard_cycles,
+        },
     )?;
     let n_steps = n_cycles
         .checked_mul(n_per_cycle)
@@ -449,22 +529,31 @@ fn normalized_trace(values: &[f64]) -> Vec<f64> {
     values.iter().map(|&value| value / denom).collect()
 }
 
-#[allow(clippy::too_many_arguments)]
 fn validate_keller_miksis_inputs(
-    r0_m: f64,
-    p_ac_pa: f64,
-    drive_frequency_hz: f64,
-    n_cycles: usize,
-    n_per_cycle: usize,
-    discard_cycles: usize,
-    p0_pa: f64,
-    rho: f64,
-    sigma: f64,
-    mu: f64,
-    kappa: f64,
-    vapor_pressure_pa: f64,
-    sound_speed_m_s: f64,
+    medium: KellerMiksisMedium,
+    drive: KellerMiksisDrive,
+    discretization: KellerMiksisDiscretization,
 ) -> Result<(), String> {
+    let KellerMiksisMedium {
+        rho,
+        sigma,
+        mu,
+        kappa,
+        vapor_pressure_pa,
+        sound_speed_m_s,
+    } = medium;
+    let KellerMiksisDrive {
+        r0_m,
+        p_ac_pa,
+        drive_frequency_hz,
+        p0_pa,
+    } = drive;
+    let KellerMiksisDiscretization {
+        n_cycles,
+        n_per_cycle,
+        discard_cycles,
+    } = discretization;
+
     let scalars = [
         r0_m,
         p_ac_pa,
