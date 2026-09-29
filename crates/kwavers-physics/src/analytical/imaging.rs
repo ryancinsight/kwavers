@@ -779,10 +779,6 @@ pub fn ivus_microbubble_delivery_fraction(
 /// delivery through [`ivus_microbubble_delivery_fraction`], peak-pressure
 /// mechanical index, and target/off-target deposition ratio.
 ///
-/// # Errors
-///
-/// Returns an error when array lengths differ, physical scalars are invalid, or
-/// any sample is non-finite.
 /// The five vessel-wall tissue masks, one flag per sample.
 ///
 /// Factored out because [`ivus_therapy_response`] and
@@ -846,6 +842,10 @@ pub struct IvusTherapyResponseInput<'a> {
     pub delivery_radial_width_m: f64,
 }
 
+/// # Errors
+///
+/// Returns an error when array lengths differ, physical scalars are invalid, or
+/// any sample is non-finite.
 pub fn ivus_therapy_response(
     input: IvusTherapyResponseInput<'_>,
 ) -> Result<IvusTherapyResponse, String> {
