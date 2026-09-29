@@ -13,25 +13,51 @@
 use leto::{Array2, ArrayView1, ArrayView2};
 use std::f64::consts::{LN_2, PI};
 
+/// Geometry and acquisition settings for [`simulate_receive_rf`].
+///
+/// The three arrays are borrowed views, so a caller sweeping `n_samples` or a
+/// bandwidth pays no copy; the scalars are named because `c`, `fs`, `f0` and
+/// `frac_bw` are four adjacent `f64` arguments in a row, which is where a
+/// positional call becomes unreadable.
+///
+/// `Clone + Copy` rather than also `Debug`/`PartialEq`: `ArrayView` is `Copy`
+/// but implements neither of the latter two, so deriving them would not compile.
+#[derive(Clone, Copy)]
+pub struct SimulateReceiveRfInput<'a> {
+    /// Scatterer positions `(n_scat, 3)` in metres.
+    pub scat_pos: ArrayView2<'a, f64>,
+    /// Reflectivity per scatterer `(n_scat,)`.
+    pub scat_amp: ArrayView1<'a, f64>,
+    /// Array element positions `(n_elem, 3)` in metres.
+    pub elem_pos: ArrayView2<'a, f64>,
+    /// Sound speed [m/s].
+    pub c: f64,
+    /// Sampling frequency [Hz].
+    pub fs: f64,
+    /// Imaging centre frequency [Hz].
+    pub f0: f64,
+    /// Fractional −6 dB pulse bandwidth, which sets the pulse length via
+    /// `σ_t = √(2 ln2)/(π·frac_bw·f0)`.
+    pub frac_bw: f64,
+    /// RF record length in samples.
+    pub n_samples: usize,
+}
+
 /// Synthesize per-element channel RF (shape `(n_elem, n_samples)`) from point
 /// scatterers `scat_pos` (`(n_scat, 3)` `m`) with reflectivity `scat_amp` (`(n_scat,)`)
 /// recorded by an array at `elem_pos` (`(n_elem, 3)` `m`).
-///
-/// * `c` — sound speed [m/s]; `fs` — sampling frequency `Hz`; `f0` — imaging centre
-///   frequency `Hz`; `frac_bw` — fractional −6 dB pulse bandwidth (sets the pulse
-///   length via `σ_t = √(2 ln2)/(π·frac_bw·f0)`); `n_samples` — RF record length.
 #[must_use]
-#[allow(clippy::too_many_arguments)]
-pub fn simulate_receive_rf(
-    scat_pos: ArrayView2<'_, f64>,
-    scat_amp: ArrayView1<'_, f64>,
-    elem_pos: ArrayView2<'_, f64>,
-    c: f64,
-    fs: f64,
-    f0: f64,
-    frac_bw: f64,
-    n_samples: usize,
-) -> Array2<f64> {
+pub fn simulate_receive_rf(input: SimulateReceiveRfInput<'_>) -> Array2<f64> {
+    let SimulateReceiveRfInput {
+        scat_pos,
+        scat_amp,
+        elem_pos,
+        c,
+        fs,
+        f0,
+        frac_bw,
+        n_samples,
+    } = input;
     let n_elem = elem_pos.shape()[0];
     let mut rf = Array2::<f64>::zeros([n_elem, n_samples]);
     if n_samples == 0 || n_elem == 0 || !(c > 0.0 && fs > 0.0 && f0 > 0.0) {
@@ -124,7 +150,16 @@ mod tests {
         let scat = positions([[0.0, 0.02, 0.0]]); // 20 mm depth along +y
         let amp = Array1::from(vec![1.0]);
         let elem = positions([[0.0, 0.0, 0.0]]); // single element at origin
-        let rf = simulate_receive_rf(scat.view(), amp.view(), elem.view(), c, fs, f0, 0.6, 2048);
+        let rf = simulate_receive_rf(SimulateReceiveRfInput {
+            scat_pos: scat.view(),
+            scat_amp: amp.view(),
+            elem_pos: elem.view(),
+            c,
+            fs,
+            f0,
+            frac_bw: 0.6,
+            n_samples: 2048,
+        });
         // Peak sample index ≈ (d/c)·fs.
         let expected = (0.02 / c * fs).round() as usize;
         let row = rf
@@ -144,16 +179,16 @@ mod tests {
         let scat = positions([[0.0, 0.02, 0.0]]);
         let amp = Array1::from(vec![0.0]);
         let elem = positions([[0.0, 0.0, 0.0]]);
-        let rf = simulate_receive_rf(
-            scat.view(),
-            amp.view(),
-            elem.view(),
-            1540.0,
-            40e6,
-            3e6,
-            0.6,
-            512,
-        );
+        let rf = simulate_receive_rf(SimulateReceiveRfInput {
+            scat_pos: scat.view(),
+            scat_amp: amp.view(),
+            elem_pos: elem.view(),
+            c: 1540.0,
+            fs: 40e6,
+            f0: 3e6,
+            frac_bw: 0.6,
+            n_samples: 512,
+        });
         assert!(rf.iter().all(|&v| v == 0.0));
     }
 
@@ -162,26 +197,26 @@ mod tests {
         let (c, fs, f0) = (1540.0, 40e6, 3e6);
         let elem = positions([[0.0, 0.0, 0.0]]);
         let amp = Array1::from(vec![1.0]);
-        let near = simulate_receive_rf(
-            positions([[0.0, 0.01, 0.0]]).view(),
-            amp.view(),
-            elem.view(),
+        let near = simulate_receive_rf(SimulateReceiveRfInput {
+            scat_pos: positions([[0.0, 0.01, 0.0]]).view(),
+            scat_amp: amp.view(),
+            elem_pos: elem.view(),
             c,
             fs,
             f0,
-            0.6,
-            2048,
-        );
-        let far = simulate_receive_rf(
-            positions([[0.0, 0.03, 0.0]]).view(),
-            amp.view(),
-            elem.view(),
+            frac_bw: 0.6,
+            n_samples: 2048,
+        });
+        let far = simulate_receive_rf(SimulateReceiveRfInput {
+            scat_pos: positions([[0.0, 0.03, 0.0]]).view(),
+            scat_amp: amp.view(),
+            elem_pos: elem.view(),
             c,
             fs,
             f0,
-            0.6,
-            2048,
-        );
+            frac_bw: 0.6,
+            n_samples: 2048,
+        });
         let pk = |r: &Array2<f64>| {
             let row = r
                 .index_axis::<1>(0, 0)
