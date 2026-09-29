@@ -1,4 +1,4 @@
-# ADR-134: IVUS imaging operations consume input records
+# ADR 134: IVUS imaging operations consume input records
 
 Status: Accepted
 
