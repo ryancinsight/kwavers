@@ -809,24 +809,24 @@ pub struct IvusTissueMasks<'a> {
 pub struct IvusTherapyDose {
     /// Radius of the catheter itself `m`.
     pub catheter_radius_m: f64,
-    /// Therapy frequency [Hz].
+    /// Therapy frequency `[Hz]`.
     pub therapy_frequency_hz: f64,
-    /// Duty cycle in `[0, 1]`.
+    /// Duty cycle in the interval `[0, 1]`.
     pub therapy_duty_cycle: f64,
     /// Sonication duration `s`.
     pub therapy_sonication_s: f64,
-    /// Tissue density [kg/m^3].
+    /// Tissue density `[kg/m^3]`.
     pub density_kg_m3: f64,
-    /// Tissue sound speed [m/s].
+    /// Tissue sound speed `[m/s]`.
     pub sound_speed_m_s: f64,
-    /// Tissue specific heat [J/(kg K)].
+    /// Tissue specific heat `[J/(kg K)]`.
     pub specific_heat_j_kg_k: f64,
 }
 
 /// Inputs for [`ivus_therapy_response`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct IvusTherapyResponseInput<'a> {
-    /// Acoustic pressure [Pa], one per sample.
+    /// Acoustic pressure `[Pa]`, one per sample.
     pub pressure_pa: &'a [f64],
     /// Radius from catheter center `m`, same length as [`Self::pressure_pa`].
     pub radius_m: &'a [f64],
@@ -1017,7 +1017,7 @@ pub struct IvusTherapyFieldsInput<'a> {
     pub masks: IvusTissueMasks<'a>,
     /// Therapy-dose scalars.
     pub dose: IvusTherapyDose,
-    /// Sector-focused peak pressure [Pa].
+    /// Sector-focused peak pressure `[Pa]`.
     pub therapy_pressure_pa: f64,
     /// Central azimuth of the therapy sector `rad`.
     pub therapy_azimuth_rad: f64,
@@ -1458,19 +1458,19 @@ pub struct IvusChapterMetricsInput<'a> {
     pub plaque_mask: &'a [bool],
     /// Cartesian B-mode image the display metrics are read from.
     pub bmode_cartesian: &'a [f64],
-    /// Tissue sound speed [m/s]; must be positive.
+    /// Tissue sound speed `[m/s]`; must be positive.
     pub sound_speed_m_s: f64,
-    /// Imaging frequency [Hz]; must be positive.
+    /// Imaging frequency `[Hz]`; must be positive.
     pub imaging_frequency_hz: f64,
-    /// Therapy frequency [Hz]; must be positive.
+    /// Therapy frequency `[Hz]`; must be positive.
     pub therapy_frequency_hz: f64,
-    /// B-mode display dynamic range [dB]; must be positive.
+    /// B-mode display dynamic range `[dB]`; must be positive.
     pub bmode_dynamic_range_db: f64,
-    /// Mechanical index of the therapy pulse [-].
+    /// Mechanical index of the therapy pulse `[-]`.
     pub therapy_mechanical_index: f64,
-    /// Peak adiabatic temperature rise [K].
+    /// Peak adiabatic temperature rise `[K]`.
     pub therapy_peak_delta_t_c: f64,
-    /// Target to off-target deposition ratio [-].
+    /// Target to off-target deposition ratio `[-]`.
     pub therapy_target_to_offtarget_deposition_ratio: f64,
 }
 
