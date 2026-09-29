@@ -1110,15 +1110,6 @@ pub fn ivus_therapy_fields(input: IvusTherapyFieldsInput<'_>) -> Result<IvusTher
     })
 }
 
-/// Polar IVUS RF fixture from phantom backscatter and attenuation fields.
-///
-/// The function samples a Cartesian phantom on a polar catheter grid, applies
-/// two-way amplitude attenuation, and adds the deterministic catheter-ring echo
-/// used by the Chapter 30 IVUS B-mode panel:
-///
-/// `rf(r, theta) = backscatter(x,y) * exp(-2 alpha(x,y) f_MHz (r-r_catheter))
-///                 + A_ring exp(-((r-r_catheter) / w_ring)^2)`.
-///
 /// Inputs for [`ivus_polar_bmode_rf`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct IvusPolarBmodeRfInput<'a> {
@@ -1144,10 +1135,21 @@ pub struct IvusPolarBmodeRfInput<'a> {
     pub ring_width_m: f64,
 }
 
+/// Polar IVUS RF fixture from phantom backscatter and attenuation fields.
+///
+/// The function samples a Cartesian phantom on a polar catheter grid, applies
+/// two-way amplitude attenuation, and adds the deterministic catheter-ring echo
+/// used by the Chapter 30 IVUS B-mode panel:
+///
+/// `rf(r, theta) = backscatter(x,y) * exp(-2 alpha(x,y) f_MHz range)
+///                 + A_ring exp(-(range / w_ring)^2)`, where
+/// `range = max(r-r_catheter, 0)`.
+///
 /// # Errors
 ///
 /// Returns an error when phantom arrays do not form the same square grid, when
-/// axes/scalars are invalid, or when any numeric sample is non-finite.
+/// axes/scalars are invalid, or when any numeric sample is non-finite. Backscatter
+/// and attenuation samples must also be non-negative.
 pub fn ivus_polar_bmode_rf(input: IvusPolarBmodeRfInput<'_>) -> Result<Vec<f64>, String> {
     let IvusPolarBmodeRfInput {
         x_m,

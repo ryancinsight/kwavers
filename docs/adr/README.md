@@ -100,3 +100,4 @@
 | [131](131-c2r-inverse-consumes-its-input.md) | The complex-to-real inverse consumes its input spectrum | Accepted |
 | [132](132-one-lockstep-traversal.md) | One lockstep field traversal, in kwavers-core | Accepted |
 | [133](133-elastic-stress-evaluates-in-slabs.md) | The elastic acceleration evaluates in slabs past the cache | Accepted |
+| [134](134-ivus-imaging-input-records.md) | IVUS imaging operations consume input records | Accepted |
