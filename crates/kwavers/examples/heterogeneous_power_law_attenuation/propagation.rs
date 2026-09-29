@@ -1,5 +1,5 @@
 use anyhow::Result;
-use kwavers_solver::forward::viscoacoustic::ViscoacousticMemorySolver;
+use kwavers_solver::forward::viscoacoustic::{ViscoacousticGrid, ViscoacousticMemorySolver};
 use leto::Array3;
 
 use super::configuration::{
@@ -16,13 +16,7 @@ pub(crate) fn run_pulse(
     let rho_field = Array3::from_elem([N, 1, 1], RHO);
     let c_field = Array3::from_elem([N, 1, 1], C0);
     let mut solver = ViscoacousticMemorySolver::from_power_law_fields(
-        N,
-        1,
-        1,
-        DX,
-        1.0,
-        1.0,
-        dt,
+        ViscoacousticGrid::new(N, 1, 1, DX, 1.0, 1.0, dt),
         &rho_field,
         &c_field,
         alpha_field,

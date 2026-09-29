@@ -12,7 +12,7 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use kwavers_grid::Grid;
 use kwavers_medium::{CoreMedium, HomogeneousMedium};
-use kwavers_solver::forward::viscoacoustic::ViscoacousticMemorySolver;
+use kwavers_solver::forward::viscoacoustic::{ViscoacousticGrid, ViscoacousticMemorySolver};
 use leto::Array3;
 use leto_ops::{FiniteDifference3D, FiniteDifference3DScheme};
 use std::f64::consts::TAU;
@@ -240,9 +240,13 @@ fn bench_viscoacoustic_step(c: &mut Criterion) {
         ("3d_64", [64, 64, 64]),
     ] {
         let [nx, ny, nz] = shape;
-        let mut solver =
-            ViscoacousticMemorySolver::new(nx, ny, nz, DX, DX, DX, DT, RHO, MODULUS, &[])
-                .expect("benchmark solver parameters are valid");
+        let mut solver = ViscoacousticMemorySolver::new(
+            ViscoacousticGrid::new(nx, ny, nz, DX, DX, DX, DT),
+            RHO,
+            MODULUS,
+            &[],
+        )
+        .expect("benchmark solver parameters are valid");
         let pressure = Array3::from_shape_fn((nx, ny, nz), |[x, y, z]| {
             let phase = x as f64 / nx as f64 + y as f64 / ny as f64 + z as f64 / nz as f64;
             (TAU * phase).sin()
@@ -283,9 +287,13 @@ fn bench_viscoacoustic_relaxation(c: &mut Criterion) {
         ("3d", [16, 16, 16]),
     ] {
         let [nx, ny, nz] = shape;
-        let homogeneous =
-            ViscoacousticMemorySolver::new(nx, ny, nz, DX, DX, DX, DT, RHO, MODULUS, &ARMS)
-                .expect("benchmark homogeneous solver parameters are valid");
+        let homogeneous = ViscoacousticMemorySolver::new(
+            ViscoacousticGrid::new(nx, ny, nz, DX, DX, DX, DT),
+            RHO,
+            MODULUS,
+            &ARMS,
+        )
+        .expect("benchmark homogeneous solver parameters are valid");
         let pressure = Array3::from_shape_fn((nx, ny, nz), |[x, y, z]| {
             let phase = x as f64 / nx as f64 + y as f64 / ny as f64 + z as f64 / nz as f64;
             (TAU * phase).sin()
@@ -328,13 +336,7 @@ fn bench_viscoacoustic_relaxation(c: &mut Criterion) {
             })
             .collect();
         let heterogeneous = ViscoacousticMemorySolver::new_heterogeneous(
-            nx,
-            ny,
-            nz,
-            DX,
-            DX,
-            DX,
-            DT,
+            ViscoacousticGrid::new(nx, ny, nz, DX, DX, DX, DT),
             &inv_rho,
             &m_inf,
             &arm_fields,
