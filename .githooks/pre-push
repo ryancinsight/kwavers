@@ -146,18 +146,54 @@ default_branch_base() {
 # hook, since every section below judges one pushed revision and the range
 # leading to it. Judging the first ref alone let a later ref carry anything.
 zero="$(printf '0%.0s' $(seq 40))"
-content_lines=()
+push_lines=()
 if [ ! -t 0 ]; then
   while IFS= read -r push_line; do
-    read -r _ push_sha _ <<<"$push_line"
-    [ -n "${push_sha:-}" ] && [ "$push_sha" != "$zero" ] || continue
-    content_lines+=("$push_line")
+    [ -n "$push_line" ] && push_lines+=("$push_line")
   done
+fi
+
+# Both Atlas and member hooks dispatch to the classifier committed at the
+# fetched stack default. The member revision cannot broaden its own exception.
+if [ "${ATLAS_RESCUE_MIXED:-0}" != 1 ] && [ "${#push_lines[@]}" -gt 0 ]; then
+  rescue_stack_root="$(cd "$repo_root/../.." && pwd)"
+  rescue_stack_ref=""
+  rescue_allowlist_ref=""
+  for rescue_ref in origin/HEAD origin/main; do
+    rescue_stack_ref="$(outside_checkout git -C "$rescue_stack_root" rev-parse --verify --quiet "$rescue_ref^{commit}" 2>/dev/null || true)"
+    [ -n "$rescue_stack_ref" ] && break
+  done
+  for rescue_ref in origin/HEAD origin/main; do
+    rescue_allowlist_ref="$(outside_checkout git -C "$repo_root" rev-parse --verify --quiet "$rescue_ref^{commit}" 2>/dev/null || true)"
+    [ -n "$rescue_allowlist_ref" ] && break
+  done
+  if [ -n "$rescue_stack_ref" ] && [ -n "$rescue_allowlist_ref" ] \
+    && outside_checkout git -C "$rescue_stack_root" cat-file -e \
+      "$rescue_stack_ref:scripts/git-hooks/rescue-push" 2>/dev/null; then
+    rescue_status=0
+    outside_checkout git -C "$rescue_stack_root" show \
+      "$rescue_stack_ref:scripts/git-hooks/rescue-push" \
+      | outside_checkout bash -s -- \
+        "$repo_root" "$rescue_stack_root" "$rescue_stack_ref" \
+        "$rescue_allowlist_ref" "${push_lines[@]}" || rescue_status=$?
+    [ "$rescue_status" -eq 0 ] && exit 0
+    [ "$rescue_status" -eq 3 ] || exit "$rescue_status"
+  fi
+fi
+
+content_lines=()
+for push_line in "${push_lines[@]}"; do
+  read -r _ push_sha _ <<<"$push_line"
+  [ -n "${push_sha:-}" ] && [ "$push_sha" != "$zero" ] || continue
+  content_lines+=("$push_line")
+done
+if [ "${#push_lines[@]}" -gt 0 ]; then
   if [ "${#content_lines[@]}" -eq 0 ]; then
     echo "pre-push: the push carries no commits; nothing to gate" >&2
     exit 0
   fi
-  if [ "${#content_lines[@]}" -gt 1 ]; then
+  if [ "${#push_lines[@]}" -gt 1 ]; then
+    export ATLAS_RESCUE_MIXED=1
     refs_status=0
     for push_line in "${content_lines[@]}"; do
       echo "pre-push: judging ${push_line%% *}" >&2
