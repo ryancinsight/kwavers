@@ -7,6 +7,7 @@ use kwavers_analysis::signal_processing::b_mode::envelope as core_bmode_envelope
 use kwavers_physics::analytical::pulse_echo::{
     bmode_db_fixed_reference as core_bmode_db_fixed_reference,
     delta_bmode_db as core_delta_bmode_db, simulate_receive_rf as core_simulate_receive_rf,
+    SimulateReceiveRfInput,
 };
 use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -60,16 +61,16 @@ pub fn simulate_receive_rf<'py>(
     let sp_leto = nd_to_leto2(sp.to_owned());
     let sa_leto = nd_to_leto1(sa.to_owned());
     let ep_leto = nd_to_leto2(ep.to_owned());
-    let rf = core_simulate_receive_rf(
-        sp_leto.view(),
-        sa_leto.view(),
-        ep_leto.view(),
+    let rf = core_simulate_receive_rf(SimulateReceiveRfInput {
+        scat_pos: sp_leto.view(),
+        scat_amp: sa_leto.view(),
+        elem_pos: ep_leto.view(),
         c,
         fs,
         f0,
         frac_bw,
         n_samples,
-    );
+    });
     Ok(leto2_to_nd2(rf).to_pyarray(py).unbind())
 }
 
