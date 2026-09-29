@@ -5,7 +5,7 @@
 
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use leto::{Array3, ArrayView3};
+use leto::{Array2, Array3, ArrayView3};
 
 /// Wall filter types
 #[derive(Debug, Clone, Copy)]
@@ -129,87 +129,89 @@ impl WallFilter {
 
 /// Build the Vandermonde basis V[n, k] = t_n^k for t_n = n/(N-1) ∈ [0, 1].
 ///
-/// Returns a `Vec<Vec<f64>>` with `ensemble_size` rows and `order + 1` columns.
-/// Used by the polynomial wall filter (Hoeks 1991) to construct the polynomial
-/// model subspace independently of the IQ signal.
-fn polynomial_basis(ensemble_size: usize, order: usize) -> Vec<Vec<f64>> {
+/// Returns an `ensemble_size × (order + 1)` row-major [`Array2`] (contiguous
+/// storage indexed `basis[[n, i]]`). Used by the polynomial wall filter
+/// (Hoeks 1991) to construct the polynomial model subspace independently of
+/// the IQ signal.
+fn polynomial_basis(ensemble_size: usize, order: usize) -> Array2<f64> {
     let k = order + 1;
     let denom = (ensemble_size.saturating_sub(1)).max(1) as f64;
-    (0..ensemble_size)
-        .map(|n| {
-            let t = n as f64 / denom;
-            let mut row = Vec::with_capacity(k);
-            let mut pow = 1.0;
-            for _ in 0..k {
-                row.push(pow);
-                pow *= t;
-            }
-            row
-        })
-        .collect()
+    let mut basis = Array2::<f64>::zeros((ensemble_size, k));
+    for n in 0..ensemble_size {
+        let t = n as f64 / denom;
+        let mut pow = 1.0;
+        for i in 0..k {
+            basis[[n, i]] = pow;
+            pow *= t;
+        }
+    }
+    basis
 }
 
 /// Inverse of the Gram matrix `(VᵀV)⁻¹` for the polynomial basis.
 ///
 /// Solves the small `(order+1) × (order+1)` linear system once per filter
 /// invocation; the result is reused across every (depth, beam) signal. Uses
-/// Gaussian elimination with partial pivoting.
-fn polynomial_projector(basis: &[Vec<f64>]) -> Vec<Vec<f64>> {
-    let n = basis.len();
-    let k = basis.first().map_or(0, Vec::len);
+/// Gaussian elimination with partial pivoting. Returns a `k × k` row-major
+/// [`Array2`] (contiguous storage indexed `projector[[i, j]]`).
+fn polynomial_projector(basis: &Array2<f64>) -> Array2<f64> {
+    let [n, k] = basis.shape();
     if k == 0 {
-        return Vec::new();
+        return Array2::zeros((0, 0));
     }
     // Gram matrix G = V^T V
-    let mut gram = vec![vec![0.0_f64; k]; k];
+    let mut gram = Array2::<f64>::zeros((k, k));
     for i in 0..k {
         for j in 0..k {
-            gram[i][j] = (0..n).map(|t| basis[t][i] * basis[t][j]).sum();
+            gram[[i, j]] = (0..n).map(|t| basis[[t, i]] * basis[[t, j]]).sum();
         }
     }
     // Augmented [G | I] for inversion via row-reduction
-    let mut aug = vec![vec![0.0_f64; 2 * k]; k];
+    let two_k = 2 * k;
+    let mut aug = Array2::<f64>::zeros((k, two_k));
     for i in 0..k {
         for j in 0..k {
-            aug[i][j] = gram[i][j];
+            aug[[i, j]] = gram[[i, j]];
         }
-        aug[i][k + i] = 1.0;
+        aug[[i, k + i]] = 1.0;
     }
     for col in 0..k {
         // Partial pivot
         let pivot = (col..k)
-            .max_by(|&a, &b| aug[a][col].abs().total_cmp(&aug[b][col].abs()))
+            .max_by(|&a, &b| aug[[a, col]].abs().total_cmp(&aug[[b, col]].abs()))
             .unwrap_or(col);
-        aug.swap(col, pivot);
-        let diag = aug[col][col];
+        if pivot != col {
+            for c in 0..two_k {
+                let tmp = aug[[col, c]];
+                aug[[col, c]] = aug[[pivot, c]];
+                aug[[pivot, c]] = tmp;
+            }
+        }
+        let diag = aug[[col, col]];
         if diag.abs() < 1e-300 {
             // Singular — return identity sentinel (filter degenerates to identity)
-            let mut id = vec![vec![0.0_f64; k]; k];
-            for (i, row) in id.iter_mut().enumerate() {
-                row[i] = 1.0;
-            }
-            return id;
+            return Array2::eye(k);
         }
-        for v in aug[col].iter_mut() {
-            *v /= diag;
+        for c in 0..two_k {
+            aug[[col, c]] /= diag;
         }
-        // The pivot row is finalized above and unchanged during elimination
-        // (every modified row has `row != col`), so clone it once to satisfy the
-        // borrow checker while zipping.
-        let pivot_row = aug[col].clone();
-        for (row, aug_row) in aug.iter_mut().enumerate() {
+        // The pivot row (row `col`) is finalized above and untouched by the
+        // `row != col` branches below, so reading it directly per column
+        // needs no snapshot (unlike a nested-Vec row, a flat array's pivot
+        // row is not borrowed by the outer mutation loop).
+        for row in 0..k {
             if row != col {
-                let factor = aug_row[col];
-                for (a, &p) in aug_row.iter_mut().zip(pivot_row.iter()) {
-                    *a -= factor * p;
+                let factor = aug[[row, col]];
+                for c in 0..two_k {
+                    aug[[row, c]] -= factor * aug[[col, c]];
                 }
             }
         }
     }
-    let mut inv = vec![vec![0.0_f64; k]; k];
+    let mut inv = Array2::<f64>::zeros((k, k));
     for i in 0..k {
         for j in 0..k {
-            inv[i][j] = aug[i][k + j];
+            inv[[i, j]] = aug[[i, k + j]];
         }
     }
     inv
@@ -220,9 +222,13 @@ fn polynomial_projector(basis: &[Vec<f64>]) -> Vec<Vec<f64>> {
 /// Returns `x - V (VᵀV)⁻¹ Vᵀ x` — the residual after subtracting the best
 /// least-squares polynomial fit. The projection is linear so it operates
 /// independently on the real and imaginary parts of the IQ signal.
-fn project_out(signal: &[Complex64], basis: &[Vec<f64>], projector: &[Vec<f64>]) -> Vec<Complex64> {
+fn project_out(
+    signal: &[Complex64],
+    basis: &Array2<f64>,
+    projector: &Array2<f64>,
+) -> Vec<Complex64> {
     let n = signal.len();
-    let k = projector.len();
+    let [k, _] = projector.shape();
     if k == 0 || n == 0 {
         return signal.to_vec();
     }
@@ -230,14 +236,14 @@ fn project_out(signal: &[Complex64], basis: &[Vec<f64>], projector: &[Vec<f64>])
     let mut vt_x = vec![Complex64::new(0.0, 0.0); k];
     for i in 0..k {
         for t in 0..n {
-            vt_x[i] += signal[t] * basis[t][i];
+            vt_x[i] += signal[t] * basis[[t, i]];
         }
     }
     // a = (VᵀV)⁻¹ Vᵀ x
     let mut coeffs = vec![Complex64::new(0.0, 0.0); k];
     for i in 0..k {
         for j in 0..k {
-            coeffs[i] += vt_x[j] * projector[i][j];
+            coeffs[i] += vt_x[j] * projector[[i, j]];
         }
     }
     // residual = x - V a
@@ -245,7 +251,7 @@ fn project_out(signal: &[Complex64], basis: &[Vec<f64>], projector: &[Vec<f64>])
     for t in 0..n {
         let mut fit = Complex64::new(0.0, 0.0);
         for i in 0..k {
-            fit += coeffs[i] * basis[t][i];
+            fit += coeffs[i] * basis[[t, i]];
         }
         residual.push(signal[t] - fit);
     }
