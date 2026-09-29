@@ -1358,6 +1358,37 @@ pub fn ivus_scan_convert(
     Ok(image)
 }
 
+/// Inputs for [`ivus_bmode_image`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IvusBmodeImageInput<'a> {
+    /// Cartesian phantom x coordinate `m`.
+    pub x_m: &'a [f64],
+    /// Cartesian phantom y coordinate `m`, same length as [`Self::x_m`].
+    pub y_m: &'a [f64],
+    /// Normalized backscatter amplitude per phantom sample.
+    pub backscatter: &'a [f64],
+    /// Attenuation `[dB/(cm MHz)]` per phantom sample.
+    pub attenuation_db_cm_mhz: &'a [f64],
+    /// Radial axis of the polar output `m`.
+    pub r_axis_m: &'a [f64],
+    /// Angular axis of the polar output `rad`.
+    pub theta_axis_rad: &'a [f64],
+    /// Radius of the scan-conversion source, `m` per Cartesian sample.
+    pub radius_m: &'a [f64],
+    /// Angle of the scan-conversion source, `rad` per Cartesian sample.
+    pub theta_m_rad: &'a [f64],
+    /// Radius of the catheter itself `m`.
+    pub catheter_radius_m: f64,
+    /// Imaging frequency `Hz`.
+    pub frequency_hz: f64,
+    /// Log-compression floor `dB`; must be finite and negative.
+    pub floor_db: f64,
+    /// Amplitude of the ring-down artefact, non-negative.
+    pub ring_amplitude: f64,
+    /// Radial width of the ring-down artefact `m`; must be positive.
+    pub ring_width_m: f64,
+}
+
 /// Complete IVUS B-mode RF-to-display fixture for Chapter 30.
 ///
 /// The function builds the polar RF field, computes Hilbert envelopes per
@@ -1370,22 +1401,22 @@ pub fn ivus_scan_convert(
 /// Returns an error when any subordinate IVUS RF or scan-conversion validation
 /// fails, when the log-compression floor is not finite and negative, or when
 /// the polar grid is empty.
-#[allow(clippy::too_many_arguments)]
-pub fn ivus_bmode_image(
-    x_m: &[f64],
-    y_m: &[f64],
-    backscatter: &[f64],
-    attenuation_db_cm_mhz: &[f64],
-    r_axis_m: &[f64],
-    theta_axis_rad: &[f64],
-    radius_m: &[f64],
-    theta_m_rad: &[f64],
-    catheter_radius_m: f64,
-    frequency_hz: f64,
-    floor_db: f64,
-    ring_amplitude: f64,
-    ring_width_m: f64,
-) -> Result<IvusBmodeImage, String> {
+pub fn ivus_bmode_image(input: IvusBmodeImageInput<'_>) -> Result<IvusBmodeImage, String> {
+    let IvusBmodeImageInput {
+        x_m,
+        y_m,
+        backscatter,
+        attenuation_db_cm_mhz,
+        r_axis_m,
+        theta_axis_rad,
+        radius_m,
+        theta_m_rad,
+        catheter_radius_m,
+        frequency_hz,
+        floor_db,
+        ring_amplitude,
+        ring_width_m,
+    } = input;
     if !(floor_db.is_finite() && floor_db < 0.0) {
         return Err("floor_db must be finite and negative".to_owned());
     }
@@ -2097,21 +2128,21 @@ mod tests {
         let radius = [0.5e-3, 1.0e-3, 2.0e-3, 2.5e-3];
         let theta = [-PI, -PI, 0.0, 0.0];
 
-        let image = ivus_bmode_image(
-            &x,
-            &y,
-            &backscatter,
-            &attenuation,
-            &r_axis,
-            &theta_axis,
-            &radius,
-            &theta,
-            1.0e-3,
-            20.0e6,
-            -60.0,
-            0.10,
-            0.22e-3,
-        )
+        let image = ivus_bmode_image(IvusBmodeImageInput {
+            x_m: &x,
+            y_m: &y,
+            backscatter: &backscatter,
+            attenuation_db_cm_mhz: &attenuation,
+            r_axis_m: &r_axis,
+            theta_axis_rad: &theta_axis,
+            radius_m: &radius,
+            theta_m_rad: &theta,
+            catheter_radius_m: 1.0e-3,
+            frequency_hz: 20.0e6,
+            floor_db: -60.0,
+            ring_amplitude: 0.10,
+            ring_width_m: 0.22e-3,
+        })
         .unwrap();
 
         assert_eq!(image.rf.len(), r_axis.len() * theta_axis.len());
@@ -2131,21 +2162,21 @@ mod tests {
 
     #[test]
     fn ivus_bmode_image_rejects_invalid_floor() {
-        let err = ivus_bmode_image(
-            &[0.0, 0.0, 1.0, 1.0],
-            &[0.0, 1.0, 0.0, 1.0],
-            &[1.0, 1.0, 1.0, 1.0],
-            &[0.0, 0.0, 0.0, 0.0],
-            &[1.0, 2.0],
-            &[0.0, 1.0],
-            &[1.0],
-            &[0.0],
-            0.0,
-            1.0,
-            0.0,
-            0.0,
-            1.0,
-        )
+        let err = ivus_bmode_image(IvusBmodeImageInput {
+            x_m: &[0.0, 0.0, 1.0, 1.0],
+            y_m: &[0.0, 1.0, 0.0, 1.0],
+            backscatter: &[1.0, 1.0, 1.0, 1.0],
+            attenuation_db_cm_mhz: &[0.0, 0.0, 0.0, 0.0],
+            r_axis_m: &[1.0, 2.0],
+            theta_axis_rad: &[0.0, 1.0],
+            radius_m: &[1.0],
+            theta_m_rad: &[0.0],
+            catheter_radius_m: 0.0,
+            frequency_hz: 1.0,
+            floor_db: 0.0,
+            ring_amplitude: 0.0,
+            ring_width_m: 1.0,
+        })
         .unwrap_err();
         assert!(err.contains("floor_db"));
     }
