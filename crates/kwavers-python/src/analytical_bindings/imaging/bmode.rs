@@ -163,21 +163,21 @@ pub fn ivus_bmode_image<'py>(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let image = py
         .detach(|| {
-            imaging::ivus_bmode_image(
-                x,
-                y,
-                back,
-                attenuation,
-                radius_axis,
-                theta_axis,
-                radius,
-                theta,
+            imaging::ivus_bmode_image(imaging::IvusBmodeImageInput {
+                x_m: x,
+                y_m: y,
+                backscatter: back,
+                attenuation_db_cm_mhz: attenuation,
+                r_axis_m: radius_axis,
+                theta_axis_rad: theta_axis,
+                radius_m: radius,
+                theta_m_rad: theta,
                 catheter_radius_m,
                 frequency_hz,
                 floor_db,
                 ring_amplitude,
                 ring_width_m,
-            )
+            })
         })
         .map_err(PyValueError::new_err)?;
 
