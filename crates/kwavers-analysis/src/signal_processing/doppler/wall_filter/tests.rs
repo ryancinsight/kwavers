@@ -264,3 +264,168 @@ fn wall_filter_iir_alternating_input_is_passed() {
         "IIR should pass Nyquist input: in={dc_input_energy:.3}, out={out_energy:.3}"
     );
 }
+
+// ─── ATLAS-ARCH-008: flat-array conversion characterization ──────────────
+//
+// polynomial_basis/polynomial_projector/project_out moved from nested
+// Vec<Vec<f64>> to a contiguous leto::Array2<f64> (row-major, `[[row,
+// col]]` indexed). The arithmetic and its order are unchanged — only the
+// storage/indexing shape changed — so these tests pin the converted
+// functions' outputs against independently computed oracles (not against
+// the pre-conversion code itself, which used the identical operation
+// sequence and would only prove the diff, not the math).
+
+/// Vandermonde basis columns equal `t^i` computed via an independent route
+/// (`f64::powi`, repeated squaring) rather than the implementation's
+/// iterative-multiply accumulation. Each route accumulates O(i) relative
+/// rounding error (Higham, *Accuracy and Stability of Numerical
+/// Algorithms*, ch. 3: each IEEE-754 multiply has relative error <= 1 ULP),
+/// so for i <= 3 the two routes agree to within a small constant number of
+/// ULPs.
+#[test]
+fn polynomial_basis_matches_closed_form_power() {
+    let ensemble_size = 7;
+    let order = 3;
+    let basis = polynomial_basis(ensemble_size, order);
+    let denom = (ensemble_size - 1) as f64;
+    for n in 0..ensemble_size {
+        let t = n as f64 / denom;
+        for i in 0..=order {
+            let expected = t.powi(i32::try_from(i).unwrap());
+            let actual = basis[[n, i]];
+            let tol = 2.0 * (i as f64 + 1.0) * f64::EPSILON * expected.abs().max(1.0);
+            assert!(
+                (actual - expected).abs() <= tol,
+                "basis[[{n},{i}]]: expected {expected}, got {actual} (tol {tol})"
+            );
+        }
+    }
+}
+
+/// `projector` is the algebraic inverse of the Gram matrix it was built
+/// from: `projector @ Gram(basis) == I`. The Gram matrix here is
+/// recomputed independently of `polynomial_projector`'s internal one, so
+/// this checks the actual inversion, not a tautology against the function's
+/// own intermediate state.
+#[test]
+fn polynomial_projector_inverts_gram_matrix() {
+    let ensemble_size = 9;
+    let order = 3;
+    let k = order + 1;
+    let basis = polynomial_basis(ensemble_size, order);
+    let projector = polynomial_projector(&basis);
+
+    for i in 0..k {
+        for l in 0..k {
+            let mut acc = 0.0_f64;
+            for j in 0..k {
+                let gram_jl: f64 = (0..ensemble_size)
+                    .map(|t| basis[[t, j]] * basis[[t, l]])
+                    .sum();
+                acc += projector[[i, j]] * gram_jl;
+            }
+            let expected = if i == l { 1.0 } else { 0.0 };
+            // Gaussian elimination with partial pivoting on a k=4
+            // well-conditioned Vandermonde Gram matrix (entries scale with
+            // ensemble_size) accumulates O(k) rounding steps; bound the
+            // residual generously against the matrix scale.
+            let tol = 1e2 * f64::EPSILON * ensemble_size as f64;
+            assert!(
+                (acc - expected).abs() <= tol,
+                "(projector * gram)[{i}][{l}] = {acc}, expected {expected} (tol {tol})"
+            );
+        }
+    }
+}
+
+/// Order-0 (`k=1`) degenerates to mean-removal: `Gram = [[n]]`, so the
+/// projector is exactly `[[1/n]]` — a single IEEE-754 division, bit-exact.
+#[test]
+fn polynomial_projector_order_zero_is_reciprocal_count() {
+    let ensemble_size = 5;
+    let basis = polynomial_basis(ensemble_size, 0);
+    let projector = polynomial_projector(&basis);
+    let expected = 1.0 / ensemble_size as f64;
+    assert_eq!(
+        projector[[0, 0]],
+        expected,
+        "order-0 projector must equal 1/n exactly"
+    );
+}
+
+/// `project_out`'s Array2-indexed hot loop (`basis[[t,i]]`,
+/// `projector[[i,j]]`) matches a closed-form 2x2 normal-equations solve —
+/// an oracle independent of `polynomial_projector`'s Gaussian-elimination
+/// code path. The signal is quadratic in `t` (not linear), so an order-1
+/// fit leaves a genuine, non-zero residual to compare.
+#[test]
+fn project_out_matches_closed_form_linear_least_squares() {
+    let ensemble_size = 5;
+    let order = 1;
+    let basis = polynomial_basis(ensemble_size, order);
+    let projector = polynomial_projector(&basis);
+
+    let denom = (ensemble_size - 1) as f64;
+    let ts: Vec<f64> = (0..ensemble_size).map(|n| n as f64 / denom).collect();
+    let signal: Vec<Complex64> = ts
+        .iter()
+        .map(|&t| Complex64::new(1.0 + 2.0 * t * t, 0.5 - t * t * t))
+        .collect();
+
+    // Closed-form 2x2 normal-equations solve: coeffs = (VᵀV)⁻¹ Vᵀx.
+    let s0 = ensemble_size as f64;
+    let s1: f64 = ts.iter().sum();
+    let s2: f64 = ts.iter().map(|t| t * t).sum();
+    let det = s0 * s2 - s1 * s1;
+    let vt_x0: Complex64 = signal.iter().copied().sum();
+    let vt_x1: Complex64 = signal.iter().zip(&ts).map(|(s, &t)| *s * t).sum();
+    let a0 = (s2 * vt_x0 - s1 * vt_x1) / det;
+    let a1 = (s0 * vt_x1 - s1 * vt_x0) / det;
+
+    let residual = project_out(&signal, &basis, &projector);
+    for (n, (&t, r)) in ts.iter().zip(residual.iter()).enumerate() {
+        let expected = signal[n] - (a0 + a1 * t);
+        assert!(
+            (r - expected).norm() < 1e-9,
+            "project_out[{n}]: expected {expected}, got {r}"
+        );
+    }
+}
+
+/// `polynomial_basis` is bit-for-bit identical to the pre-conversion
+/// `Vec<Vec<f64>>` algorithm (same iterative `pow *= t` accumulation, same
+/// order) reimplemented here directly from the ATLAS-ARCH-008 commit
+/// message's description of the prior code, not merely close under an
+/// epsilon. Only the storage container changed.
+#[test]
+fn polynomial_basis_is_bitwise_identical_to_pre_conversion_algorithm() {
+    let ensemble_size: usize = 6;
+    let order: usize = 2;
+    let k = order + 1;
+    let denom = (ensemble_size.saturating_sub(1)).max(1) as f64;
+
+    // Pre-conversion algorithm, reproduced verbatim into Vec<Vec<f64>>.
+    let reference: Vec<Vec<f64>> = (0..ensemble_size)
+        .map(|n| {
+            let t = n as f64 / denom;
+            let mut row = Vec::with_capacity(k);
+            let mut pow = 1.0;
+            for _ in 0..k {
+                row.push(pow);
+                pow *= t;
+            }
+            row
+        })
+        .collect();
+
+    let basis = polynomial_basis(ensemble_size, order);
+    for n in 0..ensemble_size {
+        for i in 0..k {
+            assert_eq!(
+                basis[[n, i]],
+                reference[n][i],
+                "basis[[{n},{i}]] must be bit-identical to the pre-conversion value"
+            );
+        }
+    }
+}
