@@ -900,6 +900,7 @@ fi
 # inputs to the owning package's tests even when no Rust source changed.
 gate_packages=""
 excluded_manifests=""
+standalone_manifests=""
 while IFS= read -r changed_path; do
   [ -n "$changed_path" ] || continue
   owner_dir="$(dirname "$changed_path")"
@@ -948,9 +949,9 @@ while IFS= read -r changed_path; do
   relative_manifest="${relative_manifest#./}"
   package_name="$(printf '%s\n' "$workspace_members" | awk -F '\t' -v manifest="$relative_manifest" '$1 == manifest { print $2; exit }')"
   if [ -z "$package_name" ]; then
-    case " $excluded_manifests " in
+    case " $standalone_manifests " in
       *" $relative_manifest "*) ;;
-      *) excluded_manifests="$excluded_manifests $relative_manifest" ;;
+      *) standalone_manifests="$standalone_manifests $relative_manifest" ;;
     esac
     continue
   fi
@@ -974,6 +975,42 @@ SKIP_LOCAL_GATE=1 git push.
 MESSAGE
   exit 1
 fi
+
+# A standalone crate outside the parent workspace (cargo-fuzz is the common
+# case) cannot be named by a parent-workspace `-p`, and its targets need a
+# toolchain this host may lack (nightly, sanitizers), so its compile and run
+# verification stays with CI. What every host can establish is checked here:
+# its own lockfile resolves under `--locked` and its sources are
+# rustfmt-clean. Refusing the push instead left no way to change a fuzz
+# target at all. A nested virtual workspace, whose members deserve a real
+# gate, is still refused above.
+for standalone_manifest in $standalone_manifests; do
+  if ! (cd "$gate_export" && cargo metadata --locked --no-deps --format-version 1 \
+    --manifest-path "$gate_export/$standalone_manifest" >/dev/null 2>&1); then
+    cat >&2 <<MESSAGE
+
+pre-push: the lockfile of the standalone crate $standalone_manifest does not
+resolve under --locked on $gate_sha.
+
+From a checkout of $gate_sha outside the stack overlay:
+
+    cargo metadata --locked --no-deps --manifest-path $standalone_manifest
+
+To push anyway: SKIP_LOCAL_GATE=1 git push
+MESSAGE
+    exit 1
+  fi
+  if ! (cd "$gate_export" && cargo fmt --manifest-path "$gate_export/$standalone_manifest" -- --check >/dev/null); then
+    cat >&2 <<MESSAGE
+
+pre-push: \`cargo fmt --check\` fails for the standalone crate $standalone_manifest on $gate_sha.
+
+Run \`cargo fmt --manifest-path $standalone_manifest\` and commit the result. To push anyway: SKIP_LOCAL_GATE=1 git push
+MESSAGE
+    exit 1
+  fi
+  echo "pre-push: standalone crate $standalone_manifest: lockfile and formatting checked; CI builds it" >&2
+done
 
 if [ -z "${gate_packages// /}" ]; then
   echo "pre-push: no package owns the changed files; local gate not needed" >&2
@@ -1304,7 +1341,38 @@ fi
 # after the merge (a redundant link target from apollo#508 did). The changed
 # packages are documented here the same way.
 if [ "$identity_enabled" -eq 1 ]; then
+  # `cargo doc` writes an artifact only for a package with a documented lib or
+  # bin target. A bench-only package (moirai-benchmarks) or a `[lib] doc =
+  # false` one (consus-python) writes none, so the identity step would refuse
+  # every push touching it; cargo's own target list is the authority.
+  if ! documented_packages="$(
+    cd "$gate_export" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+      "$python_bin" -c 'import json, sys
+sys.stdout.reconfigure(newline="\n")
+documented = {"lib", "rlib", "dylib", "cdylib", "staticlib", "proc-macro", "bin"}
+for package in json.load(sys.stdin)["packages"]:
+    targets = package.get("targets")
+    if targets is None or any(
+        target.get("doc", True) and documented.intersection(target["kind"])
+        for target in targets
+    ):
+        print(package["name"])'
+  )"; then
+    echo "pre-push: cargo metadata did not list the documented packages" >&2
+    exit 1
+  fi
   for package_name in $gate_packages; do
+    case "
+$documented_packages
+" in
+      *"
+$package_name
+"*) ;;
+      *)
+        echo "pre-push: rustdoc skipped for $package_name; it has no documented lib or bin target" >&2
+        continue
+        ;;
+    esac
     run_identity_step "$package_name" rustdoc env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps "${identity_cargo_manifest_args[@]}" -p "$package_name" --locked
   done
 else
