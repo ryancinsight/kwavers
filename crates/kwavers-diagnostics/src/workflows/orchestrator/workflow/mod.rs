@@ -119,9 +119,10 @@ impl ClinicalWorkflowOrchestrator {
     fn acquire_multimodal_data(&mut self) -> KwaversResult<AcquisitionResult> {
         let acquisition_start = Instant::now();
 
+        let grid = self.acquisition_grid();
         let ultrasound_data = self.acquire_ultrasound_data()?;
-        let pa_result = Self::acquire_photoacoustic_data()?;
-        let elastography_result = Self::acquire_elastography_data()?;
+        let pa_result = Self::acquire_photoacoustic_data(grid)?;
+        let elastography_result = Self::acquire_elastography_data(grid)?;
 
         let acquisition_time = acquisition_start.elapsed();
         if self.config.real_time_enabled
@@ -231,7 +232,31 @@ impl ClinicalWorkflowOrchestrator {
         })
     }
 
-    fn acquire_photoacoustic_data() -> KwaversResult<PhotoacousticResult> {
+    /// The shared acquisition grid for all modalities.
+    ///
+    /// Fusion registers modalities through rigid mutual-information
+    /// registration (ritk), which requires equally shaped volumes, so the
+    /// photoacoustic and elastography generators must run on the same grid
+    /// the ultrasound acquisition uses.
+    fn acquisition_grid(&self) -> [usize; 3] {
+        #[cfg(feature = "gpu")]
+        {
+            let _ = self;
+            [256, 256, 128]
+        }
+        #[cfg(not(feature = "gpu"))]
+        {
+            use super::super::config::QualityPreference;
+
+            match self.config.quality_preference {
+                QualityPreference::Quality => [256, 256, 128],
+                QualityPreference::Balanced => [128, 128, 64],
+                QualityPreference::Speed => [64, 64, 32],
+            }
+        }
+    }
+
+    fn acquire_photoacoustic_data(grid: [usize; 3]) -> KwaversResult<PhotoacousticResult> {
         let pa_config = ClinicalPhotoacousticConfig {
             _wavelength: 800e-9,
             _optical_energy: 10e-3,
@@ -243,7 +268,7 @@ impl ClinicalWorkflowOrchestrator {
             _center_frequency: 5.0 * MHZ_TO_HZ,
         };
 
-        let (pressure_fields, time_points) = generate_realistic_pa_data(&pa_config);
+        let (pressure_fields, time_points) = generate_realistic_pa_data(&pa_config, grid);
         let reconstructed_image = reconstruct_pa_image(&pressure_fields, &pa_config)?;
         let snr = compute_pa_snr(&reconstructed_image);
 
@@ -255,7 +280,7 @@ impl ClinicalWorkflowOrchestrator {
         })
     }
 
-    fn acquire_elastography_data() -> KwaversResult<ElasticityMap> {
+    fn acquire_elastography_data(grid: [usize; 3]) -> KwaversResult<ElasticityMap> {
         let elast_config = ElastographyConfig {
             _excitation_frequency: 100.0,
             _push_duration: 200e-6,
@@ -267,7 +292,7 @@ impl ClinicalWorkflowOrchestrator {
         };
 
         let (youngs_modulus, shear_modulus, shear_wave_speed) =
-            generate_realistic_elastography_data(&elast_config);
+            generate_realistic_elastography_data(&elast_config, grid);
 
         Ok(ElasticityMap {
             youngs_modulus,

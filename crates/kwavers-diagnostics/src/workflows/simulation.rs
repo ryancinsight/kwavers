@@ -64,26 +64,33 @@ pub fn generate_realistic_rf_data(config: &BeamformingConfig3D) -> Array3<f64> {
     )
 }
 
-/// Generate realistic photoacoustic data
+/// Generate realistic photoacoustic data on the requested acquisition grid.
+///
+/// `dims` must match the ultrasound acquisition grid: the clinical workflow
+/// fuses modalities through rigid mutual-information registration, which
+/// requires equally shaped volumes.
 #[must_use]
 pub fn generate_realistic_pa_data(
     _config: &ClinicalPhotoacousticConfig,
+    dims: [usize; 3],
 ) -> (Vec<Array3<f64>>, Vec<f64>) {
     // Generate time-resolved pressure fields
     let time_points = vec![0.0, 2e-6, 4e-6, 6e-6, 8e-6]; // 5 time points
     let mut pressure_fields = Vec::new();
 
+    let [nx, ny, nz] = dims;
+    let (cx, cy, cz) = (nx as f64 / 2.0, ny as f64 / 2.0, nz as f64 / 2.0);
     for &t in &time_points {
-        let mut field = Array3::from_elem([128, 128, 64], 0.0);
+        let mut field = Array3::from_elem(dims, 0.0);
 
         // Generate realistic PA wave propagation
-        for z in 0..64 {
-            for y in 0..128 {
-                for x in 0..128 {
-                    let r = (z as f64 - 32.0)
+        for z in 0..nz {
+            for y in 0..ny {
+                for x in 0..nx {
+                    let r = (z as f64 - cz)
                         .mul_add(
-                            z as f64 - 32.0,
-                            (y as f64 - 64.0).mul_add(y as f64 - 64.0, (x as f64 - 64.0).powi(2)),
+                            z as f64 - cz,
+                            (y as f64 - cy).mul_add(y as f64 - cy, (x as f64 - cx).powi(2)),
                         )
                         .sqrt()
                         * 0.001; // distance in meters
@@ -162,21 +169,27 @@ pub fn compute_pa_snr(image: &Array3<f64>) -> f64 {
     }
 }
 
-/// Generate realistic elastography data
+/// Generate realistic elastography data on the requested acquisition grid.
+///
+/// `dims` must match the ultrasound acquisition grid: the clinical workflow
+/// fuses modalities through rigid mutual-information registration, which
+/// requires equally shaped volumes.
 #[must_use]
 pub fn generate_realistic_elastography_data(
     _config: &ElastographyConfig,
+    dims: [usize; 3],
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-    let dims = [128, 128, 64];
+    let [nx, ny, nz] = dims;
+    let (cx, cy) = (nx as f64 / 2.0, ny as f64 / 2.0);
 
     // Generate realistic tissue properties
     let mut youngs_modulus = Array3::zeros(dims);
     let mut shear_modulus = Array3::zeros(dims);
     let mut shear_wave_speed = Array3::zeros(dims);
 
-    for z in 0..dims[2] {
-        for y in 0..dims[1] {
-            for x in 0..dims[0] {
+    for z in 0..nz {
+        for y in 0..ny {
+            for x in 0..nx {
                 // Create layered tissue structure
                 let depth = z as f64 * 0.001; // depth in meters
 
@@ -184,8 +197,8 @@ pub fn generate_realistic_elastography_data(
                 let mut e_mod = 10e3; // 10 kPa
                 let mut g_mod = 5e3; // 5 kPa
 
-                // Add inclusions (harder regions)
-                if (y as f64 - 64.0).mul_add(y as f64 - 64.0, (x as f64 - 64.0).powi(2)) < 100.0
+                // Add inclusions (harder regions), centred on the grid
+                if (y as f64 - cy).mul_add(y as f64 - cy, (x as f64 - cx).powi(2)) < 100.0
                     && depth > 0.02
                     && depth < 0.04
                 {

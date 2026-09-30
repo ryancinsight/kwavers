@@ -30,11 +30,11 @@ pub struct SimulateReceiveRfInput<'a> {
     pub scat_amp: ArrayView1<'a, f64>,
     /// Array element positions `(n_elem, 3)` in metres.
     pub elem_pos: ArrayView2<'a, f64>,
-    /// Sound speed [m/s].
+    /// Sound speed (`m/s`).
     pub c: f64,
-    /// Sampling frequency [Hz].
+    /// Sampling frequency (`Hz`).
     pub fs: f64,
-    /// Imaging centre frequency [Hz].
+    /// Imaging centre frequency (`Hz`).
     pub f0: f64,
     /// Fractional −6 dB pulse bandwidth, which sets the pulse length via
     /// `σ_t = √(2 ln2)/(π·frac_bw·f0)`.

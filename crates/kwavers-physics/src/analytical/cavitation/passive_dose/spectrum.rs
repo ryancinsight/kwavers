@@ -155,26 +155,26 @@ pub struct KellerMiksisMedium {
     pub rho: f64,
     /// Surface tension [N/m].
     pub sigma: f64,
-    /// Dynamic viscosity [Pa.s].
+    /// Dynamic viscosity (`Pa.s`).
     pub mu: f64,
-    /// Thermal conductivity [W/(m.K)].
+    /// Thermal conductivity (`W/(m.K)`).
     pub kappa: f64,
-    /// Vapour pressure at drive temperature [Pa].
+    /// Vapour pressure at drive temperature (`Pa`).
     pub vapor_pressure_pa: f64,
-    /// Sound speed of the surrounding liquid [m/s].
+    /// Sound speed of the surrounding liquid (`m/s`).
     pub sound_speed_m_s: f64,
 }
 
 /// The drive and initial state of a Keller-Miksis oscillation.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct KellerMiksisDrive {
-    /// Equilibrium bubble radius [m].
+    /// Equilibrium bubble radius (`m`).
     pub r0_m: f64,
-    /// Acoustic drive amplitude [Pa].
+    /// Acoustic drive amplitude (`Pa`).
     pub p_ac_pa: f64,
-    /// Drive frequency [Hz].
+    /// Drive frequency (`Hz`).
     pub drive_frequency_hz: f64,
-    /// Initial pressure amplitude [Pa].
+    /// Initial pressure amplitude (`Pa`).
     pub p0_pa: f64,
 }
 
