@@ -1,7 +1,7 @@
 use super::config::RealTimeSirtConfig;
 use super::pipeline::RealTimeSirtPipeline;
 use crate::reconstruction::acoustic_projection::{
-    backproject_acoustic, project_acoustic, AcousticProjectionGeometry,
+    backproject_acoustic_into, project_acoustic_into, AcousticProjectionGeometry,
 };
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
@@ -204,7 +204,8 @@ fn test_acoustic_forward_projection_single_scatterer() {
     };
     let mut image = Array3::zeros((1, 1, 1));
     image[[0, 0, 0]] = 1.0;
-    let proj = project_acoustic(&image, &geom);
+    let mut proj = Array1::zeros(geom.element_x.len());
+    project_acoustic_into(&image, &geom, &mut proj);
     assert!(
         (proj[0] - MPA_TO_PA).abs() / MPA_TO_PA < 1e-6,
         "Sensor 0 (at origin): expected 1e6, got {:.6e}",
@@ -248,9 +249,11 @@ fn test_acoustic_backprojection_adjoint_property() {
         }
     }
     let y = Array1::from_vec(3, vec![1.0, 2.0, 3.0]).unwrap();
-    let ax = project_acoustic(&x, &geom);
+    let mut ax = Array1::zeros(geom.element_x.len());
+    project_acoustic_into(&x, &geom, &mut ax);
     let ax_dot_y: f64 = ax.iter().zip(y.iter()).map(|(a, b)| a * b).sum();
-    let aty = backproject_acoustic(&y, shape, &geom);
+    let mut aty = Array3::zeros(shape);
+    backproject_acoustic_into(&y, &geom, &mut aty);
     let x_dot_aty: f64 = x.iter().zip(aty.iter()).map(|(a, b)| a * b).sum();
     let rel_err = (ax_dot_y - x_dot_aty).abs() / ax_dot_y.abs().max(1e-30);
     assert!(
@@ -282,7 +285,8 @@ fn test_acoustic_sirt_converges_on_point_phantom() {
     };
     let mut truth = Array3::zeros((4, 4, 4));
     truth[[2, 2, 2]] = 1.0;
-    let b = project_acoustic(&truth, &geom);
+    let mut b = Array1::zeros(geom.element_x.len());
+    project_acoustic_into(&truth, &geom, &mut b);
     let rf_data = b;
     let config = RealTimeSirtConfig {
         sirt_config: SirtConfig::default()

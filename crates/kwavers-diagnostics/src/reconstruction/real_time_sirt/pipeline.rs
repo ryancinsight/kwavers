@@ -17,12 +17,20 @@
 use super::config::RealTimeSirtConfig;
 use super::types::{FrameQuality, ReconstructionFrame};
 use crate::reconstruction::acoustic_projection::{
-    backproject_acoustic, project_acoustic, AcousticProjectionGeometry,
+    backproject_acoustic_into, project_acoustic_into, AcousticProjectionGeometry,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, map_collect_index_with, Adaptive};
 use std::time::Instant;
+
+/// Maximum number of frames retained by [`RealTimeSirtPipeline::frame_history`].
+///
+/// The pipeline is a streaming component: without a bound, every processed
+/// frame clones a full 3-D image into `frame_history`, so a long-running scan
+/// grows the heap without limit. History beyond this window is dropped; the
+/// aggregate counters (`frame_count`, `avg_frame_rate`) are unaffected.
+pub(crate) const FRAME_HISTORY_LIMIT: usize = 64;
 
 /// Compute the per-sensor squared row norm `‖A_row_s‖²` for the acoustic projection matrix.
 ///
@@ -190,6 +198,12 @@ pub struct RealTimeSirtPipeline {
     frame_history: Vec<ReconstructionFrame>,
     /// Cached `(norms, grid_shape)`; recomputed only when `grid_shape` changes.
     row_norm_sq_cache: Option<(Vec<f64>, (usize, usize, usize))>,
+    /// Reused projection scratch (zeroed before each use).
+    projection_scratch: Option<Array1<f64>>,
+    /// Reused backprojection scratch (zeroed before each use).
+    backprojection_scratch: Option<Array3<f64>>,
+    /// Reused residual / preconditioned-residual scratch.
+    residual_scratch: Option<Array1<f64>>,
 }
 
 impl RealTimeSirtPipeline {
@@ -203,6 +217,9 @@ impl RealTimeSirtPipeline {
             start_time: Instant::now(),
             frame_history: Vec::new(),
             row_norm_sq_cache: None,
+            projection_scratch: None,
+            backprojection_scratch: None,
+            residual_scratch: None,
         }
     }
 
@@ -231,7 +248,13 @@ impl RealTimeSirtPipeline {
             self.current_image = Some(Array3::zeros(expected_grid_size));
         }
 
-        let mut image = self.current_image.clone().unwrap();
+        // Move the image out of `self` for the duration of the update instead
+        // of cloning it: state is fully restored below, and the per-frame heap
+        // cost no longer scales with the grid volume.
+        let mut image = self
+            .current_image
+            .take()
+            .expect("current_image initialised above");
         let [nx, ny, nz] = image.shape();
         let relaxation = self.config.sirt_config.relaxation_factor;
         let n_meas = preprocessed.len();
@@ -241,7 +264,10 @@ impl RealTimeSirtPipeline {
         };
         let mut convergence_error = f64::INFINITY;
 
-        if let Some(ref geom) = self.config.transducer_geometry.clone() {
+        // Lend the geometry for the duration of the update (restored below),
+        // avoiding a full geometry clone — sensor arrays included — per frame.
+        let geometry = self.config.transducer_geometry.take();
+        if let Some(geom) = geometry.as_ref() {
             // ── Acoustic physics-based SIRT ───────────────────────────────────
             // Row normalisation D_R[s] = 1/‖A_row_s‖² (Dines & Kak 1979 §III).
             //
@@ -250,35 +276,84 @@ impl RealTimeSirtPipeline {
             // elements); subsequent calls reuse the cached vector.  Invalidate
             // when grid shape changes (geometry is fixed for the pipeline lifetime).
             let grid_shape = (nx, ny, nz);
-            if self
-                .row_norm_sq_cache
-                .as_ref()
-                .is_none_or(|(_, s)| *s != grid_shape)
-            {
-                let norms = compute_row_norm_sq(geom, nx, ny, nz);
-                self.row_norm_sq_cache = Some((norms, grid_shape));
-            }
-            let row_norm_sq = &self.row_norm_sq_cache.as_ref().unwrap().0;
+            // Take ownership of the row-norm cache for the duration of the
+            // update so the iteration scratch buffers can be borrowed from
+            // `self` concurrently; it is restored after the update below.
+            let (row_norm_sq, cached_shape) = match self.row_norm_sq_cache.take() {
+                Some((norms, shape)) if shape == grid_shape => (norms, shape),
+                _ => {
+                    let norms = compute_row_norm_sq(geom, nx, ny, nz);
+                    (norms, grid_shape)
+                }
+            };
             let n_sensors = geom.element_x.len();
 
+            // Provision (once) and reuse the iteration scratch buffers across
+            // iterations and frames; reallocation happens only when the sensor
+            // count or grid shape changes.
+            if self
+                .projection_scratch
+                .as_ref()
+                .is_none_or(|p| p.len() != n_sensors)
+            {
+                self.projection_scratch = Some(Array1::zeros(n_sensors));
+            }
+            if self
+                .residual_scratch
+                .as_ref()
+                .is_none_or(|p| p.len() != n_sensors)
+            {
+                self.residual_scratch = Some(Array1::zeros(n_sensors));
+            }
+            if self
+                .backprojection_scratch
+                .as_ref()
+                .is_none_or(|b| b.shape() != [nx, ny, nz])
+            {
+                self.backprojection_scratch = Some(Array3::zeros((nx, ny, nz)));
+            }
+            let proj = self.projection_scratch.as_mut().expect("provisioned above");
+            let residual = self.residual_scratch.as_mut().expect("provisioned above");
+            let backproj = self
+                .backprojection_scratch
+                .as_mut()
+                .expect("provisioned above");
+
             for _ in 0..self.config.sirt_config.max_iterations {
-                let projection = project_acoustic(&image, geom);
-                let mut residual = Array1::<f64>::zeros(n_sensors);
-                for idx in 0..n_sensors.min(n_meas) {
-                    residual[idx] = preprocessed[idx] - projection[idx];
+                proj.fill(0.0);
+                project_acoustic_into(&image, geom, proj);
+                // Residual r = b − A·x over the measured sensor range; sensors
+                // without a measurement keep a zero residual (no update source).
+                let usable = n_sensors.min(n_meas);
+                let mut res_norm_sq = 0.0_f64;
+                for idx in 0..usable {
+                    let r = preprocessed[idx] - proj[idx];
+                    residual[idx] = r;
+                    res_norm_sq += r * r;
                 }
-                let res_norm: f64 = residual.iter().map(|&r| r * r).sum::<f64>().sqrt();
-                convergence_error = res_norm / meas_norm;
-                let scaled = Array1::from_shape_fn(n_sensors, |[s]| residual[s] / row_norm_sq[s]);
-                let backproj = backproject_acoustic(&scaled, (nx, ny, nz), geom);
-                for i in 0..nx {
-                    for j in 0..ny {
-                        for k in 0..nz {
-                            image[[i, j, k]] += relaxation * backproj[[i, j, k]];
-                        }
-                    }
+                for idx in usable..n_sensors {
+                    residual[idx] = 0.0;
+                }
+                convergence_error = res_norm_sq.sqrt() / meas_norm;
+                // In-place row-norm preconditioning: scaled = D_R · r.
+                for (s, r) in residual.iter_mut().enumerate() {
+                    *r /= row_norm_sq[s];
+                }
+                backproj.fill(0.0);
+                backproject_acoustic_into(residual, geom, backproj);
+                let image_slice = image
+                    .as_slice_mut()
+                    .expect("invariant: SIRT image is C-contiguous");
+                let bp_slice = backproj
+                    .as_slice()
+                    .expect("invariant: backprojection scratch is C-contiguous");
+                for (dst, &src) in image_slice.iter_mut().zip(bp_slice.iter()) {
+                    *dst += relaxation * src;
                 }
             }
+            // Return the row-norm cache to the pipeline for reuse by later
+            // frames (same grid shape expected).
+            self.row_norm_sq_cache = Some((row_norm_sq, cached_shape));
         } else {
             // ── Legacy column-sum SIRT ────────────────────────────────────────
             // A[s,(i,j,k)] = 1 iff s = i·ny+j; D_R = (1/nz)·I.
@@ -315,10 +390,12 @@ impl RealTimeSirtPipeline {
             }
         }
 
+        // Restore the lent geometry and the working image before postprocessing.
+        self.config.transducer_geometry = geometry;
         self.current_image = Some(image.clone());
 
         let output = match self.config.output_smoothing_sigma {
-            Some(sigma) => Self::apply_smoothing(&image, sigma)?,
+            Some(sigma) => Self::apply_smoothing(image, sigma)?,
             None => image,
         };
         let output = match self.config.intensity_threshold {
@@ -339,6 +416,9 @@ impl RealTimeSirtPipeline {
             convergence_error,
             quality_metrics: quality,
         };
+        if self.frame_history.len() == FRAME_HISTORY_LIMIT {
+            self.frame_history.remove(0);
+        }
         self.frame_history.push(frame.clone());
         self.frame_count += 1;
         Ok(frame)
@@ -372,10 +452,11 @@ impl RealTimeSirtPipeline {
     /// ## Implementation
     ///
     /// Three sequential 1-D passes (X → Y → Z) using a 2-buffer ping-pong
-    /// pattern: two `Array3` allocations (down from four in the original), with
-    /// `Array3::assign` (memcpy, no allocation) used to propagate edge-plane
-    /// values between passes.  Each pass interior is computed in parallel via
-    /// Moirai chunk dispatch.
+    /// pattern: one `Array3` allocation (the write buffer; the caller's image
+    /// is consumed and reused as the first read buffer), with `Array3::assign`
+    /// (memcpy, no allocation) used to propagate edge-plane values between
+    /// passes.  Each pass interior is computed in parallel via Moirai chunk
+    /// dispatch.
     ///
     /// ## Correctness invariant
     ///
@@ -385,27 +466,27 @@ impl RealTimeSirtPipeline {
     ///
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
-    fn apply_smoothing(image: &Array3<f64>, sigma: f64) -> KwaversResult<Array3<f64>> {
+    fn apply_smoothing(image: Array3<f64>, sigma: f64) -> KwaversResult<Array3<f64>> {
         if sigma <= 0.0 {
-            return Ok(image.clone());
+            return Ok(image);
         }
         let [nx, ny, nz] = image.shape();
         if nx < 3 || ny < 3 || nz < 3 {
-            return Ok(image.clone());
+            return Ok(image);
         }
         let wn = (-0.5 / (sigma * sigma)).exp();
         let norm_w = 2.0f64.mul_add(wn, 1.0);
         let w0 = 1.0 / norm_w;
         let wn = wn / norm_w;
 
-        // Two allocations total (down from four).  After each pass we swap
-        // buffers and `assign` so that edge-plane values in the write buffer
-        // always reflect the most recent read buffer state before interior
-        // positions are overwritten.
-        let mut a = image.clone(); // read buffer
-        let mut b = a.clone(); // write buffer (edge planes pre-filled)
+        // One allocation total (down from two): the caller's image becomes the
+        // first read buffer and the write buffer starts zeroed, with edge
+        // planes propagated by `assign` before each pass.
+        let mut a = image;
+        let mut b = Array3::zeros((nx, ny, nz));
 
         // --- X pass: interior i ∈ [1, nx−2] ---
+        b.assign(&a);
         smooth_x_pass(&a, &mut b, nx, ny, nz, wn, w0);
         std::mem::swap(&mut a, &mut b);
         // Propagate current result (in a) into b so j/k edge planes are correct.
