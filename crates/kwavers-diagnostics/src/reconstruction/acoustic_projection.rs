@@ -37,6 +37,7 @@
 use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use leto::{Array1, Array3};
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 /// Acoustic forward-projection geometry for pulse-echo ultrasound SIRT.
 #[derive(Debug, Clone)]
@@ -103,36 +104,57 @@ impl AcousticProjectionGeometry {
 /// # Complexity
 ///
 /// O(N_sensors × N_voxels): 128 × 64³ ≈ 33 M multiply-adds per call.
-pub(crate) fn project_acoustic(
+/// Fill a preallocated projection buffer with **A · x**.
+///
+/// Allocation-free projection for iterative solvers that call it once per SIRT
+/// iteration: the destination must be zeroed (or carry a running accumulation
+/// base) by the caller. Sensors are computed in parallel; each sensor's sum is
+/// strictly sequential over (i, j, k), so results are bitwise identical to the
+/// serial reference implementation.
+///
+/// # Panics
+/// Panics if `proj` is not C-contiguous or shorter than the sensor count.
+pub(crate) fn project_acoustic_into(
     image: &Array3<f64>,
     geom: &AcousticProjectionGeometry,
-) -> Array1<f64> {
+    proj: &mut Array1<f64>,
+) {
     let [nx, ny, nz] = image.shape();
     let (dx, dy, dz) = geom.voxel_spacing;
     let alpha = geom.alpha_nepers_per_m_per_hz();
     let f_c = geom.center_frequency_hz;
     let zs = geom.element_z;
 
-    let mut proj = Array1::zeros(geom.element_x.len());
-    for (s, &xs) in geom.element_x.iter().enumerate() {
-        let mut sum = 0.0_f64;
-        for i in 0..nx {
-            let xv = i as f64 * dx;
-            let dx2 = (xv - xs) * (xv - xs);
-            for j in 0..ny {
-                let yv = j as f64 * dy;
-                let dxy2 = yv.mul_add(yv, dx2);
-                for k in 0..nz {
-                    let zv = k as f64 * dz;
-                    let r = (zv - zs).mul_add(zv - zs, dxy2).sqrt().max(1e-6);
-                    let weight = (-2.0 * alpha * f_c * r).exp() / r;
-                    sum += weight * image[[i, j, k]];
+    let proj_slice = proj
+        .as_slice_mut()
+        .expect("invariant: projection scratch is C-contiguous");
+    assert!(
+        proj_slice.len() >= geom.element_x.len(),
+        "projection scratch shorter than the sensor array"
+    );
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+        &mut proj_slice[..geom.element_x.len()],
+        1,
+        |s, slot| {
+            let xs = geom.element_x[s];
+            let mut sum = 0.0_f64;
+            for i in 0..nx {
+                let xv = i as f64 * dx;
+                let dx2 = (xv - xs) * (xv - xs);
+                for j in 0..ny {
+                    let yv = j as f64 * dy;
+                    let dxy2 = yv.mul_add(yv, dx2);
+                    for k in 0..nz {
+                        let zv = k as f64 * dz;
+                        let r = (zv - zs).mul_add(zv - zs, dxy2).sqrt().max(1e-6);
+                        let weight = (-2.0 * alpha * f_c * r).exp() / r;
+                        sum += weight * image[[i, j, k]];
+                    }
                 }
             }
-        }
-        proj[s] = sum;
-    }
-    proj
+            slot[0] = sum;
+        },
+    );
 }
 
 /// Compute backprojection **Aᵀ · r** for a pulse-echo transducer array.
@@ -144,22 +166,41 @@ pub(crate) fn project_acoustic(
 /// ```text
 /// [Aᵀ·r][i,j,k] = Σ_s A[s,(i,j,k)] · r(s)
 /// ```
-pub(crate) fn backproject_acoustic(
+/// Accumulate **Aᵀ · r** into a preallocated image buffer.
+///
+/// Allocation-free backprojection: the destination is accumulated onto (zero
+/// it first for a fresh backprojection). Work is parallelised over x-planes;
+/// within each plane every voxel accumulates over sensors in ascending order,
+/// so per-voxel addition order — and therefore the result — is bitwise
+/// identical to the serial reference implementation.
+///
+/// # Panics
+/// Panics if `out` is not C-contiguous or its shape differs from the grid the
+/// caller intends to backproject onto.
+pub(crate) fn backproject_acoustic_into(
     residual: &Array1<f64>,
-    shape: (usize, usize, usize),
     geom: &AcousticProjectionGeometry,
-) -> Array3<f64> {
-    let (nx, ny, nz) = shape;
+    out: &mut Array3<f64>,
+) {
+    let [nx, ny, nz] = out.shape();
     let (dx, dy, dz) = geom.voxel_spacing;
     let alpha = geom.alpha_nepers_per_m_per_hz();
     let f_c = geom.center_frequency_hz;
     let zs = geom.element_z;
 
-    let mut image = Array3::zeros(shape);
-    for (s, &xs) in geom.element_x.iter().enumerate() {
-        let r_s = residual[s];
-        for i in 0..nx {
-            let xv = i as f64 * dx;
+    let plane_len = ny * nz;
+    let out_slice = out
+        .as_slice_mut()
+        .expect("invariant: backprojection scratch is C-contiguous");
+    assert_eq!(
+        out_slice.len(),
+        nx * plane_len,
+        "backprojection scratch shape mismatch"
+    );
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(out_slice, plane_len, |i, plane| {
+        let xv = i as f64 * dx;
+        for (s, &xs) in geom.element_x.iter().enumerate() {
+            let r_s = residual[s];
             let dx2 = (xv - xs) * (xv - xs);
             for j in 0..ny {
                 let yv = j as f64 * dy;
@@ -168,10 +209,9 @@ pub(crate) fn backproject_acoustic(
                     let zv = k as f64 * dz;
                     let r = (zv - zs).mul_add(zv - zs, dxy2).sqrt().max(1e-6);
                     let weight = (-2.0 * alpha * f_c * r).exp() / r;
-                    image[[i, j, k]] += weight * r_s;
+                    plane[j * nz + k] += weight * r_s;
                 }
             }
         }
-    }
-    image
+    });
 }
