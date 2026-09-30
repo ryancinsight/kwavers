@@ -15,8 +15,6 @@ use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::inverse::fwi::frequency_domain::FrequencyObservation;
 use kwavers_source::{GridSource, SourceMode};
-#[cfg(feature = "gpu")]
-use leto::Array3 as LetoArray3;
 use leto::{Array2, Array3, SliceArg};
 
 mod signal;
@@ -263,46 +261,15 @@ fn run_pstd_transmit(
         ..GridSource::new_empty()
     };
 
-    // The `gpu` feature compiles both backends; which one runs is decided by
-    // the host at run time (standards: runtime capability detection). The GPU
-    // borrow of `source` ends before the CPU closure takes ownership of it.
-    #[cfg(feature = "gpu")]
-    {
-        select_pstd_backend(
-            run_gpu_pstd_transmit(&grid, &medium, &source, receiver_indices, steps, config),
-            || run_cpu_pstd_transmit(grid, &medium, source, receiver_indices, steps, config),
-        )
-    }
-
-    #[cfg(not(feature = "gpu"))]
-    {
-        run_cpu_pstd_transmit(grid, &medium, source, receiver_indices, steps, config)
-    }
-}
-
-/// Select the PSTD backend by capability.
-///
-/// The GPU result stands — traces or fault — unless this host has no
-/// compatible accelerator adapter, the one typed absence on which the CPU
-/// path runs; the selection is surfaced as a `tracing` event. A present
-/// adapter that fails to initialize or execute propagates: degrading silently
-/// would hide a device fault behind a slower correct answer.
-#[cfg(feature = "gpu")]
-fn select_pstd_backend<Cpu>(gpu: KwaversResult<Array2<f64>>, cpu: Cpu) -> KwaversResult<Array2<f64>>
-where
-    Cpu: FnOnce() -> KwaversResult<Array2<f64>>,
-{
-    match gpu {
-        Err(error) if error.is_gpu_absent() => {
-            tracing::info!(
-                backend = "cpu",
-                reason = "no compatible accelerator adapter",
-                "PSTD acquisition backend selected"
-            );
-            cpu()
-        }
-        gpu_outcome => gpu_outcome,
-    }
+    // Reference-data generation always runs the CPU PSTD engine, regardless
+    // of compiled backends: a dataset must be a deterministic function of the
+    // acquisition protocol alone, not of which accelerator a host happens to
+    // expose at run time. GPU-versus-CPU trace agreement is owned by the
+    // kwavers-gpu parity suite (`crates/kwavers-gpu/tests/pstd_parity.rs`),
+    // so baking GPU traces into reference data here would only duplicate that
+    // contract while making every downstream predictor comparison — and every
+    // FWI dataset generated on a GPU-equipped machine — host-dependent.
+    run_cpu_pstd_transmit(grid, &medium, source, receiver_indices, steps, config)
 }
 
 fn run_cpu_pstd_transmit(
@@ -325,50 +292,6 @@ fn run_cpu_pstd_transmit(
         SensorRecorder::from_ordered_indices(receiver_indices.to_vec(), steps)?;
     solver.run_orchestrated(steps)?.ok_or_else(|| {
         KwaversError::InvalidInput("PSTD acquisition produced no receiver data".into())
-    })
-}
-
-#[cfg(feature = "gpu")]
-fn run_gpu_pstd_transmit(
-    grid: &Grid,
-    medium: &HeterogeneousMedium,
-    source: &GridSource,
-    receiver_indices: &[(usize, usize, usize)],
-    steps: usize,
-    config: BreastUstPstdDatasetConfig,
-) -> KwaversResult<Array2<f64>> {
-    use kwavers_boundary::cpml::CPMLConfig;
-    use kwavers_gpu::pstd_gpu::{cpml_thickness_limits, run_gpu_pstd, GpuPstdRunConfig};
-    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-    let mut sensor_mask = LetoArray3::<bool>::from_elem([nx, ny, nz], false);
-    for &(i, j, k) in receiver_indices {
-        sensor_mask[[i, j, k]] = true;
-    }
-    let (_, max_pml_thickness) = cpml_thickness_limits(nx, ny, nz);
-    // GPU PSTD uses its own polynomial-PML inside the wgsl pipeline; clinical
-    // dataset gen sets `pml_inside = true` when the CPU CPML thickness is
-    // nonzero so the GPU path matches the CPU absorbing boundary semantics.
-    let gpu_config = GpuPstdRunConfig {
-        time_steps: steps,
-        dt: config.time_step_s,
-        nonlinear: false,
-        alpha_coeff_db: 0.0,
-        alpha_power: 1.0,
-        cpml: if config.cpml_thickness_cells == 0 {
-            None
-        } else {
-            Some(CPMLConfig::with_thickness(
-                config.cpml_thickness_cells.min(max_pml_thickness),
-            ))
-        },
-        pml_inside: config.cpml_thickness_cells > 0,
-    };
-    let traces = run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config)?;
-    let [rows, cols] = traces.shape();
-    Array2::from_shape_vec((rows, cols), traces.into_vec()).map_err(|error| {
-        KwaversError::InvalidInput(format!(
-            "GPU PSTD returned a trace shape incompatible with the clinical dataset: {error}"
-        ))
     })
 }
 
