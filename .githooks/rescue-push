@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Classify and scan the one pre-push exception for a new rescue branch.
+
+set -uo pipefail
+
+repo_root="$1"
+stack_root="$2"
+scanner_ref="$3"
+allowlist_ref="$4"
+shift 4
+
+# Any update, deletion, or multi-ref push belongs to the normal hook gate.
+[ "$#" -eq 1 ] || exit 3
+read -r local_ref local_sha remote_ref remote_sha extra <<<"$1"
+[ -z "${extra:-}" ] || {
+    echo "pre-push: BLOCKED -- malformed ref update" >&2
+    exit 1
+}
+zero="0000000000000000000000000000000000000000"
+case "$remote_ref" in
+    refs/heads/rescue/*) ;;
+    *) exit 3 ;;
+esac
+[ "$remote_sha" = "$zero" ] || exit 3
+[ "$local_sha" != "$zero" ] || exit 3
+
+# The destination names the durable rescue branch. Git may name its source as
+# HEAD, another local branch, or a raw object ID; the supplied object ID is the
+# source of truth for all of those refspec forms.
+[[ "$local_sha" =~ ^[0-9a-fA-F]{40}$ ]] || {
+    echo "pre-push: BLOCKED -- malformed rescue tip" >&2
+    exit 1
+}
+git -C "$repo_root" cat-file -e "$local_sha^{commit}" 2>/dev/null || {
+    echo "pre-push: BLOCKED -- rescue tip is unavailable" >&2
+    exit 1
+}
+git -C "$repo_root" cat-file -e "$allowlist_ref^{commit}" 2>/dev/null || {
+    echo "pre-push: BLOCKED -- trusted allowlist revision is unavailable" >&2
+    exit 1
+}
+git -C "$stack_root" cat-file -e "$scanner_ref:scripts/atlas-secret-scan.py" 2>/dev/null || {
+    echo "pre-push: BLOCKED -- trusted credential scanner is unavailable" >&2
+    exit 1
+}
+
+python_bin="${PYTHON:-}"
+if [ -z "$python_bin" ]; then
+    for candidate in python3 python; do
+        if command -v "$candidate" >/dev/null 2>&1 \
+            && "$candidate" -c 'import sys' >/dev/null 2>&1; then
+            python_bin="$candidate"
+            break
+        fi
+    done
+fi
+[ -n "$python_bin" ] || {
+    echo "pre-push: BLOCKED -- no Python interpreter for the credential scan" >&2
+    exit 1
+}
+
+base="$(git -C "$repo_root" merge-base "$allowlist_ref" "$local_sha" 2>/dev/null || true)"
+if [ -n "$base" ]; then
+    commits="$(git -C "$repo_root" rev-list --reverse "$base..$local_sha")" || exit 1
+else
+    commits="$(git -C "$repo_root" rev-list --reverse "$local_sha")" || exit 1
+fi
+while IFS= read -r commit; do
+    [ -n "$commit" ] || continue
+    read -r _ parent _ <<<"$(git -C "$repo_root" rev-list --parents -n 1 "$commit")"
+    args=(check --root "$repo_root" --rev "$commit" --allowlist-rev "$allowlist_ref")
+    [ -n "${parent:-}" ] && args+=(--base "$parent")
+    git -C "$stack_root" show "$scanner_ref:scripts/atlas-secret-scan.py" \
+        | "$python_bin" - "${args[@]}" || exit 1
+done <<<"$commits"
+
+exit 0
