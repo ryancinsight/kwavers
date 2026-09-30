@@ -7,6 +7,7 @@
 
 mod config;
 mod pipeline;
+mod smoothing;
 #[cfg(test)]
 mod tests;
 mod types;
