@@ -34,12 +34,20 @@ use std::{borrow::Cow, collections::HashMap};
 pub(crate) fn fuse_probabilistic(fusion: &MultiModalFusion) -> KwaversResult<FusedImageResult> {
     let registration_engine = RitkRegistrationEngine::default();
 
-    // Use first modality as reference
-    let reference_modality = fusion.registered_data.values().next().ok_or_else(|| {
+    // Use the lexicographically first modality as reference: HashMap iteration
+    // order is unspecified, so a `values().next()` reference would make the
+    // fused output depend on hash randomisation.
+    let mut modality_names: Vec<&String> = fusion.registered_data.keys().collect();
+    modality_names.sort();
+    let reference_name = modality_names.first().ok_or_else(|| {
         KwaversError::Validation(kwavers_core::error::ValidationError::ConstraintViolation {
             message: "No modalities available for fusion".to_owned(),
         })
     })?;
+    let reference_modality = fusion
+        .registered_data
+        .get(*reference_name)
+        .ok_or_else(|| KwaversError::InvalidInput("Reference modality missing".to_owned()))?;
 
     // Define target grid dimensions based on the reference modality's native grid
     let target_dims = reference_modality.data.shape();
