@@ -197,27 +197,30 @@ pub fn mvdr_cpu(
 
         // Spatially-smoothed covariance accumulator (L×L, real symmetric).
         let mut r_accum_flat = vec![0.0_f64; l * l];
+        // Scratch reused across sub-apertures; fully rewritten each iteration.
+        let mut sub_channels = vec![0_usize; l];
+        let mut x_mat = vec![0.0_f64; l * samples];
 
         for qx in 0..n_sub_x {
             for qy in 0..n_sub_y {
                 for qz in 0..n_sub_z {
-                    // Map sub-aperture element indices → global channel indices.
-                    let sub_channels: Vec<usize> = (0..lx)
-                        .flat_map(|dx_| {
-                            (0..ly).flat_map(move |dy_| {
-                                (0..lz).map(move |dz_| {
-                                    let ex = qx + dx_;
-                                    let ey = qy + dy_;
-                                    let ez = qz + dz_;
-                                    ex * nel_y * nel_z + ey * nel_z + ez
-                                })
-                            })
-                        })
-                        .collect();
+                    // Map sub-aperture element indices → global channel indices
+                    // (dx outer, dy, dz inner — same order as the former collect).
+                    let mut sc = 0;
+                    for dx_ in 0..lx {
+                        for dy_ in 0..ly {
+                            for dz_ in 0..lz {
+                                let ex = qx + dx_;
+                                let ey = qy + dy_;
+                                let ez = qz + dz_;
+                                sub_channels[sc] = ex * nel_y * nel_z + ey * nel_z + ez;
+                                sc += 1;
+                            }
+                        }
+                    }
 
                     // Build L×N delay-aligned data matrix X (averaged over frames).
                     // X[i][n] = (1/N_f) Σ_f x_i^f[n + τ_i]
-                    let mut x_mat = vec![0.0_f64; l * samples];
                     for (i, &ch) in sub_channels.iter().enumerate() {
                         let tau = delays_s[ch];
                         for n in 0..samples {

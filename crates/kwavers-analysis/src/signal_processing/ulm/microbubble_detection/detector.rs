@@ -63,14 +63,7 @@ impl UlmDetector {
                     ),
                 }));
             }
-            let envelope =
-                Array2::from_shape_vec((n_z, n_x), frame_col.iter().map(|v| v.abs()).collect())
-                    .map_err(|e| {
-                        KwaversError::Numerical(NumericalError::SolverFailed {
-                            method: "ULM reshape".to_owned(),
-                            reason: e.to_string(),
-                        })
-                    })?;
+            let envelope = Array2::from_shape_fn((n_z, n_x), |[z, x]| frame_col[z * n_x + x].abs());
 
             let frame_dets = self.localizer.localize_frame(&envelope, t)?;
             all_detections.extend(frame_dets);

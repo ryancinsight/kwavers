@@ -49,9 +49,10 @@ impl TDOAProcessor {
         let mut position = *initial_position;
         let c = self.config.config.sound_speed;
 
+        let mut residuals = vec![0.0; sensor_positions.len()];
         for _ in 0..self.config.refinement_iterations {
             let mut jacobian = [[0.0; 3]; 16]; // Up to 16 sensors
-            let mut residuals = vec![0.0; sensor_positions.len()];
+            residuals.iter_mut().for_each(|r| *r = 0.0);
             let n_sensors = sensor_positions.len().min(16);
 
             // Compute Jacobian and residuals
