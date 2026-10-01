@@ -11,6 +11,13 @@ use leto::{Array1, Array2};
 /// 3. Apply adaptive thresholding based on CBR estimation
 /// 4. Reconstruct signal with clutter eigenmodes removed
 ///
+/// ## Memory
+///
+/// The per-pixel working buffers (covariance matrix, sorted eigenvalues,
+/// sort index, filtered signal) are allocated once per [`AdaptiveFilter::filter`]
+/// call and reused across pixels, instead of five allocations per pixel. The
+/// remaining per-pixel allocations live inside the eigensolver itself.
+///
 /// ## References
 ///
 /// - Yu & Lovstakken (2010) — eigen-based clutter filter design
@@ -19,6 +26,26 @@ use leto::{Array1, Array2};
 pub struct AdaptiveFilter {
     pub(super) config: AdaptiveFilterConfig,
     pub(super) cbr_history: Vec<f64>,
+}
+
+/// Per-call scratch buffers reused across pixels.
+#[derive(Debug)]
+struct PixelScratch {
+    covariance: Array2<f64>,
+    sorted_eigenvalues: Array1<f64>,
+    indices: Vec<usize>,
+    filtered: Array1<f64>,
+}
+
+impl PixelScratch {
+    fn new(n_frames: usize) -> Self {
+        Self {
+            covariance: Array2::zeros((n_frames, n_frames)),
+            sorted_eigenvalues: Array1::zeros(n_frames),
+            indices: (0..n_frames).collect(),
+            filtered: Array1::zeros(n_frames),
+        }
+    }
 }
 
 impl AdaptiveFilter {
@@ -98,13 +125,14 @@ impl AdaptiveFilter {
         }
 
         let mut filtered_data = Array2::<f64>::zeros((n_pixels, n_frames));
+        let mut scratch = PixelScratch::new(n_frames);
 
         for pixel_idx in 0..n_pixels {
             let signal = slow_time_data
                 .index_axis::<1>(0, pixel_idx)
                 .expect("row index within pixel bounds");
-            let filtered_signal = self.filter_single_pixel(&signal)?;
-            for (t, &value) in filtered_signal.iter().enumerate() {
+            self.filter_single_pixel(&signal, &mut scratch)?;
+            for (t, &value) in scratch.filtered.iter().enumerate() {
                 filtered_data[[pixel_idx, t]] = value;
             }
         }
@@ -115,21 +143,26 @@ impl AdaptiveFilter {
     fn filter_single_pixel(
         &mut self,
         signal: &leto::ArrayView1<f64>,
-    ) -> KwaversResult<Array1<f64>> {
+        scratch: &mut PixelScratch,
+    ) -> KwaversResult<()> {
         let n_frames = signal.shape()[0];
 
-        // Construct temporal covariance matrix R[i,j] = E[x(t+i) x(t+j)]
-        let mut covariance = Array2::<f64>::zeros((n_frames, n_frames));
-        for i in 0..n_frames {
-            for j in 0..n_frames {
-                let lag = (i as i32 - j as i32).unsigned_abs() as usize;
-                let mut sum = 0.0;
-                let mut count = 0;
-                for t in 0..(n_frames - lag) {
-                    sum += signal[t] * signal[t + lag];
-                    count += 1;
-                }
-                covariance[[i, j]] = if count > 0 { sum / count as f64 } else { 0.0 };
+        // Construct the temporal covariance R[i,j] = E[x(t+i) x(t+j)]. R
+        // depends only on the lag |i-j|, so each lag's inner product is
+        // evaluated once — in the same ascending-t order the previous
+        // all-pairs loop used — and written to both triangles. The stored
+        // values are bitwise identical to computing every (i, j) pair.
+        let mut cov = scratch.covariance.view_mut();
+        for lag in 0..n_frames {
+            let count = n_frames - lag;
+            let mut sum = 0.0;
+            for t in 0..count {
+                sum += signal[t] * signal[t + lag];
+            }
+            let value = sum / count as f64;
+            for i in 0..count {
+                cov[[i, i + lag]] = value;
+                cov[[i + lag, i]] = value;
             }
         }
 
@@ -139,42 +172,44 @@ impl AdaptiveFilter {
         // (`eig`) is unnecessary here and orders of magnitude slower on matrices
         // this size (>60 s per 120×120 vs milliseconds), which per-pixel across
         // an image made the adaptive filter unusable.
-        let decomposition = leto_ops::symmetric_eigen_jacobi(&covariance.view())?;
-        let eigenvalues = decomposition.eigenvalues;
-        let eigenvectors = decomposition.eigenvectors;
+        let decomposition = leto_ops::symmetric_eigen_jacobi(&scratch.covariance.view())?;
+        let eigenvalues = &decomposition.eigenvalues;
+        let eigenvectors = &decomposition.eigenvectors;
 
-        // Sort descending
-        let mut indices: Vec<usize> = (0..eigenvalues.len()).collect();
+        // Sort descending.
+        let indices = &mut scratch.indices;
+        for (i, index) in indices.iter_mut().enumerate() {
+            *index = i;
+        }
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
-
-        let sorted_eigenvalues: Array1<f64> = indices.iter().map(|&i| eigenvalues[i]).collect();
-        let mut sorted_eigenvectors = Array2::<f64>::zeros((n_frames, n_frames));
         for (new_idx, &old_idx) in indices.iter().enumerate() {
-            for i in 0..n_frames {
-                sorted_eigenvectors[[i, new_idx]] = eigenvectors[[i, old_idx]];
-            }
+            scratch.sorted_eigenvalues[new_idx] = eigenvalues[old_idx];
         }
 
-        let clutter_rank = self.determine_clutter_rank(&sorted_eigenvalues)?;
-        let cbr = self.estimate_cbr(&sorted_eigenvalues, clutter_rank);
+        let clutter_rank = self.determine_clutter_rank(&scratch.sorted_eigenvalues)?;
+        let cbr = self.estimate_cbr(&scratch.sorted_eigenvalues, clutter_rank);
         self.cbr_history.push(cbr);
 
-        // Project onto blood subspace: filtered = x − Σᵢ <x,eᵢ> eᵢ
-        let mut filtered_signal = signal.to_contiguous();
+        // Project onto blood subspace: filtered = x − Σᵢ <x,eᵢ> eᵢ. Only the
+        // first `clutter_rank` sorted eigenvector columns are consumed, so the
+        // full sorted matrix is never materialized; column `indices[i]` holds
+        // the same values the materialized matrix had at column `i`.
+        let filtered = &mut scratch.filtered;
+        for (dst, &src) in filtered.iter_mut().zip(signal.iter()) {
+            *dst = src;
+        }
         for i in 0..clutter_rank.min(n_frames) {
-            let eigenvector = sorted_eigenvectors
-                .index_axis::<1>(1, i)
-                .expect("eigenvector column index within bounds");
+            let column = indices[i];
             let mut projection_coef = 0.0;
             for (idx, &x_val) in signal.iter().enumerate() {
-                projection_coef += x_val * eigenvector[idx];
+                projection_coef += x_val * eigenvectors[[idx, column]];
             }
-            for (idx, filtered_val) in filtered_signal.iter_mut().enumerate() {
-                *filtered_val -= projection_coef * eigenvector[idx];
+            for (idx, filtered_val) in filtered.iter_mut().enumerate() {
+                *filtered_val -= projection_coef * eigenvectors[[idx, column]];
             }
         }
 
-        Ok(filtered_signal)
+        Ok(())
     }
 
     fn determine_clutter_rank(&self, eigenvalues: &Array1<f64>) -> KwaversResult<usize> {
