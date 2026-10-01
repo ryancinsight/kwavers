@@ -1,6 +1,43 @@
 use super::super::wave_field::NonlinearElasticWaveField;
 use super::NonlinearElasticWaveSolver;
+use core::cell::RefCell;
 use moirai_parallel::{map_collect_index_with, Adaptive};
+
+/// Per-worker scratch buffers for one x-line update.
+///
+/// The global executor's workers persist across calls, so a thread-local
+/// amortizes these allocations to once per worker instead of five `nx`-length
+/// vectors per x-line per timestep. Each buffer grows monotonically to the
+/// largest `nx` seen on that worker and is fully rewritten from the previous
+/// state on every use, so reuse carries no state between lines.
+struct LineScratch {
+    rhs0: Vec<f64>,
+    rhs1: Vec<f64>,
+    u_stage: Vec<f64>,
+    slopes: Vec<f64>,
+    f_iface: Vec<f64>,
+}
+
+thread_local! {
+    static LINE_SCRATCH: RefCell<LineScratch> = const {
+        RefCell::new(LineScratch {
+            rhs0: Vec::new(),
+            rhs1: Vec::new(),
+            u_stage: Vec::new(),
+            slopes: Vec::new(),
+            f_iface: Vec::new(),
+        })
+    };
+}
+
+/// Grow `buf` to at least `n` zeroed entries (monotonic per worker) and view it.
+fn scratch_buf(buf: &mut Vec<f64>, n: usize) -> &mut [f64] {
+    if buf.len() < n {
+        buf.clear();
+        buf.resize(n, 0.0);
+    }
+    &mut buf[..n]
+}
 
 impl NonlinearElasticWaveSolver {
     /// Update fundamental frequency displacement.
@@ -68,95 +105,104 @@ impl NonlinearElasticWaveSolver {
         // Local wave speed: a(u) = c + c·β·u/u_ref
         let wave_speed = |u: f64| -> f64 { c + c * beta * u / u_ref };
 
-        // Save current state as previous before overwriting.
-        let prev = field.u_fundamental.clone();
-        field.u_fundamental_prev.assign(&prev);
+        // Rotate the pre-step state into the history buffer without copying:
+        // after the swap, `u_fundamental_prev` holds the state the update reads
+        // and `u_fundamental` holds stale data that the write-back pass below
+        // overwrites for every (i, j, k). The former clone-then-assign paid two
+        // full-field copies per timestep for the same result.
+        core::mem::swap(&mut field.u_fundamental, &mut field.u_fundamental_prev);
 
         let line_updates = map_collect_index_with::<Adaptive, _, _>(ny * nz, |line_index| {
             let j = line_index / nz;
             let k = line_index % nz;
 
-            // Per-thread scratch: nx × 6 × 8 bytes — no shared mutable state.
+            // The result line is the one buffer this design still allocates: it
+            // is returned for the write-back pass, which deliberately keeps the
+            // strided field writes out of the parallel closure.
             let mut u_line = vec![0.0f64; nx];
-            let mut rhs0 = vec![0.0f64; nx];
-            let mut rhs1 = vec![0.0f64; nx];
-            let mut u_stage = vec![0.0f64; nx];
-            let mut slopes = vec![0.0f64; nx];
-            let mut f_iface = vec![0.0f64; nx];
 
-            // Load x-line from previous state.
-            for i in 0..nx {
-                u_line[i] = prev[[i, j, k]];
-            }
+            LINE_SCRATCH.with(|cell| {
+                let scratch = &mut *cell.borrow_mut();
+                let rhs0 = scratch_buf(&mut scratch.rhs0, nx);
+                let rhs1 = scratch_buf(&mut scratch.rhs1, nx);
+                let u_stage = scratch_buf(&mut scratch.u_stage, nx);
+                let slopes = scratch_buf(&mut scratch.slopes, nx);
+                let f_iface = scratch_buf(&mut scratch.f_iface, nx);
 
-            // Stage 1: piecewise-linear reconstruction + minmod slopes.
-            for i in 0..nx {
-                let im1 = (i + nx - 1) % nx;
-                let ip1 = (i + 1) % nx;
-                let du_l = u_line[i] - u_line[im1];
-                let du_r = u_line[ip1] - u_line[i];
-                let du_c = 0.5 * (u_line[ip1] - u_line[im1]);
-                slopes[i] = minmod3(du_c, 2.0 * du_l, 2.0 * du_r);
-            }
+                // Load x-line from previous state.
+                for i in 0..nx {
+                    u_line[i] = field.u_fundamental_prev[[i, j, k]];
+                }
 
-            // Upwind Godunov interface flux.
-            for i in 0..nx {
-                let ip1 = (i + 1) % nx;
-                let u_l = 0.5f64.mul_add(slopes[i], u_line[i]);
-                let u_r = 0.5f64.mul_add(-slopes[ip1], u_line[ip1]);
-                let a = wave_speed(0.5 * (u_l + u_r));
-                f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
-            }
+                // Stage 1: piecewise-linear reconstruction + minmod slopes.
+                for i in 0..nx {
+                    let im1 = (i + nx - 1) % nx;
+                    let ip1 = (i + 1) % nx;
+                    let du_l = u_line[i] - u_line[im1];
+                    let du_r = u_line[ip1] - u_line[i];
+                    let du_c = 0.5 * (u_line[ip1] - u_line[im1]);
+                    slopes[i] = minmod3(du_c, 2.0 * du_l, 2.0 * du_r);
+                }
 
-            for i in 0..nx {
-                let im1 = (i + nx - 1) % nx;
-                rhs0[i] = -(f_iface[i] - f_iface[im1]) * inv_dx;
-            }
-
-            for i in 0..nx {
-                u_stage[i] = dt.mul_add(rhs0[i], u_line[i]);
-            }
-
-            // Stage 2.
-            for i in 0..nx {
-                let im1 = (i + nx - 1) % nx;
-                let ip1 = (i + 1) % nx;
-                let du_l = u_stage[i] - u_stage[im1];
-                let du_r = u_stage[ip1] - u_stage[i];
-                let du_c = 0.5 * (u_stage[ip1] - u_stage[im1]);
-                slopes[i] = minmod3(du_c, 2.0 * du_l, 2.0 * du_r);
-            }
-
-            for i in 0..nx {
-                let ip1 = (i + 1) % nx;
-                let u_l = 0.5f64.mul_add(slopes[i], u_stage[i]);
-                let u_r = 0.5f64.mul_add(-slopes[ip1], u_stage[ip1]);
-                let a = wave_speed(0.5 * (u_l + u_r));
-                f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
-            }
-
-            for i in 0..nx {
-                let im1 = (i + nx - 1) % nx;
-                rhs1[i] = -(f_iface[i] - f_iface[im1]) * inv_dx;
-            }
-
-            // Heun combination: u¹ = ½(u⁰ + u* + Δt·L(u*))
-            for i in 0..nx {
-                u_line[i] = 0.5f64.mul_add(u_line[i], 0.5 * dt.mul_add(rhs1[i], u_stage[i]));
-            }
-
-            // Artificial dissipation.
-            if dissipation > 0.0 {
-                let nu = dissipation * c;
+                // Upwind Godunov interface flux.
                 for i in 0..nx {
                     let ip1 = (i + 1) % nx;
-                    let im1 = (i + nx - 1) % nx;
-                    let lap = (2.0f64.mul_add(-u_line[i], u_line[ip1]) + u_line[im1]) * inv_dx2;
-                    u_line[i] += nu * dt * lap;
+                    let u_l = 0.5f64.mul_add(slopes[i], u_line[i]);
+                    let u_r = 0.5f64.mul_add(-slopes[ip1], u_line[ip1]);
+                    let a = wave_speed(0.5 * (u_l + u_r));
+                    f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
                 }
-            }
 
-            (j, k, u_line)
+                for i in 0..nx {
+                    let im1 = (i + nx - 1) % nx;
+                    rhs0[i] = -(f_iface[i] - f_iface[im1]) * inv_dx;
+                }
+
+                for i in 0..nx {
+                    u_stage[i] = dt.mul_add(rhs0[i], u_line[i]);
+                }
+
+                // Stage 2.
+                for i in 0..nx {
+                    let im1 = (i + nx - 1) % nx;
+                    let ip1 = (i + 1) % nx;
+                    let du_l = u_stage[i] - u_stage[im1];
+                    let du_r = u_stage[ip1] - u_stage[i];
+                    let du_c = 0.5 * (u_stage[ip1] - u_stage[im1]);
+                    slopes[i] = minmod3(du_c, 2.0 * du_l, 2.0 * du_r);
+                }
+
+                for i in 0..nx {
+                    let ip1 = (i + 1) % nx;
+                    let u_l = 0.5f64.mul_add(slopes[i], u_stage[i]);
+                    let u_r = 0.5f64.mul_add(-slopes[ip1], u_stage[ip1]);
+                    let a = wave_speed(0.5 * (u_l + u_r));
+                    f_iface[i] = if a >= 0.0 { flux(u_l) } else { flux(u_r) };
+                }
+
+                for i in 0..nx {
+                    let im1 = (i + nx - 1) % nx;
+                    rhs1[i] = -(f_iface[i] - f_iface[im1]) * inv_dx;
+                }
+
+                // Heun combination: u¹ = ½(u⁰ + u* + Δt·L(u*))
+                for i in 0..nx {
+                    u_line[i] = 0.5f64.mul_add(u_line[i], 0.5 * dt.mul_add(rhs1[i], u_stage[i]));
+                }
+
+                // Artificial dissipation.
+                if dissipation > 0.0 {
+                    let nu = dissipation * c;
+                    for i in 0..nx {
+                        let ip1 = (i + 1) % nx;
+                        let im1 = (i + nx - 1) % nx;
+                        let lap = (2.0f64.mul_add(-u_line[i], u_line[ip1]) + u_line[im1]) * inv_dx2;
+                        u_line[i] += nu * dt * lap;
+                    }
+                }
+
+                (j, k, u_line)
+            })
         });
 
         for (j, k, u_line) in line_updates {
