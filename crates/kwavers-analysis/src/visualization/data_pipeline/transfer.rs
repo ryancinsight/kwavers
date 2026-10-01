@@ -242,7 +242,7 @@ mod tests {
     }
 
     impl super::super::super::transfer_contract::VisualizationTransferProvider for RecordingProvider {
-        fn device_name(&self) -> &str {
+        fn device_name(&self) -> &'static str {
             "recording-stub"
         }
 

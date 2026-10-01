@@ -52,7 +52,9 @@ impl TDOAProcessor {
         let mut residuals = vec![0.0; sensor_positions.len()];
         for _ in 0..self.config.refinement_iterations {
             let mut jacobian = [[0.0; 3]; 16]; // Up to 16 sensors
-            residuals.iter_mut().for_each(|r| *r = 0.0);
+            for r in residuals.iter_mut() {
+                *r = 0.0;
+            }
             let n_sensors = sensor_positions.len().min(16);
 
             // Compute Jacobian and residuals

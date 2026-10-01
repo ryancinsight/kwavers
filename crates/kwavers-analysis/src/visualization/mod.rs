@@ -80,7 +80,7 @@ mod tests {
 
     #[cfg(feature = "gpu-visualization")]
     impl VisualizationTransferProvider for RecordingProvider {
-        fn device_name(&self) -> &str {
+        fn device_name(&self) -> &'static str {
             "recording-provider"
         }
 
