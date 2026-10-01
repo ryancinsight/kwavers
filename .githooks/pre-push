@@ -340,29 +340,40 @@ export_revision() {
 # naming its owner (`.pre-push-owner`) goes only once that pid is gone. One
 # naming none was written by an older hook that records no owner and may
 # still be building in it -- a run can take most of an hour -- so it goes only
-# after a day.
-if [ -n "$python_bin" ]; then
-  for stale in "$tmp_base"/pre-push-lock.* "$tmp_base"/pre-push-gate.* "$tmp_base"/pl.* "$tmp_base"/pg.* "$tmp_base"/pg-log.*; do
-    [ -e "$stale" ] || continue
-    stale_owner="$(cat "$stale/.pre-push-owner" 2>/dev/null || true)"
-    if [ -n "$stale_owner" ]; then
-      kill -0 "$stale_owner" 2>/dev/null && continue
-    else
-      "$python_bin" -c 'import os, sys, time; sys.exit(time.time() - os.path.getmtime(sys.argv[1]) < 86400)' "$stale" || continue
-    fi
-    rm -rf "$stale" 2>/dev/null || true
-  done
-  # A checkout's reusable export (see the gate below) outlives its runs by
-  # design; one no run has claimed for a week belongs to a checkout that is
-  # gone, and goes unless a live run holds its lock.
-  for stable in "$tmp_base"/pg-??????????; do
-    [ -d "$stable" ] || continue
-    holder="$(cat "$stable.lock/pid" 2>/dev/null || true)"
-    [ -n "$holder" ] && kill -0 "$holder" 2>/dev/null && continue
-    "$python_bin" -c 'import os, sys, time; sys.exit(time.time() - os.path.getmtime(sys.argv[1]) < 7 * 86400)' "$stable" || continue
-    rm -rf "$stable" "$stable.lock" 2>/dev/null || true
-  done
-fi
+# after a day. The sweep visits every leftover of every push since the last
+# one, and a spawned process costs most of a second on a loaded Windows host,
+# so it spawns none per entry: ages compare against two marker files
+# (`-ot`), and owners and holders read by `read`, which unlike a command
+# substitution keeps the carriage return of a file written on Windows. A marker
+# that could not be written compares false, so a failed `touch` keeps every
+# entry.
+new_run_temp age_marks pl
+touch -d '1 day ago' "$age_marks/day" 2>/dev/null || true
+touch -d '7 days ago' "$age_marks/week" 2>/dev/null || true
+for stale in "$tmp_base"/pre-push-lock.* "$tmp_base"/pre-push-gate.* "$tmp_base"/pl.* "$tmp_base"/pg.* "$tmp_base"/pg-log.*; do
+  [ -e "$stale" ] || continue
+  stale_owner=""
+  { read -r stale_owner < "$stale/.pre-push-owner"; } 2>/dev/null || true
+  stale_owner="${stale_owner%$'\r'}"
+  if [ -n "$stale_owner" ]; then
+    kill -0 "$stale_owner" 2>/dev/null && continue
+  else
+    [ "$stale" -ot "$age_marks/day" ] || continue
+  fi
+  rm -rf "$stale" 2>/dev/null || true
+done
+# A checkout's reusable export (see the gate below) outlives its runs by
+# design; one no run has claimed for a week belongs to a checkout that is
+# gone, and goes unless a live run holds its lock.
+for stable in "$tmp_base"/pg-??????????; do
+  [ -d "$stable" ] || continue
+  holder=""
+  { read -r holder < "$stable.lock/pid"; } 2>/dev/null || true
+  holder="${holder%$'\r'}"
+  [ -n "$holder" ] && kill -0 "$holder" 2>/dev/null && continue
+  [ "$stable" -ot "$age_marks/week" ] || continue
+  rm -rf "$stable" "$stable.lock" 2>/dev/null || true
+done
 
 # The skips above fall through to the code gate, so this whole section runs
 # only when the lock still wants verifying.
@@ -749,12 +760,10 @@ done
 gate_key="$(printf '%s' "$repo_root" | git hash-object --stdin | cut -c1-10)"
 gate_root="$tmp_base/pg-$gate_key"
 claim_gate_root() {
-  local lock_name="${1:-$gate_root.lock}"
-  local staged="$lock_name.$$"
-  mkdir -p "$staged" && printf '%s
-' "$$" > "$staged/pid" || return 1
-  if mv -T "$staged" "$lock_name" 2>/dev/null; then
-    run_temps+=("$lock_name")
+  local staged="$gate_root.lock.$$"
+  mkdir -p "$staged" && printf '%s\n' "$$" > "$staged/pid" || return 1
+  if mv -T "$staged" "$gate_root.lock" 2>/dev/null; then
+    run_temps+=("$gate_root.lock")
     return 0
   fi
   rm -rf "$staged"
@@ -763,30 +772,11 @@ claim_gate_root() {
 if ! claim_gate_root; then
   gate_holder="$(cat "$gate_root.lock/pid" 2>/dev/null || true)"
   if [ -n "$gate_holder" ] && ! kill -0 "$gate_holder" 2>/dev/null; then
-    # A dead holder's lock is take-over material, but `rm -rf` can fail
-    # silently on Windows -- a transient AV or indexer handle on the
-    # directory -- and that silent failure is how the stale locks pile up:
-    # twelve and thirty-five measured on this host, each degrading every
-    # later run to a cold nested export. Remove with the removal verified,
-    # and when the directory will not go this instant, take over through
-    # the alternate lock name so the stable export is still reused; the
-    # stuck lock clears on any later run whose rm takes.
-    rm -rf "$gate_root.lock" 2>/dev/null || true
-    reclaim_wait=0
-    while [ -d "$gate_root.lock" ] && [ "$reclaim_wait" -lt 10 ]; do
-      reclaim_wait=$((reclaim_wait + 1))
-      sleep 0.2
-      rm -rf "$gate_root.lock" 2>/dev/null || true
-    done
+    rm -rf "$gate_root.lock"
   fi
   if ! claim_gate_root; then
-    if [ -z "$gate_holder" ] || ! kill -0 "$gate_holder" 2>/dev/null; then
-      claim_gate_root "$gate_root.lock.next"         || { echo "pre-push: the checkout's export is in use by pid ${gate_holder:-?}; building in a fresh one" >&2
-             new_run_temp gate_root pg; }
-    else
-      echo "pre-push: the checkout's export is in use by pid ${gate_holder:-?}; building in a fresh one" >&2
-      new_run_temp gate_root pg
-    fi
+    echo "pre-push: the checkout's export is in use by pid ${gate_holder:-?}; building in a fresh one" >&2
+    new_run_temp gate_root pg
   fi
 fi
 mkdir -p "$gate_root"
@@ -888,6 +878,27 @@ fi
 # without it the flag joins the subcommand ("--no-deps--manifest-path").
 gate_manifest=" --manifest-path $gate_export/Cargo.toml"
 
+# Packages with no target nextest can run (a `test = false` cdylib such as a
+# PyO3 extension) produce no test artifact, so the source-identity checker would
+# report "no artifact found" for a package the tests stage has nothing to build.
+# Cargo metadata marks each target with `test`; a package none of whose targets
+# has it is skipped by the tests stage only. Its clippy and rustdoc stages stay.
+if ! untestable_packages="$(
+  cd "$gate_export" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+    "$python_bin" -c 'import json, sys
+sys.stdout.reconfigure(newline="\n")
+metadata = json.load(sys.stdin)
+members = set(metadata["workspace_members"])
+for package in metadata["packages"]:
+    targets = package.get("targets")
+    if package["id"] in members and targets and not any(t.get("test", True) for t in targets):
+        print(package["name"])'
+)"; then
+  echo "pre-push: cargo metadata could not establish testable packages" >&2
+  echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
+  exit 1
+fi
+
 # Cargo is the authority on which package manifests belong to this workspace.
 # A nested standalone manifest (cargo-fuzz is the common case) can legally use
 # the same package name as a member, so names alone cannot establish ownership.
@@ -921,8 +932,15 @@ fi
 # inputs to the owning package's tests even when no Rust source changed.
 gate_packages=""
 excluded_manifests=""
+standalone_manifests=""
 while IFS= read -r changed_path; do
   [ -n "$changed_path" ] || continue
+  # Git hooks and CI definitions are input to no cargo invocation. Without
+  # this, a single-package repository mapped them to its root package and a
+  # hook-only push ran clippy, tests and rustdoc for the whole package.
+  case "$changed_path" in
+    .githooks/* | .github/*) continue ;;
+  esac
   owner_dir="$(dirname "$changed_path")"
   package_dir=""
   excluded_manifest=""
@@ -969,9 +987,9 @@ while IFS= read -r changed_path; do
   relative_manifest="${relative_manifest#./}"
   package_name="$(printf '%s\n' "$workspace_members" | awk -F '\t' -v manifest="$relative_manifest" '$1 == manifest { print $2; exit }')"
   if [ -z "$package_name" ]; then
-    case " $excluded_manifests " in
+    case " $standalone_manifests " in
       *" $relative_manifest "*) ;;
-      *) excluded_manifests="$excluded_manifests $relative_manifest" ;;
+      *) standalone_manifests="$standalone_manifests $relative_manifest" ;;
     esac
     continue
   fi
@@ -995,6 +1013,42 @@ SKIP_LOCAL_GATE=1 git push.
 MESSAGE
   exit 1
 fi
+
+# A standalone crate outside the parent workspace (cargo-fuzz is the common
+# case) cannot be named by a parent-workspace `-p`, and its targets need a
+# toolchain this host may lack (nightly, sanitizers), so its compile and run
+# verification stays with CI. What every host can establish is checked here:
+# its own lockfile resolves under `--locked` and its sources are
+# rustfmt-clean. Refusing the push instead left no way to change a fuzz
+# target at all. A nested virtual workspace, whose members deserve a real
+# gate, is still refused above.
+for standalone_manifest in $standalone_manifests; do
+  if ! (cd "$gate_export" && cargo metadata --locked --no-deps --format-version 1 \
+    --manifest-path "$gate_export/$standalone_manifest" >/dev/null 2>&1); then
+    cat >&2 <<MESSAGE
+
+pre-push: the lockfile of the standalone crate $standalone_manifest does not
+resolve under --locked on $gate_sha.
+
+From a checkout of $gate_sha outside the stack overlay:
+
+    cargo metadata --locked --no-deps --manifest-path $standalone_manifest
+
+To push anyway: SKIP_LOCAL_GATE=1 git push
+MESSAGE
+    exit 1
+  fi
+  if ! (cd "$gate_export" && cargo fmt --manifest-path "$gate_export/$standalone_manifest" -- --check >/dev/null); then
+    cat >&2 <<MESSAGE
+
+pre-push: \`cargo fmt --check\` fails for the standalone crate $standalone_manifest on $gate_sha.
+
+Run \`cargo fmt --manifest-path $standalone_manifest\` and commit the result. To push anyway: SKIP_LOCAL_GATE=1 git push
+MESSAGE
+    exit 1
+  fi
+  echo "pre-push: standalone crate $standalone_manifest: lockfile and formatting checked; CI builds it" >&2
+done
 
 if [ -z "${gate_packages// /}" ]; then
   echo "pre-push: no package owns the changed files; local gate not needed" >&2
@@ -1293,6 +1347,9 @@ fi
 if command -v cargo-nextest >/dev/null 2>&1; then
   if [ "$identity_enabled" -eq 1 ]; then
     for package_name in $gate_packages; do
+      case $'\n'"$untestable_packages"$'\n' in
+        *$'\n'"$package_name"$'\n'*) continue ;;
+      esac
       run_identity_step "$package_name" tests cargo nextest run "${identity_cargo_manifest_args[@]}" -p "$package_name" --locked --no-tests=pass
     done
   else
@@ -1325,7 +1382,38 @@ fi
 # after the merge (a redundant link target from apollo#508 did). The changed
 # packages are documented here the same way.
 if [ "$identity_enabled" -eq 1 ]; then
+  # `cargo doc` writes an artifact only for a package with a documented lib or
+  # bin target. A bench-only package (moirai-benchmarks) or a `[lib] doc =
+  # false` one (consus-python) writes none, so the identity step would refuse
+  # every push touching it; cargo's own target list is the authority.
+  if ! documented_packages="$(
+    cd "$gate_export" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+      "$python_bin" -c 'import json, sys
+sys.stdout.reconfigure(newline="\n")
+documented = {"lib", "rlib", "dylib", "cdylib", "staticlib", "proc-macro", "bin"}
+for package in json.load(sys.stdin)["packages"]:
+    targets = package.get("targets")
+    if targets is None or any(
+        target.get("doc", True) and documented.intersection(target["kind"])
+        for target in targets
+    ):
+        print(package["name"])'
+  )"; then
+    echo "pre-push: cargo metadata did not list the documented packages" >&2
+    exit 1
+  fi
   for package_name in $gate_packages; do
+    case "
+$documented_packages
+" in
+      *"
+$package_name
+"*) ;;
+      *)
+        echo "pre-push: rustdoc skipped for $package_name; it has no documented lib or bin target" >&2
+        continue
+        ;;
+    esac
     run_identity_step "$package_name" rustdoc env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps "${identity_cargo_manifest_args[@]}" -p "$package_name" --locked
   done
 else
