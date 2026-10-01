@@ -935,6 +935,12 @@ excluded_manifests=""
 standalone_manifests=""
 while IFS= read -r changed_path; do
   [ -n "$changed_path" ] || continue
+  # Git hooks and CI definitions are input to no cargo invocation. Without
+  # this, a single-package repository mapped them to its root package and a
+  # hook-only push ran clippy, tests and rustdoc for the whole package.
+  case "$changed_path" in
+    .githooks/* | .github/*) continue ;;
+  esac
   owner_dir="$(dirname "$changed_path")"
   package_dir=""
   excluded_manifest=""
