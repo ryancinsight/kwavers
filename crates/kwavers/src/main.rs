@@ -11,14 +11,11 @@ use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::pstd::config::{CompatibilityMode, PSTDConfig};
 use kwavers_solver::forward::pstd::PSTDSolver;
 use kwavers_source::GridSource;
+use std::io::Write;
 
 // The compatibility smoke binary reports its result on stdout; that line is
 // the program's deliverable, not debug residue.
-#[expect(
-    clippy::print_stdout,
-    reason = "smoke binary reports its pass/fail result on stdout"
-)]
-fn main() {
+fn main() -> std::io::Result<()> {
     let config = PSTDConfig {
         compatibility_mode: CompatibilityMode::Reference,
         dt: 1e-8,
@@ -38,5 +35,9 @@ fn main() {
     for _ in 0..10 {
         solver.run_orchestrated(1).expect("Solver iteration failed");
     }
-    println!("k-Wave compatibility test passed!");
+    writeln!(
+        std::io::stdout().lock(),
+        "k-Wave compatibility test passed!"
+    )?;
+    Ok(())
 }

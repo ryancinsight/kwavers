@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 #[test]
 fn test_boundary_plane_mask_detection() -> KwaversResult<()> {
-    println!("\n=== Testing Boundary Plane Mask Detection ===\n");
+    eprintln!("\n=== Testing Boundary Plane Mask Detection ===\n");
 
     let nx = 32;
     let ny = 32;
@@ -33,8 +33,8 @@ fn test_boundary_plane_mask_detection() -> KwaversResult<()> {
     // Create mask
     let mask = source.create_mask(&grid);
 
-    println!("Mask shape: {:?}", mask.shape());
-    println!("Mask sum: {}", mask.iter().sum::<f64>());
+    eprintln!("Mask shape: {:?}", mask.shape());
+    eprintln!("Mask sum: {}", mask.iter().sum::<f64>());
 
     // Analyze mask structure
     let mut num_nonzero = 0;
@@ -55,24 +55,24 @@ fn test_boundary_plane_mask_detection() -> KwaversResult<()> {
         }
     }
 
-    println!("Number of non-zero elements: {}", num_nonzero);
-    println!("First few non-zero indices:");
+    eprintln!("Number of non-zero elements: {}", num_nonzero);
+    eprintln!("First few non-zero indices:");
     for (i, j, k, val) in &indices {
-        println!("  [{}, {}, {}] = {}", i, j, k, val);
+        eprintln!("  [{}, {}, {}] = {}", i, j, k, val);
     }
 
-    println!("\nUnique i indices: {}", i_values.len());
-    println!("Unique j indices: {}", j_values.len());
-    println!("Unique k indices: {}", k_values.len());
+    eprintln!("\nUnique i indices: {}", i_values.len());
+    eprintln!("Unique j indices: {}", j_values.len());
+    eprintln!("Unique k indices: {}", k_values.len());
 
     if i_values.len() == 1 {
-        println!("All points share i = {:?}", i_values.iter().next());
+        eprintln!("All points share i = {:?}", i_values.iter().next());
     }
     if j_values.len() == 1 {
-        println!("All points share j = {:?}", j_values.iter().next());
+        eprintln!("All points share j = {:?}", j_values.iter().next());
     }
     if k_values.len() == 1 {
-        println!("All points share k = {:?}", k_values.iter().next());
+        eprintln!("All points share k = {:?}", k_values.iter().next());
     }
 
     // Check if it's a boundary plane
@@ -85,11 +85,11 @@ fn test_boundary_plane_mask_detection() -> KwaversResult<()> {
 
     let is_boundary_plane = is_boundary_plane_i || is_boundary_plane_j || is_boundary_plane_k;
 
-    println!("\nBoundary plane detection:");
-    println!("  Is boundary plane (i): {}", is_boundary_plane_i);
-    println!("  Is boundary plane (j): {}", is_boundary_plane_j);
-    println!("  Is boundary plane (k): {}", is_boundary_plane_k);
-    println!("  Overall: {}", is_boundary_plane);
+    eprintln!("\nBoundary plane detection:");
+    eprintln!("  Is boundary plane (i): {}", is_boundary_plane_i);
+    eprintln!("  Is boundary plane (j): {}", is_boundary_plane_j);
+    eprintln!("  Is boundary plane (k): {}", is_boundary_plane_k);
+    eprintln!("  Overall: {}", is_boundary_plane);
 
     // Expected: should be a boundary plane at k=0
     assert!(
@@ -111,7 +111,7 @@ fn test_boundary_plane_mask_detection() -> KwaversResult<()> {
 
 #[test]
 fn test_fullgrid_mask_detection() -> KwaversResult<()> {
-    println!("\n=== Testing FullGrid Mask Detection ===\n");
+    eprintln!("\n=== Testing FullGrid Mask Detection ===\n");
 
     let nx = 16;
     let ny = 16;
@@ -134,7 +134,7 @@ fn test_fullgrid_mask_detection() -> KwaversResult<()> {
     // Create mask
     let mask = source.create_mask(&grid);
 
-    println!("Mask shape: {:?}", mask.shape());
+    eprintln!("Mask shape: {:?}", mask.shape());
 
     // Analyze mask structure
     let mut num_nonzero = 0;
@@ -147,15 +147,15 @@ fn test_fullgrid_mask_detection() -> KwaversResult<()> {
         }
     }
 
-    println!("Number of non-zero elements: {}", num_nonzero);
-    println!("Number of unique k indices: {}", k_values.len());
+    eprintln!("Number of non-zero elements: {}", num_nonzero);
+    eprintln!("Number of unique k indices: {}", k_values.len());
 
     // Expected: should NOT be a boundary plane (should have points at all k values)
     let is_boundary_plane_k =
         k_values.len() == 1 && (k_values.contains(&0) || k_values.contains(&(nz - 1)));
 
-    println!("\nBoundary plane detection:");
-    println!("  Is boundary plane (k): {}", is_boundary_plane_k);
+    eprintln!("\nBoundary plane detection:");
+    eprintln!("  Is boundary plane (k): {}", is_boundary_plane_k);
 
     assert!(
         !is_boundary_plane_k,

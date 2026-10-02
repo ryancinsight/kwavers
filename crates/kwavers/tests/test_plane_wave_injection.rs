@@ -76,11 +76,11 @@ fn test_plane_wave_boundary_injection_timing() {
         }
     }
 
-    println!("Mask analysis:");
-    println!("  Active points: {}", num_active_points);
-    println!("  Min z index: {}", min_z_with_source);
-    println!("  Max z index: {}", max_z_with_source);
-    println!("  Expected: {} points at z=0", nx * ny);
+    eprintln!("Mask analysis:");
+    eprintln!("  Active points: {}", num_active_points);
+    eprintln!("  Min z index: {}", min_z_with_source);
+    eprintln!("  Max z index: {}", max_z_with_source);
+    eprintln!("  Expected: {} points at z=0", nx * ny);
 
     // Verify mask is only at boundary
     assert_eq!(
@@ -103,7 +103,7 @@ fn test_plane_wave_boundary_injection_timing() {
         .expect("Failed to add source");
 
     let dt = backend.get_dt();
-    println!("\nTime step: {:.3e} s", dt);
+    eprintln!("\nTime step: {:.3e} s", dt);
 
     // Check initial condition (t=0): pressure should be zero everywhere except possibly at boundary
     let p_initial = backend.get_pressure_field();
@@ -122,9 +122,9 @@ fn test_plane_wave_boundary_injection_timing() {
         }
     }
 
-    println!("\nInitial pressure (t=0):");
-    println!("  Max |p|: {:.3e} Pa", max_p_initial);
-    println!("  Location: z={} (index)", max_p_z_index);
+    eprintln!("\nInitial pressure (t=0):");
+    eprintln!("  Max |p|: {:.3e} Pa", max_p_initial);
+    eprintln!("  Location: z={} (index)", max_p_z_index);
 
     // Initial pressure should be essentially zero (no initial condition)
     assert!(
@@ -139,14 +139,14 @@ fn test_plane_wave_boundary_injection_timing() {
     let expected_arrival_time = sensor_distance / c;
     let arrival_steps = (expected_arrival_time / dt).ceil() as usize;
 
-    println!("\nPropagation parameters:");
-    println!("  Sensor distance: {:.3e} m", sensor_distance);
-    println!(
+    eprintln!("\nPropagation parameters:");
+    eprintln!("  Sensor distance: {:.3e} m", sensor_distance);
+    eprintln!(
         "  Expected arrival time: {:.3e} s ({:.2} µs)",
         expected_arrival_time,
         expected_arrival_time * 1e6
     );
-    println!("  Arrival steps: {}", arrival_steps);
+    eprintln!("  Arrival steps: {}", arrival_steps);
 
     // Step through time and monitor pressure at sensor position
     let sensor_i = nx / 2;
@@ -175,7 +175,7 @@ fn test_plane_wave_boundary_injection_timing() {
         // Print every 100 steps
         if step % 100 == 0 {
             let t_us = t * 1e6;
-            println!("  t={:.2} µs: p_sensor={:.3e} Pa", t_us, p_sensor);
+            eprintln!("  t={:.2} µs: p_sensor={:.3e} Pa", t_us, p_sensor);
         }
     }
 
@@ -196,10 +196,10 @@ fn test_plane_wave_boundary_injection_timing() {
         let error_us = (arrival_time - expected_arrival_time).abs() * 1e6;
         let error_percent = error_us / expected_time_us * 100.0;
 
-        println!("\nArrival timing:");
-        println!("  Expected: {:.2} µs", expected_time_us);
-        println!("  Measured: {:.2} µs", arrival_time_us);
-        println!("  Error: {:.2} µs ({:.1}%)", error_us, error_percent);
+        eprintln!("\nArrival timing:");
+        eprintln!("  Expected: {:.2} µs", expected_time_us);
+        eprintln!("  Measured: {:.2} µs", arrival_time_us);
+        eprintln!("  Error: {:.2} µs ({:.1}%)", error_us, error_percent);
 
         // Allow 10% timing error (accounts for rise time, dispersion, etc.)
         assert!(
@@ -226,8 +226,8 @@ fn test_plane_wave_boundary_injection_timing() {
     let early_time_idx = arrival_steps / 4; // Well before arrival
     let (t_early, p_early) = pressure_history[early_time_idx];
 
-    println!("\nEarly time check (t={:.2} µs):", t_early * 1e6);
-    println!("  p_sensor={:.3e} Pa", p_early);
+    eprintln!("\nEarly time check (t={:.2} µs):", t_early * 1e6);
+    eprintln!("  p_sensor={:.3e} Pa", p_early);
 
     assert!(
         p_early.abs() < 1e3,
@@ -236,7 +236,7 @@ fn test_plane_wave_boundary_injection_timing() {
         t_early * 1e6
     );
 
-    println!("\n✓ Plane wave injection timing test PASSED");
+    eprintln!("\n✓ Plane wave injection timing test PASSED");
 }
 
 #[test]
@@ -288,10 +288,10 @@ fn test_plane_wave_amplitude_scaling() {
     let p_sensor = p[[nx / 2, ny / 2, sensor_k]];
     let amplitude_ratio = p_sensor.abs() / source_amplitude;
 
-    println!("\nAmplitude scaling test:");
-    println!("  Source amplitude: {:.3e} Pa", source_amplitude);
-    println!("  Measured amplitude: {:.3e} Pa", p_sensor.abs());
-    println!("  Ratio: {:.2}", amplitude_ratio);
+    eprintln!("\nAmplitude scaling test:");
+    eprintln!("  Source amplitude: {:.3e} Pa", source_amplitude);
+    eprintln!("  Measured amplitude: {:.3e} Pa", p_sensor.abs());
+    eprintln!("  Ratio: {:.2}", amplitude_ratio);
 
     // Allow factor of 2-3× due to discretization, but not 10× or 100×
     assert!(
@@ -306,5 +306,5 @@ fn test_plane_wave_amplitude_scaling() {
         amplitude_ratio
     );
 
-    println!("✓ Amplitude scaling test PASSED");
+    eprintln!("✓ Amplitude scaling test PASSED");
 }

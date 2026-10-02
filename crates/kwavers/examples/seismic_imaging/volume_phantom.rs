@@ -12,6 +12,7 @@ use super::{
     DX, HU_BRAIN, HU_CORTICAL_IN, HU_CORTICAL_OUT, HU_DIPLOE, HU_SCALP, HU_WATER, NX, NY, NZ,
     R_BRAIN, R_DIPLOE, R_HEAD, R_SKULL_IN, R_SKULL_OUT,
 };
+use std::io::Write;
 
 /// Interpolate a volume at a fractional coordinate with clamped boundaries.
 pub(super) fn trilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: f64) -> f64 {
@@ -55,20 +56,24 @@ fn resample_ct_to_fwi_grid_3d(vol: &CtVolume) -> Array3<f64> {
     let scale_y = scale * spacing_mm[0] / spacing_mm[1];
     let scale_z = scale * spacing_mm[0] / spacing_mm[2];
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  CT skull radius : {r_skull_ct:.1} px × {:.2} mm/px = {:.0} mm",
         spacing_mm[0],
         r_skull_ct * spacing_mm[0]
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  FWI fit scale   : {scale:.2} CT px / FWI voxel  \
               (skull outer edge → R_HEAD={R_HEAD} voxels)"
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Grid            : {NX}×{NY}×{NZ} voxels @ {:.0} mm",
         DX * 1e3
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Domain          : {:.0}×{:.0}×{:.0} mm",
         NX as f64 * DX * 1e3,
         NY as f64 * DX * 1e3,
@@ -103,17 +108,29 @@ fn resample_ct_to_fwi_grid_3d(vol: &CtVolume) -> Array3<f64> {
 
     let hu_min = result.iter().copied().fold(f64::INFINITY, f64::min);
     let hu_max = result.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    println!("  HU range        : [{hu_min:.0}, {hu_max:.0}]");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  HU range        : [{hu_min:.0}, {hu_max:.0}]"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Head radius     : {:.0} mm  (R_HEAD = {R_HEAD} voxels)",
         R_HEAD * DX * 1e3
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Skull thickness : ~{:.0} mm (outer cortical → inner cortical)",
         (R_SKULL_OUT - R_SKULL_IN) * DX * 1e3
     );
-    println!("  Brain radius    : {:.0} mm", R_BRAIN * DX * 1e3);
-    println!("  Layers          : water coupling / scalp / cortical bone / diploe / brain");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Brain radius    : {:.0} mm",
+        R_BRAIN * DX * 1e3
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Layers          : water coupling / scalp / cortical bone / diploe / brain"
+    );
     result
 }
 
@@ -155,18 +172,28 @@ pub(super) fn build_phantom_3d(
     input: &SeismicInputMode,
 ) -> anyhow::Result<(SkullModel, Option<CtVolume>)> {
     let (SeismicInputMode::Ct(path) | SeismicInputMode::CtMri { ct: path, .. }) = input else {
-        println!("  Phantom         : synthetic 3D spherical model");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Phantom         : synthetic 3D spherical model"
+        );
         return Ok((build_skull_phantom_3d()?, None));
     };
 
-    print!("  CT source       : {}  ", path.display());
+    let _ = write!(
+        std::io::stdout().lock(),
+        "  CT source       : {}  ",
+        path.display()
+    );
     let volume = load_ct_volume(path)
         .with_context(|| format!("explicit CT input could not be loaded: {}", path.display()))?;
     let [cx, cy, nz] = volume.hu().shape();
     let spacing_mm = volume.spacing_mm();
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
-        spacing_mm[0], spacing_mm[1], spacing_mm[2]
+        spacing_mm[0],
+        spacing_mm[1],
+        spacing_mm[2]
     );
     let hu_fwi = resample_ct_to_fwi_grid_3d(&volume);
     let phantom = SkullModel::from_hu(hu_fwi)?;

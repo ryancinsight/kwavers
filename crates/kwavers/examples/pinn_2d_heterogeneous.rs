@@ -34,6 +34,8 @@ use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 use coeus_core::MoiraiBackend;
+#[cfg(feature = "pinn")]
+use std::io::Write;
 
 #[cfg(feature = "pinn")]
 type Backend = MoiraiBackend;
@@ -180,23 +182,37 @@ where
 
 #[cfg(feature = "pinn")]
 fn main() -> KwaversResult<()> {
-    println!("🧠 Physics-Informed Neural Network for 2D Heterogeneous Wave Equation");
-    println!("====================================================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🧠 Physics-Informed Neural Network for 2D Heterogeneous Wave Equation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "===================================================================="
+    );
 
     // Configuration
     let n_training_samples = 1000;
     let n_collocation_points = 2000;
     let epochs = 200;
 
-    println!("📋 Configuration:");
-    println!("   Training samples: {}", n_training_samples);
-    println!("   Collocation points: {}", n_collocation_points);
-    println!("   Training epochs: {}", epochs);
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "📋 Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Training samples: {}",
+        n_training_samples
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Collocation points: {}",
+        n_collocation_points
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   Training epochs: {}", epochs);
+    let _ = writeln!(std::io::stdout().lock());
 
     // Initialize backend
-    println!("🔥 Backend: Moirai (CPU)");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "🔥 Backend: Moirai (CPU)");
+    let _ = writeln!(std::io::stdout().lock());
 
     // Create PINN configuration optimized for heterogeneous media
     let pinn_config = PinnConfig2D {
@@ -212,17 +228,26 @@ fn main() -> KwaversResult<()> {
         ..Default::default()
     };
 
-    println!("🧠 PINN Configuration:");
-    println!("   Hidden layers: {:?}", pinn_config.hidden_layers);
-    println!("   Learning rate: {}", pinn_config.learning_rate);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "🧠 PINN Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Hidden layers: {:?}",
+        pinn_config.hidden_layers
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Learning rate: {}",
+        pinn_config.learning_rate
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Loss weights: data={:.1}, pde={:.1}, boundary={:.1}, initial={:.1}",
         pinn_config.loss_weights.data,
         pinn_config.loss_weights.pde,
         pinn_config.loss_weights.boundary,
         pinn_config.loss_weights.initial
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Test different heterogeneous media configurations
     let media_configs = vec![
@@ -241,40 +266,67 @@ fn main() -> KwaversResult<()> {
     ];
 
     for (media_name, wave_speed_fn) in media_configs {
-        println!("🌊 Testing {} Configuration", media_name);
-        println!("=====================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🌊 Testing {} Configuration",
+            media_name
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "====================================="
+        );
 
         // Create geometry (unit square)
         let geometry = WaveGeometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
-        println!("📐 Geometry: Unit square [0,1] × [0,1]");
-        println!("🎵 Wave speed: {}", media_name);
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "📐 Geometry: Unit square [0,1] × [0,1]"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "🎵 Wave speed: {}", media_name);
+        let _ = writeln!(std::io::stdout().lock());
 
         // Create heterogeneous PINN
         let _pinn = PinnWave2D::<Backend>::new_heterogeneous(pinn_config.clone(), wave_speed_fn)?;
-        println!("✅ Heterogeneous PINN: Created successfully");
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "✅ Heterogeneous PINN: Created successfully"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
         // Generate training data
-        println!("📊 Generating training data...");
+        let _ = writeln!(std::io::stdout().lock(), "📊 Generating training data...");
         let (x_train, y_train, t_train, u_train) =
             generate_heterogeneous_training_data(n_training_samples, &geometry, wave_speed_fn);
-        println!("   Training points: {}", x_train.len());
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   Training points: {}",
+            x_train.len()
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
         // Generate test data for validation
-        println!("🧪 Validating PINN predictions...");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🧪 Validating PINN predictions..."
+        );
         let (x_test, y_test, t_test, _c_test) =
             generate_heterogeneous_test_grid(8, 8, 3, &geometry, wave_speed_fn);
-        println!("   Test points: {}", x_test.len());
+        let _ = writeln!(std::io::stdout().lock(), "   Test points: {}", x_test.len());
 
         // Create trainer
         let trainer = PinnTrainer2D::<Backend>::new_trainer(pinn_config.clone(), geometry)?;
-        println!("✅ PINN Trainer: Created successfully");
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "✅ PINN Trainer: Created successfully"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
         // Train PINN
-        println!("🚀 Training PINN on {}...", media_name);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🚀 Training PINN on {}...",
+            media_name
+        );
         let start_time = Instant::now();
         let mut trainer = trainer;
         let metrics = trainer.train(
@@ -288,29 +340,41 @@ fn main() -> KwaversResult<()> {
         )?;
         let training_time = start_time.elapsed();
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "✅ Training completed in {:.2}s",
             training_time.as_secs_f64()
         );
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   Final total loss: {:.6e}",
             metrics.total_loss.last().unwrap()
         );
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   Final data loss: {:.6e}",
             metrics.data_loss.last().unwrap()
         );
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   Final PDE loss: {:.6e}",
             metrics.pde_loss.last().unwrap()
         );
-        println!("   Final BC loss: {:.6e}", metrics.bc_loss.last().unwrap());
-        println!("   Final IC loss: {:.6e}", metrics.ic_loss.last().unwrap());
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   Final BC loss: {:.6e}",
+            metrics.bc_loss.last().unwrap()
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   Final IC loss: {:.6e}",
+            metrics.ic_loss.last().unwrap()
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
         // Make predictions
         let predictions = trainer.pinn().predict(&x_test, &y_test, &t_test)?;
-        println!("   Predictions completed");
+        let _ = writeln!(std::io::stdout().lock(), "   Predictions completed");
 
         // Compute error statistics
         let mut errors = Vec::new();
@@ -328,20 +392,29 @@ fn main() -> KwaversResult<()> {
         let mean_error: f64 = errors.iter().sum::<f64>() / errors.len() as f64;
         let max_error = errors.iter().cloned().fold(0.0, f64::max);
 
-        println!("   Mean error: {:.6e}", mean_error);
-        println!("   Max error: {:.6e}", max_error);
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   Mean error: {:.6e}",
+            mean_error
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   Max error: {:.6e}", max_error);
+        let _ = writeln!(std::io::stdout().lock());
 
         // Performance analysis
-        println!("📈 Performance Analysis:");
-        println!(
+        let _ = writeln!(std::io::stdout().lock(), "📈 Performance Analysis:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   Training time: {:.2}s ({:.1} ms/epoch)",
             training_time.as_secs_f64(),
             training_time.as_millis() as f64 / epochs as f64
         );
 
         let loss_reduction = metrics.total_loss[0] / metrics.total_loss.last().unwrap();
-        println!("   Loss reduction: {:.2e}x", loss_reduction);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   Loss reduction: {:.2e}x",
+            loss_reduction
+        );
 
         let convergence_epoch = metrics
             .total_loss
@@ -350,14 +423,15 @@ fn main() -> KwaversResult<()> {
             .find(|(_, &loss)| loss < 1e-2)
             .map(|(epoch, _)| epoch)
             .unwrap_or(epochs);
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   Convergence: {} epochs to reach 1e-2 loss",
             convergence_epoch
         );
-        println!();
+        let _ = writeln!(std::io::stdout().lock());
 
         // Demonstrate wave speed evaluation
-        println!("🌊 Wave Speed Distribution:");
+        let _ = writeln!(std::io::stdout().lock(), "🌊 Wave Speed Distribution:");
         let test_points = vec![
             (0.25, 0.25),
             (0.25, 0.75),
@@ -368,23 +442,47 @@ fn main() -> KwaversResult<()> {
 
         for (x, y) in test_points {
             let c = wave_speed_fn(x as f32, y as f32);
-            println!("   Point ({:.2}, {:.2}): c = {:.0} m/s", x, y, c);
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "   Point ({:.2}, {:.2}): c = {:.0} m/s",
+                x,
+                y,
+                c
+            );
         }
-        println!();
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     // Summary
-    println!("🎉 Heterogeneous Media PINN Examples Completed!");
-    println!("   ✅ Layered media with interface conditions");
-    println!("   ✅ Inclusion media with embedded structures");
-    println!("   ✅ Gradient media with continuous variation");
-    println!("   ✅ Physics-informed learning in complex media");
-    println!("   ✅ Spatially varying PDE constraint enforcement");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🎉 Heterogeneous Media PINN Examples Completed!"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Layered media with interface conditions"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Inclusion media with embedded structures"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Gradient media with continuous variation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Physics-informed learning in complex media"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Spatially varying PDE constraint enforcement"
+    );
 
     Ok(())
 }
 
 #[cfg(not(feature = "pinn"))]
 fn main() {
-    println!("❌ PINN feature not enabled. Run with: cargo run --example pinn_2d_heterogeneous --features pinn");
+    eprintln!("❌ PINN feature not enabled. Run with: cargo run --example pinn_2d_heterogeneous --features pinn");
 }

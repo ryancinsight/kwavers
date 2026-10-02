@@ -56,10 +56,10 @@ fn test_device_info() {
     assert!(!info.backend.is_empty(), "Backend should not be empty");
 
     // Print info for debugging
-    println!("Device: {}", info.name);
-    println!("Vendor: {}", info.vendor);
-    println!("Type: {}", info.device_type);
-    println!("Backend: {}", info.backend);
+    eprintln!("Device: {}", info.name);
+    eprintln!("Vendor: {}", info.vendor);
+    eprintln!("Type: {}", info.device_type);
+    eprintln!("Backend: {}", info.backend);
 }
 
 #[test]
@@ -95,17 +95,17 @@ fn test_device_limits() {
         "Invocations per workgroup should be at least 128"
     );
 
-    println!(
+    eprintln!(
         "Max buffer size: {} MB",
         limits.max_buffer_size / (1024 * 1024)
     );
-    println!(
+    eprintln!(
         "Max workgroup size: ({}, {}, {})",
         limits.max_compute_workgroup_size_x,
         limits.max_compute_workgroup_size_y,
         limits.max_compute_workgroup_size_z
     );
-    println!(
+    eprintln!(
         "Max invocations per workgroup: {}",
         limits.max_compute_invocations_per_workgroup
     );
@@ -125,9 +125,9 @@ fn test_device_features() {
     let has_f64 = device.supports_feature(DeviceFeature::ShaderF64);
     let has_f16 = device.supports_feature(DeviceFeature::ShaderF16);
 
-    println!("Timestamp query support: {}", has_timestamp);
-    println!("F64 shader support: {}", has_f64);
-    println!("F16 shader support: {}", has_f16);
+    eprintln!("Timestamp query support: {}", has_timestamp);
+    eprintln!("F64 shader support: {}", has_f64);
+    eprintln!("F16 shader support: {}", has_f16);
 
     // These are informational, not assertions since feature support varies
 }

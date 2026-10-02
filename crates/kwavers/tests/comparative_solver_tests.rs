@@ -149,8 +149,8 @@ pub struct ValidationReport {
 /// Returns [`Err`] if a solver comparison step, the summary report, or the
 /// results lookup fails.
 pub fn run_comparative_tests() -> KwaversResult<ComparativeResults> {
-    println!("🔬 Starting Comprehensive Comparative Solver Tests");
-    println!("==================================================");
+    eprintln!("🔬 Starting Comprehensive Comparative Solver Tests");
+    eprintln!("==================================================");
 
     // Define test problems
     let test_problems = create_test_problems();
@@ -159,8 +159,8 @@ pub fn run_comparative_tests() -> KwaversResult<ComparativeResults> {
 
     // Run each test problem
     for problem in &test_problems {
-        println!("\n📊 Testing Problem: {}", problem.name);
-        println!("------------------------------");
+        eprintln!("\n📊 Testing Problem: {}", problem.name);
+        eprintln!("------------------------------");
 
         let problem_results = run_problem_comparison(problem)?;
         all_results.insert(problem.name.clone(), problem_results);
@@ -697,8 +697,8 @@ fn report_discrepancies(comparisons: &[MethodComparison]) -> KwaversResult<()> {
     const RELATIVE_TOLERANCE: f64 = 1e-3; // 0.1% relative difference
     const L2_TOLERANCE: f64 = 1e-2; // L2 difference tolerance
 
-    println!("🔍 Method Comparison Results:");
-    println!("----------------------------");
+    eprintln!("🔍 Method Comparison Results:");
+    eprintln!("----------------------------");
 
     let mut significant_discrepancies = 0;
 
@@ -712,7 +712,7 @@ fn report_discrepancies(comparisons: &[MethodComparison]) -> KwaversResult<()> {
             "✅ Agreement"
         };
 
-        println!(
+        eprintln!(
             "  {} vs {}: {} (rel={:.2e}, L2={:.2e}, corr={:.3})",
             comparison.method1,
             comparison.method2,
@@ -724,14 +724,14 @@ fn report_discrepancies(comparisons: &[MethodComparison]) -> KwaversResult<()> {
     }
 
     if significant_discrepancies > 0 {
-        println!(
+        eprintln!(
             "\n⚠️  WARNING: {} significant discrepancies detected!",
             significant_discrepancies
         );
-        println!("   This may indicate implementation bugs or numerical instabilities.");
-        println!("   Check individual method implementations and convergence properties.");
+        eprintln!("   This may indicate implementation bugs or numerical instabilities.");
+        eprintln!("   Check individual method implementations and convergence properties.");
     } else {
-        println!("\n✅ All methods show good agreement within tolerances.");
+        eprintln!("\n✅ All methods show good agreement within tolerances.");
     }
 
     Ok(())
@@ -739,12 +739,12 @@ fn report_discrepancies(comparisons: &[MethodComparison]) -> KwaversResult<()> {
 
 /// Generate comprehensive summary report
 fn generate_summary_report(all_results: &HashMap<String, ComparativeResults>) -> KwaversResult<()> {
-    println!("\n📊 COMPARATIVE TESTING SUMMARY REPORT");
-    println!("=====================================");
+    eprintln!("\n📊 COMPARATIVE TESTING SUMMARY REPORT");
+    eprintln!("=====================================");
 
-    println!("\n🔬 Test Problems Executed:");
+    eprintln!("\n🔬 Test Problems Executed:");
     for problem_name in all_results.keys() {
-        println!("  • {}", problem_name);
+        eprintln!("  • {}", problem_name);
     }
 
     // Count total discrepancies across all problems
@@ -752,11 +752,11 @@ fn generate_summary_report(all_results: &HashMap<String, ComparativeResults>) ->
     let mut total_comparisons = 0;
 
     for (problem_name, results) in all_results {
-        println!("\n📈 Problem: {}", problem_name);
-        println!("  Methods tested: {}", results.solver_results.len());
+        eprintln!("\n📈 Problem: {}", problem_name);
+        eprintln!("  Methods tested: {}", results.solver_results.len());
 
         // Performance summary
-        println!("  Performance ranking: {:?}", results.performance.ranking);
+        eprintln!("  Performance ranking: {:?}", results.performance.ranking);
 
         // Discrepancy count
         let problem_discrepancies = results
@@ -768,7 +768,7 @@ fn generate_summary_report(all_results: &HashMap<String, ComparativeResults>) ->
         total_discrepancies += problem_discrepancies;
         total_comparisons += results.comparisons.len();
 
-        println!(
+        eprintln!(
             "  Discrepancies found: {}/{}",
             problem_discrepancies,
             results.comparisons.len()
@@ -776,15 +776,15 @@ fn generate_summary_report(all_results: &HashMap<String, ComparativeResults>) ->
 
         // Validation results
         if let Some(validation) = &results.validation {
-            println!("  Analytical validation:");
+            eprintln!("  Analytical validation:");
             for (method, &l2_error) in &validation.l2_errors {
-                println!("    {}: L2 error = {:.2e}", method, l2_error);
+                eprintln!("    {}: L2 error = {:.2e}", method, l2_error);
             }
         }
     }
 
-    println!("\n🎯 OVERALL ASSESSMENT");
-    println!("====================");
+    eprintln!("\n🎯 OVERALL ASSESSMENT");
+    eprintln!("====================");
 
     let discrepancy_rate = if total_comparisons > 0 {
         total_discrepancies as f64 / total_comparisons as f64
@@ -792,24 +792,24 @@ fn generate_summary_report(all_results: &HashMap<String, ComparativeResults>) ->
         0.0
     };
 
-    println!("Total method comparisons: {}", total_comparisons);
-    println!(
+    eprintln!("Total method comparisons: {}", total_comparisons);
+    eprintln!(
         "Significant discrepancies: {} ({:.1}%)",
         total_discrepancies,
         discrepancy_rate * 100.0
     );
 
     if discrepancy_rate > 0.1 {
-        println!("⚠️  HIGH DISCREPANCY RATE - Implementation issues likely");
-        println!("   Recommended: Debug individual solver implementations");
+        eprintln!("⚠️  HIGH DISCREPANCY RATE - Implementation issues likely");
+        eprintln!("   Recommended: Debug individual solver implementations");
     } else if discrepancy_rate > 0.05 {
-        println!("⚠️  Moderate discrepancy rate - Review numerical parameters");
+        eprintln!("⚠️  Moderate discrepancy rate - Review numerical parameters");
     } else {
-        println!("✅ Low discrepancy rate - Good implementation consistency");
+        eprintln!("✅ Low discrepancy rate - Good implementation consistency");
     }
 
-    println!("\n🏁 Comparative testing completed successfully");
-    println!("   Use results to identify and fix implementation issues");
+    eprintln!("\n🏁 Comparative testing completed successfully");
+    eprintln!("   Use results to identify and fix implementation issues");
 
     Ok(())
 }

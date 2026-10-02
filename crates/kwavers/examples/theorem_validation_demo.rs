@@ -4,55 +4,81 @@
 //! implemented in Kwavers with quantitative error bounds and convergence proofs.
 
 use kwavers_analysis::validation::theorem_validation::{TheoremValidation, TheoremValidator};
+use std::io::Write;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🔬 Theorem Validation Demonstration");
-    println!("===================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🔬 Theorem Validation Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "==================================="
+    );
 
     let validator = TheoremValidator;
 
     // Run comprehensive theorem validation
-    println!("Running comprehensive theorem validation suite...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Running comprehensive theorem validation suite..."
+    );
     let validations = validator.run_comprehensive_validation();
 
-    println!("Validated {} mathematical theorems", validations.len());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Validated {} mathematical theorems",
+        validations.len()
+    );
 
     // Display results
     display_validation_results(&validations);
 
     // Generate detailed report
     let report = validator.generate_validation_report(&validations);
-    println!("\n{}", report);
+    let _ = writeln!(std::io::stdout().lock(), "\n{}", report);
 
     // Demonstrate individual theorem validations
     demonstrate_individual_validations()?;
 
-    println!("\n✅ Theorem validation demonstration completed!");
-    println!("   Demonstrated: Systematic theorem validation with quantitative error bounds");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n✅ Theorem validation demonstration completed!"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Demonstrated: Systematic theorem validation with quantitative error bounds"
+    );
 
     Ok(())
 }
 
 fn display_validation_results(validations: &[TheoremValidation]) {
-    println!("\n📊 Validation Results Summary:");
-    println!("------------------------------");
+    let _ = writeln!(std::io::stdout().lock(), "\n📊 Validation Results Summary:");
+    let _ = writeln!(std::io::stdout().lock(), "------------------------------");
 
     let total = validations.len();
     let passed = validations.iter().filter(|v| v.passed).count();
     let pass_rate = passed as f64 / total as f64 * 100.0;
 
-    println!("Total Theorems: {}", total);
-    println!("Passed: {} ({:.1}%)", passed, pass_rate);
-    println!("Failed: {} ({:.1}%)", total - passed, 100.0 - pass_rate);
+    let _ = writeln!(std::io::stdout().lock(), "Total Theorems: {}", total);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Passed: {} ({:.1}%)",
+        passed,
+        pass_rate
+    );
+    eprintln!("Failed: {} ({:.1}%)", total - passed, 100.0 - pass_rate);
 
-    println!("\n📋 Detailed Results:");
-    println!("-------------------");
+    let _ = writeln!(std::io::stdout().lock(), "\n📋 Detailed Results:");
+    let _ = writeln!(std::io::stdout().lock(), "-------------------");
 
     for (i, validation) in validations.iter().enumerate() {
         let status = if validation.passed { "✅" } else { "❌" };
         let confidence_pct = validation.confidence * 100.0;
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "{}. {} {} - {:.1}% confidence",
             i + 1,
             validation.theorem,
@@ -61,7 +87,7 @@ fn display_validation_results(validations: &[TheoremValidation]) {
         );
 
         if !validation.passed {
-            println!(
+            eprintln!(
                 "   Error: {:.2e} (bound: {:.2e})",
                 validation.measured_error, validation.error_bound
             );
@@ -70,12 +96,21 @@ fn display_validation_results(validations: &[TheoremValidation]) {
 }
 
 fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>> {
-    println!("\n🎯 Individual Theorem Demonstrations");
-    println!("====================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🎯 Individual Theorem Demonstrations"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "===================================="
+    );
 
     // Demonstrate Beer-Lambert law validation
-    println!("\n1. Beer-Lambert Law Validation:");
-    println!("-------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n1. Beer-Lambert Law Validation:"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "-------------------------------");
     let distances: Vec<f64> = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
     let alpha: f64 = 0.1; // 1/m
     let initial_intensity: f64 = 1.0;
@@ -107,8 +142,8 @@ fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>
         &measured_intensities,
     );
 
-    println!("Theorem: {}", result.theorem);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "Theorem: {}", result.theorem);
+    eprintln!(
         "Status: {}",
         if result.passed {
             "✅ PASSED"
@@ -116,14 +151,22 @@ fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>
             "❌ FAILED"
         }
     );
-    println!("Max Error: {:.2e}", result.measured_error);
-    println!("Theoretical Bound: {:.2e}", result.error_bound);
-    println!("Confidence: {:.1}%", result.confidence * 100.0);
-    println!("Details: {}", result.details);
+    eprintln!("Max Error: {:.2e}", result.measured_error);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Theoretical Bound: {:.2e}",
+        result.error_bound
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Confidence: {:.1}%",
+        result.confidence * 100.0
+    );
+    let _ = writeln!(std::io::stdout().lock(), "Details: {}", result.details);
 
     // Demonstrate CFL condition validation
-    println!("\n2. CFL Condition Validation:");
-    println!("----------------------------");
+    let _ = writeln!(std::io::stdout().lock(), "\n2. CFL Condition Validation:");
+    let _ = writeln!(std::io::stdout().lock(), "----------------------------");
     let dt = 1e-7; // 0.1 μs
     let dx = 1e-4; // 0.1 mm
     let c = 1500.0; // m/s
@@ -131,8 +174,8 @@ fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>
 
     let cfl_result = TheoremValidator::validate_cfl_condition(dt, dx, c, dimensions);
 
-    println!("Theorem: {}", cfl_result.theorem);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "Theorem: {}", cfl_result.theorem);
+    eprintln!(
         "Status: {}",
         if cfl_result.passed {
             "✅ PASSED"
@@ -140,13 +183,27 @@ fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>
             "❌ FAILED"
         }
     );
-    println!("CFL Number: {:.3}", cfl_result.measured_error);
-    println!("Stability Limit: {:.3}", cfl_result.error_bound);
-    println!("Details: {}", cfl_result.details);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "CFL Number: {:.3}",
+        cfl_result.measured_error
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Stability Limit: {:.3}",
+        cfl_result.error_bound
+    );
+    let _ = writeln!(std::io::stdout().lock(), "Details: {}", cfl_result.details);
 
     // Demonstrate PINN convergence validation
-    println!("\n3. PINN Convergence Theorem Validation:");
-    println!("---------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n3. PINN Convergence Theorem Validation:"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "---------------------------------------"
+    );
     let n_collocation = 2000;
     let network_width = 100;
     let measured_error = 0.005; // 0.5% error
@@ -159,8 +216,8 @@ fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>
         solution_smoothness,
     );
 
-    println!("Theorem: {}", pinn_result.theorem);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "Theorem: {}", pinn_result.theorem);
+    eprintln!(
         "Status: {}",
         if pinn_result.passed {
             "✅ PASSED"
@@ -168,13 +225,23 @@ fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>
             "❌ FAILED"
         }
     );
-    println!("Measured Error: {:.2e}", pinn_result.measured_error);
-    println!("Theoretical Bound: {:.2e}", pinn_result.error_bound);
-    println!("Details: {}", pinn_result.details);
+    eprintln!("Measured Error: {:.2e}", pinn_result.measured_error);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Theoretical Bound: {:.2e}",
+        pinn_result.error_bound
+    );
+    let _ = writeln!(std::io::stdout().lock(), "Details: {}", pinn_result.details);
 
     // Demonstrate MUSIC resolution validation
-    println!("\n4. MUSIC Resolution Theorem Validation:");
-    println!("---------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n4. MUSIC Resolution Theorem Validation:"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "---------------------------------------"
+    );
     let array_length = 0.05; // 5 cm
     let wavelength = 0.0003; // 0.3 mm (1 MHz in water)
     let snr_db = 25.0;
@@ -187,8 +254,12 @@ fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>
         measured_resolution,
     );
 
-    println!("Theorem: {}", music_result.theorem);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Theorem: {}",
+        music_result.theorem
+    );
+    eprintln!(
         "Status: {}",
         if music_result.passed {
             "✅ PASSED"
@@ -196,16 +267,31 @@ fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>
             "❌ FAILED"
         }
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Measured Resolution: {:.2e} rad",
         music_result.measured_error
     );
-    println!("Theoretical Bound: {:.2e} rad", music_result.error_bound);
-    println!("Details: {}", music_result.details);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Theoretical Bound: {:.2e} rad",
+        music_result.error_bound
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Details: {}",
+        music_result.details
+    );
 
     // Demonstrate coded excitation validation
-    println!("\n5. Coded Excitation SNR Theorem Validation:");
-    println!("-------------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n5. Coded Excitation SNR Theorem Validation:"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "-------------------------------------------"
+    );
     let code_length = 512;
     let compression_ratio = 4.0;
     let measured_snr_improvement = 35.0; // Linear scale
@@ -216,8 +302,8 @@ fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>
         measured_snr_improvement,
     );
 
-    println!("Theorem: {}", ce_result.theorem);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "Theorem: {}", ce_result.theorem);
+    eprintln!(
         "Status: {}",
         if ce_result.passed {
             "✅ PASSED"
@@ -225,15 +311,17 @@ fn demonstrate_individual_validations() -> Result<(), Box<dyn std::error::Error>
             "❌ FAILED"
         }
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Measured SNR: {:.1} dB",
         10.0 * ce_result.measured_error.log10()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Theoretical SNR: {:.1} dB",
         10.0 * ce_result.error_bound.log10()
     );
-    println!("Details: {}", ce_result.details);
+    let _ = writeln!(std::io::stdout().lock(), "Details: {}", ce_result.details);
 
     Ok(())
 }

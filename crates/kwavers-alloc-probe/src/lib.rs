@@ -43,7 +43,7 @@ static BYTES_ALLOCATED: AtomicU64 = AtomicU64::new(0);
 /// Bytes released by `dealloc` on measuring threads.
 static BYTES_DEALLOCATED: AtomicU64 = AtomicU64::new(0);
 
-/// A [`System`]-forwarding allocator that counts only on threads with an
+/// A [`Mnemosyne`]-forwarding allocator that counts only on threads with an
 /// open [`Window`].
 ///
 /// Install as the test binary's `#[global_allocator]`.

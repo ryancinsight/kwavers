@@ -51,6 +51,7 @@
 //! Part VI — Atlas Stack Integration, §SIMD and Tiling.
 
 use leto::{Array3, Tiles};
+use std::io::Write;
 
 // ── Grid and tile dimensions ───────────────────────────────────────────────
 const NX: usize = 32;
@@ -66,9 +67,16 @@ const SIGMA_CELLS: f64 = 4.0; // Gaussian half-width in grid cells
 const AMPLITUDE: f64 = 1.0; // Peak pressure [Pa]
 
 fn main() {
-    println!("Tiled k-space processing demo (Tiles from leto)");
-    println!("grid: {NX}³, tile: {TILE_X}³, dx: {:.3} mm", DX * 1e3);
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Tiled k-space processing demo (Tiles from leto)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "grid: {NX}³, tile: {TILE_X}³, dx: {:.3} mm",
+        DX * 1e3
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // ── Initialize Gaussian pressure pulse ────────────────────────────────
     let sigma = SIGMA_CELLS * DX;
@@ -115,18 +123,30 @@ fn main() {
     }
 
     // ── Results ───────────────────────────────────────────────────────────
-    println!("tile coverage");
-    println!("  tiles processed: {tile_count}  (expected {expected_tiles})");
-    println!();
-    println!("acoustic energy [Pa²·m³/dx³]");
-    println!("  reference (flat):    {energy_ref:.12e}");
-    println!("  tiled accumulation:  {energy_tiled:.12e}");
+    let _ = writeln!(std::io::stdout().lock(), "tile coverage");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  tiles processed: {tile_count}  (expected {expected_tiles})"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(std::io::stdout().lock(), "acoustic energy [Pa²·m³/dx³]");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  reference (flat):    {energy_ref:.12e}"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  tiled accumulation:  {energy_tiled:.12e}"
+    );
     let energy_error = (energy_tiled - energy_ref).abs() / energy_ref;
-    println!("  relative error:      {energy_error:.2e}");
-    println!();
-    println!("peak pressure [Pa]");
-    println!("  reference: {peak_ref:.12e}");
-    println!("  tiled:     {peak_tiled:.12e}");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  relative error:      {energy_error:.2e}"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(std::io::stdout().lock(), "peak pressure [Pa]");
+    let _ = writeln!(std::io::stdout().lock(), "  reference: {peak_ref:.12e}");
+    let _ = writeln!(std::io::stdout().lock(), "  tiled:     {peak_tiled:.12e}");
 
     // ── Theorem verification ──────────────────────────────────────────────
     assert_eq!(tile_count, expected_tiles, "all tiles must be visited");
@@ -140,11 +160,17 @@ fn main() {
         "tiled peak {peak_tiled:.12e} ≠ reference {peak_ref:.12e}"
     );
 
-    println!();
-    println!("Energy conservation: PASS  (error = {energy_error:.2e})");
-    println!("Peak pressure:       PASS");
-    println!();
-    println!("Tiles: zero-copy tiling, no element copied.");
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Energy conservation: PASS  (error = {energy_error:.2e})"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "Peak pressure:       PASS");
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Tiles: zero-copy tiling, no element copied."
+    );
 }
 
 #[cfg(test)]

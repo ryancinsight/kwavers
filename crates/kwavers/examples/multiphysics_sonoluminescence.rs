@@ -11,6 +11,7 @@ use kwavers_solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use kwavers_solver::inverse::pinn::ml::universal_solver::{
     UniversalPINNSolver, UniversalTrainingConfig,
 };
+use std::io::Write;
 
 type Backend = MoiraiBackend;
 
@@ -60,17 +61,32 @@ fn main() -> KwaversResult<()> {
     };
 
     let result = solver.train_all_domains(&config, &physics)?;
-    println!("trained {} domains", result.domain_stats.len());
-    println!("total final loss: {:.6e}", result.total_loss);
-    println!("training time: {:.3}s", result.training_time.as_secs_f64());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "trained {} domains",
+        result.domain_stats.len()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "total final loss: {:.6e}",
+        result.total_loss
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "training time: {:.3}s",
+        result.training_time.as_secs_f64()
+    );
 
     let mut domain_names: Vec<_> = result.domain_stats.keys().collect();
     domain_names.sort_unstable();
     for domain_name in domain_names {
         let stats = &result.domain_stats[domain_name];
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "{domain_name}: final_loss={:.6e}, converged={}, epochs={}",
-            stats.final_loss, stats.convergence_info.converged, stats.convergence_info.final_epoch,
+            stats.final_loss,
+            stats.convergence_info.converged,
+            stats.convergence_info.final_epoch,
         );
     }
 

@@ -62,6 +62,7 @@ use kwavers_transducer::HemisphericalArray;
 use leto::Array3 as LetoArray3;
 use leto::{Array2, Array3};
 use std::f64::consts::PI;
+use std::io::Write;
 use std::time::Instant;
 
 // ── Grid (CPML 10-cell safe; modest for runtime) ────────────────────────────
@@ -337,24 +338,35 @@ fn main() -> KwaversResult<()> {
         _ => lesion::TherapyMode::Thermal,
     };
 
-    println!("╔════════════════════════════════════════════════════════════╗");
-    println!("║  Theranostic brain imaging + real-time therapy monitor      ║");
-    println!("╚════════════════════════════════════════════════════════════╝");
-    println!("  Therapy mode    : {mode:?}");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╔════════════════════════════════════════════════════════════╗"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "║  Theranostic brain imaging + real-time therapy monitor      ║"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╚════════════════════════════════════════════════════════════╝"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  Therapy mode    : {mode:?}");
 
     // ── 1. Phantom + grid ────────────────────────────────────────────────
     let (true_c, _rho) = build_phantom();
     let grid = Grid::new(NX, NY, NZ, DX, DX, DX)?;
     let c_lo = true_c.iter().copied().fold(f64::INFINITY, f64::min);
     let c_hi = true_c.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "\n[1/5] Phantom {NX}×{NY}×{NZ} @ {:.0} mm — c∈[{c_lo:.0},{c_hi:.0}] m/s",
         DX * 1e3
     );
 
     // ── 2. Map the 1024-element hemisphere onto the grid ─────────────────
     let elements = map_array_to_grid()?;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "[2/5] 1024-element hemisphere → {} distinct grid acquisition voxels",
         elements.len()
     );
@@ -373,7 +385,7 @@ fn main() -> KwaversResult<()> {
     for s in &subsets {
         tx.extend(s.iter().take(RECON_TX_PER_SUBSET));
     }
-    println!(
+    let _ = writeln!(std::io::stdout().lock(),
         "[3/5] Full-brain FWI: {} low-dose transmit elements, {} receivers, {} iters (dt={:.1} ns, nt={nt})",
         tx.len(),
         elements.len() - 1,
@@ -393,7 +405,8 @@ fn main() -> KwaversResult<()> {
     // Smooth initial model: water background (CT prior would go here).
     let initial = Array3::from_elem(dims, C_WATER);
     let recon = fwi.invert_multi_source(&shots, &initial, &grid)?;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "      reconstructed c∈[{:.0},{:.0}] m/s in {:.1} s",
         recon.iter().copied().fold(f64::INFINITY, f64::min),
         recon.iter().copied().fold(f64::NEG_INFINITY, f64::max),
@@ -423,9 +436,11 @@ fn main() -> KwaversResult<()> {
         },
     );
     let tgt = target.voxel;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "[4/5] Target voxel {:?}  position {:?} m",
-        tgt, target.position_m
+        tgt,
+        target.position_m
     );
 
     // ── 5. Interleaved therapy + monitored-slice reconstruction ──────────
@@ -439,7 +454,8 @@ fn main() -> KwaversResult<()> {
         THERAPY_PRI_S,
         IMAGING_PRI_S,
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "[5/5] Interleaved schedule: {} frames ({} therapy, {} imaging)",
         schedule.len(),
         schedule
@@ -504,8 +520,14 @@ fn main() -> KwaversResult<()> {
     let q_focal = focal_q(tgt);
 
     let mut monitor_frame = 0usize;
-    println!("\n  frame | t [s] | maxT °C | CEM43_max | lesion vox | applied Δc | recon ROI Δc");
-    println!("  ------+-------+---------+-----------+------------+------------+-------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  frame | t [s] | maxT °C | CEM43_max | lesion vox | applied Δc | recon ROI Δc"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  ------+-------+---------+-----------+------------+------------+-------------"
+    );
     for frame in &schedule {
         match frame.kind {
             PulseKind::Therapy => {
@@ -608,7 +630,8 @@ fn main() -> KwaversResult<()> {
                         .count(),
                 };
 
-                println!(
+                let _ = writeln!(
+                    std::io::stdout().lock(),
                     "   {:3}  | {:5.2} | {:7.2} | {:9.2} | {:10} | {:9.1} | {:6.2}/{:+6.2}",
                     monitor_frame,
                     frame.time_s,
@@ -636,8 +659,17 @@ fn main() -> KwaversResult<()> {
         }
     }
 
-    println!("\n  Wrote {monitor_frame} monitored-slice PNG frames (brain_monitor_frameNN.png).");
-    println!("  Lesion image is reconstructed from simulated echoes of the");
-    println!("  therapy-perturbed medium — not read out from ground truth.");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  Wrote {monitor_frame} monitored-slice PNG frames (brain_monitor_frameNN.png)."
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Lesion image is reconstructed from simulated echoes of the"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  therapy-perturbed medium — not read out from ground truth."
+    );
     Ok(())
 }

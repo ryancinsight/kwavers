@@ -124,7 +124,7 @@ fn run_pstd_two_layer(use_heterogeneous: bool) -> KwaversResult<(f64, f64)> {
 #[test]
 fn test_pstd_homogeneous_two_layer_sensor() -> KwaversResult<()> {
     let (sensor_peak, field_peak) = run_pstd_two_layer(false)?;
-    println!(
+    eprintln!(
         "Homogeneous: sensor={:.4e} Pa, field_max={:.4e} Pa",
         sensor_peak, field_peak
     );
@@ -140,7 +140,7 @@ fn test_pstd_homogeneous_two_layer_sensor() -> KwaversResult<()> {
 #[test]
 fn test_pstd_heterogeneous_two_layer_sensor() -> KwaversResult<()> {
     let (sensor_peak, field_peak) = run_pstd_two_layer(true)?;
-    println!(
+    eprintln!(
         "Heterogeneous: sensor={:.4e} Pa, field_max={:.4e} Pa",
         sensor_peak, field_peak
     );

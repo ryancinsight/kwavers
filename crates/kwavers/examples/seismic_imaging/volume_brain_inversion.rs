@@ -9,6 +9,7 @@ use super::{
 };
 use anyhow::Context as _;
 use kwavers_solver::inverse::seismic::parameters::RegularizationParameters;
+use std::io::Write;
 use std::time::Instant;
 
 const F0_BRAIN_HZ: f64 = 400_000.0;
@@ -42,7 +43,10 @@ pub(super) fn run_brain_inversion(
         .mapv(|velocity| velocity > BONE_VELOCITY_THRESHOLD);
     let n_frozen = skull_mask.iter().filter(|&&frozen| frozen).count();
     let n_free = skull_mask.len() - n_frozen;
-    println!("  Skull mask        : {n_frozen} frozen bone voxels, {n_free} free brain voxels");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Skull mask        : {n_frozen} frozen bone voxels, {n_free} free brain voxels"
+    );
 
     let (brain_min, brain_max) = skull_mask
         .indexed_iter()
@@ -52,7 +56,10 @@ pub(super) fn run_brain_inversion(
             (f64::INFINITY, f64::NEG_INFINITY),
             |(min, max), velocity| (min.min(velocity), max.max(velocity)),
         );
-    println!("  True brain c      : [{brain_min:.1}, {brain_max:.1}] m/s");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  True brain c      : [{brain_min:.1}, {brain_max:.1}] m/s"
+    );
 
     let t1_brain = match (prior, t1_result) {
         (_, Some((t1_volume, spacing))) => Some(
@@ -129,7 +136,8 @@ pub(super) fn run_brain_inversion(
             }
         }
     }
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  {} / {} brain gathers at {:.0} kHz ({:.1} s)",
         brain_shots.len(),
         transmit_indices.len(),
@@ -143,7 +151,8 @@ pub(super) fn run_brain_inversion(
         )));
     }
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Running {N_BRAIN_ITER} iterations at {:.0} kHz (nt={nt_brain}) …",
         F0_BRAIN_HZ * 1e-3
     );
@@ -161,11 +170,15 @@ pub(super) fn run_brain_inversion(
         .map_err(|error| {
             KwaversError::InvalidInput(format!("brain FWI inversion failed: {error:#}"))
         })?;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Brain FWI done ({:.1} s)",
         inversion_at.elapsed().as_secs_f32()
     );
-    println!("  Quality (brain voxels only, r_3d < R_SKULL_IN):");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Quality (brain voxels only, r_3d < R_SKULL_IN):"
+    );
     print_quality_report(&brain_true, &brain_reconstructed);
 
     Ok(BrainInversionResult {

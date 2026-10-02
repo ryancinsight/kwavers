@@ -38,9 +38,9 @@ fn test_plane_wave_mask_boundary_only() {
     let source = PlaneWaveSource::new(config, signal);
     let mask = source.create_mask(&grid);
 
-    println!("\n=== Plane Wave Mask (BoundaryOnly mode) ===");
-    println!("Grid: {}×{}×{}", nx, ny, nz);
-    println!("Direction: +z");
+    eprintln!("\n=== Plane Wave Mask (BoundaryOnly mode) ===");
+    eprintln!("Grid: {}×{}×{}", nx, ny, nz);
+    eprintln!("Direction: +z");
 
     // Analyze mask
     let mut num_nonzero = 0;
@@ -62,28 +62,28 @@ fn test_plane_wave_mask_boundary_only() {
         }
     }
 
-    println!("\nMask statistics:");
-    println!("  Non-zero points: {}", num_nonzero);
-    println!("  Min value: {:.6}", min_val);
-    println!("  Max value: {:.6}", max_val);
-    println!("  Z indices with sources: {:?}", {
+    eprintln!("\nMask statistics:");
+    eprintln!("  Non-zero points: {}", num_nonzero);
+    eprintln!("  Min value: {:.6}", min_val);
+    eprintln!("  Max value: {:.6}", max_val);
+    eprintln!("  Z indices with sources: {:?}", {
         let mut v: Vec<_> = z_indices_with_nonzero.iter().copied().collect();
         v.sort_unstable();
         v
     });
 
     // Print mask at z=0 plane
-    println!("\nMask at z=0 plane:");
+    eprintln!("\nMask at z=0 plane:");
     for j in 0..ny {
         for i in 0..nx {
             let val = mask[[i, j, 0]];
             if val.abs() > 1e-12 {
-                print!("1 ");
+                eprint!("1 ");
             } else {
-                print!(". ");
+                eprint!(". ");
             }
         }
-        println!();
+        eprintln!();
     }
 
     // Verify expectations for BoundaryOnly mode
@@ -97,7 +97,7 @@ fn test_plane_wave_mask_boundary_only() {
     assert!((min_val - 1.0).abs() < 1e-6, "Mask values should be 1.0");
     assert!((max_val - 1.0).abs() < 1e-6, "Mask values should be 1.0");
 
-    println!("\n✓ BoundaryOnly mask test PASSED");
+    eprintln!("\n✓ BoundaryOnly mask test PASSED");
 }
 
 #[test]
@@ -125,9 +125,9 @@ fn test_plane_wave_mask_full_grid() {
     let source = PlaneWaveSource::new(config, signal);
     let mask = source.create_mask(&grid);
 
-    println!("\n=== Plane Wave Mask (FullGrid mode) ===");
-    println!("Grid: {}×{}×{}", nx, ny, nz);
-    println!("Direction: +z");
+    eprintln!("\n=== Plane Wave Mask (FullGrid mode) ===");
+    eprintln!("Grid: {}×{}×{}", nx, ny, nz);
+    eprintln!("Direction: +z");
 
     // Analyze mask
     let mut num_nonzero = 0;
@@ -147,16 +147,16 @@ fn test_plane_wave_mask_full_grid() {
         }
     }
 
-    println!("\nMask statistics:");
-    println!("  Non-zero points: {}", num_nonzero);
-    println!("  Min value: {:.6}", min_val);
-    println!("  Max value: {:.6}", max_val);
+    eprintln!("\nMask statistics:");
+    eprintln!("  Non-zero points: {}", num_nonzero);
+    eprintln!("  Min value: {:.6}", min_val);
+    eprintln!("  Max value: {:.6}", max_val);
 
     // Print mask values along z axis at center (i=4, j=4)
-    println!("\nMask values along z-axis (center line):");
+    eprintln!("\nMask values along z-axis (center line):");
     for k in 0..nz {
         let val = mask[[nx / 2, ny / 2, k]];
-        println!("  z={}: {:.6}", k, val);
+        eprintln!("  z={}: {:.6}", k, val);
     }
 
     // FullGrid mode should create a spatial pattern (cos(k*z)) across the domain
@@ -174,7 +174,7 @@ fn test_plane_wave_mask_full_grid() {
         "Max should be near 1.0 (cos at peak)"
     );
 
-    println!("\n✓ FullGrid mask test PASSED");
+    eprintln!("\n✓ FullGrid mask test PASSED");
 }
 
 #[test]
@@ -199,9 +199,9 @@ fn test_point_source_mask() {
     let source = PointSource::new(position, signal);
     let mask = source.create_mask(&grid);
 
-    println!("\n=== Point Source Mask ===");
-    println!("Grid: {}×{}×{}", nx, ny, nz);
-    println!(
+    eprintln!("\n=== Point Source Mask ===");
+    eprintln!("Grid: {}×{}×{}", nx, ny, nz);
+    eprintln!(
         "Position: ({:.4}, {:.4}, {:.4}) mm",
         position.0 * 1e3,
         position.1 * 1e3,
@@ -224,11 +224,11 @@ fn test_point_source_mask() {
         }
     }
 
-    println!("\nMask statistics:");
-    println!("  Non-zero points: {}", num_nonzero);
-    println!("  Source points:");
+    eprintln!("\nMask statistics:");
+    eprintln!("  Non-zero points: {}", num_nonzero);
+    eprintln!("  Source points:");
     for (i, j, k, val) in &source_indices {
-        println!("    ({}, {}, {}): {:.6}", i, j, k, val);
+        eprintln!("    ({}, {}, {}): {:.6}", i, j, k, val);
     }
 
     // Point source should have exactly 1 point
@@ -238,5 +238,5 @@ fn test_point_source_mask() {
         num_nonzero
     );
 
-    println!("\n✓ Point source mask test PASSED");
+    eprintln!("\n✓ Point source mask test PASSED");
 }

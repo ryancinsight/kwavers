@@ -88,6 +88,7 @@ use moirai_parallel::{map_collect_index_with, map_collect_with, Adaptive};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::BufWriter;
+use std::io::Write;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -934,14 +935,21 @@ fn quality_report(true_model: &Array3<f64>, recon: &Array3<f64>) {
         / n
         * 100.0;
 
-    println!("    RMSE        : {rmse:8.2} m/s");
+    let _ = writeln!(std::io::stdout().lock(), "    RMSE        : {rmse:8.2} m/s");
     if denom > f64::EPSILON {
-        println!("    Pearson r   : {:8.4}", cov / denom);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "    Pearson r   : {:8.4}",
+            cov / denom
+        );
     } else {
-        println!("    Pearson r   :      N/A");
+        let _ = writeln!(std::io::stdout().lock(), "    Pearson r   :      N/A");
     }
-    println!("    Max |err|   : {max_err:8.1} m/s");
-    println!("    voxels ±50  : {within:7.1} %");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Max |err|   : {max_err:8.1} m/s"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "    voxels ±50  : {within:7.1} %");
 }
 
 fn image_dynamic_range(name: &str, img: &Array3<f64>) {
@@ -952,7 +960,10 @@ fn image_dynamic_range(name: &str, img: &Array3<f64>) {
             (a.min(v), b.max(v))
         });
     let abs_peak = img.iter().copied().fold(0.0_f64, |a, v| a.max(v.abs()));
-    println!("    {name:14}: [{lo:+.3e}, {hi:+.3e}],  |peak| = {abs_peak:.3e}");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    {name:14}: [{lo:+.3e}, {hi:+.3e}],  |peak| = {abs_peak:.3e}"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -962,12 +973,24 @@ fn image_dynamic_range(name: &str, img: &Array3<f64>) {
 fn main() -> KwaversResult<()> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("warn"));
 
-    println!("╔══════════════════════════════════════════════════════════════╗");
-    println!("║  Liver Theranostic Reconstruction — SoS / Born / RTM / FWI  ║");
-    println!("╚══════════════════════════════════════════════════════════════╝\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╔══════════════════════════════════════════════════════════════╗"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "║  Liver Theranostic Reconstruction — SoS / Born / RTM / FWI  ║"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╚══════════════════════════════════════════════════════════════╝\n"
+    );
 
     // ── 1. CT phantom ─────────────────────────────────────────────────────
-    println!("[ 1 / 6 ]  Loading liver CT slice …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "[ 1 / 6 ]  Loading liver CT slice …"
+    );
     let ct_path = std::env::var("LIVER_CT_PATH")
         .unwrap_or_else(|_| "data/lits17_sample/volume-0.nii".to_string());
     let seg_path = std::env::var("LIVER_SEG_PATH")
@@ -975,14 +998,23 @@ fn main() -> KwaversResult<()> {
 
     let phantom = match load_liver_ct(&ct_path, &seg_path) {
         Some(p) => {
-            println!("  Loaded LiTS17 axial slice from {ct_path}");
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "  Loaded LiTS17 axial slice from {ct_path}"
+            );
             if p.liver_mask.is_some() {
-                println!("  Liver/tumour segmentation: {seg_path}");
+                let _ = writeln!(
+                    std::io::stdout().lock(),
+                    "  Liver/tumour segmentation: {seg_path}"
+                );
             }
             p
         }
         None => {
-            println!("  Synthetic abdominal phantom (set LIVER_CT_PATH for LiTS17)");
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "  Synthetic abdominal phantom (set LIVER_CT_PATH for LiTS17)"
+            );
             build_synthetic_abdomen()
         }
     };
@@ -999,28 +1031,42 @@ fn main() -> KwaversResult<()> {
         .fold(f64::NEG_INFINITY, f64::max);
     let hu_min = phantom.hu.iter().copied().fold(f64::INFINITY, f64::min);
     let hu_max = phantom.hu.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Grid          : {NX}×{NY}×{NZ} @ {:.0} mm ({:.0}×{:.0} mm FoV)",
         DX * 1e3,
         NX as f64 * DX * 1e3,
         NZ as f64 * DX * 1e3
     );
-    println!("  HU range      : [{hu_min:.0}, {hu_max:.0}]");
-    println!("  Sound-speed   : [{c_min:.0}, {c_max:.0}] m/s");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  HU range      : [{hu_min:.0}, {hu_max:.0}]"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Sound-speed   : [{c_min:.0}, {c_max:.0}] m/s"
+    );
 
     // ── 2. Grid & acquisition geometry ────────────────────────────────────
-    println!("\n[ 2 / 6 ]  Configuring ring transducer …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 2 / 6 ]  Configuring ring transducer …"
+    );
     let grid = Grid::new(NX, NY, NZ, DX, DX, DX)?;
     let ring = ring_positions();
     let tx = tx_positions(&ring);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  {} elements, {} active transmitters",
         ring.len(),
         tx.len()
     );
 
     // ── 3. Forward model — synthetic acquisitions on true CT model ────────
-    println!("\n[ 3 / 6 ]  Forward FDTD acquisitions (true CT) …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 3 / 6 ]  Forward FDTD acquisitions (true CT) …"
+    );
 
     // CFL-stable time step for the highest velocity in the medium.
     let dt = 0.3 * DX / (c_max * 3.0_f64.sqrt());
@@ -1049,7 +1095,8 @@ fn main() -> KwaversResult<()> {
     };
 
     let fwi = FwiProcessor::new(fwi_params.clone());
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  dt = {:.2} ns, nt = {} ({:.0} μs)",
         dt * 1e9,
         nt,
@@ -1069,7 +1116,8 @@ fn main() -> KwaversResult<()> {
     })
     .into_iter()
     .collect::<KwaversResult<Vec<_>>>()?;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  {} shots simulated in {:.1} s ({} parallel)",
         shots.len(),
         t0.elapsed().as_secs_f32(),
@@ -1079,10 +1127,13 @@ fn main() -> KwaversResult<()> {
     );
 
     // ── 4. Reconstructions ────────────────────────────────────────────────
-    println!("\n[ 4 / 6 ]  Reconstructions");
+    let _ = writeln!(std::io::stdout().lock(), "\n[ 4 / 6 ]  Reconstructions");
 
     // 4a. Sound-Speed (TOF tomography) ───────────────────────────────────
-    println!("\n  ── (a) Sound-Speed tomography (Greenleaf 1981) ──");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  ── (a) Sound-Speed tomography (Greenleaf 1981) ──"
+    );
     // Reference: simulate the same geometry in a uniform water bath so the
     // TOF residual ΔT = t_obs − t_water is free of grid / Dirichlet bias.
     let water_model = Array3::<f64>::from_elem((NX, NY, NZ), C_WATER);
@@ -1093,7 +1144,8 @@ fn main() -> KwaversResult<()> {
         })
         .into_iter()
         .collect::<KwaversResult<Vec<_>>>()?;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    {} water-reference shots in {:.1} s",
         water_shots.len(),
         t.elapsed().as_secs_f32()
@@ -1103,7 +1155,8 @@ fn main() -> KwaversResult<()> {
     let n_sirt = 8usize;
     let relax = 0.5_f64;
     let (sos_image, sos_frames) = reconstruct_sos_sirt(&rays, n_sirt, relax, true);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    {} rays, {n_sirt} SIRT iterations (λ={relax}) in {:.1} s",
         rays.len(),
         t.elapsed().as_secs_f32()
@@ -1111,12 +1164,18 @@ fn main() -> KwaversResult<()> {
     quality_report(&phantom.sound_speed, &sos_image);
 
     // 4b. Born scattering-potential image ─────────────────────────────────
-    println!("\n  ── (b) Born first-order inverse (Tarantola 1984) ──");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  ── (b) Born first-order inverse (Tarantola 1984) ──"
+    );
     let born_image = reconstruct_born(&phantom.sound_speed);
     image_dynamic_range("V(x)", &born_image);
 
     // 4c. RTM (snapshot zero-lag XC) ──────────────────────────────────────
-    println!("\n  ── (c) Reverse Time Migration (Baysal 1983) ──");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  ── (c) Reverse Time Migration (Baysal 1983) ──"
+    );
     // Snapshot-style RtmProcessor: project per-element RMS of each observed
     // trace onto its grid position to form a coarse 3-D receiver-energy
     // snapshot, then zero-lag XC with itself.  We do not use the full-FDTD
@@ -1150,12 +1209,14 @@ fn main() -> KwaversResult<()> {
     let rtm_image = rtm
         .migrate(&rtm_snapshot, &rtm_snapshot, &grid)
         .unwrap_or_else(|_| Array3::<f64>::zeros((NX, NY, NZ)));
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    {} shots migrated in {:.1} s",
         shots.len(),
         t.elapsed().as_secs_f32()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    {} shots × full forward+backward propagation in {:.1} s",
         shots.len(),
         t.elapsed().as_secs_f32()
@@ -1163,12 +1224,18 @@ fn main() -> KwaversResult<()> {
     image_dynamic_range("I_RTM(x)", &rtm_image);
 
     // 4d. FWI from CT-blurred prior ───────────────────────────────────────
-    println!("\n  ── (d) Full-Waveform Inversion (Tarantola 1984) ──");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  ── (d) Full-Waveform Inversion (Tarantola 1984) ──"
+    );
     let fwi_shots: Vec<(FwiGeometry, Array2<f64>)> = shots
         .iter()
         .map(|(g, o, _, _)| (g.clone(), o.clone()))
         .collect();
-    println!("    Initial model: CT-blurred prior (σ = 3 vox = 9 mm; Guasch 2020)");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Initial model: CT-blurred prior (σ = 3 vox = 9 mm; Guasch 2020)"
+    );
 
     // Single-call FWI: per-iteration capture is unsuitable here because each
     // `invert_multi_source(max_iter=1)` restart re-runs Armijo backtracking
@@ -1177,7 +1244,8 @@ fn main() -> KwaversResult<()> {
     // evolution animation is therefore a 2-frame before/after.
     let t = Instant::now();
     let fwi_image = fwi.invert_multi_source(&fwi_shots, &smooth_prior, &grid)?;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    {} shots × {} iterations in {:.1} s",
         shots.len(),
         fwi_params.max_iterations,
@@ -1187,22 +1255,46 @@ fn main() -> KwaversResult<()> {
     quality_report(&phantom.sound_speed, &fwi_image);
 
     // ── 5. Summary ────────────────────────────────────────────────────────
-    println!("\n[ 5 / 6 ]  Comparative summary");
-    println!("  Method         RMSE [m/s]     Pearson r");
+    let _ = writeln!(std::io::stdout().lock(), "\n[ 5 / 6 ]  Comparative summary");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Method         RMSE [m/s]     Pearson r"
+    );
     let m_sos = metrics(&phantom.sound_speed, &sos_image);
     let m_prior = metrics(&phantom.sound_speed, &smooth_prior);
     let m_fwi = metrics(&phantom.sound_speed, &fwi_image);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    Prior        {:8.2}        {:6.4}",
-        m_prior.0, m_prior.1
+        m_prior.0,
+        m_prior.1
     );
-    println!("    SoS          {:8.2}        {:6.4}", m_sos.0, m_sos.1);
-    println!("    FWI          {:8.2}        {:6.4}", m_fwi.0, m_fwi.1);
-    println!("    Born:        scattering potential V(x), dimensionless");
-    println!("    RTM:         migrated reflectivity, arbitrary units");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    SoS          {:8.2}        {:6.4}",
+        m_sos.0,
+        m_sos.1
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    FWI          {:8.2}        {:6.4}",
+        m_fwi.0,
+        m_fwi.1
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Born:        scattering potential V(x), dimensionless"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    RTM:         migrated reflectivity, arbitrary units"
+    );
 
     // ── 6. Therapy planning consumption ───────────────────────────────────
-    println!("\n[ 6 / 6 ]  Therapy planning outputs");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 6 / 6 ]  Therapy planning outputs"
+    );
     if let Some(mask) = &phantom.liver_mask {
         let (liver_voxels, tumour_voxels) = mask.iter().fold((0usize, 0usize), |(l, t), &v| {
             if v >= 1.5 {
@@ -1215,14 +1307,21 @@ fn main() -> KwaversResult<()> {
         });
         let liver_vol_ml = liver_voxels as f64 * (DX * 1e3).powi(3) / 1000.0; // mm³ → mL
         let tumour_vol_ml = tumour_voxels as f64 * (DX * 1e3).powi(3) / 1000.0;
-        println!("  Liver volume in slice : {liver_vol_ml:7.2} mL");
-        println!("  Tumour volume in slice: {tumour_vol_ml:7.2} mL");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Liver volume in slice : {liver_vol_ml:7.2} mL"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Tumour volume in slice: {tumour_vol_ml:7.2} mL"
+        );
     }
 
     // Rib detection from FWI velocity map (HU>700 → c>2800 m/s)
     let rib_voxels = fwi_image.iter().filter(|&&c| c > 2200.0).count();
     let total = fwi_image.len();
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  High-c (>2200 m/s)    : {rib_voxels} voxels ({:.1} % of slice — rib-shadow mask)",
         rib_voxels as f64 / total as f64 * 100.0
     );
@@ -1247,7 +1346,8 @@ fn main() -> KwaversResult<()> {
         .copied()
         .fold(0.0_f64, |a, v| a.max(v.abs()))
         * 1e6;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Focal point           : (ix={}, iz={})  [{}]",
         focal.0,
         focal.1,
@@ -1257,17 +1357,21 @@ fn main() -> KwaversResult<()> {
             "grid centre"
         }
     );
-    println!(
+    let _ = writeln!(std::io::stdout().lock(),
         "  Per-element aberration: |Δτ|_max = {max_true_us:.3} μs (true);  Δτ_FWI − Δτ_true RMSE = {delay_rmse_us:.3} μs"
     );
     // Element-level delay table (μs) — what the therapy beamformer would apply
-    println!("    elem  ix  iz   Δτ_true [μs]  Δτ_FWI [μs]");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    elem  ix  iz   Δτ_true [μs]  Δτ_FWI [μs]"
+    );
     for (n, ((ix, iz), (dt_t, dt_f))) in ring
         .iter()
         .zip(delays_true.iter().zip(delays_fwi.iter()))
         .enumerate()
     {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    {n:4}  {ix:3} {iz:3}   {:+8.3}      {:+8.3}",
             dt_t * 1e6,
             dt_f * 1e6
@@ -1323,16 +1427,22 @@ fn main() -> KwaversResult<()> {
             eprintln!("  WARN: failed to write {}: {e}", methods_gif.display());
         }
 
-        println!("  Animated GIFs written to {}", out_dir.display());
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Animated GIFs written to {}",
+            out_dir.display()
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    • sirt_evolution.gif     — {} frames @ 500 ms (SoS SIRT)",
             sos_frames.len()
         );
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    • fwi_evolution.gif      — {} frames @ 1000 ms (FWI before / after)",
             fwi_frames.len()
         );
-        println!("    • methods_comparison.gif — 6 frames @ 1500 ms (truth → prior → SoS → FWI → Born → RTM)");
+        let _ = writeln!(std::io::stdout().lock(), "    • methods_comparison.gif — 6 frames @ 1500 ms (truth → prior → SoS → FWI → Born → RTM)");
 
         // ── B-mode-style displays ─────────────────────────────────────────
         // Three sources of reflectivity, all run through the same
@@ -1412,30 +1522,51 @@ fn main() -> KwaversResult<()> {
             }
         }
 
-        println!(
+        let _ = writeln!(std::io::stdout().lock(),
             "    • bmode_rtm.gif          — 1 frame, log-compressed RTM reflectivity ({DYNAMIC_RANGE_DB:.0} dB DR, greyscale)"
         );
-        println!(
+        let _ = writeln!(std::io::stdout().lock(),
             "    • bmode_born.gif         — 1 frame, log-compressed Born V(x)        ({DYNAMIC_RANGE_DB:.0} dB DR, greyscale)"
         );
-        println!(
+        let _ = writeln!(std::io::stdout().lock(),
             "    • bmode_fwi.gif          — 1 frame, log-compressed FWI Δc           ({DYNAMIC_RANGE_DB:.0} dB DR, greyscale)"
         );
-        println!(
+        let _ = writeln!(std::io::stdout().lock(),
             "    • bmode_gradient.gif     — 1 frame, log-compressed |∇c| (FWI)       ({DYNAMIC_RANGE_DB:.0} dB DR, greyscale)"
         );
-        println!(
+        let _ = writeln!(std::io::stdout().lock(),
             "    • bmode_comparison.gif   — 4 frames @ 1500 ms (RTM → Born → FWI Δc → |∇c| B-mode cycle)"
         );
     }
 
-    println!("\n═══════════════════════════════════════════════════════════════");
-    println!("  Therapy outputs from this pipeline:");
-    println!("    • c(x) → element-by-element transmit-delay aberration correction");
-    println!("    • ρ(x), V(x) → focal-spot intensity & acoustic-dose prediction");
-    println!("    • rib mask (c>2200 m/s) → transcostal-aperture occlusion map");
-    println!("    • RTM reflectivity → vessel + tumour boundary localisation");
-    println!("═══════════════════════════════════════════════════════════════");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n═══════════════════════════════════════════════════════════════"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Therapy outputs from this pipeline:"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    • c(x) → element-by-element transmit-delay aberration correction"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    • ρ(x), V(x) → focal-spot intensity & acoustic-dose prediction"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    • rib mask (c>2200 m/s) → transcostal-aperture occlusion map"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    • RTM reflectivity → vessel + tumour boundary localisation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "═══════════════════════════════════════════════════════════════"
+    );
 
     Ok(())
 }

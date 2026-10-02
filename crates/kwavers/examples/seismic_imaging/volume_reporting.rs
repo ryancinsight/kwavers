@@ -4,6 +4,7 @@ use super::{
     seismic_volume_artifacts, Array3, KwaversError, KwaversResult, BRAIN_C_MAX, BRAIN_C_MIN,
 };
 use kwavers_core::constants::acoustic_parameters::SOUND_SPEED_SKULL_CORTICAL;
+use std::io::Write;
 use std::path::PathBuf;
 
 /// Write reconstructed skull, T1-derived, and brain-tissue volume artifacts.
@@ -37,7 +38,11 @@ pub(super) fn write_outputs(
             BRAIN_C_MAX,
         )
         .map_err(|e| KwaversError::InvalidInput(format!("T1 tissue PNG write failed: {e}")))?;
-        println!("  T1 tissue image  : {}", t1_tissue_path.display());
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  T1 tissue image  : {}",
+            t1_tissue_path.display()
+        );
     }
 
     if let Some(bt_recon) = brain_reconstructed {
@@ -48,12 +53,21 @@ pub(super) fn write_outputs(
             BRAIN_C_MAX,
         )
         .map_err(|e| KwaversError::InvalidInput(format!("brain tissue PNG write failed: {e}")))?;
-        println!("  Brain tissue image: {}", brain_tissue_path.display());
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Brain tissue image: {}",
+            brain_tissue_path.display()
+        );
     }
 
-    println!("\n  Output directory  : {}", abs_dir.display());
-    println!("\n  Wrote images:");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  Output directory  : {}",
+        abs_dir.display()
+    );
+    let _ = writeln!(std::io::stdout().lock(), "\n  Wrote images:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    {}  (axial+coronal+sagittal skull velocity, reconstructed)",
         skull_path.display()
     );

@@ -36,10 +36,6 @@
 //!   algorithms in ultrasound shear wave elasticity imaging." *IEEE TUFFC*, 61(6), 1076-1088.
 //! - Palmeri, M. L., et al. (2011). "Quantifying hepatic shear modulus in vivo using
 //!   acoustic radiation force." *Ultrasound in Medicine & Biology*, 37(4), 546-558.
-#![expect(
-    clippy::print_stdout,
-    reason = "validation harness reports step progress"
-)]
 
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousMedium;
@@ -56,13 +52,12 @@ use kwavers_therapy::therapy::swe_3d_workflows::{
 };
 use leto::Array3;
 use std::default::Default;
-use std::println;
 use std::vec::Vec;
 
 /// Test analytical validation for homogeneous medium
 #[test]
 fn test_analytical_homogeneous_validation() {
-    println!("Testing analytical validation for homogeneous medium...");
+    eprintln!("Testing analytical validation for homogeneous medium...");
 
     // Create homogeneous medium with known properties
     let grid = Grid::new(24, 24, 24, 0.002, 0.002, 0.002).unwrap();
@@ -120,7 +115,7 @@ fn test_analytical_homogeneous_validation() {
         }
     }
 
-    println!("Max center displacement magnitude: {:.3e} m", max_u_center);
+    eprintln!("Max center displacement magnitude: {:.3e} m", max_u_center);
     assert!(
         max_u_center > 0.0,
         "Expected non-trivial response from body-force excitation"
@@ -137,7 +132,7 @@ fn test_analytical_homogeneous_validation() {
 #[test]
 #[ignore = "Correctness divergence: background reconstruction error 1648% vs <30% asserted (measured 2026-08-22). Tracked as KW-GAP-2026-08-22-SWERECON; re-enable trigger: background mean error < 30% and inclusion mean error < 40%"]
 fn test_volumetric_phantom_validation() {
-    println!("Testing volumetric phantom validation...");
+    eprintln!("Testing volumetric phantom validation...");
 
     let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001).unwrap(); // 5x5x5cm
     let phantom = create_validation_phantom(&grid);
@@ -195,7 +190,7 @@ fn test_volumetric_phantom_validation() {
 #[test]
 #[ignore = "Correctness divergence: reconstructed stiffness too high for the fibrosis phantom (measured 2026-08-22). Tracked as KW-GAP-2026-08-22-SWERECON; re-enable trigger: reconstructed stiffness lands in the asserted fibrosis-stage ranges"]
 fn test_clinical_liver_fibrosis_accuracy() {
-    println!("Testing clinical accuracy for liver fibrosis staging...");
+    eprintln!("Testing clinical accuracy for liver fibrosis staging...");
 
     let grid = Grid::new(60, 60, 40, 0.001, 0.001, 0.0015).unwrap(); // 6x6x6cm
     let liver_phantom = create_liver_fibrosis_phantom(&grid);
@@ -241,10 +236,10 @@ fn test_clinical_liver_fibrosis_accuracy() {
     let cds = Swe3dClinicalDecisionSupport::default();
     let classification = cds.classify_liver_fibrosis(&stats);
 
-    println!("Clinical Assessment Results:");
-    println!("  Mean stiffness: {:.1} kPa", stats.mean_modulus / 1000.0);
-    println!("  Fibrosis stage: {:?}", classification.stage);
-    println!("  Confidence: {:?}", classification.confidence);
+    eprintln!("Clinical Assessment Results:");
+    eprintln!("  Mean stiffness: {:.1} kPa", stats.mean_modulus / 1000.0);
+    eprintln!("  Fibrosis stage: {:?}", classification.stage);
+    eprintln!("  Confidence: {:?}", classification.confidence);
 
     // Validate clinical accuracy
     assert!(
@@ -265,7 +260,7 @@ fn test_clinical_liver_fibrosis_accuracy() {
 /// Test robustness with edge cases
 #[test]
 fn test_robustness_edge_cases() {
-    println!("Testing robustness with edge cases...");
+    eprintln!("Testing robustness with edge cases...");
 
     // Test with very small grid
     let small_grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
@@ -301,7 +296,7 @@ fn volumetric_tracking_covers_non_pml_domain() {
     const NZ: usize = 28;
     const PML_THICKNESS: usize = 6;
 
-    println!("Testing volumetric tracking coverage...");
+    eprintln!("Testing volumetric tracking coverage...");
 
     // Based on Palmeri et al. (2011) liver SWE study
     let grid = Grid::new(NX, NY, NZ, 0.001, 0.001, 0.0015).unwrap(); // ~4x4x2.8cm liver volume
@@ -349,13 +344,13 @@ fn volumetric_tracking_covers_non_pml_domain() {
     // Extract clinically relevant metrics
     let quality_metrics = volumetric_solver.calculate_volumetric_quality(&tracker);
 
-    println!("Volumetric Tracking Coverage:");
-    println!(
+    eprintln!("Volumetric Tracking Coverage:");
+    eprintln!(
         "  Volume coverage: {:.1}%",
         quality_metrics.coverage * 100.0
     );
-    println!("  Quality score: {:.2}", quality_metrics.average_quality);
-    println!(
+    eprintln!("  Quality score: {:.2}", quality_metrics.average_quality);
+    eprintln!(
         "  Valid tracking points: {}",
         quality_metrics.valid_tracking_points
     );
@@ -807,13 +802,13 @@ fn validate_phantom_reconstruction(
     let inclusion_mean_error: f64 =
         inclusion_errors.iter().sum::<f64>() / inclusion_errors.len() as f64;
 
-    println!("Phantom Validation Results:");
-    println!(
+    eprintln!("Phantom Validation Results:");
+    eprintln!(
         "  Background regions: {} points, mean error: {:.1}%",
         background_errors.len(),
         background_mean_error * 100.0
     );
-    println!(
+    eprintln!(
         "  Inclusion regions: {} points, mean error: {:.1}%",
         inclusion_errors.len(),
         inclusion_mean_error * 100.0

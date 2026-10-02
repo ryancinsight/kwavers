@@ -130,7 +130,7 @@ mod ic_loss_tests {
         let initial_ic_loss = metrics.ic_loss[0];
         let final_ic_loss = *metrics.ic_loss.last().unwrap();
 
-        println!(
+        eprintln!(
             "IC displacement loss: initial={:.6}, final={:.6}",
             initial_ic_loss, final_ic_loss
         );
@@ -274,7 +274,7 @@ mod ic_loss_tests {
         let initial_ic = metrics.ic_loss[0];
         let final_ic = *metrics.ic_loss.last().unwrap();
 
-        println!(
+        eprintln!(
             "Combined IC test: initial_loss={:.6}, final_loss={:.6}, improvement={:.1}%",
             initial_ic,
             final_ic,
@@ -373,7 +373,7 @@ mod ic_loss_tests {
         let initial_ic = metrics.ic_loss[0];
         let final_ic = *metrics.ic_loss.last().unwrap();
         let improvement = 1.0 - final_ic / initial_ic;
-        println!(
+        eprintln!(
             "Zero field IC loss: initial={initial_ic:.6}, final={final_ic:.6},              improvement={:.1}%",
             improvement * 100.0
         );
@@ -460,7 +460,7 @@ mod ic_loss_tests {
         let initial_ic = metrics.ic_loss[0];
         let final_ic = *metrics.ic_loss.last().unwrap();
 
-        println!(
+        eprintln!(
             "Plane wave IC: initial={:.6}, final={:.6}",
             initial_ic, final_ic
         );

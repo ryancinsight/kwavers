@@ -661,7 +661,7 @@ fn probe_coated_subharmonic() {
                 let tr = simulate_coated_bubble_emission(&c);
                 let dt = tr.time[1] - tr.time[0];
                 let (s, u, b) = frac(&tr.emission, dt);
-                println!(
+                eprintln!(
                     "r0={r0u}um pa={:.0}kPa chi={chi} -> sub={:.1}% ultra={:.1}% broad={:.1}% maxC={:.1}",
                     pa / 1e3, s * 100.0, u * 100.0, b * 100.0, tr.max_compression
                 );

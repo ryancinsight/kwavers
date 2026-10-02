@@ -2,6 +2,7 @@ use super::{exact_gaussian_pressure, physical_coordinate, NamedLine, DT, ELEMENT
 use kwavers_core::error::KwaversResult;
 use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
 use leto::{Array1, Array3};
+use std::io::Write;
 
 const COMMON_SAMPLING_ORDER: usize = 4;
 
@@ -85,29 +86,54 @@ pub fn common_gaussian_samples(
 }
 
 pub fn print_common_solver_matrix(matrix: &CommonGaussianMatrix) {
-    println!("{:<36} {:>16.6e}", "common DG vs exact", matrix.dg_exact_l2);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "common FDTD vs exact", matrix.fdtd_exact_l2
+        "common DG vs exact",
+        matrix.dg_exact_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "common FDTD+k-space vs exact", matrix.kspace_exact_l2
+        "common FDTD vs exact",
+        matrix.fdtd_exact_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "common PSTD vs exact", matrix.pstd_exact_l2
+        "common FDTD+k-space vs exact",
+        matrix.kspace_exact_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "common FDTD vs PSTD", matrix.fdtd_pstd_l2
+        "common PSTD vs exact",
+        matrix.pstd_exact_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "common FDTD+k-space vs PSTD", matrix.kspace_pstd_l2
+        "common FDTD vs PSTD",
+        matrix.fdtd_pstd_l2
     );
-    println!("{:<36} {:>16.6e}", "common DG vs FDTD", matrix.dg_fdtd_l2);
-    println!("{:<36} {:>16.6e}", "common DG vs PSTD", matrix.dg_pstd_l2);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<36} {:>16.6e}",
+        "common FDTD+k-space vs PSTD",
+        matrix.kspace_pstd_l2
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<36} {:>16.6e}",
+        "common DG vs FDTD",
+        matrix.dg_fdtd_l2
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<36} {:>16.6e}",
+        "common DG vs PSTD",
+        matrix.dg_pstd_l2
+    );
 }
 
 fn interpolate_dg_element(

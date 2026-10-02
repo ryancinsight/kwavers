@@ -12,6 +12,7 @@ use super::{
     HU_BRAIN, HU_CORTICAL_IN, HU_CORTICAL_OUT, HU_DIPLOE, HU_SCALP, HU_WATER, NX, NY, NZ, R_BRAIN,
     R_DIPLOE, R_HEAD, R_SKULL_IN, R_SKULL_OUT,
 };
+use std::io::Write;
 
 /// Build the synthetic concentric-shell skull phantom.
 pub(super) fn build_skull_phantom() -> super::KwaversResult<SkullModel> {
@@ -72,12 +73,14 @@ fn resample_ct_to_fwi_grid(vol: &CtVolume) -> Array3<f64> {
     let spacing_mm = vol.spacing_mm();
     let scale = r_skull_ct / R_HEAD;
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  CT skull radius : {r_skull_ct:.1} px × {:.2} mm/px = {:.0} mm",
         spacing_mm[0],
         r_skull_ct * spacing_mm[0]
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  FWI fit scale   : {scale:.2} CT px / FWI voxel  \
               (skull outer edge → R_HEAD={R_HEAD} voxels)"
     );
@@ -113,19 +116,29 @@ pub(super) fn build_phantom_for_demo(
 ) -> anyhow::Result<(SkullModel, Option<CtVolume>)> {
     match input {
         SeismicInputMode::Synthetic => {
-            println!("  Phantom         : synthetic analytical skull");
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "  Phantom         : synthetic analytical skull"
+            );
             Ok((build_skull_phantom()?, None))
         }
         SeismicInputMode::Ct(path) => {
-            print!("  CT source       : {}  ", path.display());
+            let _ = write!(
+                std::io::stdout().lock(),
+                "  CT source       : {}  ",
+                path.display()
+            );
             let vol = load_ct_volume(path).with_context(|| {
                 format!("explicit CT input could not be loaded: {}", path.display())
             })?;
             let [cx, cy, nz] = vol.hu().shape();
             let spacing_mm = vol.spacing_mm();
-            println!(
+            let _ = writeln!(
+                std::io::stdout().lock(),
                 "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
-                spacing_mm[0], spacing_mm[1], spacing_mm[2]
+                spacing_mm[0],
+                spacing_mm[1],
+                spacing_mm[2]
             );
             let hu_fwi = resample_ct_to_fwi_grid(&vol);
             let phantom = SkullModel::from_hu(hu_fwi)?;

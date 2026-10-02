@@ -741,5 +741,5 @@ fn test_sprint_225_2_acceptance_criteria() {
         "Frame pool should be retrievable"
     );
 
-    println!("Sprint 225.2 Acceptance Criteria: All checks passed");
+    eprintln!("Sprint 225.2 Acceptance Criteria: All checks passed");
 }

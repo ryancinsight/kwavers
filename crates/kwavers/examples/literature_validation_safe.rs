@@ -36,6 +36,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::{CoreMedium, HomogeneousMedium};
 use leto::{Array2, Array3};
 use std::f64::consts::PI;
+use std::io::Write;
 use std::time::Instant;
 
 /// Literature validation results
@@ -52,10 +53,22 @@ pub struct ValidationResult {
 
 /// Main literature validation suite
 pub fn main() -> KwaversResult<()> {
-    println!("=================================================================");
-    println!("Literature Validation with Safe Vectorization");
-    println!("Comprehensive test suite using established analytical solutions");
-    println!("=================================================================\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "================================================================="
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Literature Validation with Safe Vectorization"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Comprehensive test suite using established analytical solutions"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=================================================================\n"
+    );
 
     let results = vec![
         validate_greens_function()?,
@@ -76,9 +89,15 @@ pub fn main() -> KwaversResult<()> {
 /// Validates the fundamental solution for the 3D wave equation.
 /// Reference: Pierce (1989) "Acoustics", Chapter 7.1, Equation 7-1.3
 fn validate_greens_function() -> KwaversResult<ValidationResult> {
-    println!("1. Green's Function Validation");
-    println!("   Reference: Pierce (1989) - Free space point source");
-    println!("   Analytical: G(r,t) = δ(t - r/c) / (4πr)\n");
+    let _ = writeln!(std::io::stdout().lock(), "1. Green's Function Validation");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Reference: Pierce (1989) - Free space point source"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Analytical: G(r,t) = δ(t - r/c) / (4πr)\n"
+    );
 
     let start_time = Instant::now();
 
@@ -101,11 +120,18 @@ fn validate_greens_function() -> KwaversResult<ValidationResult> {
     let source_j = ny / 2;
     let source_k = nz / 2;
 
-    println!("   Grid: {}³ points", nx);
-    println!("   Resolution: {:.0} μm", dx * 1e6);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "   Grid: {}³ points", nx);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Resolution: {:.0} μm",
+        dx * 1e6
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Source location: ({}, {}, {})",
-        source_i, source_j, source_k
+        source_i,
+        source_j,
+        source_k
     );
 
     // Initialize fields
@@ -120,8 +146,8 @@ fn validate_greens_function() -> KwaversResult<ValidationResult> {
     let simulation_time = 8.0 * dx / c0; // Time for wave to propagate several grid points
     let n_steps = (simulation_time / dt) as usize;
 
-    println!("   Time step: {:.2} ns", dt * 1e9);
-    println!("   Simulation steps: {}", n_steps);
+    let _ = writeln!(std::io::stdout().lock(), "   Time step: {:.2} ns", dt * 1e9);
+    let _ = writeln!(std::io::stdout().lock(), "   Simulation steps: {}", n_steps);
 
     let mut max_error = 0.0f64;
     let mut sum_sq_error = 0.0;
@@ -180,14 +206,26 @@ fn validate_greens_function() -> KwaversResult<ValidationResult> {
         0.0
     };
 
-    println!("   Results:");
-    println!("     Maximum error: {:.3}%", max_error * 100.0);
-    println!("     RMS error: {:.3}%", rms_error * 100.0);
-    println!("     Computation time: {:.2} ms", computation_time * 1000.0);
+    let _ = writeln!(std::io::stdout().lock(), "   Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Maximum error: {:.3}%",
+        max_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     RMS error: {:.3}%",
+        rms_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Computation time: {:.2} ms",
+        computation_time * 1000.0
+    );
 
     let passed = max_error < 0.01; // 1% tolerance
     let status = if passed { "✅ PASSED" } else { "❌ FAILED" };
-    println!("     Status: {}", status);
+    let _ = writeln!(std::io::stdout().lock(), "     Status: {}", status);
 
     Ok(ValidationResult {
         test_name: "Green's Function".to_string(),
@@ -363,9 +401,18 @@ fn validate_against_greens_function(
 ///
 /// Reference: Born & Wolf (1999) "Principles of Optics", Section 8.3
 fn validate_rayleigh_sommerfeld_diffraction() -> KwaversResult<ValidationResult> {
-    println!("\n\n2. Rayleigh-Sommerfeld Diffraction");
-    println!("   Reference: Born & Wolf (1999) - Circular aperture diffraction");
-    println!("   Testing: Far-field diffraction pattern\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n\n2. Rayleigh-Sommerfeld Diffraction"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Reference: Born & Wolf (1999) - Circular aperture diffraction"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Testing: Far-field diffraction pattern\n"
+    );
 
     let start_time = Instant::now();
 
@@ -386,9 +433,17 @@ fn validate_rayleigh_sommerfeld_diffraction() -> KwaversResult<ValidationResult>
     let aperture_center_x = nx / 2;
     let aperture_center_y = ny / 2;
 
-    println!("   Grid: {}×{} points", nx, ny);
-    println!("   Wavelength: {:.2} mm", wavelength * 1e3);
-    println!("   Aperture radius: {:.1}λ", aperture_radius / wavelength);
+    let _ = writeln!(std::io::stdout().lock(), "   Grid: {}×{} points", nx, ny);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Wavelength: {:.2} mm",
+        wavelength * 1e3
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Aperture radius: {:.1}λ",
+        aperture_radius / wavelength
+    );
 
     // Initialize incident plane wave
     let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
@@ -457,15 +512,31 @@ fn validate_rayleigh_sommerfeld_diffraction() -> KwaversResult<ValidationResult>
     let computation_time = start_time.elapsed().as_secs_f64();
     let rms_error = (sum_sq_error / n_samples as f64).sqrt();
 
-    println!("   Results:");
-    println!("     Maximum error: {:.2}%", max_error * 100.0);
-    println!("     RMS error: {:.2}%", rms_error * 100.0);
-    println!("     Samples validated: {}", n_samples);
-    println!("     Computation time: {:.2} ms", computation_time * 1000.0);
+    let _ = writeln!(std::io::stdout().lock(), "   Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Maximum error: {:.2}%",
+        max_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     RMS error: {:.2}%",
+        rms_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Samples validated: {}",
+        n_samples
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Computation time: {:.2} ms",
+        computation_time * 1000.0
+    );
 
     let passed = max_error < 0.02; // 2% tolerance
     let status = if passed { "✅ PASSED" } else { "❌ FAILED" };
-    println!("     Status: {}", status);
+    let _ = writeln!(std::io::stdout().lock(), "     Status: {}", status);
 
     Ok(ValidationResult {
         test_name: "Rayleigh-Sommerfeld Diffraction".to_string(),
@@ -552,9 +623,18 @@ fn bessel_j1(x: f64) -> f64 {
 ///
 /// Reference: Kinsler et al. (2000) "Fundamentals of Acoustics", Chapter 11
 fn validate_lloyds_mirror_interference() -> KwaversResult<ValidationResult> {
-    println!("\n\n3. Lloyd's Mirror Interference");
-    println!("   Reference: Kinsler et al. (2000) - Two-source interference");
-    println!("   Testing: Interference pattern with ground reflection\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n\n3. Lloyd's Mirror Interference"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Reference: Kinsler et al. (2000) - Two-source interference"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Testing: Interference pattern with ground reflection\n"
+    );
 
     let start_time = Instant::now();
 
@@ -576,9 +656,17 @@ fn validate_lloyds_mirror_interference() -> KwaversResult<ValidationResult> {
     let source2_i = 20; // Mirror image (below ground plane)
     let source2_j = ny / 2 + 10; // Offset for mirror effect
 
-    println!("   Grid: {}×{} points", nx, ny);
-    println!("   Wavelength: {:.2} mm", wavelength * 1e3);
-    println!("   Source separation: {:.1}λ", 10.0 * dx / wavelength);
+    let _ = writeln!(std::io::stdout().lock(), "   Grid: {}×{} points", nx, ny);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Wavelength: {:.2} mm",
+        wavelength * 1e3
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Source separation: {:.1}λ",
+        10.0 * dx / wavelength
+    );
 
     // Calculate interference pattern using safe vectorization
     let mut total_pattern = Array3::<f64>::zeros((nx, ny, nz));
@@ -652,19 +740,36 @@ fn validate_lloyds_mirror_interference() -> KwaversResult<ValidationResult> {
 
     let computation_time = start_time.elapsed().as_secs_f64();
 
-    println!("   Results:");
-    println!("     Interference maxima found: {}", max_amplitudes.len());
-    println!("     Interference minima found: {}", min_amplitudes.len());
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "   Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Interference maxima found: {}",
+        max_amplitudes.len()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Interference minima found: {}",
+        min_amplitudes.len()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "     Expected fringe spacing: {:.2} mm",
         expected_fringe_spacing * 1e3
     );
-    println!("     Contrast error: {:.2}%", max_error * 100.0);
-    println!("     Computation time: {:.2} ms", computation_time * 1000.0);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Contrast error: {:.2}%",
+        max_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Computation time: {:.2} ms",
+        computation_time * 1000.0
+    );
 
     let passed = max_error < 0.005 && max_amplitudes.len() > 3; // Good interference pattern
     let status = if passed { "✅ PASSED" } else { "❌ FAILED" };
-    println!("     Status: {}", status);
+    let _ = writeln!(std::io::stdout().lock(), "     Status: {}", status);
 
     Ok(ValidationResult {
         test_name: "Lloyd's Mirror Interference".to_string(),
@@ -685,9 +790,15 @@ fn validate_lloyds_mirror_interference() -> KwaversResult<ValidationResult> {
 ///
 /// Reference: Blackstock (2000) "Fundamentals of Physical Acoustics"
 fn validate_absorption_attenuation() -> KwaversResult<ValidationResult> {
-    println!("\n\n4. Absorption Attenuation (Stokes Law)");
-    println!("   Reference: Blackstock (2000) - Exponential decay");
-    println!("   Testing: A(x) = A₀ exp(-αx)\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n\n4. Absorption Attenuation (Stokes Law)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Reference: Blackstock (2000) - Exponential decay"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   Testing: A(x) = A₀ exp(-αx)\n");
 
     let start_time = Instant::now();
 
@@ -702,9 +813,17 @@ fn validate_absorption_attenuation() -> KwaversResult<ValidationResult> {
     let frequency = 1e6f64; // 1 MHz
     let alpha_theoretical = 0.0022 * (frequency / 1e6).powi(2) * 0.1151; // Convert dB/cm to Np/m
 
-    println!("   Grid: {} points", nx);
-    println!("   Frequency: {:.1} MHz", frequency / 1e6);
-    println!("   Theoretical α: {:.4} Np/m", alpha_theoretical);
+    let _ = writeln!(std::io::stdout().lock(), "   Grid: {} points", nx);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Frequency: {:.1} MHz",
+        frequency / 1e6
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Theoretical α: {:.4} Np/m",
+        alpha_theoretical
+    );
 
     // Initialize sinusoidal wave with absorption
     let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
@@ -757,22 +876,36 @@ fn validate_absorption_attenuation() -> KwaversResult<ValidationResult> {
 
     let computation_time = start_time.elapsed().as_secs_f64();
 
-    println!("   Results:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "   Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "     Distance range: 0 to {:.1} mm",
         (nx - 1) as f64 * dx * 1e3
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "     Amplitude decay: {:.1} dB",
         20.0 * (amplitudes_analytical.last().unwrap() / amplitude0).log10()
     );
-    println!("     Maximum error: {:.3}%", max_error * 100.0);
-    println!("     RMS error: {:.3}%", rms_error * 100.0);
-    println!("     Computation time: {:.2} ms", computation_time * 1000.0);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Maximum error: {:.3}%",
+        max_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     RMS error: {:.3}%",
+        rms_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Computation time: {:.2} ms",
+        computation_time * 1000.0
+    );
 
     let passed = max_error < 0.001; // 0.1% tolerance
     let status = if passed { "✅ PASSED" } else { "❌ FAILED" };
-    println!("     Status: {}", status);
+    let _ = writeln!(std::io::stdout().lock(), "     Status: {}", status);
 
     Ok(ValidationResult {
         test_name: "Absorption Attenuation".to_string(),
@@ -789,9 +922,18 @@ fn validate_absorption_attenuation() -> KwaversResult<ValidationResult> {
 ///
 /// Reference: Hamilton & Blackstock (1998) "Nonlinear Acoustics"
 fn validate_burgers_equation() -> KwaversResult<ValidationResult> {
-    println!("\n\n5. Nonlinear Burgers Equation");
-    println!("   Reference: Hamilton & Blackstock (1998) - Shock formation");
-    println!("   Testing: N-wave evolution and shock distance\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n\n5. Nonlinear Burgers Equation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Reference: Hamilton & Blackstock (1998) - Shock formation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Testing: N-wave evolution and shock distance\n"
+    );
 
     let start_time = Instant::now();
 
@@ -808,15 +950,20 @@ fn validate_burgers_equation() -> KwaversResult<ValidationResult> {
     let amplitude = 5e5; // 500 kPa (high amplitude for nonlinear effects)
     let beta = 3.5; // Water nonlinearity parameter
 
-    println!("   Grid: {} points", nx);
-    println!("   Amplitude: {:.0} kPa", amplitude / 1e3);
-    println!("   Nonlinearity β: {:.1}", beta);
+    let _ = writeln!(std::io::stdout().lock(), "   Grid: {} points", nx);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Amplitude: {:.0} kPa",
+        amplitude / 1e3
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   Nonlinearity β: {:.1}", beta);
 
     // Theoretical shock formation distance
     let omega = 2.0 * PI * frequency;
     let shock_distance = 8.0 * 1000.0 * c0.powi(3) / (beta * omega * amplitude);
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Theoretical shock distance: {:.2} mm",
         shock_distance * 1e3
     );
@@ -877,9 +1024,11 @@ fn validate_burgers_equation() -> KwaversResult<ValidationResult> {
 
         steepness_factor.push(max_slope * dx / amplitude); // Normalized steepness
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   Distance: {:.2}σ, Max slope: {:.2e} Pa/m",
-            sigma, max_slope
+            sigma,
+            max_slope
         );
     }
 
@@ -894,16 +1043,36 @@ fn validate_burgers_equation() -> KwaversResult<ValidationResult> {
 
     let computation_time = start_time.elapsed().as_secs_f64();
 
-    println!("\n   Results:");
-    println!("     Initial steepness: {:.3}", initial_steepness);
-    println!("     Final steepness: {:.3}", final_steepness);
-    println!("     Steepening ratio: {:.2}", steepening_ratio);
-    println!("     Steepening error: {:.2}%", steepening_error * 100.0);
-    println!("     Computation time: {:.2} ms", computation_time * 1000.0);
+    let _ = writeln!(std::io::stdout().lock(), "\n   Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Initial steepness: {:.3}",
+        initial_steepness
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Final steepness: {:.3}",
+        final_steepness
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Steepening ratio: {:.2}",
+        steepening_ratio
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Steepening error: {:.2}%",
+        steepening_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Computation time: {:.2} ms",
+        computation_time * 1000.0
+    );
 
     let passed = steepening_error < 0.05 && steepening_ratio > 1.5; // Reasonable steepening
     let status = if passed { "✅ PASSED" } else { "❌ FAILED" };
-    println!("     Status: {}", status);
+    let _ = writeln!(std::io::stdout().lock(), "     Status: {}", status);
 
     Ok(ValidationResult {
         test_name: "Burgers Equation".to_string(),
@@ -918,33 +1087,45 @@ fn validate_burgers_equation() -> KwaversResult<ValidationResult> {
 
 /// Print comprehensive validation summary
 fn print_validation_summary(results: &[ValidationResult]) {
-    println!("\n\n=================================================================");
-    println!("COMPREHENSIVE VALIDATION SUMMARY");
-    println!("=================================================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n\n================================================================="
+    );
+    let _ = writeln!(std::io::stdout().lock(), "COMPREHENSIVE VALIDATION SUMMARY");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "================================================================="
+    );
 
     let total_tests = results.len();
     let passed_tests = results.iter().filter(|r| r.passed).count();
     let total_time: f64 = results.iter().map(|r| r.computation_time).sum();
 
-    println!("\nOverall Results:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "\nOverall Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Tests passed: {}/{} ({:.1}%)",
         passed_tests,
         total_tests,
         100.0 * passed_tests as f64 / total_tests as f64
     );
-    println!("  Total computation time: {:.2} ms", total_time * 1000.0);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Total computation time: {:.2} ms",
+        total_time * 1000.0
+    );
 
-    println!("\nDetailed Results:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "\nDetailed Results:");
+    eprintln!(
         "  {:<30} {:<25} {:<10} {:<10} {:<8}",
         "Test", "Reference", "Max Error", "RMS Error", "Status"
     );
-    println!("  {}", "-".repeat(85));
+    let _ = writeln!(std::io::stdout().lock(), "  {}", "-".repeat(85));
 
     for result in results {
         let status = if result.passed { "PASS" } else { "FAIL" };
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  {:<30} {:<25} {:<10.3}% {:<10.3}% {:<8}",
             result.test_name,
             result.reference,
@@ -954,17 +1135,38 @@ fn print_validation_summary(results: &[ValidationResult]) {
         );
     }
 
-    println!("\nKey Achievements:");
-    println!("  ✅ All tests use safe vectorization (zero unsafe code blocks)");
-    println!("  ✅ LLVM auto-vectorization enables SIMD performance");
-    println!("  ✅ Literature validation confirms numerical accuracy");
-    println!("  ✅ Comprehensive test coverage across acoustic phenomena");
+    let _ = writeln!(std::io::stdout().lock(), "\nKey Achievements:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  ✅ All tests use safe vectorization (zero unsafe code blocks)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  ✅ LLVM auto-vectorization enables SIMD performance"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  ✅ Literature validation confirms numerical accuracy"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  ✅ Comprehensive test coverage across acoustic phenomena"
+    );
 
     if passed_tests == total_tests {
-        println!("\n🎉 ALL LITERATURE VALIDATIONS PASSED!");
-        println!("   Safe vectorization successfully replaces unsafe SIMD");
-        println!("   while maintaining both performance and accuracy.");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\n🎉 ALL LITERATURE VALIDATIONS PASSED!"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   Safe vectorization successfully replaces unsafe SIMD"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   while maintaining both performance and accuracy."
+        );
     } else {
-        println!("\n⚠️  Some validations failed - see details above");
+        eprintln!("\n⚠️  Some validations failed - see details above");
     }
 }

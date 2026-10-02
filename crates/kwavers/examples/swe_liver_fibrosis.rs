@@ -38,12 +38,19 @@ use kwavers_physics::acoustics::imaging::modalities::elastography::AcousticRadia
 use kwavers_solver::forward::elastic::swe::{ElasticWaveConfig, ElasticWaveSolver};
 use kwavers_solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
 use leto::Array3;
+use std::io::Write;
 use std::time::Instant;
 
 /// Clinical liver fibrosis assessment using SWE
 fn main() -> KwaversResult<()> {
-    println!("🫀 Shear Wave Elastography: Liver Fibrosis Assessment");
-    println!("==================================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🫀 Shear Wave Elastography: Liver Fibrosis Assessment"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=================================================="
+    );
 
     let start_time = Instant::now();
 
@@ -52,16 +59,21 @@ fn main() -> KwaversResult<()> {
     let medium = create_liver_phantom(&grid)?;
     let swe_config = create_swe_parameters()?;
 
-    println!("📊 Simulation Setup:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "📊 Simulation Setup:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Grid: {} × {} × {} ({} mm³)",
         grid.nx,
         grid.ny,
         grid.nz,
         (grid.nx as f64 * grid.dx * 1000.0) as usize
     );
-    println!("   Tissue: Heterogeneous liver phantom");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Tissue: Heterogeneous liver phantom"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   ARFI Push: {:.1} MHz, {:.0} μs, {:.0} W/cm²",
         swe_config.frequency / 1e6,
         swe_config.duration * 1e6,
@@ -69,7 +81,7 @@ fn main() -> KwaversResult<()> {
     );
 
     // Generate shear wave using ARFI
-    println!("\n🔊 Generating Shear Wave...");
+    let _ = writeln!(std::io::stdout().lock(), "\n🔊 Generating Shear Wave...");
     let push_location = [0.025, 0.025, 0.015]; // 25mm lateral, 15mm depth
     let mut arfi = AcousticRadiationForce::new(&grid, &medium)?;
     arfi.set_parameters(PushPulseParameters::new(
@@ -91,7 +103,8 @@ fn main() -> KwaversResult<()> {
         .uz
         .clone();
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   ✓ ARFI push applied at [{:.1}, {:.1}, {:.1}] mm",
         push_location[0] * 1000.0,
         push_location[1] * 1000.0,
@@ -99,7 +112,10 @@ fn main() -> KwaversResult<()> {
     );
 
     // Track shear wave propagation (ultrafast imaging simulation)
-    println!("\n📹 Tracking Shear Wave Propagation...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n📹 Tracking Shear Wave Propagation..."
+    );
     let tracked_displacement = track_shear_wave_propagation(
         &displacement_field,
         &grid,
@@ -108,9 +124,11 @@ fn main() -> KwaversResult<()> {
         swe_config.frame_rate,
     )?;
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   ✓ Tracked {} frames at {:.0} fps",
-        swe_config.tracking_frames, swe_config.frame_rate
+        swe_config.tracking_frames,
+        swe_config.frame_rate
     );
     let min_disp = tracked_displacement
         .magnitude()
@@ -120,7 +138,8 @@ fn main() -> KwaversResult<()> {
         .magnitude()
         .iter()
         .fold(f64::NEG_INFINITY, |a: f64, &b| a.max(b));
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   ✓ Displacement range: {:.3} - {:.3} μm",
         min_disp * 1e6,
         max_disp * 1e6
@@ -133,23 +152,28 @@ fn main() -> KwaversResult<()> {
     let initial_max = displacement_field
         .iter()
         .fold(f64::NEG_INFINITY, |a: f64, &b| a.max(b));
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   ✓ Initial displacement range: {:.3} - {:.3} μm",
         initial_min * 1e6,
         initial_max * 1e6
     );
 
     // Reconstruct elasticity map
-    println!("\n🧮 Reconstructing Elasticity Map...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🧮 Reconstructing Elasticity Map..."
+    );
     let config = ShearWaveInversionConfig::new(InversionMethod::TimeOfFlight);
     let inversion = ShearWaveInversion::new(config);
     let elasticity_map = inversion.reconstruct(&tracked_displacement, &grid)?;
 
     // Analyze results
-    println!("\n📈 Clinical Analysis:");
+    let _ = writeln!(std::io::stdout().lock(), "\n📈 Clinical Analysis:");
     let stiffness_stats = analyze_stiffness_distribution(&elasticity_map)?;
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Liver Stiffness: {:.1} ± {:.1} kPa (IQR: {:.1} - {:.1} kPa)",
         stiffness_stats.mean / 1000.0,
         stiffness_stats.std / 1000.0,
@@ -159,25 +183,37 @@ fn main() -> KwaversResult<()> {
 
     // Clinical interpretation
     let fibrosis_stage = interpret_fibrosis_stage(stiffness_stats.mean);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Fibrosis Stage: {} ({} kPa)",
         fibrosis_stage.name,
         fibrosis_stage.threshold / 1000.0
     );
-    println!("   Confidence: {:.1}%", fibrosis_stage.confidence * 100.0);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Confidence: {:.1}%",
+        fibrosis_stage.confidence * 100.0
+    );
 
     // Validate against phantom studies
-    println!("\n✅ Validation:");
+    let _ = writeln!(std::io::stdout().lock(), "\n✅ Validation:");
     validate_against_phantom(&elasticity_map, &stiffness_stats)?;
 
     let elapsed = start_time.elapsed();
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "\n⏱️  Total simulation time: {:.2} seconds",
         elapsed.as_secs_f64()
     );
 
-    println!("\n🎉 SWE liver assessment completed successfully!");
-    println!("   Results demonstrate clinical-grade tissue characterization");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🎉 SWE liver assessment completed successfully!"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Results demonstrate clinical-grade tissue characterization"
+    );
 
     Ok(())
 }
@@ -310,14 +346,15 @@ fn validate_against_phantom(
     // Check if F1 region is within expected range
     let f1_region_stiffness = extract_region_stiffness(elasticity_map, 0.020, 0.030, 0.010, 0.020)?;
     if !expected_f1.contains(&f1_region_stiffness) {
-        println!(
+        eprintln!(
             "   ⚠️  F1 region stiffness {:.1} kPa outside expected range {:.1}-{:.1} kPa",
             f1_region_stiffness / 1000.0,
             expected_f1.start / 1000.0,
             expected_f1.end / 1000.0
         );
     } else {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   ✓ F1 region validated: {:.1} kPa",
             f1_region_stiffness / 1000.0
         );
@@ -326,14 +363,15 @@ fn validate_against_phantom(
     // Check if F3 region is within expected range
     let f3_region_stiffness = extract_region_stiffness(elasticity_map, 0.030, 0.040, 0.010, 0.020)?;
     if !expected_f3.contains(&f3_region_stiffness) {
-        println!(
+        eprintln!(
             "   ⚠️  F3 region stiffness {:.1} kPa outside expected range {:.1}-{:.1} kPa",
             f3_region_stiffness / 1000.0,
             expected_f3.start / 1000.0,
             expected_f3.end / 1000.0
         );
     } else {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   ✓ F3 region validated: {:.1} kPa",
             f3_region_stiffness / 1000.0
         );
@@ -343,13 +381,14 @@ fn validate_against_phantom(
     let target_accuracy = 0.10; // 10% target accuracy
     let measured_error = stats.std / stats.mean;
     if measured_error > target_accuracy {
-        println!(
+        eprintln!(
             "   ⚠️  Measurement variability {:.1}% exceeds target {:.1}%",
             measured_error * 100.0,
             target_accuracy * 100.0
         );
     } else {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   ✓ Measurement precision: {:.1}% variability",
             measured_error * 100.0
         );

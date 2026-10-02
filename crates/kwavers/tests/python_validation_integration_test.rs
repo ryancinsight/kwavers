@@ -236,7 +236,7 @@ fn test_module_imports() {
 #[test]
 fn test_grid_validation_suite() {
     if !should_run_python_validation() {
-        println!(
+        eprintln!(
             "Skipping grid validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
         );
         return;
@@ -246,8 +246,8 @@ fn test_grid_validation_suite() {
     let passed = results.iter().filter(|r| r.passed).count();
     let total = results.len();
 
-    println!("Grid Validation: {}/{} passed", passed, total);
-    println!(
+    eprintln!("Grid Validation: {}/{} passed", passed, total);
+    eprintln!(
         "Max relative error: {:.3e}",
         results.iter().map(|r| r.relative_error).fold(0.0, f64::max)
     );
@@ -275,7 +275,7 @@ fn test_grid_validation_suite() {
 #[test]
 fn test_signal_validation_suite() {
     if !should_run_python_validation() {
-        println!(
+        eprintln!(
             "Skipping signal validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
         );
         return;
@@ -285,12 +285,12 @@ fn test_signal_validation_suite() {
     let passed = results.iter().filter(|r| r.passed).count();
     let total = results.len();
 
-    println!("Signal Validation: {}/{} passed", passed, total);
+    eprintln!("Signal Validation: {}/{} passed", passed, total);
 
     assert!(passed > 0, "Signal validation should run");
 
     let max_error = results.iter().map(|r| r.relative_error).fold(0.0, f64::max);
-    println!("Signal max relative error: {:.3e}", max_error);
+    eprintln!("Signal max relative error: {:.3e}", max_error);
 
     // Signals should match within tolerance
     assert!(
@@ -307,7 +307,7 @@ fn test_signal_validation_suite() {
 #[test]
 fn test_source_validation_suite() {
     if !should_run_python_validation() {
-        println!(
+        eprintln!(
             "Skipping source validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
         );
         return;
@@ -317,7 +317,7 @@ fn test_source_validation_suite() {
     let passed = results.iter().filter(|r| r.passed).count();
     let total = results.len();
 
-    println!("Source Validation: {}/{} passed", passed, total);
+    eprintln!("Source Validation: {}/{} passed", passed, total);
 
     // Should have tests for point, line, plane sources
     assert!(
@@ -339,7 +339,7 @@ fn test_source_validation_suite() {
 #[test]
 fn test_sensor_validation_suite() {
     if !should_run_python_validation() {
-        println!(
+        eprintln!(
             "Skipping sensor validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
         );
         return;
@@ -349,7 +349,7 @@ fn test_sensor_validation_suite() {
     let passed = results.iter().filter(|r| r.passed).count();
     let total = results.len();
 
-    println!("Sensor Validation: {}/{} passed", passed, total);
+    eprintln!("Sensor Validation: {}/{} passed", passed, total);
 
     assert!(
         total >= 3,
@@ -368,7 +368,7 @@ fn test_sensor_validation_suite() {
 #[test]
 fn test_solver_validation_suite() {
     if !should_run_python_validation() {
-        println!(
+        eprintln!(
             "Skipping solver validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
         );
         return;
@@ -378,14 +378,14 @@ fn test_solver_validation_suite() {
     let passed = results.iter().filter(|r| r.passed).count();
     let total = results.len();
 
-    println!("Solver Validation: {}/{} passed", passed, total);
+    eprintln!("Solver Validation: {}/{} passed", passed, total);
 
     // Solvers should have some tests run
     assert!(total > 0, "Solver validation should run tests");
 
     // Check error bounds
     let max_error = results.iter().map(|r| r.relative_error).fold(0.0, f64::max);
-    println!("Solver max relative error: {:.3e}", max_error);
+    eprintln!("Solver max relative error: {:.3e}", max_error);
 
     assert!(
         max_error < thresholds::SOLVER_L2_TOLERANCE,
@@ -401,14 +401,14 @@ fn test_solver_validation_suite() {
 #[test]
 fn test_full_validation_suite() {
     if !should_run_python_validation() {
-        println!(
+        eprintln!(
             "Skipping full validation suite (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)"
         );
         return;
     }
-    println!("\\n========================================");
-    println!("Running Full Validation Suite");
-    println!("========================================\\n");
+    eprintln!("\\n========================================");
+    eprintln!("Running Full Validation Suite");
+    eprintln!("========================================\\n");
 
     let mut report = ComprehensiveValidationReport::new();
 
@@ -420,38 +420,38 @@ fn test_full_validation_suite() {
     report.solver_results = generate_solver_validation_report();
 
     // Print summary
-    println!("\\n=== Validation Summary ===");
-    println!(
+    eprintln!("\\n=== Validation Summary ===");
+    eprintln!(
         "Grid: {}/{}",
         report.grid_results.iter().filter(|r| r.passed).count(),
         report.grid_results.len()
     );
-    println!(
+    eprintln!(
         "Signal: {}/{}",
         report.signal_results.iter().filter(|r| r.passed).count(),
         report.signal_results.len()
     );
-    println!(
+    eprintln!(
         "Source: {}/{}",
         report.source_results.iter().filter(|r| r.passed).count(),
         report.source_results.len()
     );
-    println!(
+    eprintln!(
         "Sensor: {}/{}",
         report.sensor_results.iter().filter(|r| r.passed).count(),
         report.sensor_results.len()
     );
-    println!(
+    eprintln!(
         "Solver: {}/{}",
         report.solver_results.iter().filter(|r| r.passed).count(),
         report.solver_results.len()
     );
-    println!(
+    eprintln!(
         "\\nTotal: {}/{}",
         report.passed_count(),
         report.total_tests()
     );
-    println!("Max Error: {:.3e}", report.max_relative_error());
+    eprintln!("Max Error: {:.3e}", report.max_relative_error());
 
     // Save report if running in CI
     if should_run_python_validation() {
@@ -462,7 +462,7 @@ fn test_full_validation_suite() {
             if let Err(e) = std::fs::write(report_path, markdown) {
                 eprintln!("Failed to write report: {}", e);
             } else {
-                println!("Report saved to: {}", report_path);
+                eprintln!("Report saved to: {}", report_path);
             }
         }
     }
@@ -500,9 +500,9 @@ fn test_full_validation_suite() {
         sensor_passed, sensor_total
     );
 
-    println!("\\n========================================");
-    println!("Validation Suite Complete");
-    println!("========================================\\n");
+    eprintln!("\\n========================================");
+    eprintln!("Validation Suite Complete");
+    eprintln!("========================================\\n");
 }
 
 /// Python interop validation (requires k-wave-python)
@@ -510,11 +510,11 @@ fn test_full_validation_suite() {
 #[ignore = "Requires a Python environment with k-wave-python installed (KWAVERS_RUN_PYTHON=1); blocked on the reproducible k-Wave harness tracked by KW-GAP-2026-08-20-KWAVEPARITY. Re-enable trigger: the k-Wave interop harness is committed and runnable from a clean clone"]
 fn test_python_interop_validation() {
     if !should_run_python_validation() {
-        println!("Skipping Python interop validation (set KWAVERS_RUN_PYTHON=1 to enable)");
+        eprintln!("Skipping Python interop validation (set KWAVERS_RUN_PYTHON=1 to enable)");
         return;
     }
 
-    println!("Running Python interop validation...");
+    eprintln!("Running Python interop validation...");
     // Python runtime test would go here
 }
 
@@ -533,7 +533,7 @@ fn test_validation_performance() {
 
     let elapsed = start.elapsed();
 
-    println!("Validation suite completed in {:?}", elapsed);
+    eprintln!("Validation suite completed in {:?}", elapsed);
 
     // Should complete in reasonable time (< 30 seconds for basic validation)
     assert!(
@@ -574,11 +574,11 @@ fn test_dimensional_consistency() {
     let ppw = wavelength / grid.dx;
     assert!(ppw >= 2.0); // Nyquist criterion
 
-    println!("Dimensional consistency verified:");
-    println!(" Domain size: {:.3e} m", domain_size);
-    println!(" Wavelength: {:.3e} m", wavelength);
-    println!(" Period: {:.3e} s", period);
-    println!(" PPW: {:.1}", ppw);
+    eprintln!("Dimensional consistency verified:");
+    eprintln!(" Domain size: {:.3e} m", domain_size);
+    eprintln!(" Wavelength: {:.3e} m", wavelength);
+    eprintln!(" Period: {:.3e} s", period);
+    eprintln!(" PPW: {:.1}", ppw);
 }
 
 /// Regression test: Known k-wave-python configurations
@@ -603,7 +603,7 @@ fn test_known_kwave_configurations() {
     let grid_2d = Grid::new(128, 128, 1, 0.05e-3, 0.05e-3, 0.05e-3).expect("2D grid");
     assert_eq!(grid_2d.nz, 1);
 
-    println!("All known configurations validated");
+    eprintln!("All known configurations validated");
 }
 
 /// Documentation test: Mathematical specifications
@@ -632,11 +632,11 @@ fn test_mathematical_specifications() {
     let expected_dt = cfl * dx / c;
     assert!((dt - expected_dt).abs() < 1e-15);
 
-    println!("Mathematical specifications verified:");
-    println!(" Domain size L = {:.3e} m", l);
-    println!(" Nyquist k_max = {:.3e} rad/m", k_max);
-    println!(" Points/wavelength = {:.1}", ppw);
-    println!(" CFL dt = {:.3e} s", dt);
+    eprintln!("Mathematical specifications verified:");
+    eprintln!(" Domain size L = {:.3e} m", l);
+    eprintln!(" Nyquist k_max = {:.3e} rad/m", k_max);
+    eprintln!(" Points/wavelength = {:.1}", ppw);
+    eprintln!(" CFL dt = {:.3e} s", dt);
 }
 
 /// CI/CD hook for generating validation reports
@@ -645,7 +645,7 @@ fn test_mathematical_specifications() {
 #[test]
 fn test_generate_ci_report() {
     if !should_run_python_validation() {
-        println!("Skipping CI report (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
+        eprintln!("Skipping CI report (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
         return;
     }
     let mut report = ComprehensiveValidationReport::new();
@@ -657,37 +657,37 @@ fn test_generate_ci_report() {
     report.solver_results = generate_solver_validation_report();
 
     // Output in JUnit-like format for CI parsing
-    println!("<testsuites>");
-    println!(
+    eprintln!("<testsuites>");
+    eprintln!(
         " <testsuite name=\"grid_validation\" tests=\"{}\" failures=\"{}\">",
         report.grid_results.len(),
         report.grid_results.len() - report.grid_results.iter().filter(|r| r.passed).count()
     );
     for result in &report.grid_results {
-        println!(
+        eprintln!(
             " <testcase name=\"{}\" classname=\"grid_validation\">",
             result.test_name
         );
         if !result.passed {
-            println!(" <failure message=\"{}\">", result.diagnostics);
-            println!(" L2 Error: {:.3e}", result.l2_error);
-            println!(" Relative Error: {:.3e}", result.relative_error);
-            println!(" </failure>");
+            eprintln!(" <failure message=\"{}\">", result.diagnostics);
+            eprintln!(" L2 Error: {:.3e}", result.l2_error);
+            eprintln!(" Relative Error: {:.3e}", result.relative_error);
+            eprintln!(" </failure>");
         }
-        println!(" </testcase>");
+        eprintln!(" </testcase>");
     }
-    println!(" </testsuite>");
-    println!("</testsuites>");
+    eprintln!(" </testsuite>");
+    eprintln!("</testsuites>");
 
     // Overall status
     let total_passed = report.passed_count();
     let total_tests = report.total_tests();
 
-    println!("\\nVALIDATION_SUMMARY:");
-    println!(" total: {}", total_tests);
-    println!(" passed: {}", total_passed);
-    println!(" failed: {}", total_tests - total_passed);
-    println!(
+    eprintln!("\\nVALIDATION_SUMMARY:");
+    eprintln!(" total: {}", total_tests);
+    eprintln!(" passed: {}", total_passed);
+    eprintln!(" failed: {}", total_tests - total_passed);
+    eprintln!(
         " success_rate: {:.2}%",
         100.0 * total_passed as f64 / total_tests as f64
     );

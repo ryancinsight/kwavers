@@ -13,19 +13,33 @@ use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_simulation::modalities::photoacoustic::{
     PhotoacousticParameters, PhotoacousticSimulator,
 };
+use std::io::Write;
 use std::time::Instant;
 
 fn main() -> KwaversResult<()> {
-    println!("🖼️  Photoacoustic Imaging Simulation");
-    println!("==================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🖼️  Photoacoustic Imaging Simulation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=================================="
+    );
 
     let start_time = Instant::now();
 
     // 1. Setup computational domain
     let grid = create_simulation_grid()?;
-    println!("📊 Computational Grid:");
-    println!("   Dimensions: {} × {} × {}", grid.nx, grid.ny, grid.nz);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "📊 Computational Grid:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Dimensions: {} × {} × {}",
+        grid.nx,
+        grid.ny,
+        grid.nz
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Physical size: {:.1} × {:.1} × {:.1} mm",
         grid.nx as f64 * grid.dx * 1000.0,
         grid.ny as f64 * grid.dy * 1000.0,
@@ -34,66 +48,98 @@ fn main() -> KwaversResult<()> {
 
     // 2. Create tissue medium
     let medium = create_tissue_medium(&grid)?;
-    println!("   Tissue: Heterogeneous phantom with blood vessels and tumor");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Tissue: Heterogeneous phantom with blood vessels and tumor"
+    );
 
     // 3. Configure photoacoustic simulation
     let parameters = create_photoacoustic_parameters()?;
-    println!("\n🔬 Optical Parameters:");
-    println!("   Wavelengths: {} nm", parameters.wavelengths.len());
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "\n🔬 Optical Parameters:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Wavelengths: {} nm",
+        parameters.wavelengths.len()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Pulse duration: {:.0} ns",
         parameters.pulse_duration * 1e9
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Laser fluence: {:.0} mJ/cm²",
         parameters.laser_fluence * 100.0
     );
 
     // 4. Create photoacoustic simulator
     let mut simulator = PhotoacousticSimulator::new(grid, parameters, &medium)?;
-    println!("   Simulator initialized with optical property maps");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Simulator initialized with optical property maps"
+    );
 
     // 5. Compute optical fluence distribution
-    println!("\n💡 Computing Optical Fluence...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n💡 Computing Optical Fluence..."
+    );
     let fluence = simulator.compute_fluence()?;
     let max_fluence = fluence.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
     let min_fluence = fluence.iter().cloned().fold(f64::INFINITY, f64::min);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Fluence range: {:.1} - {:.1} mJ/cm²",
         min_fluence * 100.0,
         max_fluence * 100.0
     );
 
     // 6. Compute initial pressure distribution
-    println!("\n🗣️  Computing Photoacoustic Initial Pressure...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🗣️  Computing Photoacoustic Initial Pressure..."
+    );
     let initial_pressure = simulator.compute_initial_pressure(&fluence)?;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Maximum pressure: {:.1} Pa",
         initial_pressure.max_pressure
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Dynamic range: {:.1} dB",
         20.0 * (initial_pressure.max_pressure / 1e-6).log10()
     );
 
     // 7. Run photoacoustic simulation
-    println!("\n🌊 Running Photoacoustic Wave Propagation...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🌊 Running Photoacoustic Wave Propagation..."
+    );
     let result = simulator.simulate(&initial_pressure)?;
-    println!("   Simulation completed successfully");
-    println!("   Signal-to-noise ratio: {:.1} dB", result.snr);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Simulation completed successfully"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Signal-to-noise ratio: {:.1} dB",
+        result.snr
+    );
 
     // 8. Analyze results
-    println!("\n📈 Analysis Results:");
+    let _ = writeln!(std::io::stdout().lock(), "\n📈 Analysis Results:");
     analyze_simulation_results(&result)?;
 
     // 9. Validation against analytical solution
-    println!("\n✅ Validation:");
+    let _ = writeln!(std::io::stdout().lock(), "\n✅ Validation:");
     let validation_error = simulator.validate_analytical()?;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Analytical validation error: {:.3}%",
         validation_error * 100.0
     );
-    println!(
+    eprintln!(
         "   Validation: {}",
         if validation_error < 0.1 {
             "PASSED ✓"
@@ -103,18 +149,31 @@ fn main() -> KwaversResult<()> {
     );
 
     // 10. Demonstrate tissue contrast
-    println!("\n🩸 Tissue Contrast Demonstration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🩸 Tissue Contrast Demonstration:"
+    );
     demonstrate_tissue_contrast(&simulator)?;
 
     let elapsed_time = start_time.elapsed();
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "\n⏱️  Total simulation time: {:.2} seconds",
         elapsed_time.as_secs_f64()
     );
 
-    println!("\n🎉 Photoacoustic imaging simulation completed!");
-    println!("   Demonstrates molecular imaging capabilities with optical contrast");
-    println!("   and acoustic penetration depth");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🎉 Photoacoustic imaging simulation completed!"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Demonstrates molecular imaging capabilities with optical contrast"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   and acoustic penetration depth"
+    );
 
     Ok(())
 }
@@ -177,14 +236,27 @@ fn analyze_simulation_results(
     let variance = (sum_sq / count as f64) - (mean * mean);
     let std_dev = variance.sqrt();
 
-    println!("   Image statistics:");
-    println!("     Mean pressure: {:.2} Pa", mean);
-    println!("     Std deviation: {:.2} Pa", std_dev);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "   Image statistics:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Mean pressure: {:.2} Pa",
+        mean
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Std deviation: {:.2} Pa",
+        std_dev
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "     Dynamic range: {:.1} dB",
         20.0 * (max_val / max_val.max(1e-12)).log10()
     );
-    println!("     Contrast-to-noise: {:.1}", mean / std_dev.max(1e-12));
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     Contrast-to-noise: {:.1}",
+        mean / std_dev.max(1e-12)
+    );
 
     // Check for expected tissue features
     let high_contrast_pixels = reconstructed
@@ -194,7 +266,8 @@ fn analyze_simulation_results(
     let total_pixels = reconstructed.size();
     let high_contrast_ratio = high_contrast_pixels as f64 / total_pixels as f64;
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Tissue features detected: {:.1}% high-contrast regions",
         high_contrast_ratio * 100.0
     );
@@ -209,18 +282,24 @@ fn demonstrate_tissue_contrast(_simulator: &PhotoacousticSimulator) -> KwaversRe
     let tissue_props = OpticalProperties::soft_tissue(750.0)?;
     let tumor_props = OpticalProperties::tumor(750.0)?;
 
-    println!("   Optical Properties Comparison (750 nm):");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Optical Properties Comparison (750 nm):"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "     Blood:     μ_a = {:.1} cm⁻¹, μ_s = {:.1} cm⁻¹",
         blood_props.absorption_coefficient() * 100.0,
         blood_props.scattering_coefficient() * 100.0
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "     Soft tissue: μ_a = {:.1} cm⁻¹, μ_s = {:.1} cm⁻¹",
         tissue_props.absorption_coefficient() * 100.0,
         tissue_props.scattering_coefficient() * 100.0
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "     Tumor:    μ_a = {:.1} cm⁻¹, μ_s = {:.1} cm⁻¹",
         tumor_props.absorption_coefficient() * 100.0,
         tumor_props.scattering_coefficient() * 100.0
@@ -232,13 +311,15 @@ fn demonstrate_tissue_contrast(_simulator: &PhotoacousticSimulator) -> KwaversRe
     let tumor_tissue_contrast =
         tumor_props.absorption_coefficient() / tissue_props.absorption_coefficient();
 
-    println!("   Expected Contrast Ratios:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "   Expected Contrast Ratios:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "     Blood/Tissue: {:.1}x ({:.1} dB)",
         blood_tissue_contrast,
         20.0 * blood_tissue_contrast.log10()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "     Tumor/Tissue: {:.1}x ({:.1} dB)",
         tumor_tissue_contrast,
         20.0 * tumor_tissue_contrast.log10()

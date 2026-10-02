@@ -94,20 +94,20 @@ fn test_all_filters_reduce_power() -> KwaversResult<()> {
         "Adaptive filter should reduce power"
     );
 
-    println!("Power Reduction:");
-    println!(
+    eprintln!("Power Reduction:");
+    eprintln!(
         "  SVD Filter:      {:.1}%",
         (1.0 - svd_power / original_power) * 100.0
     );
-    println!(
+    eprintln!(
         "  Polynomial:      {:.1}%",
         (1.0 - poly_power / original_power) * 100.0
     );
-    println!(
+    eprintln!(
         "  IIR Filter:      {:.1}%",
         (1.0 - iir_power / original_power) * 100.0
     );
-    println!(
+    eprintln!(
         "  Adaptive Filter: {:.1}%",
         (1.0 - adaptive_power / original_power) * 100.0
     );
@@ -313,10 +313,10 @@ fn test_realistic_fus_workflow() -> KwaversResult<()> {
     let filtered_power: f64 = filtered.iter().map(|x| x * x).sum();
     let clutter_rejection = (1.0 - filtered_power / original_power) * 100.0;
 
-    println!("Realistic fUS Workflow:");
-    println!("  Dimensions: {} × {}", n_pixels, n_frames);
-    println!("  Clutter rejection: {:.1}%", clutter_rejection);
-    println!(
+    eprintln!("Realistic fUS Workflow:");
+    eprintln!("  Dimensions: {} × {}", n_pixels, n_frames);
+    eprintln!("  Clutter rejection: {:.1}%", clutter_rejection);
+    eprintln!(
         "  Power Doppler range: {:.2e} to {:.2e}",
         power_doppler.iter().cloned().fold(f64::INFINITY, f64::min),
         power_doppler

@@ -26,9 +26,13 @@ use kwavers_medium::optical_map::{OpticalPropertyMapBuilder, Region};
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_phantom::{ClinicalPhantoms, PhantomBuilder};
 use kwavers_physics::optics::OpticalPropertyMapAnalysis;
+use std::io::Write;
 
 fn main() -> Result<()> {
-    println!("=== Clinical Phantom Builder Demonstration ===\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=== Clinical Phantom Builder Demonstration ===\n"
+    );
 
     // Demo 1: Blood oxygenation phantom
     demo_blood_oxygenation()?;
@@ -48,20 +52,41 @@ fn main() -> Result<()> {
     // Demo 6: Predefined clinical phantoms
     demo_predefined_phantoms()?;
 
-    println!("\n=== Demonstration Complete ===");
-    println!("\nNext Steps:");
-    println!("1. Use these phantoms with diffusion solver (see diffusion_solver_example.rs)");
-    println!("2. Run Monte Carlo simulations (see monte_carlo_validation.rs)");
-    println!("3. Perform multi-wavelength spectroscopy (see photoacoustic_blood_oxygenation.rs)");
-    println!("4. Create custom phantoms for your specific application");
+    let _ = writeln!(std::io::stdout().lock(), "\n=== Demonstration Complete ===");
+    let _ = writeln!(std::io::stdout().lock(), "\nNext Steps:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "1. Use these phantoms with diffusion solver (see diffusion_solver_example.rs)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "2. Run Monte Carlo simulations (see monte_carlo_validation.rs)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "3. Perform multi-wavelength spectroscopy (see photoacoustic_blood_oxygenation.rs)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "4. Create custom phantoms for your specific application"
+    );
 
     Ok(())
 }
 
 fn demo_blood_oxygenation() -> Result<()> {
-    println!("Demo 1: Blood Oxygenation Phantom");
-    println!("----------------------------------");
-    println!("Purpose: Validate spectroscopic imaging and sO₂ estimation algorithms\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Demo 1: Blood Oxygenation Phantom"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "----------------------------------"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Purpose: Validate spectroscopic imaging and sO₂ estimation algorithms\n"
+    );
 
     let dims = GridDimensions::new(40, 40, 40, 0.001, 0.001, 0.001);
 
@@ -79,30 +104,62 @@ fn demo_blood_oxygenation() -> Result<()> {
         .build()?;
 
     let stats = phantom.absorption_stats();
-    println!("  Grid: {}×{}×{} voxels", dims.nx, dims.ny, dims.nz);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Grid: {}×{}×{} voxels",
+        dims.nx,
+        dims.ny,
+        dims.nz
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Spacing: {:.1}×{:.1}×{:.1} mm",
         dims.dx * 1000.0,
         dims.dy * 1000.0,
         dims.dz * 1000.0
     );
-    println!("  Volume: {:.2} cm³", phantom.volume() * 1e6);
-    println!("  Absorption coefficient:");
-    println!("    Mean: {:.2} m⁻¹", stats.mean);
-    println!("    Range: [{:.2}, {:.2}] m⁻¹", stats.min, stats.max);
-    println!("    Std dev: {:.2} m⁻¹", stats.std_dev);
-    println!("\n  Clinical relevance:");
-    println!("    - Arterial sO₂ = 98% (normal oxygenated blood)");
-    println!("    - Venous sO₂ = 65% (normal deoxygenated blood)");
-    println!("    - Tumor sO₂ = 55% (hypoxic, indicator of aggressive tumor)\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Volume: {:.2} cm³",
+        phantom.volume() * 1e6
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  Absorption coefficient:");
+    let _ = writeln!(std::io::stdout().lock(), "    Mean: {:.2} m⁻¹", stats.mean);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Range: [{:.2}, {:.2}] m⁻¹",
+        stats.min,
+        stats.max
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Std dev: {:.2} m⁻¹",
+        stats.std_dev
+    );
+    let _ = writeln!(std::io::stdout().lock(), "\n  Clinical relevance:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Arterial sO₂ = 98% (normal oxygenated blood)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Venous sO₂ = 65% (normal deoxygenated blood)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Tumor sO₂ = 55% (hypoxic, indicator of aggressive tumor)\n"
+    );
 
     Ok(())
 }
 
 fn demo_layered_tissue() -> Result<()> {
-    println!("Demo 2: Layered Tissue Phantom");
-    println!("-------------------------------");
-    println!("Purpose: Model stratified media (skin/fat/muscle)\n");
+    let _ = writeln!(std::io::stdout().lock(), "Demo 2: Layered Tissue Phantom");
+    let _ = writeln!(std::io::stdout().lock(), "-------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Purpose: Model stratified media (skin/fat/muscle)\n"
+    );
 
     let dims = GridDimensions::new(30, 30, 50, 0.001, 0.001, 0.001);
 
@@ -119,19 +176,43 @@ fn demo_layered_tissue() -> Result<()> {
         .add_muscle_layer(0.010, 0.050)
         .build();
 
-    println!("  Grid: {}×{}×{} voxels", dims.nx, dims.ny, dims.nz);
-    println!("  Layers:");
-    println!("    0-1 mm:   Epidermis (μ_a ≈ 5.0 m⁻¹)");
-    println!("    1-3 mm:   Dermis    (μ_a ≈ 1.0 m⁻¹)");
-    println!("    3-10 mm:  Fat       (μ_a ≈ 0.3 m⁻¹)");
-    println!("    10-50 mm: Muscle    (μ_a ≈ 0.8 m⁻¹)");
-    println!("\n  Use case:");
-    println!("    - Depth profiling validation");
-    println!("    - Layer boundary detection algorithms");
-    println!("    - Penetration depth studies\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Grid: {}×{}×{} voxels",
+        dims.nx,
+        dims.ny,
+        dims.nz
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  Layers:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    0-1 mm:   Epidermis (μ_a ≈ 5.0 m⁻¹)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    1-3 mm:   Dermis    (μ_a ≈ 1.0 m⁻¹)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    3-10 mm:  Fat       (μ_a ≈ 0.3 m⁻¹)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    10-50 mm: Muscle    (μ_a ≈ 0.8 m⁻¹)"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "\n  Use case:");
+    let _ = writeln!(std::io::stdout().lock(), "    - Depth profiling validation");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Layer boundary detection algorithms"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Penetration depth studies\n"
+    );
 
     // Sample properties at different depths
-    println!("  Depth sampling:");
+    let _ = writeln!(std::io::stdout().lock(), "  Depth sampling:");
     for (depth_mm, layer_name) in &[
         (0.5, "Epidermis"),
         (2.0, "Dermis"),
@@ -140,7 +221,8 @@ fn demo_layered_tissue() -> Result<()> {
     ] {
         let k = (depth_mm / 1000.0 / dims.dz) as usize;
         if let Some(props) = phantom.get_properties(dims.nx / 2, dims.ny / 2, k) {
-            println!(
+            let _ = writeln!(
+                std::io::stdout().lock(),
                 "    {} ({:.1} mm): μ_a = {:.2} m⁻¹, μ_s = {:.1} m⁻¹",
                 layer_name,
                 depth_mm,
@@ -149,15 +231,18 @@ fn demo_layered_tissue() -> Result<()> {
             );
         }
     }
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     Ok(())
 }
 
 fn demo_tumor_detection() -> Result<()> {
-    println!("Demo 3: Tumor Detection Phantom");
-    println!("--------------------------------");
-    println!("Purpose: Validate tumor detection and characterization algorithms\n");
+    let _ = writeln!(std::io::stdout().lock(), "Demo 3: Tumor Detection Phantom");
+    let _ = writeln!(std::io::stdout().lock(), "--------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Purpose: Validate tumor detection and characterization algorithms\n"
+    );
 
     let dims = GridDimensions::new(35, 35, 35, 0.001, 0.001, 0.001);
 
@@ -171,24 +256,57 @@ fn demo_tumor_detection() -> Result<()> {
         .add_tumor([0.018, 0.025, 0.025], 0.002, 0.70) // 2 mm, less hypoxic
         .build()?;
 
-    println!("  Grid: {}×{}×{} voxels", dims.nx, dims.ny, dims.nz);
-    println!("  Background: Fat tissue (simulates breast)");
-    println!("  Tumors:");
-    println!("    Tumor 1: 3 mm radius, sO₂ = 60% (moderately hypoxic)");
-    println!("    Tumor 2: 5 mm radius, sO₂ = 55% (severely hypoxic)");
-    println!("    Tumor 3: 2 mm radius, sO₂ = 70% (mildly hypoxic)");
-    println!("\n  Clinical interpretation:");
-    println!("    - Lower sO₂ correlates with tumor aggressiveness");
-    println!("    - Hypoxia (sO₂ < 60%) indicates poor prognosis");
-    println!("    - Size and oxygenation are independent prognostic factors\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Grid: {}×{}×{} voxels",
+        dims.nx,
+        dims.ny,
+        dims.nz
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Background: Fat tissue (simulates breast)"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  Tumors:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Tumor 1: 3 mm radius, sO₂ = 60% (moderately hypoxic)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Tumor 2: 5 mm radius, sO₂ = 55% (severely hypoxic)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Tumor 3: 2 mm radius, sO₂ = 70% (mildly hypoxic)"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "\n  Clinical interpretation:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Lower sO₂ correlates with tumor aggressiveness"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Hypoxia (sO₂ < 60%) indicates poor prognosis"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Size and oxygenation are independent prognostic factors\n"
+    );
 
     Ok(())
 }
 
 fn demo_vascular_network() -> Result<()> {
-    println!("Demo 4: Vascular Network Phantom");
-    println!("---------------------------------");
-    println!("Purpose: Model complex vessel geometries for angiogenesis studies\n");
+    let _ = writeln!(std::io::stdout().lock(), "Demo 4: Vascular Network Phantom");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "---------------------------------"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Purpose: Model complex vessel geometries for angiogenesis studies\n"
+    );
 
     let dims = GridDimensions::new(40, 40, 50, 0.001, 0.001, 0.001);
     let cx = dims.dx * (dims.nx as f64) / 2.0;
@@ -221,24 +339,60 @@ fn demo_vascular_network() -> Result<()> {
         )
         .build()?;
 
-    println!("  Grid: {}×{}×{} voxels", dims.nx, dims.ny, dims.nz);
-    println!("  Vessel network:");
-    println!("    - 1 main arterial trunk (2 mm diameter, sO₂ = 97%)");
-    println!("    - 2 arterial branches (1.5 mm diameter, sO₂ = 96%)");
-    println!("    - 2 venous vessels (3 mm diameter, sO₂ = 68%)");
-    println!("    - 2 capillaries (0.3 mm diameter, sO₂ = 85%)");
-    println!("\n  Applications:");
-    println!("    - Angiogenesis quantification");
-    println!("    - Perfusion mapping validation");
-    println!("    - Vessel segmentation algorithms\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Grid: {}×{}×{} voxels",
+        dims.nx,
+        dims.ny,
+        dims.nz
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  Vessel network:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - 1 main arterial trunk (2 mm diameter, sO₂ = 97%)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - 2 arterial branches (1.5 mm diameter, sO₂ = 96%)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - 2 venous vessels (3 mm diameter, sO₂ = 68%)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - 2 capillaries (0.3 mm diameter, sO₂ = 85%)"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "\n  Applications:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Angiogenesis quantification"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Perfusion mapping validation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Vessel segmentation algorithms\n"
+    );
 
     Ok(())
 }
 
 fn demo_custom_regions() -> Result<()> {
-    println!("Demo 5: Custom Region-Based Phantom");
-    println!("------------------------------------");
-    println!("Purpose: Demonstrate low-level region API for arbitrary geometries\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Demo 5: Custom Region-Based Phantom"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "------------------------------------"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Purpose: Demonstrate low-level region API for arbitrary geometries\n"
+    );
 
     let dims = GridDimensions::new(30, 30, 30, 0.001, 0.001, 0.001);
     let mut builder = OpticalPropertyMapBuilder::new(dims);
@@ -285,62 +439,119 @@ fn demo_custom_regions() -> Result<()> {
 
     let _phantom = builder.build();
 
-    println!("  Grid: {}×{}×{} voxels", dims.nx, dims.ny, dims.nz);
-    println!("  Custom regions:");
-    println!("    - Sphere (tumor)");
-    println!("    - Cylinder (blood vessel)");
-    println!("    - Box (bone inclusion)");
-    println!("    - Ellipsoid (elongated tumor)");
-    println!("    - Box (tissue boundary layer)");
-    println!("    - Ellipsoid (muscle fiber)");
-    println!("\n  Advantages:");
-    println!("    - Full control over geometry");
-    println!("    - Combine multiple region types\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Grid: {}×{}×{} voxels",
+        dims.nx,
+        dims.ny,
+        dims.nz
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  Custom regions:");
+    let _ = writeln!(std::io::stdout().lock(), "    - Sphere (tumor)");
+    let _ = writeln!(std::io::stdout().lock(), "    - Cylinder (blood vessel)");
+    let _ = writeln!(std::io::stdout().lock(), "    - Box (bone inclusion)");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Ellipsoid (elongated tumor)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Box (tissue boundary layer)"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "    - Ellipsoid (muscle fiber)");
+    let _ = writeln!(std::io::stdout().lock(), "\n  Advantages:");
+    let _ = writeln!(std::io::stdout().lock(), "    - Full control over geometry");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    - Combine multiple region types\n"
+    );
 
     Ok(())
 }
 
 fn demo_predefined_phantoms() -> Result<()> {
-    println!("Demo 6: Predefined Clinical Phantoms");
-    println!("-------------------------------------");
-    println!("Purpose: Quick-start phantoms for common scenarios\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Demo 6: Predefined Clinical Phantoms"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "-------------------------------------"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Purpose: Quick-start phantoms for common scenarios\n"
+    );
 
     let dims = GridDimensions::new(35, 35, 35, 0.001, 0.001, 0.001);
 
     // Standard blood oxygenation phantom
-    println!("  6a. Standard Blood Oxygenation Phantom");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  6a. Standard Blood Oxygenation Phantom"
+    );
     let _phantom1 = ClinicalPhantoms::standard_blood_oxygenation(dims)?;
-    println!("      Contains: artery (sO₂=98%), vein (sO₂=65%), tumor (sO₂=55%)");
-    println!("      Use: Multi-wavelength spectroscopy validation");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "      Contains: artery (sO₂=98%), vein (sO₂=65%), tumor (sO₂=55%)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "      Use: Multi-wavelength spectroscopy validation"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Skin tissue phantom
     let dims_skin = GridDimensions::new(30, 30, 50, 0.001, 0.001, 0.001);
-    println!("  6b. Skin Tissue Phantom");
+    let _ = writeln!(std::io::stdout().lock(), "  6b. Skin Tissue Phantom");
     let _phantom2 = ClinicalPhantoms::skin_tissue(dims_skin);
-    println!("      Layers: epidermis/dermis/fat/muscle");
-    println!("      Use: Depth profiling and layer detection");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "      Layers: epidermis/dermis/fat/muscle"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "      Use: Depth profiling and layer detection"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Breast tumor phantom
-    println!("  6c. Breast Tumor Phantom");
+    let _ = writeln!(std::io::stdout().lock(), "  6c. Breast Tumor Phantom");
     let tumor_center = [0.0175, 0.0175, 0.0175];
     let _phantom3 = ClinicalPhantoms::breast_tumor(dims, tumor_center)?;
-    println!("      Background: Fat (breast tissue)");
-    println!("      Lesion: 8 mm hypoxic tumor");
-    println!("      Use: Tumor detection algorithm validation");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "      Background: Fat (breast tissue)"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "      Lesion: 8 mm hypoxic tumor");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "      Use: Tumor detection algorithm validation"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Vascular network phantom
-    println!("  6d. Vascular Network Phantom");
+    let _ = writeln!(std::io::stdout().lock(), "  6d. Vascular Network Phantom");
     let _phantom4 = ClinicalPhantoms::vascular_network(dims)?;
-    println!("      Contains: Arterial tree and venous drainage");
-    println!("      Use: Angiogenesis and perfusion studies");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "      Contains: Arterial tree and venous drainage"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "      Use: Angiogenesis and perfusion studies"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("  Quick start:");
-    println!("    let phantom = ClinicalPhantoms::standard_blood_oxygenation(dims)?;");
-    println!("    // Ready to use with diffusion solver, MC, or other physics modules\n");
+    let _ = writeln!(std::io::stdout().lock(), "  Quick start:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    let phantom = ClinicalPhantoms::standard_blood_oxygenation(dims)?;"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    // Ready to use with diffusion solver, MC, or other physics modules\n"
+    );
 
     Ok(())
 }

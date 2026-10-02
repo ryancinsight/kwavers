@@ -180,7 +180,8 @@ fn main() -> Result<()> {
     diagnostics_3d::write_three_dimensional_diagnostics(&output_path, &ct, &projections)
         .context("failed to write 3D skull-array diagnostics")?;
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Loaded CT {}x{}x{} voxels, spacing [{:.3}, {:.3}, {:.3}] mm",
         nx,
         ny,
@@ -189,7 +190,8 @@ fn main() -> Result<()> {
         1e3 * ct.spacing_m[1],
         1e3 * ct.spacing_m[2]
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Computed {} element corrections at {:.0} kHz; wrote {}, {}, {}, {}, and {}",
         projections.len(),
         FREQUENCY_HZ / 1e3,
@@ -199,7 +201,8 @@ fn main() -> Result<()> {
         diagnostics_3d::companion_path(&output_path, "_element_maps", "svg").display(),
         diagnostics_3d::companion_path(&output_path, "_pressure_field", "ppm").display()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Wrote 3D diagnostics {} and {}",
         diagnostics_3d::companion_path(&output_path, "_3d", "svg").display(),
         diagnostics_3d::companion_path(&output_path, "_3d", "obj").display()

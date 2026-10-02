@@ -89,15 +89,15 @@ fn test_plane_wave_boundary_injection_fdtd() -> KwaversResult<()> {
     let distance = (nz / 2) as f64 * dx;
     let expected_arrival = distance / c0;
 
-    println!("Plane Wave Boundary Injection (FDTD):");
-    println!("  Expected arrival: {:.3} μs", expected_arrival * 1e6);
-    println!(
+    eprintln!("Plane Wave Boundary Injection (FDTD):");
+    eprintln!("  Expected arrival: {:.3} μs", expected_arrival * 1e6);
+    eprintln!(
         "  Actual arrival: {:.3} μs",
         arrival_time.unwrap_or(0.0) * 1e6
     );
-    println!("  Expected amplitude: {:.2e} Pa", amplitude);
-    println!("  Actual amplitude: {:.2e} Pa", max_amp);
-    println!("  Amplitude ratio: {:.3}", max_amp / amplitude.max(1e-10));
+    eprintln!("  Expected amplitude: {:.2e} Pa", amplitude);
+    eprintln!("  Actual amplitude: {:.2e} Pa", max_amp);
+    eprintln!("  Amplitude ratio: {:.3}", max_amp / amplitude.max(1e-10));
 
     // Assertions
     let arrival = arrival_time.expect("no arrival detected in the pressure signal");
@@ -167,13 +167,13 @@ fn test_plane_wave_boundary_injection_pstd() -> KwaversResult<()> {
     let mut pressure_history = Vec::with_capacity(nt);
     let mut boundary_pressure = Vec::with_capacity(nt);
 
-    println!("\nDEBUG: PSTD Source Timing Analysis");
-    println!("  Grid: {}x{}x{}, dx={:.2e} m", nx, ny, nz, dx);
-    println!("  c0={} m/s, dt={:.3e} s", c0, dt);
-    println!("  Center point: {:?}", center_idx);
-    println!("  Boundary point: {:?}", boundary_idx);
-    println!("  Expected distance: {:.2e} m", (nz / 2) as f64 * dx);
-    println!(
+    eprintln!("\nDEBUG: PSTD Source Timing Analysis");
+    eprintln!("  Grid: {}x{}x{}, dx={:.2e} m", nx, ny, nz, dx);
+    eprintln!("  c0={} m/s, dt={:.3e} s", c0, dt);
+    eprintln!("  Center point: {:?}", center_idx);
+    eprintln!("  Boundary point: {:?}", boundary_idx);
+    eprintln!("  Expected distance: {:.2e} m", (nz / 2) as f64 * dx);
+    eprintln!(
         "  Expected travel time: {:.3} μs",
         ((nz / 2) as f64 * dx / c0) * 1e6
     );
@@ -187,7 +187,7 @@ fn test_plane_wave_boundary_injection_pstd() -> KwaversResult<()> {
 
         // Log first few timesteps
         if i < 10 {
-            println!(
+            eprintln!(
                 "  t={:.3e} s: p_boundary={:.2e}, p_center={:.2e}",
                 i as f64 * dt,
                 p_boundary,
@@ -200,23 +200,23 @@ fn test_plane_wave_boundary_injection_pstd() -> KwaversResult<()> {
     let (arrival_time, max_amp) = analyze_pressure_signal(&pressure_history, dt, 0.01);
     let (boundary_arrival, boundary_amp) = analyze_pressure_signal(&boundary_pressure, dt, 0.01);
 
-    println!("\nBoundary Signal:");
-    println!("  Arrival: {:.3} μs", boundary_arrival.unwrap_or(0.0) * 1e6);
-    println!("  Max amplitude: {:.2e} Pa", boundary_amp);
+    eprintln!("\nBoundary Signal:");
+    eprintln!("  Arrival: {:.3} μs", boundary_arrival.unwrap_or(0.0) * 1e6);
+    eprintln!("  Max amplitude: {:.2e} Pa", boundary_amp);
 
     // Expected arrival time: distance / speed = (nz/2 * dz) / c0
     let distance = (nz / 2) as f64 * dx;
     let expected_arrival = distance / c0;
 
-    println!("Plane Wave Boundary Injection (PSTD):");
-    println!("  Expected arrival: {:.3} μs", expected_arrival * 1e6);
-    println!(
+    eprintln!("Plane Wave Boundary Injection (PSTD):");
+    eprintln!("  Expected arrival: {:.3} μs", expected_arrival * 1e6);
+    eprintln!(
         "  Actual arrival: {:.3} μs",
         arrival_time.unwrap_or(0.0) * 1e6
     );
-    println!("  Expected amplitude: {:.2e} Pa", amplitude);
-    println!("  Actual amplitude: {:.2e} Pa", max_amp);
-    println!("  Amplitude ratio: {:.3}", max_amp / amplitude.max(1e-10));
+    eprintln!("  Expected amplitude: {:.2e} Pa", amplitude);
+    eprintln!("  Actual amplitude: {:.2e} Pa", max_amp);
+    eprintln!("  Amplitude ratio: {:.3}", max_amp / amplitude.max(1e-10));
 
     // Assertions
     let arrival = arrival_time.expect("no arrival detected in the pressure signal");
@@ -290,10 +290,10 @@ fn test_point_source_normalization_fdtd() -> KwaversResult<()> {
     // Analyze results
     let (_, max_amp) = analyze_pressure_signal(&pressure_history, dt, 0.01);
 
-    println!("Point Source Normalization (FDTD):");
-    println!("  Expected amplitude: {:.2e} Pa", amplitude);
-    println!("  Actual amplitude: {:.2e} Pa", max_amp);
-    println!("  Amplitude ratio: {:.3}", max_amp / amplitude.max(1e-10));
+    eprintln!("Point Source Normalization (FDTD):");
+    eprintln!("  Expected amplitude: {:.2e} Pa", amplitude);
+    eprintln!("  Actual amplitude: {:.2e} Pa", max_amp);
+    eprintln!("  Amplitude ratio: {:.3}", max_amp / amplitude.max(1e-10));
 
     // Point source amplitude should be reasonable (not 100× too large)
     // Allow larger range since point source has singularity at center
@@ -384,18 +384,18 @@ fn test_boundary_vs_fullgrid_injection() -> KwaversResult<()> {
     let distance = (nz / 2) as f64 * dx;
     let expected_arrival = distance / c0;
 
-    println!("Boundary vs FullGrid Injection:");
-    println!("  Expected arrival: {:.3} μs", expected_arrival * 1e6);
-    println!(
+    eprintln!("Boundary vs FullGrid Injection:");
+    eprintln!("  Expected arrival: {:.3} μs", expected_arrival * 1e6);
+    eprintln!(
         "  BoundaryOnly arrival: {:.3} μs",
         arrival_boundary.unwrap_or(0.0) * 1e6
     );
-    println!(
+    eprintln!(
         "  FullGrid arrival: {:.3} μs",
         arrival_full.unwrap_or(0.0) * 1e6
     );
-    println!("  BoundaryOnly amplitude: {:.2e} Pa", amp_boundary);
-    println!("  FullGrid amplitude: {:.2e} Pa", amp_full);
+    eprintln!("  BoundaryOnly amplitude: {:.2e} Pa", amp_boundary);
+    eprintln!("  FullGrid amplitude: {:.2e} Pa", amp_full);
 
     // BoundaryOnly should have correct arrival time
     let arrival_boundary =
@@ -411,7 +411,7 @@ fn test_boundary_vs_fullgrid_injection() -> KwaversResult<()> {
     // This demonstrates the difference between the two modes
     if let Some(full_arrival) = arrival_full {
         let full_error = (full_arrival - expected_arrival).abs() / expected_arrival;
-        println!(
+        eprintln!(
             "  FullGrid timing error: {:.1}% (expected, due to spatial pre-population)",
             full_error * 100.0
         );
@@ -475,10 +475,10 @@ fn test_no_amplitude_accumulation() -> KwaversResult<()> {
 
     let peak_pressure = max_pressure.abs().max(min_pressure.abs());
 
-    println!("Amplitude Accumulation Test:");
-    println!("  Expected amplitude: {:.2e} Pa", amplitude);
-    println!("  Peak pressure at boundary: {:.2e} Pa", peak_pressure);
-    println!("  Ratio: {:.3}", peak_pressure / amplitude.max(1e-10));
+    eprintln!("Amplitude Accumulation Test:");
+    eprintln!("  Expected amplitude: {:.2e} Pa", amplitude);
+    eprintln!("  Peak pressure at boundary: {:.2e} Pa", peak_pressure);
+    eprintln!("  Ratio: {:.3}", peak_pressure / amplitude.max(1e-10));
 
     // Peak pressure should not grow indefinitely
     // Should be on same order of magnitude as source amplitude

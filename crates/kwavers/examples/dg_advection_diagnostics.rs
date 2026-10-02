@@ -31,6 +31,7 @@ use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
 use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};
 use leto::{Array1, Array3};
 use std::f64::consts::PI;
+use std::io::Write;
 use std::sync::Arc;
 
 const ELEMENTS: usize = 12;
@@ -45,53 +46,102 @@ fn main() -> KwaversResult<()> {
     let acoustic = run_acoustic_characteristic_diagnostic()?;
     let bidirectional = run_bidirectional_acoustic_diagnostic()?;
 
-    println!("DG scalar-advection diagnostic");
-    println!("elements: {ELEMENTS}, polynomial_order: {POLYNOMIAL_ORDER}, steps: {STEPS}");
-    println!("equation: u_t + c u_x = 0, periodic, c = {SOUND_SPEED}");
-    println!();
-    println!("{:<24} {:>16.6e}", "relative_l2", diagnostics.relative_l2);
-    println!("{:<24} {:>16.6e}", "mass_error", diagnostics.mass_error);
-    println!(
-        "{:<24} {:>16.6e}",
-        "phase_error_rad", diagnostics.phase_error_rad
+    let _ = writeln!(std::io::stdout().lock(), "DG scalar-advection diagnostic");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "elements: {ELEMENTS}, polynomial_order: {POLYNOMIAL_ORDER}, steps: {STEPS}"
     );
-    println!(
-        "{:<24} {:>16.6e}",
-        "amplitude_ratio", diagnostics.amplitude_ratio
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "equation: u_t + c u_x = 0, periodic, c = {SOUND_SPEED}"
     );
-    println!();
-    println!("DG right-going acoustic characteristic diagnostic");
-    println!("state: w+ = p + rho*c*u, w- = p - rho*c*u = 0");
-    println!(
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<24} {:>16.6e}",
-        "pressure_relative_l2", acoustic.pressure_relative_l2
+        "relative_l2",
+        diagnostics.relative_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<24} {:>16.6e}",
-        "velocity_relative_l2", acoustic.velocity_relative_l2
+        "mass_error",
+        diagnostics.mass_error
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<24} {:>16.6e}",
-        "left_invariant_error", acoustic.left_invariant_error
+        "phase_error_rad",
+        diagnostics.phase_error_rad
     );
-    println!("{:<24} {:>16.6e}", "energy_ratio", acoustic.energy_ratio);
-    println!();
-    println!("DG bidirectional acoustic characteristic diagnostic");
-    println!("state: w+ = sin(kx), w- = sin(kx), so p = sin(kx), u = 0 at t = 0");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<24} {:>16.6e}",
-        "pressure_relative_l2", bidirectional.pressure_relative_l2
+        "amplitude_ratio",
+        diagnostics.amplitude_ratio
     );
-    println!(
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "DG right-going acoustic characteristic diagnostic"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "state: w+ = p + rho*c*u, w- = p - rho*c*u = 0"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<24} {:>16.6e}",
-        "velocity_relative_l2", bidirectional.velocity_relative_l2
+        "pressure_relative_l2",
+        acoustic.pressure_relative_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<24} {:>16.6e}",
-        "energy_ratio", bidirectional.energy_ratio
+        "velocity_relative_l2",
+        acoustic.velocity_relative_l2
     );
-    println!();
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<24} {:>16.6e}",
+        "left_invariant_error",
+        acoustic.left_invariant_error
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<24} {:>16.6e}",
+        "energy_ratio",
+        acoustic.energy_ratio
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "DG bidirectional acoustic characteristic diagnostic"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "state: w+ = sin(kx), w- = sin(kx), so p = sin(kx), u = 0 at t = 0"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<24} {:>16.6e}",
+        "pressure_relative_l2",
+        bidirectional.pressure_relative_l2
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<24} {:>16.6e}",
+        "velocity_relative_l2",
+        bidirectional.velocity_relative_l2
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<24} {:>16.6e}",
+        "energy_ratio",
+        bidirectional.energy_ratio
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(std::io::stdout().lock(),
         "interpretation: DG is checked against exact scalar advection; acoustic FDTD/PSTD field metrics are reported by pstd_fdtd_comparison.rs"
     );
 

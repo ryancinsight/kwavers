@@ -276,9 +276,9 @@ mod edge_case_tests {
     fn test_extreme_compression_stability() {
         let results = EdgeCaseTester::test_extreme_compression();
 
-        println!("Extreme compression stability test:");
+        eprintln!("Extreme compression stability test:");
         for (case, stress, is_stable) in results {
-            println!("  {}: σ = {:.2e} Pa, stable = {}", case, stress, is_stable);
+            eprintln!("  {}: σ = {:.2e} Pa, stable = {}", case, stress, is_stable);
             assert!(
                 is_stable,
                 "Compression case '{}' should be numerically stable",
@@ -291,9 +291,9 @@ mod edge_case_tests {
     fn test_extreme_tension_stability() {
         let results = EdgeCaseTester::test_extreme_tension();
 
-        println!("Extreme tension stability test:");
+        eprintln!("Extreme tension stability test:");
         for (case, stress, is_stable) in results {
-            println!("  {}: σ = {:.2e} Pa, stable = {}", case, stress, is_stable);
+            eprintln!("  {}: σ = {:.2e} Pa, stable = {}", case, stress, is_stable);
             assert!(
                 is_stable,
                 "Tension case '{}' should be numerically stable",
@@ -306,9 +306,9 @@ mod edge_case_tests {
     fn test_ogden_parameter_robustness() {
         let results = EdgeCaseTester::test_ogden_extreme_parameters();
 
-        println!("Ogden parameter robustness test:");
+        eprintln!("Ogden parameter robustness test:");
         for (case, is_stable) in &results {
-            println!("  {}: stable = {}", case, is_stable);
+            eprintln!("  {}: stable = {}", case, is_stable);
             // Note: Some extreme parameters may legitimately fail, so we don't assert
             // This test is for information and robustness checking
         }
@@ -324,11 +324,11 @@ mod edge_case_tests {
     fn test_near_singularity_stability() {
         let results = EdgeCaseTester::test_near_singularities();
 
-        println!("Near-singularity stability test:");
+        eprintln!("Near-singularity stability test:");
         let mut unstable_cases = Vec::new();
 
         for (case, is_stable) in results {
-            println!("  {}: stable = {}", case, is_stable);
+            eprintln!("  {}: stable = {}", case, is_stable);
             if !is_stable {
                 unstable_cases.push(case);
             }
@@ -336,7 +336,7 @@ mod edge_case_tests {
 
         // Some near-singular cases may be unstable, which is acceptable
         // The important thing is that the code doesn't crash
-        println!(
+        eprintln!(
             "  Found {} potentially unstable cases (may be acceptable)",
             unstable_cases.len()
         );
@@ -346,9 +346,9 @@ mod edge_case_tests {
     fn test_extreme_harmonic_generation() {
         let results = EdgeCaseTester::test_extreme_harmonic_generation();
 
-        println!("Extreme harmonic generation test:");
+        eprintln!("Extreme harmonic generation test:");
         for (case, ratio, is_stable) in results {
-            println!("  {}: ratio = {:.2e}, stable = {}", case, ratio, is_stable);
+            eprintln!("  {}: ratio = {:.2e}, stable = {}", case, ratio, is_stable);
             assert!(
                 is_stable,
                 "Harmonic generation case '{}' should be numerically stable",
@@ -424,7 +424,7 @@ mod edge_case_tests {
 
             // Some configurations might have numerical issues, but shouldn't crash
             if result.is_err() {
-                println!("Configuration {} failed: {:?}", i, result.err());
+                eprintln!("Configuration {} failed: {:?}", i, result.err());
             }
         }
     }

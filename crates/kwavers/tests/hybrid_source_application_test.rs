@@ -90,7 +90,7 @@ fn test_hybrid_source_application() {
         .iter()
         .fold(0.0f64, |a, &b| a.max(b.abs()));
 
-    println!("Max pressure: {}", max_p);
+    eprintln!("Max pressure: {}", max_p);
     assert!(
         max_p > 1e-10,
         "Pressure field should be non-zero after applying source (expected ~1.0)"

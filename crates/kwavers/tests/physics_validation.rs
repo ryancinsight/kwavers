@@ -119,7 +119,7 @@ mod absorption_tests {
         let alpha_db_cm = alpha_np_m * 8.686 / 100.0;
 
         // Classical absorption at 1 MHz should be ~0.002 dB/cm
-        println!("Calculated alpha_db_cm: {}", alpha_db_cm);
+        eprintln!("Calculated alpha_db_cm: {}", alpha_db_cm);
         assert!(alpha_db_cm < 0.01, "Alpha too high: {} dB/cm", alpha_db_cm);
     }
 

@@ -46,15 +46,26 @@ use kwavers_therapy::therapy::swe_3d_workflows::{
     ElasticityMap3D, MultiPlanarReconstruction, Swe3dClinicalDecisionSupport, VolumetricROI,
 };
 use leto::Array3;
+use std::io::Write;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🫀 3D SWE Liver Fibrosis Assessment Example");
-    println!("==========================================\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🫀 3D SWE Liver Fibrosis Assessment Example"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "==========================================\n"
+    );
 
     // Step 1: Patient setup and ROI definition
-    println!("📋 Step 1: Patient Setup and ROI Definition");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "📋 Step 1: Patient Setup and ROI Definition"
+    );
     let grid = Grid::new(80, 80, 60, 0.001, 0.001, 0.0015)?; // 8x8x9cm volume
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Computational grid: {}x{}x{} ({}x{}x{}cm)",
         grid.nx,
         grid.ny,
@@ -66,13 +77,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Define liver ROI for fibrosis assessment
     let liver_roi = VolumetricROI::liver_roi([0.04, 0.04, 0.045]); // Center of volume
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Liver ROI: {:.1}x{:.1}x{:.1}cm volume",
         liver_roi.size[0] * 100.0,
         liver_roi.size[1] * 100.0,
         liver_roi.size[2] * 100.0
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Quality threshold: {:.1}, Depth range: {:.1}-{:.1}cm\n",
         liver_roi.quality_threshold,
         liver_roi.min_depth * 100.0,
@@ -80,14 +93,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Step 2: Create heterogeneous liver medium with fibrosis
-    println!("🫘 Step 2: Liver Tissue Model Creation");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🫘 Step 2: Liver Tissue Model Creation"
+    );
     let liver_medium = create_fibrotic_liver_medium(&grid);
-    println!("   Created heterogeneous liver medium with fibrotic regions");
-    println!("   Background stiffness: 5.5 kPa (healthy liver)");
-    println!("   Fibrotic regions: 12-18 kPa (F3-F4 fibrosis)\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Created heterogeneous liver medium with fibrotic regions"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Background stiffness: 5.5 kPa (healthy liver)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Fibrotic regions: 12-18 kPa (F3-F4 fibrosis)\n"
+    );
 
     // Step 3: Multi-directional shear wave generation
-    println!("🌊 Step 3: Multi-Directional Shear Wave Generation");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🌊 Step 3: Multi-Directional Shear Wave Generation"
+    );
     let arf = AcousticRadiationForce::new(&grid, &liver_medium)?;
 
     // Create orthogonal push pattern for comprehensive 3D coverage
@@ -95,15 +123,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         [0.04, 0.04, 0.03], // Push location (3cm depth)
         0.015,              // 1.5cm spacing between pushes
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Generated {} orthogonal push pulses",
         push_pattern.pushes.len()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Push sequence duration: {:.1} μs",
         push_pattern.sequence_duration * 1e6
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Time delays: {:.1} to {:.1} μs\n",
         push_pattern
             .time_delays
@@ -115,7 +146,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Step 4: Volumetric wave propagation simulation
-    println!("🔬 Step 4: Volumetric Wave Propagation Simulation");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🔬 Step 4: Volumetric Wave Propagation Simulation"
+    );
     let mut solver = ElasticWaveSolver::new(&grid, &liver_medium, Default::default())?;
 
     // Configure volumetric features
@@ -144,8 +178,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } => *impulse_n_per_m3_s,
         })
         .fold(f64::NEG_INFINITY, f64::max);
-    println!("   Generated {} ARFI body-force sources", body_forces.len());
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Generated {} ARFI body-force sources",
+        body_forces.len()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Maximum impulse density: {:.3e} N·s/m³",
         max_impulse_n_per_m3_s
     );
@@ -163,111 +202,215 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     let (displacement_history, tracker) =
         solver.propagate_volumetric_waves_with_body_forces(&body_forces, &push_times, &sources)?;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Simulated {} time steps of wave propagation",
         displacement_history.len()
     );
-    println!("   Wave front tracking completed\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Wave front tracking completed\n"
+    );
 
     // Step 5: 3D elasticity reconstruction
-    println!("🧮 Step 5: 3D Elasticity Reconstruction");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🧮 Step 5: 3D Elasticity Reconstruction"
+    );
     let mut elasticity_map = ElasticityMap3D::new(&grid);
 
     // Perform multi-directional time-of-flight inversion
     perform_3d_elasticity_reconstruction(&tracker, &push_pattern, &mut elasticity_map, &grid)?;
-    println!("   3D elasticity map reconstructed");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   3D elasticity map reconstructed"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Mean stiffness: {:.1} kPa",
         calculate_mean_stiffness(&elasticity_map, &liver_roi) / 1000.0
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Reliable voxels: {:.1}%\n",
         calculate_reliability_percentage(&elasticity_map, &liver_roi) * 100.0
     );
 
     // Step 6: Volumetric statistical analysis
-    println!("📊 Step 6: Volumetric Statistical Analysis");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "📊 Step 6: Volumetric Statistical Analysis"
+    );
     let stats = elasticity_map.volumetric_statistics(&liver_roi);
-    println!("   Analysis of {}x{}x{}cm ROI", 8, 8, 6);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Analysis of {}x{}x{}cm ROI",
+        8,
+        8,
+        6
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Valid voxels: {} ({:.1}%)",
         stats.valid_voxels,
         stats.volume_coverage * 100.0
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Mean Young's modulus: {:.1} ± {:.1} kPa",
         stats.mean_modulus / 1000.0,
         stats.std_modulus / 1000.0
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Range: {:.1} - {:.1} kPa",
         stats.min_modulus / 1000.0,
         stats.max_modulus / 1000.0
     );
-    println!("   Mean shear speed: {:.1} m/s", stats.mean_speed);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Mean shear speed: {:.1} m/s",
+        stats.mean_speed
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Quality metrics - Confidence: {:.2}, Quality: {:.2}\n",
-        stats.mean_confidence, stats.mean_quality
+        stats.mean_confidence,
+        stats.mean_quality
     );
 
     // Step 7: Clinical decision support
-    println!("🏥 Step 7: Clinical Decision Support");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🏥 Step 7: Clinical Decision Support"
+    );
     let cds = Swe3dClinicalDecisionSupport::default();
     let fibrosis_classification = cds.classify_liver_fibrosis(&stats);
 
-    println!("   Liver Fibrosis Assessment (METAVIR Classification):");
-    println!("   Stage: {:?}", fibrosis_classification.stage);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Liver Fibrosis Assessment (METAVIR Classification):"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Stage: {:?}",
+        fibrosis_classification.stage
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Mean stiffness: {:.1} kPa",
         fibrosis_classification.mean_stiffness_kpa
     );
-    println!("   Confidence: {:?}", fibrosis_classification.confidence);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Confidence: {:?}",
+        fibrosis_classification.confidence
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Quality score: {:.2}\n",
         fibrosis_classification.quality_score
     );
 
     // Step 8: Multi-planar visualization
-    println!("📈 Step 8: Multi-Planar Visualization");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "📈 Step 8: Multi-Planar Visualization"
+    );
     let mpr = MultiPlanarReconstruction::from_elasticity_map(&elasticity_map, 0.005); // 5mm slices
-    println!("   Generated {} axial slices", mpr.axial_slices.len());
-    println!("   Generated {} sagittal slices", mpr.sagittal_slices.len());
-    println!("   Generated {} coronal slices", mpr.coronal_slices.len());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Generated {} axial slices",
+        mpr.axial_slices.len()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Generated {} sagittal slices",
+        mpr.sagittal_slices.len()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Generated {} coronal slices",
+        mpr.coronal_slices.len()
+    );
 
     // Display slice statistics
     display_slice_statistics(&mpr);
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Step 9: Clinical report generation
-    println!("📄 Step 9: Clinical Report Generation");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "📄 Step 9: Clinical Report Generation"
+    );
     let report = cds.generate_report("liver", &stats);
-    println!("   Generated comprehensive clinical report");
-    println!("   Report length: {} characters\n", report.len());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Generated comprehensive clinical report"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Report length: {} characters\n",
+        report.len()
+    );
 
     // Step 10: Validation and quality assessment
-    println!("✅ Step 10: Validation and Quality Assessment");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "✅ Step 10: Validation and Quality Assessment"
+    );
     let quality_metrics = solver.calculate_volumetric_quality(&tracker);
-    println!("   Volumetric quality assessment:");
-    println!("   Coverage: {:.1}%", quality_metrics.coverage * 100.0);
-    println!("   Average quality: {:.2}", quality_metrics.average_quality);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Volumetric quality assessment:"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Coverage: {:.1}%",
+        quality_metrics.coverage * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Average quality: {:.2}",
+        quality_metrics.average_quality
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Valid tracking points: {}\n",
         quality_metrics.valid_tracking_points
     );
 
     // Final summary
-    println!("🎯 Examination Summary");
-    println!("====================");
-    println!("Patient: Adult male, suspected liver fibrosis");
-    println!("Modality: 3D Shear Wave Elastography");
-    println!("ROI: Liver parenchyma (8x8x6cm)");
-    println!("Fibrosis Stage: {:?}", fibrosis_classification.stage);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "🎯 Examination Summary");
+    let _ = writeln!(std::io::stdout().lock(), "====================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Patient: Adult male, suspected liver fibrosis"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Modality: 3D Shear Wave Elastography"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "ROI: Liver parenchyma (8x8x6cm)");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Fibrosis Stage: {:?}",
+        fibrosis_classification.stage
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Mean Stiffness: {:.1} kPa",
         fibrosis_classification.mean_stiffness_kpa
     );
-    println!("Quality: {:?}", fibrosis_classification.confidence);
-    println!("Recommendation: Further evaluation with biopsy correlation");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Quality: {:?}",
+        fibrosis_classification.confidence
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Recommendation: Further evaluation with biopsy correlation"
+    );
 
     Ok(())
 }
@@ -471,7 +614,8 @@ fn calculate_reliability_percentage(elasticity_map: &ElasticityMap3D, roi: &Volu
 fn display_slice_statistics(mpr: &MultiPlanarReconstruction) {
     if !mpr.axial_slices.is_empty() {
         let axial_stats = calculate_slice_stats(&mpr.axial_slices);
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   Axial slices: {} total, mean stiffness {:.1} kPa",
             mpr.axial_slices.len(),
             axial_stats.mean_stiffness / 1000.0
@@ -480,7 +624,8 @@ fn display_slice_statistics(mpr: &MultiPlanarReconstruction) {
 
     if !mpr.sagittal_slices.is_empty() {
         let sagittal_stats = calculate_slice_stats(&mpr.sagittal_slices);
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   Sagittal slices: {} total, mean stiffness {:.1} kPa",
             mpr.sagittal_slices.len(),
             sagittal_stats.mean_stiffness / 1000.0
@@ -489,7 +634,8 @@ fn display_slice_statistics(mpr: &MultiPlanarReconstruction) {
 
     if !mpr.coronal_slices.is_empty() {
         let coronal_stats = calculate_slice_stats(&mpr.coronal_slices);
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   Coronal slices: {} total, mean stiffness {:.1} kPa",
             mpr.coronal_slices.len(),
             coronal_stats.mean_stiffness / 1000.0

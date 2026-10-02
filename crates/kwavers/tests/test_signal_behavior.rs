@@ -32,16 +32,16 @@ fn test_sinewave_initial_amplitude() {
 
     let signal = SineWave::new(frequency, amplitude, phase);
 
-    println!("\n=== SineWave Initial Amplitude Test ===");
-    println!("Frequency: {} Hz", frequency);
-    println!("Amplitude: {} Pa", amplitude);
-    println!("Phase: {} rad", phase);
+    eprintln!("\n=== SineWave Initial Amplitude Test ===");
+    eprintln!("Frequency: {} Hz", frequency);
+    eprintln!("Amplitude: {} Pa", amplitude);
+    eprintln!("Phase: {} rad", phase);
 
     // Test at t=0
     let amp_t0 = signal.amplitude(0.0);
-    println!("\nAt t=0:");
-    println!("  amplitude(0) = {:.6e}", amp_t0);
-    println!("  Expected: ~0 (sin(0) = 0)");
+    eprintln!("\nAt t=0:");
+    eprintln!("  amplitude(0) = {:.6e}", amp_t0);
+    eprintln!("  Expected: ~0 (sin(0) = 0)");
 
     // Should be exactly zero for zero phase sine wave
     assert!(
@@ -50,16 +50,16 @@ fn test_sinewave_initial_amplitude() {
         amp_t0
     );
 
-    println!("  ✓ Amplitude at t=0 is zero");
+    eprintln!("  ✓ Amplitude at t=0 is zero");
 
     // Test at t=T/4 (quarter period - peak)
     let period = 1.0 / frequency;
     let t_quarter = period / 4.0;
     let amp_t_quarter = signal.amplitude(t_quarter);
 
-    println!("\nAt t=T/4 ({:.3e} s):", t_quarter);
-    println!("  amplitude(T/4) = {:.6e}", amp_t_quarter);
-    println!("  Expected: {:.6e} (sin(π/2) = 1)", amplitude);
+    eprintln!("\nAt t=T/4 ({:.3e} s):", t_quarter);
+    eprintln!("  amplitude(T/4) = {:.6e}", amp_t_quarter);
+    eprintln!("  Expected: {:.6e} (sin(π/2) = 1)", amplitude);
 
     assert!(
         (amp_t_quarter - amplitude).abs() < 1e-6,
@@ -68,15 +68,15 @@ fn test_sinewave_initial_amplitude() {
         amplitude
     );
 
-    println!("  ✓ Amplitude at T/4 is A");
+    eprintln!("  ✓ Amplitude at T/4 is A");
 
     // Test at t=T/2 (half period - zero crossing)
     let t_half = period / 2.0;
     let amp_t_half = signal.amplitude(t_half);
 
-    println!("\nAt t=T/2 ({:.3e} s):", t_half);
-    println!("  amplitude(T/2) = {:.6e}", amp_t_half);
-    println!("  Expected: ~0 (sin(π) = 0)");
+    eprintln!("\nAt t=T/2 ({:.3e} s):", t_half);
+    eprintln!("  amplitude(T/2) = {:.6e}", amp_t_half);
+    eprintln!("  Expected: ~0 (sin(π) = 0)");
 
     assert!(
         amp_t_half.abs() < 1e-6,
@@ -84,9 +84,9 @@ fn test_sinewave_initial_amplitude() {
         amp_t_half
     );
 
-    println!("  ✓ Amplitude at T/2 is zero");
+    eprintln!("  ✓ Amplitude at T/2 is zero");
 
-    println!("\n✓ SineWave initial amplitude test PASSED");
+    eprintln!("\n✓ SineWave initial amplitude test PASSED");
 }
 
 #[test]
@@ -98,14 +98,14 @@ fn test_sinewave_with_phase_offset() {
 
     let signal = SineWave::new(frequency, amplitude, phase);
 
-    println!("\n=== SineWave with Phase Offset Test ===");
-    println!("Phase: {} rad (π/2)", phase);
+    eprintln!("\n=== SineWave with Phase Offset Test ===");
+    eprintln!("Phase: {} rad (π/2)", phase);
 
     // At t=0, cos(0) = 1
     let amp_t0 = signal.amplitude(0.0);
-    println!("\nAt t=0:");
-    println!("  amplitude(0) = {:.6e}", amp_t0);
-    println!("  Expected: {:.6e} (cos(0) = 1)", amplitude);
+    eprintln!("\nAt t=0:");
+    eprintln!("  amplitude(0) = {:.6e}", amp_t0);
+    eprintln!("  Expected: {:.6e} (cos(0) = 1)", amplitude);
 
     assert!(
         (amp_t0 - amplitude).abs() < 1e-6,
@@ -113,16 +113,16 @@ fn test_sinewave_with_phase_offset() {
         amp_t0
     );
 
-    println!("  ✓ Cosine starts at maximum");
+    eprintln!("  ✓ Cosine starts at maximum");
 
     // At t=T/4, cos(π/2) = 0
     let period = 1.0 / frequency;
     let t_quarter = period / 4.0;
     let amp_t_quarter = signal.amplitude(t_quarter);
 
-    println!("\nAt t=T/4:");
-    println!("  amplitude(T/4) = {:.6e}", amp_t_quarter);
-    println!("  Expected: ~0 (cos(π/2) = 0)");
+    eprintln!("\nAt t=T/4:");
+    eprintln!("  amplitude(T/4) = {:.6e}", amp_t_quarter);
+    eprintln!("  Expected: ~0 (cos(π/2) = 0)");
 
     assert!(
         amp_t_quarter.abs() < 1e-6,
@@ -130,9 +130,9 @@ fn test_sinewave_with_phase_offset() {
         amp_t_quarter
     );
 
-    println!("  ✓ Cosine has zero crossing at T/4");
+    eprintln!("  ✓ Cosine has zero crossing at T/4");
 
-    println!("\n✓ Phase offset test PASSED");
+    eprintln!("\n✓ Phase offset test PASSED");
 }
 
 #[test]
@@ -140,14 +140,14 @@ fn test_sinewave_negative_time() {
     // Verify signal handles negative times correctly (should extend smoothly)
     let signal = SineWave::new(1e6, 1e5, 0.0);
 
-    println!("\n=== SineWave Negative Time Test ===");
+    eprintln!("\n=== SineWave Negative Time Test ===");
 
     // Test at small negative time
     let t_neg = -1e-7; // -0.1 µs
     let amp_neg = signal.amplitude(t_neg);
 
-    println!("At t={:.3e} s:", t_neg);
-    println!("  amplitude = {:.6e}", amp_neg);
+    eprintln!("At t={:.3e} s:", t_neg);
+    eprintln!("  amplitude = {:.6e}", amp_neg);
 
     // sin(-x) = -sin(x), so should be negative small value
     assert!(
@@ -160,19 +160,19 @@ fn test_sinewave_negative_time() {
     let amp_pos = signal.amplitude(t_pos);
 
     let symmetry_error = (amp_neg + amp_pos).abs();
-    println!("\nSymmetry check:");
-    println!("  amplitude(-t) = {:.6e}", amp_neg);
-    println!("  amplitude(+t) = {:.6e}", amp_pos);
-    println!("  amplitude(-t) + amplitude(+t) = {:.6e}", symmetry_error);
+    eprintln!("\nSymmetry check:");
+    eprintln!("  amplitude(-t) = {:.6e}", amp_neg);
+    eprintln!("  amplitude(+t) = {:.6e}", amp_pos);
+    eprintln!("  amplitude(-t) + amplitude(+t) = {:.6e}", symmetry_error);
 
     assert!(
         symmetry_error < 1e-6,
         "Sine wave should be antisymmetric: sin(-t) = -sin(t)"
     );
 
-    println!("  ✓ Antisymmetry verified");
+    eprintln!("  ✓ Antisymmetry verified");
 
-    println!("\n✓ Negative time test PASSED");
+    eprintln!("\n✓ Negative time test PASSED");
 }
 
 #[test]
@@ -182,8 +182,8 @@ fn test_sinewave_amplitude_range() {
     let max_amplitude = 1e5;
     let signal = SineWave::new(frequency, max_amplitude, 0.0);
 
-    println!("\n=== SineWave Amplitude Range Test ===");
-    println!("Maximum amplitude: {:.3e} Pa", max_amplitude);
+    eprintln!("\n=== SineWave Amplitude Range Test ===");
+    eprintln!("Maximum amplitude: {:.3e} Pa", max_amplitude);
 
     let period = 1.0 / frequency;
     let num_samples = 100;
@@ -197,10 +197,10 @@ fn test_sinewave_amplitude_range() {
         measured_min = measured_min.min(amp);
     }
 
-    println!("\nMeasured over one period:");
-    println!("  Max amplitude: {:.6e}", measured_max);
-    println!("  Min amplitude: {:.6e}", measured_min);
-    println!("  Peak-to-peak: {:.6e}", measured_max - measured_min);
+    eprintln!("\nMeasured over one period:");
+    eprintln!("  Max amplitude: {:.6e}", measured_max);
+    eprintln!("  Min amplitude: {:.6e}", measured_min);
+    eprintln!("  Peak-to-peak: {:.6e}", measured_max - measured_min);
 
     assert!(
         (measured_max - max_amplitude).abs() < 1e-6,
@@ -216,9 +216,9 @@ fn test_sinewave_amplitude_range() {
         measured_min
     );
 
-    println!("  ✓ Amplitude range correct");
+    eprintln!("  ✓ Amplitude range correct");
 
-    println!("\n✓ Amplitude range test PASSED");
+    eprintln!("\n✓ Amplitude range test PASSED");
 }
 
 #[test]
@@ -227,8 +227,8 @@ fn test_sinewave_frequency() {
     let frequency = 1e6; // 1 MHz
     let signal = SineWave::new(frequency, 1e5, 0.0);
 
-    println!("\n=== SineWave Frequency Test ===");
-    println!("Expected frequency: {:.3e} Hz", frequency);
+    eprintln!("\n=== SineWave Frequency Test ===");
+    eprintln!("Expected frequency: {:.3e} Hz", frequency);
 
     let period = 1.0 / frequency;
     let total_time = 10.0 * period; // 10 periods
@@ -269,11 +269,11 @@ fn test_sinewave_frequency() {
     let measured_periods = (zero_crossings - 1) as f64 / 2.0;
     let measured_frequency = measured_periods / measured_duration;
 
-    println!("\nMeasured over {:.1} periods:", total_time / period);
-    println!("  Zero crossings: {}", zero_crossings);
-    println!("  Measured periods: {:.1}", measured_periods);
-    println!("  Measured frequency: {:.6e} Hz", measured_frequency);
-    println!(
+    eprintln!("\nMeasured over {:.1} periods:", total_time / period);
+    eprintln!("  Zero crossings: {}", zero_crossings);
+    eprintln!("  Measured periods: {:.1}", measured_periods);
+    eprintln!("  Measured frequency: {:.6e} Hz", measured_frequency);
+    eprintln!(
         "  Relative error: {:.2}%",
         (measured_frequency - frequency).abs() / frequency * 100.0
     );
@@ -285,9 +285,9 @@ fn test_sinewave_frequency() {
         freq_error * 100.0
     );
 
-    println!("  ✓ Frequency correct");
+    eprintln!("  ✓ Frequency correct");
 
-    println!("\n✓ Frequency test PASSED");
+    eprintln!("\n✓ Frequency test PASSED");
 }
 
 /// Theorem (CPML Absorption Effectiveness Diagnostic):
@@ -307,7 +307,7 @@ fn test_sinewave_frequency() {
 /// "3x amplitude too high" parity gap (project memory 2026-03-26).
 #[test]
 fn test_cpml_absorption_effectiveness() -> kwavers_core::error::KwaversResult<()> {
-    println!("\n=== CPML Absorption Effectiveness Diagnostic ===");
+    eprintln!("\n=== CPML Absorption Effectiveness Diagnostic ===");
 
     // 1-D like grid: 128 cells along x, 1 cell in y and z.
     let nx = 128;
@@ -327,11 +327,11 @@ fn test_cpml_absorption_effectiveness() -> kwavers_core::error::KwaversResult<()
     // One-way travel time across interior (128 - 2*pml = 88 cells × dx = 44 mm)
     let interior_cells = nx - 2 * pml_layers;
     let one_way_steps = ((interior_cells as f64 * dx) / (c0 * dt)).ceil() as usize;
-    println!(
+    eprintln!(
         "Grid: {}×{}×{}, dx={:.2e} m, dt={:.2e} s",
         nx, ny, nz, dx, dt
     );
-    println!(
+    eprintln!(
         "Interior: {} cells = {:.1} mm, one-way travel ≈ {} steps",
         interior_cells,
         interior_cells as f64 * dx * 1e3,
@@ -430,16 +430,16 @@ fn test_cpml_absorption_effectiveness() -> kwavers_core::error::KwaversResult<()
     let retained_cpml = e_cpml / e0_cpml.max(1e-30);
     let absorption_ratio = retained_cpml / retained_none.max(1e-30);
 
-    println!("\nAfter {} steps:", nt);
-    println!(
+    eprintln!("\nAfter {} steps:", nt);
+    eprintln!(
         "  No-boundary retained energy: {:.4} ({:.2e} → {:.2e})",
         retained_none, e0_none, e_none
     );
-    println!(
+    eprintln!(
         "  CPML retained energy:         {:.4} ({:.2e} → {:.2e})",
         retained_cpml, e0_cpml, e_cpml
     );
-    println!(
+    eprintln!(
         "  Absorption ratio (CPML/none): {:.4}  (< 1 = absorbing, ≈ 1 = broken CPML)",
         absorption_ratio
     );
@@ -463,8 +463,8 @@ fn test_cpml_absorption_effectiveness() -> kwavers_core::error::KwaversResult<()
         nt
     );
 
-    println!("\n✓ CPML absorption effectiveness test PASSED");
-    println!(
+    eprintln!("\n✓ CPML absorption effectiveness test PASSED");
+    eprintln!(
         "  DIAGNOSIS: CPML absorbs {:.1}% of energy relative to no-boundary",
         (1.0 - absorption_ratio) * 100.0
     );

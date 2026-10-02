@@ -16,11 +16,18 @@ use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_signal::SineWave;
 use kwavers_source::Source;
 use kwavers_transducer::{BeamformingMode, PhasedArrayConfig, PhasedArrayTransducer};
+use std::io::Write;
 use std::sync::Arc;
 
 fn main() -> KwaversResult<()> {
-    println!("🎯 Advanced Phased Array Beamforming Demonstration");
-    println!("=====================================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🎯 Advanced Phased Array Beamforming Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "====================================================="
+    );
 
     // Demonstrate different beamforming modes
     demonstrate_focus_beamforming()?;
@@ -28,8 +35,12 @@ fn main() -> KwaversResult<()> {
     demonstrate_custom_patterns()?;
     demonstrate_cross_talk_effects()?;
 
-    println!("\n✅ Phased array beamforming demonstration completed successfully!");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n✅ Phased array beamforming demonstration completed successfully!"
+    );
+    let _ =
+        writeln!(std::io::stdout().lock(),
         "   Demonstrated: Electronic focusing, beam steering, custom patterns, cross-talk modeling"
     );
 
@@ -38,8 +49,14 @@ fn main() -> KwaversResult<()> {
 
 /// Demonstrate electronic beam focusing capabilities
 fn demonstrate_focus_beamforming() -> KwaversResult<()> {
-    println!("\n📍 Electronic Beam Focusing Demonstration");
-    println!("-----------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n📍 Electronic Beam Focusing Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "-----------------------------------------"
+    );
 
     // Create grid and medium
     let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)?;
@@ -63,10 +80,22 @@ fn demonstrate_focus_beamforming() -> KwaversResult<()> {
     // Create phased array transducer
     let mut array = PhasedArrayTransducer::create(array_config.clone(), signal, &medium, &grid)?;
 
-    println!("Array Configuration:");
-    println!("  Elements: {}", array_config.num_elements);
-    println!("  Spacing: {:.1} mm", array_config.element_spacing * 1e3);
-    println!("  Frequency: {:.1} MHz", array_config.frequency / 1e6);
+    let _ = writeln!(std::io::stdout().lock(), "Array Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Elements: {}",
+        array_config.num_elements
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Spacing: {:.1} mm",
+        array_config.element_spacing * 1e3
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Frequency: {:.1} MHz",
+        array_config.frequency / 1e6
+    );
 
     // Test different focus depths
     let focus_depths = [20e-3, 40e-3, 60e-3, 80e-3]; // 20, 40, 60, 80 mm
@@ -83,7 +112,8 @@ fn demonstrate_focus_beamforming() -> KwaversResult<()> {
         let min_val = delays.iter().copied().fold(f64::INFINITY, f64::min);
         let delay_range = max_val - min_val;
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  Focus at {:.0}mm: Max delay = {:.2} rad, Range = {:.2} rad",
             depth * 1e3,
             max_delay,
@@ -94,7 +124,11 @@ fn demonstrate_focus_beamforming() -> KwaversResult<()> {
         let center_idx = delays.len() / 2;
         let edge_delay_avg = (delays[0] + delays[delays.len() - 1]) / 2.0;
         let focus_quality = (edge_delay_avg - delays[center_idx]).abs();
-        println!("    Focus quality: {:.2} rad", focus_quality);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "    Focus quality: {:.2} rad",
+            focus_quality
+        );
     }
 
     Ok(())
@@ -102,8 +136,14 @@ fn demonstrate_focus_beamforming() -> KwaversResult<()> {
 
 /// Demonstrate beam steering capabilities
 fn demonstrate_beam_steering() -> KwaversResult<()> {
-    println!("\n🎯 Electronic Beam Steering Demonstration");
-    println!("-----------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🎯 Electronic Beam Steering Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "-----------------------------------------"
+    );
 
     let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
@@ -130,9 +170,11 @@ fn demonstrate_beam_steering() -> KwaversResult<()> {
         let delays = array.element_delays();
         let delay_gradient = (delays[delays.len() - 1] - delays[0]) / (delays.len() - 1) as f64;
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  Steer to {:.0}°: Delay gradient = {:.3} rad/element",
-            angle_deg, delay_gradient
+            angle_deg,
+            delay_gradient
         );
 
         // Calculate steering accuracy
@@ -157,7 +199,11 @@ fn demonstrate_beam_steering() -> KwaversResult<()> {
                 format!("error: {:.1}% from theoretical", relative_error)
             }
         };
-        println!("    Steering accuracy: {}", accuracy_metric);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "    Steering accuracy: {}",
+            accuracy_metric
+        );
     }
 
     Ok(())
@@ -165,8 +211,14 @@ fn demonstrate_beam_steering() -> KwaversResult<()> {
 
 /// Demonstrate custom beamforming patterns
 fn demonstrate_custom_patterns() -> KwaversResult<()> {
-    println!("\n🎨 Custom Beamforming Patterns Demonstration");
-    println!("--------------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🎨 Custom Beamforming Patterns Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "--------------------------------------------"
+    );
 
     let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
@@ -181,7 +233,10 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
     let mut array = PhasedArrayTransducer::create(array_config.clone(), signal, &medium, &grid)?;
 
     // Pattern 1: Dual focus (split beam)
-    println!("  Pattern 1: Dual Focus (Split Beam)");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Pattern 1: Dual Focus (Split Beam)"
+    );
     let mut dual_focus_delays = Vec::new();
     for i in 0..array_config.num_elements {
         let element_pos = -((array_config.num_elements - 1) as f64) / 2.0 + i as f64;
@@ -207,13 +262,17 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
     array.set_beamforming(BeamformingMode::Custom {
         delays: dual_focus_delays.clone(),
     });
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    Applied {} custom delays for dual focus",
         dual_focus_delays.len()
     );
 
     // Pattern 2: Gaussian apodization with linear phase
-    println!("  Pattern 2: Gaussian Apodization with Linear Phase");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Pattern 2: Gaussian Apodization with Linear Phase"
+    );
     let mut gaussian_delays = Vec::new();
     for i in 0..array_config.num_elements {
         let element_pos = -((array_config.num_elements - 1) as f64) / 2.0 + i as f64;
@@ -224,10 +283,16 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
     array.set_beamforming(BeamformingMode::Custom {
         delays: gaussian_delays.clone(),
     });
-    println!("    Applied Gaussian-weighted linear phase pattern");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Applied Gaussian-weighted linear phase pattern"
+    );
 
     // Pattern 3: Sinusoidal phase pattern
-    println!("  Pattern 3: Sinusoidal Phase Pattern");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Pattern 3: Sinusoidal Phase Pattern"
+    );
     let mut sinusoidal_delays = Vec::new();
     for i in 0..array_config.num_elements {
         let phase = 2.0 * std::f64::consts::PI * i as f64 / array_config.num_elements as f64;
@@ -236,15 +301,24 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
     array.set_beamforming(BeamformingMode::Custom {
         delays: sinusoidal_delays,
     });
-    println!("    Applied sinusoidal phase pattern for side lobe control");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Applied sinusoidal phase pattern for side lobe control"
+    );
 
     Ok(())
 }
 
 /// Demonstrate cross-talk effects
 fn demonstrate_cross_talk_effects() -> KwaversResult<()> {
-    println!("\n🔗 Element Cross-talk Effects Demonstration");
-    println!("-------------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🔗 Element Cross-talk Effects Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "-------------------------------------------"
+    );
 
     let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
@@ -285,9 +359,11 @@ fn demonstrate_cross_talk_effects() -> KwaversResult<()> {
             f64::INFINITY
         };
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  Cross-talk {:.1}: Focus/Off-axis = {:.1} dB",
-            coefficient, contrast_ratio
+            coefficient,
+            contrast_ratio
         );
     }
 

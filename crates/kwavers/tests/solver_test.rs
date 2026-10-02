@@ -151,7 +151,7 @@ fn test_fdtd_solver() {
         max_pressure,
         max_expected
     );
-    println!(
+    eprintln!(
         "FDTD max pressure after {} steps: {}",
         TEST_STEPS_SHORT, max_pressure
     );
@@ -248,7 +248,7 @@ fn test_pstd_solver() {
         max_pressure,
         max_expected
     );
-    println!(
+    eprintln!(
         "PSTD max pressure after {} steps: {}",
         TEST_STEPS_SHORT, max_pressure
     );

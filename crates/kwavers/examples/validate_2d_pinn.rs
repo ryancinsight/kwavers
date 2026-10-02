@@ -36,6 +36,7 @@
 //! - Periodicity: Verifies temporal periodicity of the solution
 
 use std::f64::consts::PI;
+use std::io::Write;
 use std::time::Instant;
 
 /// Analytical solution for 2D wave equation with separable variables
@@ -116,16 +117,25 @@ fn compute_analytical_residual(x: f64, y: f64, t: f64, wave_speed: f64) -> f64 {
 fn main() {
     let start_time = Instant::now();
 
-    println!("🧠 2D PINN Physics Validation");
-    println!("============================");
+    let _ = writeln!(std::io::stdout().lock(), "🧠 2D PINN Physics Validation");
+    let _ = writeln!(std::io::stdout().lock(), "============================");
 
     let wave_speed = 343.0; // m/s (speed of sound in air)
     let domain_size = 1.0; // 1m x 1m domain
 
-    println!("📋 Configuration:");
-    println!("   Wave speed: {} m/s", wave_speed);
-    println!("   Domain: {}m x {}m", domain_size, domain_size);
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "📋 Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Wave speed: {} m/s",
+        wave_speed
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Domain: {}m x {}m",
+        domain_size,
+        domain_size
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Test points for validation
     let test_points = vec![
@@ -136,20 +146,36 @@ fn main() {
         (1.0, 1.0, 0.0), // Boundary point
     ];
 
-    println!("🧪 Analytical Solution Validation:");
-    println!("Point (x,y,t) → u(x,y,t)");
-    println!("--------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🧪 Analytical Solution Validation:"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "Point (x,y,t) → u(x,y,t)");
+    let _ = writeln!(std::io::stdout().lock(), "--------------------------------");
 
     for (x, y, t) in &test_points {
         let u = analytical_solution_2d(*x, *y, *t, wave_speed);
-        println!("   ({:.2}, {:.2}, {:.3}s) → {:.6}", x, y, t, u);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ({:.2}, {:.2}, {:.3}s) → {:.6}",
+            x,
+            y,
+            t,
+            u
+        );
     }
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("🔬 PDE Residual Validation:");
-    println!("Testing that analytical solution satisfies PDE");
-    println!("∂²u/∂t² = c²(∂²u/∂x² + ∂²u/∂y²)");
-    println!("---------------------------------------------");
+    let _ = writeln!(std::io::stdout().lock(), "🔬 PDE Residual Validation:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Testing that analytical solution satisfies PDE"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "∂²u/∂t² = c²(∂²u/∂x² + ∂²u/∂y²)");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "---------------------------------------------"
+    );
 
     let mut max_residual: f64 = 0.0;
     let mut residual_sum = 0.0;
@@ -169,18 +195,32 @@ fn main() {
 
     let rmse = (residual_sum / count as f64).sqrt();
 
-    println!("   Maximum residual: {:.2e}", max_residual);
-    println!("   RMSE residual: {:.2e}", rmse);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Maximum residual: {:.2e}",
+        max_residual
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   RMSE residual: {:.2e}", rmse);
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Residual threshold: {:.2e} (accounting for numerical precision)",
         1e-9
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Boundary condition validation
-    println!("🏗️  Boundary Condition Validation:");
-    println!("Testing Dirichlet boundary conditions u=0");
-    println!("---------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🏗️  Boundary Condition Validation:"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Testing Dirichlet boundary conditions u=0"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "---------------------------------------"
+    );
 
     let boundary_points = vec![
         (0.0, 0.25, 0.0),
@@ -201,17 +241,38 @@ fn main() {
     for (x, y, t) in &boundary_points {
         let u = analytical_solution_2d(*x, *y, *t, wave_speed);
         max_bc_error = max_bc_error.max(u.abs());
-        println!("   Boundary ({:.2}, {:.2}, {:.3}s): u = {:.2e}", x, y, t, u);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   Boundary ({:.2}, {:.2}, {:.3}s): u = {:.2e}",
+            x,
+            y,
+            t,
+            u
+        );
     }
 
-    println!("   Maximum boundary error: {:.2e}", max_bc_error);
-    println!("   Boundary threshold: {:.2e} (should be ~0)", 1e-15);
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Maximum boundary error: {:.2e}",
+        max_bc_error
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Boundary threshold: {:.2e} (should be ~0)",
+        1e-15
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Initial condition validation
-    println!("⏰ Initial Condition Validation:");
-    println!("Testing initial condition u(x,y,0) = sin(πx)sin(πy)");
-    println!("------------------------------------------------");
+    let _ = writeln!(std::io::stdout().lock(), "⏰ Initial Condition Validation:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Testing initial condition u(x,y,0) = sin(πx)sin(πy)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "------------------------------------------------"
+    );
 
     let mut max_ic_error: f64 = 0.0;
     for x in (0..11).map(|i| i as f64 * 0.1) {
@@ -223,47 +284,70 @@ fn main() {
         }
     }
 
-    println!("   Maximum initial condition error: {:.2e}", max_ic_error);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Maximum initial condition error: {:.2e}",
+        max_ic_error
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Initial condition threshold: {:.2e} (should be ~0)",
         1e-15
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Summary
-    println!("📊 Validation Summary:");
-    println!("======================");
+    let _ = writeln!(std::io::stdout().lock(), "📊 Validation Summary:");
+    let _ = writeln!(std::io::stdout().lock(), "======================");
 
     let physics_valid = max_residual < 1e-9 && rmse < 1e-9;
     let bc_valid = max_bc_error < 1e-14;
     let ic_valid = max_ic_error < 1e-14;
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   ✅ PDE satisfaction: {}",
         if physics_valid { "PASS" } else { "FAIL" }
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   ✅ Boundary conditions: {}",
         if bc_valid { "PASS" } else { "FAIL" }
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   ✅ Initial conditions: {}",
         if ic_valid { "PASS" } else { "FAIL" }
     );
 
     if physics_valid && bc_valid && ic_valid {
-        println!();
-        println!("🎉 All physics validations PASSED!");
-        println!("   The analytical solution correctly satisfies:");
-        println!("   • 2D wave equation PDE");
-        println!("   • Dirichlet boundary conditions");
-        println!("   • Initial conditions");
-        println!();
-        println!("   This confirms our PINN implementation has the correct physics!");
+        let _ = writeln!(std::io::stdout().lock());
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🎉 All physics validations PASSED!"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   The analytical solution correctly satisfies:"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   • 2D wave equation PDE");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Dirichlet boundary conditions"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   • Initial conditions");
+        let _ = writeln!(std::io::stdout().lock());
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   This confirms our PINN implementation has the correct physics!"
+        );
     } else {
-        println!();
-        println!("❌ Some physics validations FAILED!");
-        println!("   Please check the analytical solution implementation.");
+        let _ = writeln!(std::io::stdout().lock());
+        eprintln!("❌ Some physics validations FAILED!");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   Please check the analytical solution implementation."
+        );
     }
 
     // Performance summary - run multiple iterations for better timing
@@ -278,20 +362,27 @@ fn main() {
     let total_points = 11 * 11 * 6;
     let total_elapsed = start_time.elapsed();
 
-    println!();
-    println!("⚡ Performance Summary:");
-    println!("=======================");
-    println!(
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(std::io::stdout().lock(), "⚡ Performance Summary:");
+    let _ = writeln!(std::io::stdout().lock(), "=======================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Total validation time: {:.3} ms",
         total_elapsed.as_millis()
     );
-    println!("   Validated {} spatial-temporal points", total_points);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Validated {} spatial-temporal points",
+        total_points
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   PDE residual benchmark ({} iterations): {:.3} μs/iter",
         iterations,
         perf_elapsed.as_micros() as f64 / iterations as f64
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Overall throughput: {:.0} points/ms",
         total_points as f64 / total_elapsed.as_millis().max(1) as f64
     );

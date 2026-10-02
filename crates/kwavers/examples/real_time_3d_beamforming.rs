@@ -26,13 +26,20 @@ use kwavers_core::error::KwaversResult;
 #[cfg(feature = "gpu")]
 use kwavers_gpu::beamforming::three_dimensional::WgpuBeamformingProvider;
 use leto::{Array3, Array4};
+use std::io::Write;
 #[cfg(feature = "gpu")]
 use std::time::Instant;
 
 #[cfg(feature = "gpu")]
 fn main() -> KwaversResult<()> {
-    println!("🚀 Real-Time 3D Beamforming Demonstration");
-    println!("==========================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🚀 Real-Time 3D Beamforming Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=========================================="
+    );
 
     // Demonstrate different beamforming configurations
     demonstrate_delay_and_sum()?;
@@ -40,25 +47,46 @@ fn main() -> KwaversResult<()> {
     demonstrate_streaming_processing()?;
     demonstrate_performance_benchmarking()?;
 
-    println!("\n✅ Real-time 3D beamforming demonstration completed successfully!");
-    println!("   Demonstrated: GPU acceleration, streaming processing, dynamic focusing, performance benchmarking");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n✅ Real-time 3D beamforming demonstration completed successfully!"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   Demonstrated: GPU acceleration, streaming processing, dynamic focusing, performance benchmarking");
 
     Ok(())
 }
 
 #[cfg(not(feature = "gpu"))]
 fn main() {
-    println!("🚫 Real-Time 3D Beamforming Example");
-    println!("====================================");
-    println!("This example requires GPU acceleration.");
-    println!("Run with: cargo run --example real_time_3d_beamforming --features gpu");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🚫 Real-Time 3D Beamforming Example"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "===================================="
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "This example requires GPU acceleration."
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Run with: cargo run --example real_time_3d_beamforming --features gpu"
+    );
 }
 
 #[cfg(feature = "gpu")]
 /// Demonstrate basic delay-and-sum beamforming
 fn demonstrate_delay_and_sum() -> KwaversResult<()> {
-    println!("\n📊 Delay-and-Sum 3D Beamforming Demonstration");
-    println!("---------------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n📊 Delay-and-Sum 3D Beamforming Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "---------------------------------------------"
+    );
 
     // Create configuration
     let config = BeamformingConfig3D {
@@ -67,19 +95,27 @@ fn demonstrate_delay_and_sum() -> KwaversResult<()> {
         ..Default::default()
     };
 
-    println!("Configuration:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Volume: {}×{}×{}",
-        config.volume_dims.0, config.volume_dims.1, config.volume_dims.2
+        config.volume_dims.0,
+        config.volume_dims.1,
+        config.volume_dims.2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Elements: {}×{}×{} = {}",
         config.num_elements_3d.0,
         config.num_elements_3d.1,
         config.num_elements_3d.2,
         config.num_elements_3d.0 * config.num_elements_3d.1 * config.num_elements_3d.2
     );
-    println!("  Voxel spacing: {:.1}mm", config.voxel_spacing.0 * 1000.0);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Voxel spacing: {:.1}mm",
+        config.voxel_spacing.0 * 1000.0
+    );
 
     // Create processor
     let mut processor =
@@ -105,15 +141,27 @@ fn demonstrate_delay_and_sum() -> KwaversResult<()> {
     let processing_time = start_time.elapsed().as_secs_f64() * 1000.0;
 
     // Display results
-    println!("Processing Results:");
-    println!("  Processing time: {:.2}ms", processing_time);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "Processing Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Processing time: {:.2}ms",
+        processing_time
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Reconstruction rate: {:.1} volumes/sec",
         1000.0 / processing_time
     );
     let [nx, ny, nz] = volume.shape();
-    println!("  Volume dimensions: {}×{}×{}", nx, ny, nz);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Volume dimensions: {}×{}×{}",
+        nx,
+        ny,
+        nz
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Volume range: {:.3} to {:.3}",
         volume.iter().copied().fold(f32::INFINITY, f32::min),
         volume.iter().copied().fold(f32::NEG_INFINITY, f32::max)
@@ -121,9 +169,17 @@ fn demonstrate_delay_and_sum() -> KwaversResult<()> {
 
     // Get performance metrics
     let metrics = processor.metrics();
-    println!("Performance Metrics:");
-    println!("  GPU memory usage: {:.1} MB", metrics.gpu_memory_mb);
-    println!("  CPU memory usage: {:.1} MB", metrics.cpu_memory_mb);
+    let _ = writeln!(std::io::stdout().lock(), "Performance Metrics:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  GPU memory usage: {:.1} MB",
+        metrics.gpu_memory_mb
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  CPU memory usage: {:.1} MB",
+        metrics.cpu_memory_mb
+    );
 
     Ok(())
 }
@@ -131,8 +187,14 @@ fn demonstrate_delay_and_sum() -> KwaversResult<()> {
 /// Demonstrate dynamic focusing capabilities
 #[cfg(feature = "gpu")]
 fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
-    println!("\n🎯 Dynamic Focusing 3D Beamforming Demonstration");
-    println!("------------------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🎯 Dynamic Focusing 3D Beamforming Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "------------------------------------------------"
+    );
 
     let config = BeamformingConfig3D {
         volume_dims: (32, 32, 32), // Even smaller for quick demo
@@ -181,10 +243,18 @@ fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
             0.0
         };
 
-        println!("{}:", name);
-        println!("  Processing time: {:.2}ms", processing_time);
-        println!("  Dynamic range: {:.1} dB", dynamic_range);
-        println!("  Peak signal: {:.3}", max_signal);
+        let _ = writeln!(std::io::stdout().lock(), "{}:", name);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Processing time: {:.2}ms",
+            processing_time
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Dynamic range: {:.1} dB",
+            dynamic_range
+        );
+        let _ = writeln!(std::io::stdout().lock(), "  Peak signal: {:.3}", max_signal);
     }
 
     Ok(())
@@ -193,8 +263,14 @@ fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
 /// Demonstrate real-time streaming processing for 4D ultrasound
 #[cfg(feature = "gpu")]
 fn demonstrate_streaming_processing() -> KwaversResult<()> {
-    println!("\n📺 Real-Time Streaming 4D Ultrasound Demonstration");
-    println!("--------------------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n📺 Real-Time Streaming 4D Ultrasound Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "--------------------------------------------------"
+    );
 
     let config = BeamformingConfig3D {
         volume_dims: (32, 32, 32),
@@ -213,11 +289,18 @@ fn demonstrate_streaming_processing() -> KwaversResult<()> {
         sub_volume_size: None,
     };
 
-    println!("Streaming Configuration:");
-    println!("  Buffer size: {} frames", config.streaming_buffer_size);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "Streaming Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Buffer size: {} frames",
+        config.streaming_buffer_size
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Volume size: {}×{}×{}",
-        config.volume_dims.0, config.volume_dims.1, config.volume_dims.2
+        config.volume_dims.0,
+        config.volume_dims.1,
+        config.volume_dims.2
     );
 
     // Simulate streaming data acquisition
@@ -225,7 +308,7 @@ fn demonstrate_streaming_processing() -> KwaversResult<()> {
     let mut processed_volumes = 0;
     let mut total_processing_time = 0.0;
 
-    println!("Processing streaming frames...");
+    let _ = writeln!(std::io::stdout().lock(), "Processing streaming frames...");
 
     for frame_idx in 0..total_frames {
         // Generate synthetic frame data
@@ -243,13 +326,16 @@ fn demonstrate_streaming_processing() -> KwaversResult<()> {
             processed_volumes += 1;
 
             if processed_volumes <= 3 || processed_volumes % 5 == 0 {
-                println!(
+                let _ = writeln!(
+                    std::io::stdout().lock(),
                     "  Frame {}: Processed volume in {:.2}ms",
-                    frame_idx, processing_time
+                    frame_idx,
+                    processing_time
                 );
             }
         } else {
-            println!(
+            let _ = writeln!(
+                std::io::stdout().lock(),
                 "  Frame {}: Added to buffer (buffer not full yet)",
                 frame_idx
             );
@@ -258,13 +344,19 @@ fn demonstrate_streaming_processing() -> KwaversResult<()> {
 
     if processed_volumes > 0 {
         let avg_processing_time = total_processing_time / processed_volumes as f64;
-        println!("Streaming Results:");
-        println!("  Total volumes processed: {}", processed_volumes);
-        println!(
+        let _ = writeln!(std::io::stdout().lock(), "Streaming Results:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Total volumes processed: {}",
+            processed_volumes
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  Average processing time: {:.2}ms per volume",
             avg_processing_time
         );
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  Effective frame rate: {:.1} volumes/sec",
             1000.0 / avg_processing_time
         );
@@ -276,8 +368,14 @@ fn demonstrate_streaming_processing() -> KwaversResult<()> {
 /// Demonstrate performance benchmarking against CPU implementation
 #[cfg(feature = "gpu")]
 fn demonstrate_performance_benchmarking() -> KwaversResult<()> {
-    println!("\n⚡ Performance Benchmarking Demonstration");
-    println!("-----------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n⚡ Performance Benchmarking Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "-----------------------------------------"
+    );
 
     let config = BeamformingConfig3D {
         volume_dims: (16, 16, 16), // Very small for benchmarking
@@ -298,7 +396,10 @@ fn demonstrate_performance_benchmarking() -> KwaversResult<()> {
     };
 
     // Benchmark GPU implementation
-    println!("Benchmarking GPU implementation...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Benchmarking GPU implementation..."
+    );
     let mut gpu_times = Vec::new();
 
     for _ in 0..5 {
@@ -311,7 +412,10 @@ fn demonstrate_performance_benchmarking() -> KwaversResult<()> {
     let gpu_min = gpu_times.iter().fold(f64::INFINITY, |a, &b| a.min(b));
 
     // Simulate CPU implementation (simplified)
-    println!("Benchmarking CPU implementation (simplified)...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Benchmarking CPU implementation (simplified)..."
+    );
     let mut cpu_times = Vec::new();
 
     for _ in 0..5 {
@@ -327,27 +431,43 @@ fn demonstrate_performance_benchmarking() -> KwaversResult<()> {
     let speedup_avg = cpu_avg / gpu_avg;
     let speedup_best = cpu_min / gpu_min;
 
-    println!("Performance Results:");
-    println!("  GPU average: {:.3}ms", gpu_avg);
-    println!("  GPU best: {:.3}ms", gpu_min);
-    println!("  CPU average: {:.3}ms", cpu_avg);
-    println!("  CPU best: {:.3}ms", cpu_min);
-    println!("  Speedup (average): {:.1}x", speedup_avg);
-    println!("  Speedup (best): {:.1}x", speedup_best);
+    let _ = writeln!(std::io::stdout().lock(), "Performance Results:");
+    let _ = writeln!(std::io::stdout().lock(), "  GPU average: {:.3}ms", gpu_avg);
+    let _ = writeln!(std::io::stdout().lock(), "  GPU best: {:.3}ms", gpu_min);
+    let _ = writeln!(std::io::stdout().lock(), "  CPU average: {:.3}ms", cpu_avg);
+    let _ = writeln!(std::io::stdout().lock(), "  CPU best: {:.3}ms", cpu_min);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Speedup (average): {:.1}x",
+        speedup_avg
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Speedup (best): {:.1}x",
+        speedup_best
+    );
 
     // Check against targets
     let target_time = 10.0; // 10ms target
     let target_speedup = 10.0; // 10x speedup target
 
-    println!("Target Analysis:");
-    println!("  Target time: <{}ms per volume", target_time);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "Target Analysis:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Target time: <{}ms per volume",
+        target_time
+    );
+    eprintln!(
         "  Achieved: {:.1}ms {}",
         gpu_avg,
         if gpu_avg < target_time { "✅" } else { "❌" }
     );
-    println!("  Target speedup: >{}x", target_speedup);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Target speedup: >{}x",
+        target_speedup
+    );
+    eprintln!(
         "  Achieved: {:.1}x {}",
         speedup_avg,
         if speedup_avg > target_speedup {

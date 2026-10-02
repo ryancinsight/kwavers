@@ -40,6 +40,7 @@
 //! Part VI — Atlas Stack Integration, §SIMD: Hermes for Vectorized Operations.
 
 use hermes_simd::{axpy, dot, elementwise_add, scale, sum};
+use std::io::Write;
 
 // ── Physical constants ────────────────────────────────────────────────────
 const N: usize = 1024; // 1-D field length
@@ -48,10 +49,16 @@ const RHO0: f64 = 1000.0; // water density [kg/m³]
 const SIGMA_PML: f64 = 1.0e6; // PML attenuation coefficient [Np/s]
 
 fn main() {
-    println!("SIMD wave kernel demo (hermes-simd runtime dispatch)");
-    println!("field size: {N}, dt: {DT:.1e} s, ρ₀: {RHO0:.0} kg/m³");
-    println!("backend: {}", runtime_backend());
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "SIMD wave kernel demo (hermes-simd runtime dispatch)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "field size: {N}, dt: {DT:.1e} s, ρ₀: {RHO0:.0} kg/m³"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "backend: {}", runtime_backend());
+    let _ = writeln!(std::io::stdout().lock());
 
     // ── 1. Pressure superposition: p_out = p_a + p_b ─────────────────────
     //
@@ -81,16 +88,22 @@ fn main() {
     let sum_ref: f64 = p_a.iter().zip(&p_b).map(|(a, b)| a + b).sum();
     let add_error = (sum_super - sum_ref).abs() / sum_ref.abs().max(f64::EPSILON);
 
-    println!("1. elementwise_add — pressure superposition");
-    println!("   ||p_a||² = {energy_a:.8e}");
-    println!("   ||p_b||² = {energy_b:.8e}");
-    println!("   Σ(p_a+p_b) = {sum_super:.8e}  (ref: {sum_ref:.8e}, err: {add_error:.2e})");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "1. elementwise_add — pressure superposition"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   ||p_a||² = {energy_a:.8e}");
+    let _ = writeln!(std::io::stdout().lock(), "   ||p_b||² = {energy_b:.8e}");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Σ(p_a+p_b) = {sum_super:.8e}  (ref: {sum_ref:.8e}, err: {add_error:.2e})"
+    );
     assert!(
         add_error < 1e-12,
         "elementwise_add error {add_error:.2e} exceeds tolerance"
     );
-    println!("   → PASS");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "   → PASS");
+    let _ = writeln!(std::io::stdout().lock());
 
     // ── 2. PML damping: p *= exp(−σ·Δt) ─────────────────────────────────
     //
@@ -108,17 +121,26 @@ fn main() {
     let actual_ratio = energy_after / energy_before;
     let pml_error = (actual_ratio - expected_ratio).abs();
 
-    println!("2. scale — PML attenuation (exp(−σΔt) = {damping:.14})");
-    println!("   E_before = {energy_before:.8e}");
-    println!("   E_after  = {energy_after:.8e}");
-    println!("   ratio    = {actual_ratio:.14}  (expected {expected_ratio:.14})");
-    println!("   error    = {pml_error:.2e}");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "2. scale — PML attenuation (exp(−σΔt) = {damping:.14})"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   E_before = {energy_before:.8e}"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   E_after  = {energy_after:.8e}");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ratio    = {actual_ratio:.14}  (expected {expected_ratio:.14})"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   error    = {pml_error:.2e}");
     assert!(
         pml_error < 1e-12,
         "PML energy ratio error {pml_error:.2e} exceeds tolerance"
     );
-    println!("   → PASS");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "   → PASS");
+    let _ = writeln!(std::io::stdout().lock());
 
     // ── 3. Velocity update: u += α · ∇p  (AXPY, α = −Δt/ρ₀) ─────────────
     //
@@ -143,25 +165,34 @@ fn main() {
     let axpy_error =
         (vel_energy - expected_vel_energy).abs() / expected_vel_energy.max(f64::EPSILON);
 
-    println!("3. axpy — velocity update (α = {alpha:.4e})");
-    println!("   ||∇p||² = {grad_energy:.8e}");
-    println!("   ||u||²  = {vel_energy:.8e}  (expected {expected_vel_energy:.8e})");
-    println!("   relative error = {axpy_error:.2e}");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "3. axpy — velocity update (α = {alpha:.4e})"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   ||∇p||² = {grad_energy:.8e}");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ||u||²  = {vel_energy:.8e}  (expected {expected_vel_energy:.8e})"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   relative error = {axpy_error:.2e}"
+    );
     assert!(
         axpy_error < 1e-12,
         "AXPY velocity energy error {axpy_error:.2e} exceeds tolerance"
     );
-    println!("   → PASS");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "   → PASS");
+    let _ = writeln!(std::io::stdout().lock());
 
     // ── 4. Field diagnostics: sum and dot ─────────────────────────────────
 
     let integral_p = sum(&p_damped);
     let l2_norm = dot(&p_damped, &p_damped).map(|e| e.sqrt()).unwrap();
 
-    println!("4. sum + dot — field diagnostics");
-    println!("   ∫p dx     = {integral_p:.8e}");
-    println!("   ||p||_L2  = {l2_norm:.8e}");
+    let _ = writeln!(std::io::stdout().lock(), "4. sum + dot — field diagnostics");
+    let _ = writeln!(std::io::stdout().lock(), "   ∫p dx     = {integral_p:.8e}");
+    let _ = writeln!(std::io::stdout().lock(), "   ||p||_L2  = {l2_norm:.8e}");
 
     // Peak detection via argmax
     let (peak_idx, peak_val) = hermes_simd::argmax(&p_a).expect("non-empty");
@@ -170,12 +201,19 @@ fn main() {
         (peak_idx as isize - expected_peak_idx as isize).unsigned_abs() <= 1,
         "peak index {peak_idx} should be near {expected_peak_idx}"
     );
-    println!("   peak p_a at idx {peak_idx} = {peak_val:.8e}  (expected near {expected_peak_idx})");
-    println!("   → PASS");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   peak p_a at idx {peak_idx} = {peak_val:.8e}  (expected near {expected_peak_idx})"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   → PASS");
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("All SIMD correctness checks PASS");
-    println!("Runtime backend: {}", runtime_backend());
+    let _ = writeln!(std::io::stdout().lock(), "All SIMD correctness checks PASS");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Runtime backend: {}",
+        runtime_backend()
+    );
 }
 
 /// Gaussian pulse.

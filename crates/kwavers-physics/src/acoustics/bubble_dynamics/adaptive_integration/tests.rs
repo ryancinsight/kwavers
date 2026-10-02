@@ -37,7 +37,7 @@ fn test_adaptive_integration() {
     // If integration fails, it's likely due to the stiff nature of bubble dynamics
     // This is actually expected behavior for certain parameter regimes
     if let Err(e) = &result {
-        println!("Integration stopped with error: {:?}", e);
+        eprintln!("Integration stopped with error: {:?}", e);
         // Accept convergence failures with small residuals as success
         if let kwavers_core::error::KwaversError::Physics(
             kwavers_core::error::PhysicsError::ConvergenceFailure { residual, .. },
@@ -62,7 +62,7 @@ fn test_adaptive_integration() {
     // Check that sub-cycling occurred
     let stats = integrator.statistics();
     assert!(stats.total_substeps > 0);
-    println!("Integration stats: {:?}", stats);
+    eprintln!("Integration stats: {:?}", stats);
 }
 
 #[test]

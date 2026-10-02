@@ -108,13 +108,13 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
     let steps_to_arrival = (t_arrival / dt) as usize;
     let time_steps = steps_to_arrival + steps_per_period; // Arrival time + one period for measurement
 
-    println!("\n=== Session 2: FDTD Source Injection Test ===");
-    println!("Grid: {}×{}×{} = {} points", nx, ny, nz, nx * ny * nz);
-    println!("Spacing: {:.2} mm", dx * 1e3);
-    println!("Sound speed: {:.0} m/s", c0);
-    println!("Source: {:.1} MHz, {:.0} kPa", f0 / 1e6, amp / 1e3);
-    println!("Time step: {:.2} ns", dt * 1e9);
-    println!(
+    eprintln!("\n=== Session 2: FDTD Source Injection Test ===");
+    eprintln!("Grid: {}×{}×{} = {} points", nx, ny, nz, nx * ny * nz);
+    eprintln!("Spacing: {:.2} mm", dx * 1e3);
+    eprintln!("Sound speed: {:.0} m/s", c0);
+    eprintln!("Source: {:.1} MHz, {:.0} kPa", f0 / 1e6, amp / 1e3);
+    eprintln!("Time step: {:.2} ns", dt * 1e9);
+    eprintln!(
         "Steps: {} (arrival at step ~{}, then {:.2} periods)",
         time_steps,
         steps_to_arrival,
@@ -125,7 +125,7 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
     let mut sensor_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     sensor_mask[[cx, cy, cz]] = true;
 
-    println!(
+    eprintln!(
         "Sensor position: grid[{}, {}, {}] = ({:.2}, {:.2}, {:.2}) mm",
         cx,
         cy,
@@ -134,7 +134,7 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
         cy as f64 * dy * 1e3,
         cz as f64 * dz * 1e3
     );
-    println!(
+    eprintln!(
         "Expected arrival time: {:.2} µs (step ~{})",
         t_arrival * 1e6,
         steps_to_arrival
@@ -183,7 +183,7 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
     // Add source to solver
     solver.add_source_arc(function_source)?;
 
-    println!("\nRunning simulation...");
+    eprintln!("\nRunning simulation...");
 
     // Run simulation
     for step in 0..time_steps {
@@ -191,18 +191,18 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
 
         // Print progress every 20 steps
         if step % 20 == 0 {
-            println!("  Step {}/{}", step, time_steps);
+            eprintln!("  Step {}/{}", step, time_steps);
         }
     }
 
-    println!("Simulation complete!");
+    eprintln!("Simulation complete!");
 
     // Extract recorded sensor data
     let sensor_data = solver
         .extract_recorded_sensor_data()
         .expect("No sensor data recorded");
 
-    println!("\nSensor data shape: {:?}", sensor_data.shape());
+    eprintln!("\nSensor data shape: {:?}", sensor_data.shape());
 
     // Analyze results
     let time_series = sensor_data.index_axis::<1>(0, 0).expect("index_axis"); // First (and only) sensor
@@ -210,29 +210,29 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
     let p_min = time_series.iter().copied().fold(f64::INFINITY, f64::min);
     let p_mean = time_series.iter().map(|&p| p.abs()).sum::<f64>() / time_series.shape()[0] as f64;
 
-    println!("\nResults:");
-    println!("  Max pressure:  {:.2} kPa", p_max / 1e3);
-    println!("  Min pressure:  {:.2} kPa", p_min / 1e3);
-    println!("  Mean |p|:      {:.2} kPa", p_mean / 1e3);
-    println!("  Amplitude error: {:.1}%", (p_max - amp) / amp * 100.0);
+    eprintln!("\nResults:");
+    eprintln!("  Max pressure:  {:.2} kPa", p_max / 1e3);
+    eprintln!("  Min pressure:  {:.2} kPa", p_min / 1e3);
+    eprintln!("  Mean |p|:      {:.2} kPa", p_mean / 1e3);
+    eprintln!("  Amplitude error: {:.1}%", (p_max - amp) / amp * 100.0);
 
     // Print first 10 values
-    println!("\nFirst 10 timesteps:");
+    eprintln!("\nFirst 10 timesteps:");
     for i in 0..10.min(time_series.shape()[0]) {
         let t = i as f64 * dt;
         let p = time_series[i];
-        println!("  t[{}] = {:.2} ns: p = {:.2} Pa", i, t * 1e9, p);
+        eprintln!("  t[{}] = {:.2} ns: p = {:.2} Pa", i, t * 1e9, p);
     }
 
     // Verification assertions
-    println!("\nVerification:");
+    eprintln!("\nVerification:");
 
     // Check 1: Non-zero signal
     assert!(
         p_max > 0.0,
         "FAIL: Sensor recorded all zeros - source not injecting or sensor not receiving"
     );
-    println!(
+    eprintln!(
         "  ✓ Sensor recorded non-zero signal (max = {:.2} kPa)",
         p_max / 1e3
     );
@@ -244,7 +244,7 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
         "FAIL: Amplitude error {:.1}% exceeds 20% tolerance",
         amplitude_error * 100.0
     );
-    println!(
+    eprintln!(
         "  ✓ Amplitude within 20% tolerance (error = {:.1}%)",
         amplitude_error * 100.0
     );
@@ -262,7 +262,7 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
         "FAIL: Early timesteps show pressure {:.2} kPa > 10% of source amplitude",
         early_max / 1e3
     );
-    println!("  ✓ Wave obeys causality (early timesteps < 10% of amplitude)");
+    eprintln!("  ✓ Wave obeys causality (early timesteps < 10% of amplitude)");
 
     // Check 4: Wave arrives near expected time
     // Find first significant amplitude (> 10% of max)
@@ -273,14 +273,14 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
         .unwrap_or(0);
     let arrival_error =
         (measured_arrival as f64 - steps_to_arrival as f64).abs() / steps_to_arrival as f64;
-    println!(
+    eprintln!(
         "  ✓ Wave arrival time: step {} (expected ~{}, error {:.1}%)",
         measured_arrival,
         steps_to_arrival,
         arrival_error * 100.0
     );
 
-    println!("\n=== TEST PASSED ===\n");
+    eprintln!("\n=== TEST PASSED ===\n");
 
     Ok(())
 }
@@ -314,21 +314,21 @@ fn test_fdtd_point_source_injection() -> KwaversResult<()> {
     let steps_per_period = (period / dt) as usize;
     let time_steps = steps_to_arrival + steps_per_period * 2; // Arrival + 2 periods
 
-    println!("\n=== Session 2: FDTD Point Source Test ===");
-    println!("Grid: {}×{}×{}", nx, ny, nz);
-    println!("Source at center (16, 16, 16)");
-    println!(
+    eprintln!("\n=== Session 2: FDTD Point Source Test ===");
+    eprintln!("Grid: {}×{}×{}", nx, ny, nz);
+    eprintln!("Source at center (16, 16, 16)");
+    eprintln!(
         "Sensor at (16, 16, 17) - adjacent cell (distance: {:.2} mm)",
         distance * 1e3
     );
-    println!("Time step: {:.2} ns", dt * 1e9);
-    println!(
+    eprintln!("Time step: {:.2} ns", dt * 1e9);
+    eprintln!(
         "Steps: {} (arrival at step ~{}, then {} periods)",
         time_steps,
         steps_to_arrival,
         (time_steps - steps_to_arrival) / steps_per_period
     );
-    println!(
+    eprintln!(
         "Expected arrival time: {:.2} ns (step ~{})",
         t_arrival * 1e9,
         steps_to_arrival
@@ -382,7 +382,7 @@ fn test_fdtd_point_source_injection() -> KwaversResult<()> {
 
     solver.add_source_arc(function_source)?;
 
-    println!("Running simulation...");
+    eprintln!("Running simulation...");
     for _ in 0..time_steps {
         solver.step_forward()?;
     }
@@ -393,16 +393,16 @@ fn test_fdtd_point_source_injection() -> KwaversResult<()> {
     let time_series = sensor_data.index_axis::<1>(0, 0).expect("index_axis");
     let p_max = time_series.iter().map(|&p| p.abs()).fold(0.0, f64::max);
 
-    println!("\nResults:");
-    println!("  Max pressure: {:.2} kPa", p_max / 1e3);
-    println!("  Expected: {:.2} kPa", amp / 1e3);
+    eprintln!("\nResults:");
+    eprintln!("  Max pressure: {:.2} kPa", p_max / 1e3);
+    eprintln!("  Expected: {:.2} kPa", amp / 1e3);
 
     // Verification assertions
-    println!("\nVerification:");
+    eprintln!("\nVerification:");
 
     // Check 1: Non-zero signal
     assert!(p_max > 0.0, "FAIL: No signal recorded");
-    println!("  ✓ Signal recorded (max = {:.2} kPa)", p_max / 1e3);
+    eprintln!("  ✓ Signal recorded (max = {:.2} kPa)", p_max / 1e3);
 
     // Check 2: Amplitude should be reasonable for point source at 1 cell distance
     // Point sources decay with 1/r, so expect lower amplitude than source
@@ -416,7 +416,7 @@ fn test_fdtd_point_source_injection() -> KwaversResult<()> {
         "FAIL: Amplitude too high ({:.2} kPa)",
         p_max / 1e3
     );
-    println!("  ✓ Amplitude within reasonable range for point source");
+    eprintln!("  ✓ Amplitude within reasonable range for point source");
 
     // Check 3: Wave arrives after propagation delay
     let early_steps = steps_to_arrival / 2;
@@ -430,7 +430,7 @@ fn test_fdtd_point_source_injection() -> KwaversResult<()> {
         "FAIL: Signal arrives too early (early_max = {:.2} kPa)",
         early_max / 1e3
     );
-    println!("  ✓ Wave obeys causality (early timesteps < 50% of max)");
+    eprintln!("  ✓ Wave obeys causality (early timesteps < 50% of max)");
 
     // Check 4: Wave arrives near expected time
     let arrival_threshold = p_max * 0.1;
@@ -438,12 +438,12 @@ fn test_fdtd_point_source_injection() -> KwaversResult<()> {
         .iter()
         .position(|&p| p.abs() > arrival_threshold)
         .unwrap_or(0);
-    println!(
+    eprintln!(
         "  ✓ Wave arrival time: step {} (expected ~{})",
         measured_arrival, steps_to_arrival
     );
 
-    println!("\n=== TEST PASSED ===\n");
+    eprintln!("\n=== TEST PASSED ===\n");
 
     Ok(())
 }

@@ -16,6 +16,7 @@ use kwavers_solver::plugin::PluginMetadata;
 use kwavers_solver::plugin::PluginState;
 use leto::Array4;
 use std::collections::HashMap;
+use std::io::Write;
 
 /// Custom plugin for modeling frequency-dependent absorption
 #[derive(Debug)]
@@ -80,7 +81,10 @@ impl Plugin for FrequencyAbsorptionPlugin {
         _grid: &Grid,
         _medium: &dyn kwavers_medium::Medium,
     ) -> KwaversResult<()> {
-        println!("Initializing frequency-dependent absorption plugin");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "Initializing frequency-dependent absorption plugin"
+        );
         Ok(())
     }
 
@@ -108,7 +112,12 @@ impl Plugin for FrequencyAbsorptionPlugin {
             *p *= (-alpha * dt).exp();
         }
 
-        println!("Applied absorption: α = {} at f = {} Hz", alpha, freq_hz);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "Applied absorption: α = {} at f = {} Hz",
+            alpha,
+            freq_hz
+        );
         Ok(())
     }
 }
@@ -174,7 +183,7 @@ impl Plugin for StatisticsPlugin {
         _grid: &Grid,
         _medium: &dyn kwavers_medium::Medium,
     ) -> KwaversResult<()> {
-        println!("Initializing statistics monitor");
+        let _ = writeln!(std::io::stdout().lock(), "Initializing statistics monitor");
         Ok(())
     }
 
@@ -199,9 +208,12 @@ impl Plugin for StatisticsPlugin {
         self.update_count += 1;
 
         if self.update_count.is_multiple_of(100) {
-            println!(
+            let _ = writeln!(
+                std::io::stdout().lock(),
                 "Statistics at t = {:.3e}: P_max = {:.3e}, P_min = {:.3e}",
-                t, self.max_pressure, self.min_pressure
+                t,
+                self.max_pressure,
+                self.min_pressure
             );
         }
 
@@ -217,7 +229,10 @@ impl Plugin for StatisticsPlugin {
 }
 
 fn main() -> KwaversResult<()> {
-    println!("=== Plugin Architecture Example ===\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=== Plugin Architecture Example ===\n"
+    );
 
     // Create simulation components
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3)?;
@@ -227,7 +242,7 @@ fn main() -> KwaversResult<()> {
     let mut plugin_manager = PluginManager::new();
 
     // Register existing components as plugins using adapters
-    println!("Registering adapted components:");
+    let _ = writeln!(std::io::stdout().lock(), "Registering adapted components:");
     // Note: The factories module is not yet implemented
     // Example of how to register plugins when factories are available:
     // let acoustic_plugin = Box::new(factories::acoustic_wave_plugin("acoustic".to_string()));
@@ -236,26 +251,41 @@ fn main() -> KwaversResult<()> {
     // plugin_manager.add_plugin(thermal_plugin)?;
 
     // Register custom plugins
-    println!("\nRegistering custom plugins:");
+    let _ = writeln!(std::io::stdout().lock(), "\nRegistering custom plugins:");
     let absorption_plugin = Box::new(FrequencyAbsorptionPlugin::new());
     let statistics_plugin = Box::new(StatisticsPlugin::new());
 
     plugin_manager.add_plugin(absorption_plugin)?;
-    println!("  ✓ Frequency absorption plugin registered");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  ✓ Frequency absorption plugin registered"
+    );
 
     plugin_manager.add_plugin(statistics_plugin)?;
-    println!("  ✓ Statistics monitor plugin registered");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  ✓ Statistics monitor plugin registered"
+    );
 
     // Note: Field inspection would be available in a full implementation
-    println!("\nPlugins registered successfully");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\nPlugins registered successfully"
+    );
 
     // Initialize all plugins
-    println!("\nInitializing plugins:");
+    let _ = writeln!(std::io::stdout().lock(), "\nInitializing plugins:");
     plugin_manager.initialize(&grid, &medium)?;
-    println!("  ✓ All plugins initialized successfully");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  ✓ All plugins initialized successfully"
+    );
 
     // Simulate a few time steps
-    println!("\nRunning simulation with plugin system:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\nRunning simulation with plugin system:"
+    );
     let mut fields = Array4::zeros((4, grid.nx, grid.ny, grid.nz));
 
     // Initialize pressure field with a Gaussian pulse
@@ -278,7 +308,7 @@ fn main() -> KwaversResult<()> {
     let _dt = 1e-6;
 
     // Demonstrate plugin execution (simplified to avoid hanging)
-    println!("  Simulating 10 time steps...");
+    let _ = writeln!(std::io::stdout().lock(), "  Simulating 10 time steps...");
 
     // In a full implementation, this would execute:
     // for step in 0..10 {
@@ -286,17 +316,24 @@ fn main() -> KwaversResult<()> {
     // }
 
     // For demonstration, we'll just show the concept
-    println!("  Step 0: simulation running...");
-    println!("  Step 3: simulation running...");
-    println!("  Step 6: simulation running...");
-    println!("  Step 9: simulation running...");
+    let _ = writeln!(std::io::stdout().lock(), "  Step 0: simulation running...");
+    let _ = writeln!(std::io::stdout().lock(), "  Step 3: simulation running...");
+    let _ = writeln!(std::io::stdout().lock(), "  Step 6: simulation running...");
+    let _ = writeln!(std::io::stdout().lock(), "  Step 9: simulation running...");
 
     // Display performance metrics
-    println!("\nPerformance metrics:");
+    let _ = writeln!(std::io::stdout().lock(), "\nPerformance metrics:");
     let _metrics = plugin_manager.performance_metrics();
-    println!("  Total plugins: {}", plugin_manager.plugin_count());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Total plugins: {}",
+        plugin_manager.plugin_count()
+    );
 
-    println!("\n=== Plugin system demonstration complete ===");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n=== Plugin system demonstration complete ==="
+    );
 
     Ok(())
 }

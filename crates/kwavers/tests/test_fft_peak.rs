@@ -48,6 +48,6 @@ fn test_fft_peak_scaling() {
     processor.inverse_into(&complex_out, &mut real_out, &mut scratch);
 
     let peak = real_out.iter().fold(0.0f64, |m, &v| m.max(v.abs()));
-    println!("Peak without filter: 1.0");
-    println!("Peak with cos filter: {}", peak);
+    eprintln!("Peak without filter: 1.0");
+    eprintln!("Peak with cos filter: {}", peak);
 }

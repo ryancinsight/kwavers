@@ -48,7 +48,7 @@ fn test_equilibrium_preserved() {
 
     let r_err = (state.radius - r0).abs() / r0;
     let v_err = state.wall_velocity.abs();
-    println!(
+    eprintln!(
         "Equilibrium preservation: |R−R₀|/R₀ = {:.2e}, |Ṙ| = {:.2e} m/s",
         r_err, v_err
     );

@@ -481,15 +481,15 @@ fn calculate_energy<F: Field3>(field: &F) -> f64 {
 /// Run all property-based tests
 #[cfg(test)]
 pub fn run_all_property_tests() {
-    println!("🔬 Running Property-Based Tests for Mathematical Invariants");
-    println!("==========================================================");
+    eprintln!("🔬 Running Property-Based Tests for Mathematical Invariants");
+    eprintln!("==========================================================");
 
     // Run proptest campaigns
     // Note: In a real implementation, these would be run with proper proptest configuration
 
-    println!("✅ Property-based tests configured");
-    println!("   Run with: cargo test --features proptest");
-    println!("   Or with custom configuration for longer test campaigns");
+    eprintln!("✅ Property-based tests configured");
+    eprintln!("   Run with: cargo test --features proptest");
+    eprintln!("   Or with custom configuration for longer test campaigns");
 }
 
 /// Configuration for property-based testing campaigns

@@ -39,240 +39,510 @@
 //! cargo run --example pinn_meta_uncertainty -- --all
 //! ```
 
+use std::io::Write;
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 mod ml_demo {
+    use std::io::Write;
+
     /// Demonstrate meta-learning capabilities
     pub fn demonstrate_meta_learning() {
-        println!("🎓 Meta-Learning PINN Demonstration");
-        println!("==================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🎓 Meta-Learning PINN Demonstration"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "=================================="
+        );
 
-        println!("🧠 Model-Agnostic Meta-Learning (MAML):");
-        println!("   📚 Inner Loop: Task-specific adaptation");
-        println!("   🎯 Outer Loop: Meta-parameter optimization");
-        println!("   🚀 Few-Shot: 5× faster convergence");
-        println!("   🔄 Generalization: Cross-physics domains");
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🧠 Model-Agnostic Meta-Learning (MAML):"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   📚 Inner Loop: Task-specific adaptation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🎯 Outer Loop: Meta-parameter optimization"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🚀 Few-Shot: 5× faster convergence"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🔄 Generalization: Cross-physics domains"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🔬 Meta-Learning Process:");
-        println!("   1. Sample physics tasks from distribution");
-        println!("   2. Inner adaptation on each task");
-        println!("   3. Meta-update using task losses");
-        println!("   4. Repeat until convergence");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🔬 Meta-Learning Process:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   1. Sample physics tasks from distribution"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   2. Inner adaptation on each task"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   3. Meta-update using task losses"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   4. Repeat until convergence");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📊 Physics Tasks Examples:");
-        println!("   • Wave equations with varying speeds");
-        println!("   • Different boundary conditions");
-        println!("   • Complex geometries (L-shaped, circular)");
-        println!("   • Multi-material interfaces");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📊 Physics Tasks Examples:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Wave equations with varying speeds"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Different boundary conditions"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Complex geometries (L-shaped, circular)"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   • Multi-material interfaces");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📈 Performance Metrics:");
-        println!("   • Adaptation steps: 10-50 vs 1000+ from scratch");
-        println!("   • Final accuracy: >95% vs >90% from scratch");
-        println!("   • Training time: 3× faster convergence");
-        println!("   • Memory overhead: +20% for meta-parameters");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📈 Performance Metrics:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Adaptation steps: 10-50 vs 1000+ from scratch"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Final accuracy: >95% vs >90% from scratch"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Training time: 3× faster convergence"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Memory overhead: +20% for meta-parameters"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🌍 Applications:");
-        println!("   • Rapid prototyping of new physics");
-        println!("   • Adaptive simulation frameworks");
-        println!("   • Multi-scale physics coupling");
-        println!("   • Real-time parameter optimization");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🌍 Applications:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Rapid prototyping of new physics"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Adaptive simulation frameworks"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Multi-scale physics coupling"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Real-time parameter optimization"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate transfer learning capabilities
     pub fn demonstrate_transfer_learning() {
-        println!("🔄 Transfer Learning PINN Demonstration");
-        println!("======================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🔄 Transfer Learning PINN Demonstration"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "======================================"
+        );
 
-        println!("📚 Transfer Learning Strategies:");
-        println!("   🏗️  Source Domain: Simple geometries (rectangular)");
-        println!("   🎯 Target Domain: Complex geometries (L-shaped, irregular)");
-        println!("   🔧 Adaptation: Domain adaptation layers");
-        println!("   ❄️  Fine-tuning: Progressive layer unfreezing");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📚 Transfer Learning Strategies:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🏗️  Source Domain: Simple geometries (rectangular)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🎯 Target Domain: Complex geometries (L-shaped, irregular)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🔧 Adaptation: Domain adaptation layers"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ❄️  Fine-tuning: Progressive layer unfreezing"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🔬 Transfer Process:");
-        println!("   1. Train source model on simple geometry");
-        println!("   2. Apply domain adaptation layers");
-        println!("   3. Fine-tune with target geometry data");
-        println!("   4. Validate transfer accuracy");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🔬 Transfer Process:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   1. Train source model on simple geometry"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   2. Apply domain adaptation layers"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   3. Fine-tune with target geometry data"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   4. Validate transfer accuracy");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📊 Transfer Scenarios:");
-        println!("   • Rectangle → L-shaped domain");
-        println!("   • Circle → Complex boundary");
-        println!("   • Single material → Multi-material");
-        println!("   • 2D → 3D geometry adaptation");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📊 Transfer Scenarios:");
+        let _ = writeln!(std::io::stdout().lock(), "   • Rectangle → L-shaped domain");
+        let _ = writeln!(std::io::stdout().lock(), "   • Circle → Complex boundary");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Single material → Multi-material"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   • 2D → 3D geometry adaptation");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📈 Performance Metrics:");
-        println!("   • Transfer accuracy: >85% preservation");
-        println!("   • Fine-tuning data: 10-20% of full training");
-        println!("   • Convergence speed: 3× faster adaptation");
-        println!("   • Memory efficiency: Reuse source model weights");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📈 Performance Metrics:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Transfer accuracy: >85% preservation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Fine-tuning data: 10-20% of full training"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Convergence speed: 3× faster adaptation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Memory efficiency: Reuse source model weights"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🌍 Applications:");
-        println!("   • Progressive geometry complexity");
-        println!("   • Multi-resolution simulations");
-        println!("   • Adaptive mesh refinement");
-        println!("   • Hierarchical physics modeling");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🌍 Applications:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Progressive geometry complexity"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Multi-resolution simulations"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   • Adaptive mesh refinement");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Hierarchical physics modeling"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate uncertainty quantification
     pub fn demonstrate_uncertainty() {
-        println!("📊 Uncertainty Quantification PINN");
-        println!("=================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "📊 Uncertainty Quantification PINN"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "================================="
+        );
 
-        println!("🎲 Uncertainty Estimation Methods:");
-        println!("   🧠 Bayesian PINNs:");
-        println!("      • Monte Carlo Dropout sampling");
-        println!("      • Deep ensemble predictions");
-        println!("      • Variational inference");
-        println!("      • 95% confidence intervals");
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🎲 Uncertainty Estimation Methods:"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   🧠 Bayesian PINNs:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      • Monte Carlo Dropout sampling"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      • Deep ensemble predictions"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "      • Variational inference");
+        let _ = writeln!(std::io::stdout().lock(), "      • 95% confidence intervals");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🎯 Conformal Prediction:");
-        println!("      • Distribution-free uncertainty");
-        println!("      • Guaranteed coverage bounds");
-        println!("      • Safety-critical reliability");
-        println!("      • Adaptive confidence levels");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🎯 Conformal Prediction:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      • Distribution-free uncertainty"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      • Guaranteed coverage bounds"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      • Safety-critical reliability"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      • Adaptive confidence levels"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📈 Reliability Metrics:");
-        println!("   • Expected Calibration Error (ECE)");
-        println!("   • Predictive entropy analysis");
-        println!("   • Uncertainty-normalized predictions");
-        println!("   • Reliability diagrams");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📈 Reliability Metrics:");
+        eprintln!("   • Expected Calibration Error (ECE)");
+        let _ = writeln!(std::io::stdout().lock(), "   • Predictive entropy analysis");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Uncertainty-normalized predictions"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   • Reliability diagrams");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🔬 Validation Cases:");
-        println!("   ✅ Boundary condition uncertainty");
-        println!("   ✅ Material property variations");
-        println!("   ✅ Geometric parameter sensitivity");
-        println!("   ✅ Initial condition perturbations");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🔬 Validation Cases:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Boundary condition uncertainty"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Material property variations"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Geometric parameter sensitivity"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Initial condition perturbations"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📊 Performance Metrics:");
-        println!("   • Coverage accuracy: 95% confidence intervals");
-        println!("   • Computational overhead: 10× for ensembles");
-        println!("   • Memory usage: 5× for uncertainty storage");
-        println!("   • Inference time: 2-5× slower with uncertainty");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📊 Performance Metrics:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Coverage accuracy: 95% confidence intervals"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Computational overhead: 10× for ensembles"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Memory usage: 5× for uncertainty storage"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Inference time: 2-5× slower with uncertainty"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🚨 Safety-Critical Applications:");
-        println!("   • Medical diagnosis uncertainty");
-        println!("   • Structural integrity assessment");
-        println!("   • Environmental risk prediction");
-        println!("   • Financial risk modeling");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🚨 Safety-Critical Applications:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Medical diagnosis uncertainty"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Structural integrity assessment"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Environmental risk prediction"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   • Financial risk modeling");
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate combined ML capabilities
     pub fn demonstrate_integrated_ml() {
-        println!("🤖 Integrated ML PINN Framework");
-        println!("===============================");
+        let _ = writeln!(std::io::stdout().lock(), "🤖 Integrated ML PINN Framework");
+        let _ = writeln!(std::io::stdout().lock(), "===============================");
 
-        println!("🔗 ML Pipeline Integration:");
-        println!("   1. Meta-learned initialization");
-        println!("   2. Transfer learning adaptation");
-        println!("   3. Uncertainty quantification");
-        println!("   4. Active learning refinement");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🔗 ML Pipeline Integration:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   1. Meta-learned initialization"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   2. Transfer learning adaptation"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   3. Uncertainty quantification");
+        let _ = writeln!(std::io::stdout().lock(), "   4. Active learning refinement");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("⚡ Adaptive Learning Cycle:");
-        println!("   📊 High uncertainty → Additional training data");
-        println!("   🎯 Poor accuracy → Meta-learning adaptation");
-        println!("   🔄 New geometry → Transfer learning");
-        println!("   ⚠️  Safety bounds → Uncertainty monitoring");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "⚡ Adaptive Learning Cycle:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   📊 High uncertainty → Additional training data"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🎯 Poor accuracy → Meta-learning adaptation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🔄 New geometry → Transfer learning"
+        );
+        eprintln!("   ⚠️  Safety bounds → Uncertainty monitoring");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🧪 Validation Framework:");
-        println!("   ✅ Cross-validation with uncertainty");
-        println!("   ✅ Meta-learning generalization tests");
-        println!("   ✅ Transfer learning robustness");
-        println!("   ✅ Uncertainty calibration checks");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🧪 Validation Framework:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Cross-validation with uncertainty"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Meta-learning generalization tests"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Transfer learning robustness"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Uncertainty calibration checks"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📈 Integrated Performance:");
-        println!("   • Overall accuracy: >95% with guarantees");
-        println!("   • Adaptation speed: 10× faster than retraining");
-        println!("   • Reliability: 99% confidence in safety bounds");
-        println!("   • Efficiency: Optimal compute resource usage");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📈 Integrated Performance:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Overall accuracy: >95% with guarantees"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Adaptation speed: 10× faster than retraining"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Reliability: 99% confidence in safety bounds"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Efficiency: Optimal compute resource usage"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🌟 Advanced Capabilities:");
-        println!("   • Self-improving PINN systems");
-        println!("   • Automated physics discovery");
-        println!("   • Uncertainty-aware optimization");
-        println!("   • Multi-fidelity modeling");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🌟 Advanced Capabilities:");
+        let _ = writeln!(std::io::stdout().lock(), "   • Self-improving PINN systems");
+        let _ = writeln!(std::io::stdout().lock(), "   • Automated physics discovery");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Uncertainty-aware optimization"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   • Multi-fidelity modeling");
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate real-world impact
     pub fn demonstrate_real_world_impact() {
-        println!("🌍 Real-World ML Impact");
-        println!("======================");
+        let _ = writeln!(std::io::stdout().lock(), "🌍 Real-World ML Impact");
+        let _ = writeln!(std::io::stdout().lock(), "======================");
 
-        println!("🏥 Medical Applications:");
-        println!("   🔊 Ultrasound uncertainty quantification");
-        println!("   🧠 Brain modeling with confidence bounds");
-        println!("   💓 Cardiac simulation reliability");
-        println!("   🦠 Disease progression prediction");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🏥 Medical Applications:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🔊 Ultrasound uncertainty quantification"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🧠 Brain modeling with confidence bounds"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   💓 Cardiac simulation reliability"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🦠 Disease progression prediction"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🚀 Aerospace Applications:");
-        println!("   ✈️  Aircraft design with safety margins");
-        println!("   🚀 Rocket trajectory uncertainty");
-        println!("   🛰️ Satellite thermal analysis");
-        println!("   🌪️ Turbulence prediction confidence");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🚀 Aerospace Applications:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✈️  Aircraft design with safety margins"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🚀 Rocket trajectory uncertainty"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   🛰️ Satellite thermal analysis");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🌪️ Turbulence prediction confidence"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🏭 Industrial Applications:");
-        println!("   🔧 Predictive maintenance uncertainty");
-        println!("   🏗️ Structural assessment reliability");
-        println!("   ⚡ Process optimization bounds");
-        println!("   🔍 Quality control confidence");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🏭 Industrial Applications:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🔧 Predictive maintenance uncertainty"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🏗️ Structural assessment reliability"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ⚡ Process optimization bounds"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   🔍 Quality control confidence");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🌡️ Environmental Applications:");
-        println!("   🌊 Climate model uncertainty");
-        println!("   🏜️ Drought prediction reliability");
-        println!("   🌪️ Storm surge confidence bounds");
-        println!("   🌊 Ocean current modeling");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🌡️ Environmental Applications:");
+        let _ = writeln!(std::io::stdout().lock(), "   🌊 Climate model uncertainty");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🏜️ Drought prediction reliability"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🌪️ Storm surge confidence bounds"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   🌊 Ocean current modeling");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📊 Societal Impact:");
-        println!("   • Risk assessment accuracy: 90% → 99%");
-        println!("   • Decision confidence: Qualitative → Quantitative");
-        println!("   • Safety margins: Conservative → Optimized");
-        println!("   • Public trust: Improved through transparency");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📊 Societal Impact:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Risk assessment accuracy: 90% → 99%"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Decision confidence: Qualitative → Quantitative"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Safety margins: Conservative → Optimized"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Public trust: Improved through transparency"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 }
 
 #[cfg(not(feature = "pinn"))]
 mod ml_demo {
     pub fn demonstrate_meta_learning() {
-        println!("❌ PINN feature not enabled. Use --features pinn to enable ML capabilities.");
+        eprintln!("❌ PINN feature not enabled. Use --features pinn to enable ML capabilities.");
     }
     pub fn demonstrate_transfer_learning() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_uncertainty() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_integrated_ml() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_real_world_impact() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
 }
 
@@ -280,12 +550,24 @@ fn main() {
     let start_time = Instant::now();
     let args: Vec<String> = std::env::args().collect();
 
-    println!("🎓 Advanced ML PINN Demonstration");
-    println!("=================================");
-    println!();
-    println!("🧠 Featuring: Meta-Learning • Transfer Learning • Uncertainty Quantification");
-    println!("   Applications: Medical • Aerospace • Industrial • Environmental");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🎓 Advanced ML PINN Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "================================="
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🧠 Featuring: Meta-Learning • Transfer Learning • Uncertainty Quantification"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Applications: Medical • Aerospace • Industrial • Environmental"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Parse command line arguments
     let demo_mode = if args.len() > 1 {
@@ -311,9 +593,15 @@ fn main() {
             ml_demo::demonstrate_real_world_impact();
         }
         "--all" => {
-            println!("🎭 Complete Advanced ML Demonstration");
-            println!("=====================================");
-            println!();
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "🎭 Complete Advanced ML Demonstration"
+            );
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "====================================="
+            );
+            let _ = writeln!(std::io::stdout().lock());
 
             ml_demo::demonstrate_meta_learning();
             ml_demo::demonstrate_transfer_learning();
@@ -322,9 +610,15 @@ fn main() {
             ml_demo::demonstrate_real_world_impact();
         }
         _ => {
-            println!("🎭 Complete Advanced ML Demonstration");
-            println!("=====================================");
-            println!();
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "🎭 Complete Advanced ML Demonstration"
+            );
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "====================================="
+            );
+            let _ = writeln!(std::io::stdout().lock());
 
             ml_demo::demonstrate_meta_learning();
             ml_demo::demonstrate_transfer_learning();
@@ -335,18 +629,52 @@ fn main() {
     }
 
     let elapsed = start_time.elapsed();
-    println!("🏆 Advanced ML Demonstration Complete!");
-    println!("=====================================");
-    println!("   ⏱️  Total runtime: {:.2}s", elapsed.as_secs_f64());
-    println!("   ✅ All ML capabilities demonstrated");
-    println!("   🚀 Ready for safety-critical applications");
-    println!();
-    println!("📚 ML-Specific Examples:");
-    println!("   • --meta: Meta-learning for rapid adaptation");
-    println!("   • --transfer: Transfer learning across domains");
-    println!("   • --uncertainty: Reliability and confidence bounds");
-    println!("   • --integrated: Combined ML pipeline");
-    println!("   • --impact: Real-world safety applications");
-    println!();
-    println!("🌟 PINN: From simulation to certified AI systems!");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🏆 Advanced ML Demonstration Complete!"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "====================================="
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ⏱️  Total runtime: {:.2}s",
+        elapsed.as_secs_f64()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ All ML capabilities demonstrated"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   🚀 Ready for safety-critical applications"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(std::io::stdout().lock(), "📚 ML-Specific Examples:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • --meta: Meta-learning for rapid adaptation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • --transfer: Transfer learning across domains"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • --uncertainty: Reliability and confidence bounds"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • --integrated: Combined ML pipeline"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • --impact: Real-world safety applications"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🌟 PINN: From simulation to certified AI systems!"
+    );
 }

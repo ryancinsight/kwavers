@@ -8,6 +8,7 @@
 use kwavers_physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::optics::sonoluminescence::{EmissionParameters, IntegratedSonoluminescence};
+use std::io::Write;
 
 #[expect(
     clippy::field_reassign_with_default,
@@ -52,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             simulation
                 .emission
                 .components_at_point(temperature, radius, charge_density);
-        println!(
+        let _ = writeln!(std::io::stdout().lock(),
             "step={step} temperature={temperature:.3} K radius={radius:.6e} m blackbody={:.6e} W/m³ bremsstrahlung={:.6e} W/m³",
             components.blackbody().into_base(),
             components.bremsstrahlung().into_base(),
@@ -67,7 +68,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         simulation.charge_density_field[[0, 0, 0]],
         simulation.compression_field[[0, 0, 0]],
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "spectral samples={} arbitrary-unit total={:.6e} peak={:.6e} m",
         spectrum.intensities.len(),
         spectrum.total_intensity(),

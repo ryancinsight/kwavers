@@ -102,11 +102,11 @@ fn test_yoshida4_order() {
         y4_errs.push((run_sho(n, true) - x_exact).abs());
     }
 
-    println!(
+    eprintln!(
         "SHO SV  errors at N=100/200/400: {:.4e} / {:.4e} / {:.4e}",
         sv_errs[0], sv_errs[1], sv_errs[2]
     );
-    println!(
+    eprintln!(
         "SHO Y4  errors at N=100/200/400: {:.4e} / {:.4e} / {:.4e}",
         y4_errs[0], y4_errs[1], y4_errs[2]
     );
@@ -116,7 +116,7 @@ fn test_yoshida4_order() {
     let sv_slope = (sv_errs[2] / sv_errs[0].max(1e-30)).ln() / log_n_ratio;
     let y4_slope = (y4_errs[2] / y4_errs[0].max(1e-30)).ln() / log_n_ratio;
 
-    println!(
+    eprintln!(
         "Convergence slopes — SV: {:.2} (expected 2.0), Y4: {:.2} (expected 4.0)",
         sv_slope, y4_slope
     );

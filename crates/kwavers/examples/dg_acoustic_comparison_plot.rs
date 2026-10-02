@@ -37,13 +37,16 @@ fn main() -> Result<()> {
     write_plot(&png_path, &series, &uniform)?;
     write_csv(&csv_path, &series, &uniform)?;
 
-    println!("DG/FDTD/PSTD acoustic Gaussian comparison plot");
-    println!("png: {}", png_path.display());
-    println!("csv: {}", csv_path.display());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "DG/FDTD/PSTD acoustic Gaussian comparison plot"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "png: {}", png_path.display());
+    let _ = writeln!(std::io::stdout().lock(), "csv: {}", csv_path.display());
     print_solver_matrix(&series.matrix);
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
     print_common_solver_matrix(&series.common_matrix);
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
     print_uniform_solver_matrix(&uniform.matrix);
     Ok(())
 }
@@ -334,32 +337,54 @@ fn error_line(
 }
 
 fn print_uniform_solver_matrix(matrix: &UniformGaussianMatrix) {
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "uniform DG vs exact", matrix.dg_exact_l2
+        "uniform DG vs exact",
+        matrix.dg_exact_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "uniform FDTD vs exact", matrix.fdtd_exact_l2
+        "uniform FDTD vs exact",
+        matrix.fdtd_exact_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "uniform FDTD+k-space vs exact", matrix.kspace_exact_l2
+        "uniform FDTD+k-space vs exact",
+        matrix.kspace_exact_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "uniform PSTD vs exact", matrix.pstd_exact_l2
+        "uniform PSTD vs exact",
+        matrix.pstd_exact_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "uniform FDTD vs PSTD", matrix.fdtd_pstd_l2
+        "uniform FDTD vs PSTD",
+        matrix.fdtd_pstd_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "uniform FDTD+k-space vs PSTD", matrix.kspace_pstd_l2
+        "uniform FDTD+k-space vs PSTD",
+        matrix.kspace_pstd_l2
     );
-    println!("{:<36} {:>16.6e}", "uniform DG vs FDTD", matrix.dg_fdtd_l2);
-    println!("{:<36} {:>16.6e}", "uniform DG vs PSTD", matrix.dg_pstd_l2);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<36} {:>16.6e}",
+        "uniform DG vs FDTD",
+        matrix.dg_fdtd_l2
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<36} {:>16.6e}",
+        "uniform DG vs PSTD",
+        matrix.dg_pstd_l2
+    );
 }
 
 #[cfg(test)]

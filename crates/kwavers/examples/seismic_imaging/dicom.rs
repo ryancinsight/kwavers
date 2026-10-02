@@ -1,6 +1,7 @@
 //! Shared DICOM-series selection for seismic CT workflows.
 
 use ritk_io::DicomSeriesInfo;
+use std::io::Write;
 
 const DEFAULT_MEDIMODEL_SERIES_UID: &str =
     "1.3.6.1.4.1.5962.99.1.1761388472.1291962045.1616669124536.2634.0";
@@ -28,7 +29,8 @@ pub(crate) fn select_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo
             .flat_map(|candidate| candidate.file_paths.drain(..))
             .collect();
         let count = all_paths.len();
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  Note: each DICOM slice has a unique SeriesInstanceUID; \
                   merging {count} files into one logical series for spatial sort."
         );
