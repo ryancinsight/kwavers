@@ -472,6 +472,6 @@ fn bubble_spectrum_length() {
     let (f, p) = bubble_power_spectrum(&r, 1e-9, 64);
     assert_eq!(f.len(), 33);
     assert_eq!(p.len(), 33);
-    assert!(f[0] == 0.0);
+    assert_eq!(f[0], 0.0);
     assert!(p.iter().all(|&v| v >= 0.0));
 }

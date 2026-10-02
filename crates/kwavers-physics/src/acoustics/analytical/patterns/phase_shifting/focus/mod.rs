@@ -215,11 +215,11 @@ mod tests {
         let mut focusing = DynamicFocusing::new(linear_array(), MHZ_TO_HZ);
 
         let single_error = focusing.set_focal_point(0.0, 0.0, 0.0005).unwrap_err();
-        assert!(format!("{single_error}").contains("1"));
+        assert!(format!("{single_error}").contains('1'));
 
         let multi_error = focusing
             .set_multiple_focal_points(vec![[0.0, 0.0, 0.001], [0.0, 0.0, 0.0005]])
             .unwrap_err();
-        assert!(format!("{multi_error}").contains("1"));
+        assert!(format!("{multi_error}").contains('1'));
     }
 }

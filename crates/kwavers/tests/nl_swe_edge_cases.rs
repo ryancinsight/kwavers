@@ -19,7 +19,7 @@ struct EdgeCaseTester;
 
 impl EdgeCaseTester {
     /// Test hyperelastic models with extreme compression
-    fn test_extreme_compression(&self) -> Vec<(String, f64, bool)> {
+    fn test_extreme_compression() -> Vec<(String, f64, bool)> {
         let mut results = Vec::new();
 
         let models = vec![
@@ -58,7 +58,7 @@ impl EdgeCaseTester {
     }
 
     /// Test hyperelastic models with extreme tension
-    fn test_extreme_tension(&self) -> Vec<(String, f64, bool)> {
+    fn test_extreme_tension() -> Vec<(String, f64, bool)> {
         let mut results = Vec::new();
 
         let models = vec![
@@ -98,7 +98,7 @@ impl EdgeCaseTester {
     }
 
     /// Test Ogden model with extreme parameters
-    fn test_ogden_extreme_parameters(&self) -> Vec<(String, bool)> {
+    fn test_ogden_extreme_parameters() -> Vec<(String, bool)> {
         let mut results = Vec::new();
 
         // Test various Ogden parameter combinations
@@ -143,7 +143,7 @@ impl EdgeCaseTester {
     }
 
     /// Test numerical stability near material singularities
-    fn test_near_singularities(&self) -> Vec<(String, bool)> {
+    fn test_near_singularities() -> Vec<(String, bool)> {
         let mut results = Vec::new();
 
         // Test deformation gradients that might cause numerical issues
@@ -198,7 +198,7 @@ impl EdgeCaseTester {
     }
 
     /// Test harmonic generation with extreme nonlinearity
-    fn test_extreme_harmonic_generation(&self) -> Vec<(String, f64, bool)> {
+    fn test_extreme_harmonic_generation() -> Vec<(String, f64, bool)> {
         let mut results = Vec::new();
 
         let nonlinearity_values = [0.0, 0.1, 1.0, 10.0]; // From linear to extreme nonlinearity
@@ -274,8 +274,7 @@ mod edge_case_tests {
 
     #[test]
     fn test_extreme_compression_stability() {
-        let tester = EdgeCaseTester {};
-        let results = tester.test_extreme_compression();
+        let results = EdgeCaseTester::test_extreme_compression();
 
         println!("Extreme compression stability test:");
         for (case, stress, is_stable) in results {
@@ -290,8 +289,7 @@ mod edge_case_tests {
 
     #[test]
     fn test_extreme_tension_stability() {
-        let tester = EdgeCaseTester {};
-        let results = tester.test_extreme_tension();
+        let results = EdgeCaseTester::test_extreme_tension();
 
         println!("Extreme tension stability test:");
         for (case, stress, is_stable) in results {
@@ -306,8 +304,7 @@ mod edge_case_tests {
 
     #[test]
     fn test_ogden_parameter_robustness() {
-        let tester = EdgeCaseTester {};
-        let results = tester.test_ogden_extreme_parameters();
+        let results = EdgeCaseTester::test_ogden_extreme_parameters();
 
         println!("Ogden parameter robustness test:");
         for (case, is_stable) in &results {
@@ -325,8 +322,7 @@ mod edge_case_tests {
 
     #[test]
     fn test_near_singularity_stability() {
-        let tester = EdgeCaseTester {};
-        let results = tester.test_near_singularities();
+        let results = EdgeCaseTester::test_near_singularities();
 
         println!("Near-singularity stability test:");
         let mut unstable_cases = Vec::new();
@@ -348,8 +344,7 @@ mod edge_case_tests {
 
     #[test]
     fn test_extreme_harmonic_generation() {
-        let tester = EdgeCaseTester {};
-        let results = tester.test_extreme_harmonic_generation();
+        let results = EdgeCaseTester::test_extreme_harmonic_generation();
 
         println!("Extreme harmonic generation test:");
         for (case, ratio, is_stable) in results {

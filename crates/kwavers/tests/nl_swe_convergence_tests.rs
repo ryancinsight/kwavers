@@ -146,7 +146,7 @@ impl ConvergenceTester {
     }
 
     /// Analyze convergence rate from error data
-    fn analyze_convergence_rate(&self, error_data: &[(f64, f64, f64)]) -> f64 {
+    fn analyze_convergence_rate(error_data: &[(f64, f64, f64)]) -> f64 {
         if error_data.len() < 2 {
             return 0.0;
         }
@@ -190,7 +190,7 @@ struct HyperelasticValidator;
 
 impl HyperelasticValidator {
     /// Test Neo-Hookean model against analytical uniaxial compression
-    fn validate_neo_hookean_uniaxial(&self) -> (f64, f64) {
+    fn validate_neo_hookean_uniaxial() -> (f64, f64) {
         let model = HyperelasticModel::neo_hookean_soft_tissue();
 
         // Uniaxial compression: λ₁ = λ, λ₂ = λ₃ = 1/√λ
@@ -217,7 +217,7 @@ impl HyperelasticValidator {
     }
 
     /// Test Ogden model principal stretch computation
-    fn validate_ogden_principal_stretches(&self) -> (f64, f64) {
+    fn validate_ogden_principal_stretches() -> (f64, f64) {
         let model = HyperelasticModel::Ogden {
             mu: vec![1000.0, 200.0],
             alpha: vec![1.5, 3.0],
@@ -256,7 +256,7 @@ struct HarmonicValidator;
 
 impl HarmonicValidator {
     /// Test second harmonic generation against analytical solution
-    fn validate_second_harmonic(&self) -> (f64, f64) {
+    fn validate_second_harmonic() -> (f64, f64) {
         // Create a test case with known second harmonic generation
         let grid = Grid::new(32, 8, 8, 0.001, 0.001, 0.001).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
@@ -405,8 +405,6 @@ mod convergence_tests {
 
     #[test]
     fn test_convergence_rate_analysis() {
-        let tester = ConvergenceTester::new();
-
         // Create synthetic convergence data: error = C * dx^2 (2nd order convergence)
         let synthetic_data = vec![
             (0.01, 0.01, 0.0001),           // dx=0.01, error=0.01, dx²=0.0001
@@ -414,7 +412,7 @@ mod convergence_tests {
             (0.0025, 0.000625, 0.00000625), // dx=0.0025, error=0.000625, dx²=0.00000625
         ];
 
-        let convergence_rate = tester.analyze_convergence_rate(&synthetic_data);
+        let convergence_rate = ConvergenceTester::analyze_convergence_rate(&synthetic_data);
 
         // Should be close to 2.0 for second-order convergence
         assert!(
@@ -426,8 +424,8 @@ mod convergence_tests {
 
     #[test]
     fn test_neo_hookean_analytical_validation() {
-        let validator = HyperelasticValidator {};
-        let (numerical_stress, relative_error) = validator.validate_neo_hookean_uniaxial();
+        let (numerical_stress, relative_error) =
+            HyperelasticValidator::validate_neo_hookean_uniaxial();
 
         assert!(
             numerical_stress < 0.0,
@@ -442,8 +440,8 @@ mod convergence_tests {
 
     #[test]
     fn test_ogden_principal_stretches() {
-        let validator = HyperelasticValidator {};
-        let (largest_stretch, max_error) = validator.validate_ogden_principal_stretches();
+        let (largest_stretch, max_error) =
+            HyperelasticValidator::validate_ogden_principal_stretches();
 
         assert!(
             largest_stretch > 1.0,
@@ -457,8 +455,7 @@ mod convergence_tests {
 
     #[test]
     fn test_second_harmonic_generation() {
-        let validator = HarmonicValidator {};
-        let (harmonic_ratio, validity_flag) = validator.validate_second_harmonic();
+        let (harmonic_ratio, validity_flag) = HarmonicValidator::validate_second_harmonic();
 
         assert!(
             harmonic_ratio > 0.0,

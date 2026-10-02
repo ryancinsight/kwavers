@@ -30,11 +30,7 @@ fn toy_abdominal_volume(
         let dy = iy as f64 - (centre + organ_offset[1]);
         let dz = iz as f64 - (centre + organ_offset[2]);
         let r = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
-        if r < r_organ {
-            1i16
-        } else {
-            0i16
-        }
+        i16::from(r < r_organ)
     });
     (ct, label)
 }

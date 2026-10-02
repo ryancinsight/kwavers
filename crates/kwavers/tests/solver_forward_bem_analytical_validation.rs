@@ -47,12 +47,7 @@ pub struct MieScatteringSolution {
 
 impl MieScatteringSolution {
     /// Create new Mie solution
-    pub fn new(
-        radius: f64,
-        frequency: f64,
-        sound_speed: f64,
-        density: f64,
-    ) -> Result<Self, String> {
+    pub fn new(radius: f64, frequency: f64, sound_speed: f64, density: f64) -> Self {
         // Calculate wavenumber
         let wavenumber = 2.0 * PI * frequency / sound_speed;
 
@@ -61,7 +56,7 @@ impl MieScatteringSolution {
         let ka = wavenumber * radius;
         let num_terms = (ka + 10.0 * ka.cbrt()).ceil() as usize + 5;
 
-        Ok(Self {
+        Self {
             radius,
             frequency,
             sound_speed,
@@ -69,11 +64,11 @@ impl MieScatteringSolution {
             num_terms,
             mie_coefficients: Vec::new(),
             wavenumber,
-        })
+        }
     }
 
     /// Compute Mie coefficients for rigid boundary (Neumann BC: ∂p/∂n = 0)
-    pub fn compute_coefficients(&mut self) -> Result<(), String> {
+    pub fn compute_coefficients(&mut self) {
         self.mie_coefficients.clear();
 
         let ka = self.wavenumber * self.radius;
@@ -94,12 +89,13 @@ impl MieScatteringSolution {
 
             self.mie_coefficients.push(a_n);
         }
-
-        Ok(())
     }
 
     /// Evaluate scattered pressure field at point (r, θ)
     /// where θ is angle from incident wave direction
+    ///
+    /// # Errors
+    /// Returns [`Err`] when `r` is inside the sphere or the coefficients are not computed.
     pub fn scattered_pressure(&self, r: f64, theta: f64) -> Result<eunomia::Complex64, String> {
         if r < self.radius {
             return Err("Evaluation point inside sphere".to_string());
@@ -136,6 +132,9 @@ impl MieScatteringSolution {
     }
 
     /// Evaluate total pressure field (incident + scattered)
+    ///
+    /// # Errors
+    /// Returns [`Err`] when the scattered-field evaluation fails.
     pub fn total_pressure(&self, x: f64, y: f64, z: f64) -> Result<eunomia::Complex64, String> {
         // Assume incident plane wave propagating in +z direction: p_i = exp(i·k·z)
         let r = (x * x + y * y + z * z).sqrt();
@@ -242,8 +241,7 @@ mod tests {
 
     #[test]
     fn test_mie_solution_creation() {
-        let mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0)
-            .expect("a 1 cm sphere at 100 kHz in water is inside the supported parameter range");
+        let mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0);
         assert_eq!(mie.radius, 0.01);
         assert_eq!(mie.frequency, 1e5);
         assert!(mie.num_terms >= 10);
@@ -251,9 +249,8 @@ mod tests {
 
     #[test]
     fn test_mie_coefficients_computation() {
-        let mut mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0).unwrap();
-        mie.compute_coefficients()
-            .expect("coefficients converge for a 1 cm sphere at 100 kHz");
+        let mut mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0);
+        mie.compute_coefficients();
         assert!(!mie.mie_coefficients.is_empty());
         // First coefficient should be significant
         assert!(mie.mie_coefficients[0].norm() > 0.01);
@@ -279,8 +276,8 @@ mod tests {
 
     #[test]
     fn test_scattered_pressure_field() {
-        let mut mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0).unwrap();
-        mie.compute_coefficients().unwrap();
+        let mut mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0);
+        mie.compute_coefficients();
 
         // Evaluate at shadow side (θ = π)
         let p_shadow = mie.scattered_pressure(0.05, PI).unwrap();
@@ -296,8 +293,8 @@ mod tests {
 
     #[test]
     fn test_total_pressure() {
-        let mut mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0).unwrap();
-        mie.compute_coefficients().unwrap();
+        let mut mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0);
+        mie.compute_coefficients();
 
         // Evaluate far field
         let p_total = mie.total_pressure(0.1, 0.0, 0.05).unwrap();
@@ -307,12 +304,12 @@ mod tests {
     #[test]
     fn test_convergence_with_frequency() {
         // At different frequencies, we should get different scattering patterns
-        let mut mie_low = MieScatteringSolution::new(0.001, 1e3, 1500.0, 1000.0).unwrap();
-        mie_low.compute_coefficients().unwrap();
+        let mut mie_low = MieScatteringSolution::new(0.001, 1e3, 1500.0, 1000.0);
+        mie_low.compute_coefficients();
         let p_low = mie_low.scattered_pressure(0.05, 0.0).unwrap();
 
-        let mut mie_high = MieScatteringSolution::new(0.001, 1e5, 1500.0, 1000.0).unwrap();
-        mie_high.compute_coefficients().unwrap();
+        let mut mie_high = MieScatteringSolution::new(0.001, 1e5, 1500.0, 1000.0);
+        mie_high.compute_coefficients();
         let p_high = mie_high.scattered_pressure(0.05, 0.0).unwrap();
 
         // Both should produce valid (non-NaN) results
@@ -324,8 +321,8 @@ mod tests {
     #[test]
     fn test_reciprocity_symmetry() {
         // For axisymmetric scattering (plane wave), certain symmetries hold
-        let mut mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0).unwrap();
-        mie.compute_coefficients().unwrap();
+        let mut mie = MieScatteringSolution::new(0.01, 1e5, 1500.0, 1000.0);
+        mie.compute_coefficients();
 
         // Evaluate at symmetric angles
         let p1 = mie.scattered_pressure(0.1, PI / 4.0).unwrap();
@@ -338,8 +335,8 @@ mod tests {
     #[test]
     fn test_mie_backscatter_monopole_limit() {
         // At ka → 0, backscatter should approach monopole value
-        let mut mie = MieScatteringSolution::new(0.0001, 1e3, 1500.0, 1000.0).unwrap();
-        mie.compute_coefficients().unwrap();
+        let mut mie = MieScatteringSolution::new(0.0001, 1e3, 1500.0, 1000.0);
+        mie.compute_coefficients();
 
         let p_back = mie.scattered_pressure(1.0, PI).unwrap();
 
@@ -350,8 +347,8 @@ mod tests {
     #[test]
     fn test_mie_small_ka_expansion() {
         // For ka << 1, dominant term is monopole (n=1)
-        let mut mie = MieScatteringSolution::new(0.001, 5e3, 1500.0, 1000.0).unwrap();
-        mie.compute_coefficients().unwrap();
+        let mut mie = MieScatteringSolution::new(0.001, 5e3, 1500.0, 1000.0);
+        mie.compute_coefficients();
 
         // First coefficient should dominate
         let a1_norm = mie.mie_coefficients[0].norm();
@@ -366,8 +363,8 @@ mod tests {
 
     #[test]
     fn test_mie_series_convergence() {
-        let mut mie = MieScatteringSolution::new(0.01, 5e5, 1500.0, 1000.0).unwrap();
-        mie.compute_coefficients().unwrap();
+        let mut mie = MieScatteringSolution::new(0.01, 5e5, 1500.0, 1000.0);
+        mie.compute_coefficients();
 
         // Coefficients should be computed
         assert!(!mie.mie_coefficients.is_empty());
@@ -381,8 +378,8 @@ mod tests {
     #[test]
     fn test_mie_forward_scatter_amplitude() {
         // Forward scatter (θ = 0) should have largest amplitude for most frequencies
-        let mut mie = MieScatteringSolution::new(0.01, 2e5, 1500.0, 1000.0).unwrap();
-        mie.compute_coefficients().unwrap();
+        let mut mie = MieScatteringSolution::new(0.01, 2e5, 1500.0, 1000.0);
+        mie.compute_coefficients();
 
         let p_forward = mie.scattered_pressure(0.1, 0.0).unwrap();
         let p_side = mie.scattered_pressure(0.1, PI / 2.0).unwrap();

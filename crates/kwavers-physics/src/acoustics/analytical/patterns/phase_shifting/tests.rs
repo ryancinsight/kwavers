@@ -135,13 +135,13 @@ fn strategy_input_shapes_and_domains_are_rejected_before_computation() {
     let focus_shape_error = shifter.apply_phases(&[0.0, 0.0]).unwrap_err();
     assert!(format!("{focus_shape_error}").contains("3D point"));
     let focus_distance_error = shifter.apply_phases(&[0.0, 0.0, 0.0005]).unwrap_err();
-    assert!(format!("{focus_distance_error}").contains("1"));
+    assert!(format!("{focus_distance_error}").contains('1'));
 
     shifter.set_strategy(ShiftingStrategy::MultiFocus);
     let multifocus_error = shifter.apply_phases(&[0.0, 0.0]).unwrap_err();
     assert!(format!("{multifocus_error}").contains("3D focal points"));
     let multifocus_distance_error = shifter.apply_phases(&[0.0, 0.0, 0.0005]).unwrap_err();
-    assert!(format!("{multifocus_distance_error}").contains("1"));
+    assert!(format!("{multifocus_distance_error}").contains('1'));
 
     shifter.set_strategy(ShiftingStrategy::Custom);
     let custom_error = shifter.apply_phases(&[0.0, 1.0]).unwrap_err();

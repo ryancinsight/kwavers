@@ -144,6 +144,10 @@ pub struct ValidationReport {
 }
 
 /// Run comprehensive comparative tests
+///
+/// # Errors
+/// Returns [`Err`] if a solver comparison step, the summary report, or the
+/// results lookup fails.
 pub fn run_comparative_tests() -> KwaversResult<ComparativeResults> {
     println!("🔬 Starting Comprehensive Comparative Solver Tests");
     println!("==================================================");
