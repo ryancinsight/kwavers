@@ -3,6 +3,10 @@ name: Crates.io Release
 on:
   release:
     types: [published]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "22 6 * * *"
   workflow_dispatch:
     inputs:
       package:
@@ -18,7 +22,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: crates-release-${{ github.event.release.tag_name || inputs.package }}
+  group: crates-release-${{ github.event.release.tag_name || inputs.package || github.event_name }}
   cancel-in-progress: false
 
 jobs:
@@ -56,3 +60,15 @@ jobs:
       rust-toolchain: "1.97.1"
       dispatch-package: ${{ inputs.package }}
       dispatch-version: ${{ inputs.version }}
+
+  # Version-change publishing (ADR 0068): a merged version bump publishes the
+  # packages whose manifest version crates.io lacks. Push and schedule runs
+  # reach only this job; the release and dispatch jobs above skip them.
+  publish-pending:
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    uses: ryancinsight/atlas/.github/workflows/crates-publish-pending.yml@ee2b7200c4781e39b5ea3e379d2aa97947758099
+    permissions:
+      contents: write # creates the release tags
+      id-token: write # OIDC trusted publishing; no stored registry token.
+    with:
+      rust-toolchain: "1.97.0"
