@@ -28,14 +28,19 @@
 
 use anyhow::Result;
 use kwavers_grid::{Grid3D, GridDimensions};
-use kwavers_medium::optical_map::{OpticalPropertyMap, OpticalPropertyMapBuilder};
+use kwavers_medium::optical_map::OpticalPropertyMapBuilder;
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_phantom::PhantomBuilder;
 use kwavers_physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
-use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
-use leto::Array3;
 use std::io::Write;
 use std::time::Instant;
+
+#[path = "monte_carlo_validation/diffusion_reference.rs"]
+mod diffusion_reference;
+#[path = "monte_carlo_validation/fluence_analysis.rs"]
+mod fluence_analysis;
+use diffusion_reference::solve_diffusion_fluence;
+use fluence_analysis::{analyze_depth_profile, compare_fluence};
 
 fn main() -> Result<()> {
     let _ = writeln!(
@@ -439,155 +444,4 @@ fn validate_blood_vessel() -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Compare two fluence distributions
-fn compare_fluence(
-    mc_fluence: &[f64],
-    diff_fluence: &[f64],
-    _dims: GridDimensions,
-) -> (f64, f64, f64) {
-    assert_eq!(mc_fluence.len(), diff_fluence.len());
-
-    let n = mc_fluence.len();
-    let mut sum_rel_error = 0.0;
-    let mut max_rel_error: f64 = 0.0;
-    let mut count = 0;
-
-    // Relative error calculation
-    for i in 0..n {
-        let mc = mc_fluence[i];
-        let diff = diff_fluence[i];
-
-        // Only compare where fluence is significant
-        let threshold = mc_fluence.iter().cloned().fold(0.0, f64::max) * 1e-3;
-        if mc > threshold && diff > threshold {
-            let rel_error = ((mc - diff) / mc.max(diff)).abs();
-            sum_rel_error += rel_error;
-            max_rel_error = max_rel_error.max(rel_error);
-            count += 1;
-        }
-    }
-
-    let mean_rel_error = if count > 0 {
-        sum_rel_error / count as f64
-    } else {
-        0.0
-    };
-
-    // Compute correlation coefficient
-    let correlation = compute_correlation(mc_fluence, diff_fluence);
-
-    (mean_rel_error, max_rel_error, correlation)
-}
-
-/// Compute Pearson correlation coefficient
-fn compute_correlation(x: &[f64], y: &[f64]) -> f64 {
-    assert_eq!(x.len(), y.len());
-    let n = x.len() as f64;
-
-    let mean_x = x.iter().sum::<f64>() / n;
-    let mean_y = y.iter().sum::<f64>() / n;
-
-    let mut cov = 0.0;
-    let mut var_x = 0.0;
-    let mut var_y = 0.0;
-
-    for i in 0..x.len() {
-        let dx = x[i] - mean_x;
-        let dy = y[i] - mean_y;
-        cov += dx * dy;
-        var_x += dx * dx;
-        var_y += dy * dy;
-    }
-
-    if var_x < 1e-12 || var_y < 1e-12 {
-        return 0.0;
-    }
-
-    cov / (var_x * var_y).sqrt()
-}
-
-/// Analyze depth profile (central axis)
-fn analyze_depth_profile(
-    mc_fluence: &[f64],
-    diff_fluence: &[f64],
-    dims: GridDimensions,
-    label: &str,
-) {
-    let _ = writeln!(
-        std::io::stdout().lock(),
-        "  Depth Profile Analysis ({}):",
-        label
-    );
-
-    let cx = dims.nx / 2;
-    let cy = dims.ny / 2;
-
-    eprintln!("    z (mm) | MC Fluence | Diff Fluence | Rel. Error");
-    let _ = writeln!(
-        std::io::stdout().lock(),
-        "    -------|------------|--------------|------------"
-    );
-
-    for k in (0..dims.nz).step_by(5) {
-        let idx = k * (dims.nx * dims.ny) + cy * dims.nx + cx;
-        let mc = mc_fluence[idx];
-        let diff = diff_fluence[idx];
-        let rel_err = if mc > 1e-12 {
-            ((mc - diff) / mc).abs() * 100.0
-        } else {
-            0.0
-        };
-
-        let z_mm = (k as f64 + 0.5) * dims.dz * 1000.0;
-        let _ = writeln!(
-            std::io::stdout().lock(),
-            "    {:.1}    | {:.3e}   | {:.3e}   | {:.1}%",
-            z_mm,
-            mc,
-            diff,
-            rel_err
-        );
-    }
-}
-
-fn solve_diffusion_fluence(
-    grid: &Grid3D,
-    optical_map: &OpticalPropertyMap,
-    source_position: [f64; 3],
-) -> Result<Vec<f64>> {
-    let config = DiffusionSolverConfig::default();
-    let optical_properties = optical_property_map_to_array3(optical_map);
-    let solver = DiffusionSolver::new(grid.clone(), optical_properties, config)?;
-
-    let (nx, ny, nz) = grid.dimensions();
-    let mut source = Array3::<f64>::zeros((nx, ny, nz));
-    if let Some((i, j, k)) = grid.coordinates_to_indices(
-        source_position[0].max(0.0),
-        source_position[1].max(0.0),
-        source_position[2].max(0.0),
-    ) {
-        source[[i, j, k]] = 1e6;
-    }
-
-    let fluence = solver.solve(&source)?;
-    Ok(flatten_kji(&fluence))
-}
-
-fn optical_property_map_to_array3(map: &OpticalPropertyMap) -> Array3<OpticalPropertyData> {
-    map.properties().clone()
-}
-
-fn flatten_kji(field: &Array3<f64>) -> Vec<f64> {
-    let [nx, ny, nz] = field.shape();
-    let mut out = Vec::with_capacity(nx * ny * nz);
-    for k in 0..nz {
-        for j in 0..ny {
-            for i in 0..nx {
-                out.push(field[[i, j, k]]);
-            }
-        }
-    }
-    out
 }

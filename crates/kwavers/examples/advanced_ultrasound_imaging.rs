@@ -13,8 +13,18 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::advanced::{
     PlaneWaveReconstruction, SyntheticApertureConfig, SyntheticApertureReconstruction,
     UltrasoundPlaneWaveConfig,
 };
-use leto::{Array1, Array2, Array3};
+use leto::Array3;
 use std::io::Write;
+
+#[path = "advanced_ultrasound_imaging/quality_metrics.rs"]
+mod quality_metrics;
+#[path = "advanced_ultrasound_imaging/synthetic_data.rs"]
+mod synthetic_data;
+use quality_metrics::{analyze_image_quality, analyze_pulse_compression};
+use synthetic_data::{
+    create_image_grid, generate_noisy_received_signal, generate_synthetic_pw_rf_data,
+    generate_synthetic_sa_rf_data,
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = writeln!(
@@ -363,203 +373,4 @@ fn demonstrate_coded_excitation() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
-
-/// Generate synthetic RF data for SA imaging
-fn generate_synthetic_sa_rf_data(
-    n_samples: usize,
-    n_rx: usize,
-    n_tx: usize,
-    config: &SyntheticApertureConfig,
-) -> Array3<f64> {
-    let mut rf_data = Array3::<f64>::zeros((n_samples, n_rx, n_tx));
-
-    // Create a simple point scatterer at (0, 30mm)
-    let scatterer_x = 0.0f64;
-    let scatterer_z = 30e-3f64;
-
-    for tx in 0..n_tx {
-        for rx in 0..n_rx {
-            // Calculate transmit and receive element positions
-            let tx_x = (tx as f64 - (n_tx - 1) as f64 / 2.0) * config.element_spacing;
-            let rx_x = (rx as f64 - (n_rx - 1) as f64 / 2.0) * config.element_spacing;
-
-            // Calculate round-trip delay to scatterer
-            let tx_distance = ((scatterer_x - tx_x).powi(2) + scatterer_z.powi(2)).sqrt();
-            let rx_distance = ((scatterer_x - rx_x).powi(2) + scatterer_z.powi(2)).sqrt();
-            let total_delay = (tx_distance + rx_distance) / config.sound_speed;
-
-            // Convert to sample index
-            let sample_idx = (total_delay * config.sampling_frequency) as usize;
-            if sample_idx < n_samples {
-                // Add a simple pulse (in practice, this would be more complex)
-                let amplitude = 1.0 / ((tx_distance + rx_distance) * 10.0); // Attenuation
-                rf_data[[sample_idx, rx, tx]] = amplitude;
-            }
-        }
-    }
-
-    rf_data
-}
-
-/// Generate synthetic RF data for plane wave imaging
-fn generate_synthetic_pw_rf_data(
-    n_samples: usize,
-    n_elements: usize,
-    _tx_angle: f64,
-) -> Array2<f64> {
-    let mut rf_data = Array2::<f64>::zeros((n_samples, n_elements));
-
-    // Create a simple point scatterer at (5mm, 30mm)
-    let scatterer_x = 5e-3f64;
-    let scatterer_z = 30e-3f64;
-    let sound_speed = 1540.0;
-    let sampling_frequency = 40e6;
-
-    for elem in 0..n_elements {
-        // Calculate element position
-        let elem_x = (elem as f64 - (n_elements - 1) as f64 / 2.0) * 0.3e-3;
-
-        // For plane wave, transmit delay is incorporated in steering
-        // Receive delay is distance from scatterer to element
-        let rx_distance = ((scatterer_x - elem_x).powi(2) + scatterer_z.powi(2)).sqrt();
-        let rx_delay = rx_distance / sound_speed;
-
-        // Convert to sample index
-        let sample_idx = (rx_delay * sampling_frequency) as usize;
-        if sample_idx < n_samples {
-            let amplitude = 1.0 / (rx_distance * 10.0); // Attenuation
-            rf_data[[sample_idx, elem]] = amplitude;
-        }
-    }
-
-    rf_data
-}
-
-/// Create image grid coordinates
-fn create_image_grid(width: usize, height: usize, max_depth: f64) -> Array3<f64> {
-    let mut grid = Array3::<f64>::zeros((2, height, width)); // [x/z, height, width]
-
-    let x_range = 40e-3; // ±20mm lateral
-    let z_range = max_depth;
-
-    for i in 0..height {
-        for j in 0..width {
-            // X coordinate (lateral)
-            grid[[0, i, j]] = (j as f64 - width as f64 / 2.0) * x_range / width as f64;
-            // Z coordinate (depth)
-            grid[[1, i, j]] = (i as f64) * z_range / height as f64;
-        }
-    }
-
-    grid
-}
-
-/// Generate noisy received signal for coded excitation testing
-fn generate_noisy_received_signal(
-    code: &Array1<eunomia::Complex64>,
-    noise_level: f64,
-) -> Array1<f64> {
-    use rand::prelude::*;
-
-    let mut rng = rand::thread_rng();
-    let mut signal = Array1::<f64>::zeros(code.len() * 4); // Longer to show compression
-
-    // Add the code with some delay and noise
-    let delay = 50;
-    for i in 0..code.len() {
-        if delay + i < signal.len() {
-            signal[delay + i] = code[i].re + rng.gen::<f64>() * noise_level;
-        }
-    }
-
-    signal
-}
-
-/// Analyze image quality metrics
-struct ImageStats {
-    max_value: f64,
-    mean_value: f64,
-    dynamic_range: f64,
-}
-
-fn analyze_image_quality(image: &Array2<f64>) -> ImageStats {
-    let mut max_val = 0.0f64;
-    let mut sum = 0.0f64;
-    let mut count = 0usize;
-
-    for &val in image.iter() {
-        max_val = max_val.max(val);
-        sum += val;
-        count += 1;
-    }
-
-    let mean_val = sum / count as f64;
-    let dynamic_range = if mean_val > 0.0 {
-        20.0 * (max_val / mean_val).log10()
-    } else {
-        0.0
-    };
-
-    ImageStats {
-        max_value: max_val,
-        mean_value: mean_val,
-        dynamic_range,
-    }
-}
-
-/// Analyze pulse compression results
-struct CompressionStats {
-    compression_ratio: f64,
-    peak_sidelobe_db: f64,
-    main_lobe_width: usize,
-}
-
-fn analyze_pulse_compression(original: &Array1<f64>, compressed: &Array1<f64>) -> CompressionStats {
-    // Find peak in compressed signal
-    let mut peak_idx = 0;
-    let mut peak_value = 0.0f64;
-
-    for (i, &val) in compressed.iter().enumerate() {
-        if val > peak_value {
-            peak_value = val;
-            peak_idx = i;
-        }
-    }
-
-    // Find main lobe width (points above half maximum)
-    let half_max = peak_value / 2.0;
-    let mut start_idx = peak_idx;
-    let mut end_idx = peak_idx;
-
-    while start_idx > 0 && compressed[start_idx] > half_max {
-        start_idx -= 1;
-    }
-    while end_idx < compressed.len() - 1 && compressed[end_idx] > half_max {
-        end_idx += 1;
-    }
-
-    let main_lobe_width = end_idx - start_idx;
-
-    // Find peak sidelobe
-    let mut max_sidelobe = 0.0f64;
-    for (i, &val) in compressed.iter().enumerate() {
-        if i < start_idx || i > end_idx {
-            max_sidelobe = max_sidelobe.max(val);
-        }
-    }
-
-    let peak_sidelobe_db = if max_sidelobe > 0.0 {
-        20.0 * (max_sidelobe / peak_value).log10()
-    } else {
-        -100.0
-    };
-
-    let compression_ratio = original.len() as f64 / main_lobe_width as f64;
-
-    CompressionStats {
-        compression_ratio,
-        peak_sidelobe_db,
-        main_lobe_width,
-    }
 }
