@@ -44,6 +44,8 @@ use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 mod ml_demo {
+    use std::io::Write;
+
     /// Demonstrate meta-learning capabilities
     pub fn demonstrate_meta_learning() {
         let _ = writeln!(

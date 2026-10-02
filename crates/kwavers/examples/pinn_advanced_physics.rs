@@ -41,6 +41,8 @@ use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 mod physics_demo {
+    use std::io::Write;
+
     /// Demonstrate Navier-Stokes fluid dynamics
     pub fn demonstrate_navier_stokes() {
         let _ = writeln!(

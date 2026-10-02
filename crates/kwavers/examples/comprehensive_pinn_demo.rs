@@ -54,6 +54,8 @@ use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 mod pinn_demo {
+    use std::io::Write;
+
     /// Demonstrate basic 2D wave equation PINN training
     pub fn demonstrate_basic_pinn() {
         let _ = writeln!(
