@@ -141,7 +141,6 @@ impl NonlinearWave {
 #[cfg(test)]
 impl NonlinearWave {
     pub(crate) fn compute_spectral_gradient(
-        &self,
         field: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {

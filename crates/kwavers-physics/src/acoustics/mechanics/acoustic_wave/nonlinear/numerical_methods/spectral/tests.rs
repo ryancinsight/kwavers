@@ -11,10 +11,9 @@ use leto::Array3;
 #[test]
 fn compute_spectral_gradient_zero_for_constant_field() {
     let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
-    let w = NonlinearWave::new(&grid, 1e-7);
     let field = Array3::<f64>::from_elem((8, 8, 8), 42.0);
 
-    let (gx, gy, gz) = w.compute_spectral_gradient(&field, &grid).unwrap();
+    let (gx, gy, gz) = NonlinearWave::compute_spectral_gradient(&field, &grid).unwrap();
 
     let tol = 512.0 * f64::EPSILON * 10.0;
     for &v in gx.iter().chain(gy.iter()).chain(gz.iter()) {
@@ -57,7 +56,6 @@ fn compute_spectral_gradient_x_analytical_for_single_mode_sinusoid() {
     let n = 8_usize;
     let dx = 0.001_f64;
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
-    let w = NonlinearWave::new(&grid, 1e-7);
 
     let mut field = Array3::<f64>::zeros((n, n, n));
     for i in 0..n {
@@ -69,7 +67,7 @@ fn compute_spectral_gradient_x_analytical_for_single_mode_sinusoid() {
         }
     }
 
-    let (grad_x, _gy, _gz) = w.compute_spectral_gradient(&field, &grid).unwrap();
+    let (grad_x, _gy, _gz) = NonlinearWave::compute_spectral_gradient(&field, &grid).unwrap();
 
     let k1x = TWO_PI / (n as f64 * dx);
     let tol = 1e-9 * k1x;
@@ -127,7 +125,6 @@ fn compute_spectral_gradient_y_analytical_for_single_mode_sinusoid() {
     let n = 8_usize;
     let dx = 0.001_f64;
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
-    let w = NonlinearWave::new(&grid, 1e-7);
 
     let mut field = Array3::<f64>::zeros((n, n, n));
     for j in 0..n {
@@ -139,7 +136,7 @@ fn compute_spectral_gradient_y_analytical_for_single_mode_sinusoid() {
         }
     }
 
-    let (_gx, grad_y, _gz) = w.compute_spectral_gradient(&field, &grid).unwrap();
+    let (_gx, grad_y, _gz) = NonlinearWave::compute_spectral_gradient(&field, &grid).unwrap();
 
     let k1 = TWO_PI / (n as f64 * dx);
     let tol = 1e-9 * k1;

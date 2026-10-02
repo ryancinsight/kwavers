@@ -132,7 +132,7 @@ pub mod acoustic_wave_validation {
         duration: f64,
         grid_points: usize,
         _tolerance: &ValidationTolerance,
-    ) -> KwaversResult<ValidationResult> {
+    ) -> ValidationResult {
         let start_time = std::time::Instant::now();
 
         // Use a simple, well-conditioned test case
@@ -242,7 +242,7 @@ pub mod acoustic_wave_validation {
         };
         let correlation = if passed { 0.95 } else { 0.5 }; // High correlation for stable solutions
 
-        Ok(ValidationResult {
+        ValidationResult {
             passed,
             errors: ValidationMetrics {
                 max_absolute_error,
@@ -256,7 +256,7 @@ pub mod acoustic_wave_validation {
                 convergence_rate: if passed { 0.95 } else { 0.5 },
             },
             clinical_score: if passed { 0.9 } else { 0.6 },
-        })
+        }
     }
 
     /// Test dispersion analysis for wave equation
@@ -266,7 +266,7 @@ pub mod acoustic_wave_validation {
         frequencies: &[f64],
         grid_points_per_wavelength: usize,
         tolerance: &ValidationTolerance,
-    ) -> KwaversResult<ValidationResult> {
+    ) -> ValidationResult {
         let start_time = std::time::Instant::now();
 
         let mut dispersion_errors = Vec::new();
@@ -299,7 +299,7 @@ pub mod acoustic_wave_validation {
 
         let computation_time = start_time.elapsed().as_secs_f64();
 
-        Ok(ValidationResult {
+        ValidationResult {
             passed,
             errors: ValidationMetrics {
                 max_absolute_error: max_error,
@@ -313,7 +313,7 @@ pub mod acoustic_wave_validation {
                 convergence_rate: 1.0,
             },
             clinical_score: if passed { 0.9 } else { 0.6 },
-        })
+        }
     }
 }
 
@@ -326,6 +326,9 @@ pub mod swe_validation {
     /// Validate SWE elasticity reconstruction accuracy
     ///
     /// Tests reconstruction of known elasticity distribution
+    ///
+    /// # Errors
+    /// Returns [`Err`] when SWE reconstruction fails on the synthetic displacement field.
     pub fn validate_elasticity_reconstruction(
         grid: &Grid,
         medium: &HomogeneousMedium,
@@ -614,8 +617,7 @@ mod tests {
             0.001,  // 1 ms duration
             100,    // 100 grid points
             &tolerance,
-        )
-        .unwrap();
+        );
 
         assert!(result.passed, "1D wave equation validation should pass");
         // For stability test, use different criteria than analytical matching
@@ -635,8 +637,7 @@ mod tests {
             &frequencies,
             20, // 20 points per wavelength
             &tolerance,
-        )
-        .unwrap();
+        );
 
         assert!(result.passed, "Dispersion analysis should pass");
         assert!(result.errors.max_absolute_error < tolerance.relative);

@@ -124,7 +124,11 @@ mod tests {
         let dt = 2.0e-8; // fs = 50 MHz ≫ 2·(3f0/2) Nyquist
         let n = 8192;
         let waveform = cavitation_emission_waveform(n, dt, f0);
-        let trace = Array1::from_iter(waveform.iter().map(|&v| f64::from(v)));
+        let trace = Array1::from_vec(
+            [waveform.len()],
+            waveform.iter().map(|&v| f64::from(v)).collect::<Vec<f64>>(),
+        )
+        .expect("trace shape matches the waveform length");
         let fs = 1.0 / dt;
 
         // Narrow band-pass energy at a centre frequency.
