@@ -36,6 +36,7 @@ use kwavers_analysis::performance::SafeVectorOps;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use leto::{Array1, Array3};
+use std::io::Write;
 use std::time::Instant;
 
 /// Benchmark result for a single test
@@ -70,9 +71,15 @@ impl BenchmarkSuite {
     }
 
     pub fn print_summary(&self) {
-        println!("\n=================================================================");
-        println!("PERFORMANCE BENCHMARK SUMMARY");
-        println!("=================================================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\n================================================================="
+        );
+        let _ = writeln!(std::io::stdout().lock(), "PERFORMANCE BENCHMARK SUMMARY");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "================================================================="
+        );
 
         // Group results by test type
         let mut test_groups: std::collections::HashMap<String, Vec<&BenchmarkResult>> =
@@ -89,15 +96,25 @@ impl BenchmarkSuite {
         }
 
         for (category, results) in test_groups {
-            println!("\n{} Operations:", category.to_uppercase());
-            println!(
-                "  {:<25} {:<15} {:<15} {:<12} {:<10}",
-                "Implementation", "Array Size", "Ops/sec", "Bandwidth", "Speedup"
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "\n{} Operations:",
+                category.to_uppercase()
             );
-            println!("  {}", "-".repeat(80));
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "  {:<25} {:<15} {:<15} {:<12} {:<10}",
+                "Implementation",
+                "Array Size",
+                "Ops/sec",
+                "Bandwidth",
+                "Speedup"
+            );
+            let _ = writeln!(std::io::stdout().lock(), "  {}", "-".repeat(80));
 
             for result in results {
-                println!(
+                let _ = writeln!(
+                    std::io::stdout().lock(),
                     "  {:<25} {:<15} {:<15.2e} {:<12.1} {:<10.2}x",
                     result.implementation,
                     format!("{}³", (result.array_size as f64).cbrt() as usize),
@@ -134,21 +151,33 @@ impl BenchmarkSuite {
                 .sum::<f64>()
                 / traditional_results.len() as f64;
 
-            println!("\nOverall Performance Comparison:");
-            println!("  Safe Vectorization Avg:    {:.2e} ops/sec", avg_safe_perf);
-            println!(
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "\nOverall Performance Comparison:"
+            );
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "  Safe Vectorization Avg:    {:.2e} ops/sec",
+                avg_safe_perf
+            );
+            let _ = writeln!(
+                std::io::stdout().lock(),
                 "  Traditional Methods Avg:   {:.2e} ops/sec",
                 avg_traditional_perf
             );
-            println!(
+            let _ = writeln!(
+                std::io::stdout().lock(),
                 "  Performance Ratio:         {:.2}x",
                 avg_safe_perf / avg_traditional_perf
             );
 
             if avg_safe_perf >= avg_traditional_perf * 0.95 {
-                println!("  Status: ✅ Safe vectorization achieves competitive performance");
+                let _ = writeln!(
+                    std::io::stdout().lock(),
+                    "  Status: ✅ Safe vectorization achieves competitive performance"
+                );
             } else {
-                println!("  Status: ⚠️  Performance gap detected");
+                eprintln!("  Status: ⚠️  Performance gap detected");
             }
         }
     }
@@ -156,10 +185,22 @@ impl BenchmarkSuite {
 
 /// Main benchmark execution
 pub fn main() -> KwaversResult<()> {
-    println!("=================================================================");
-    println!("Safe Vectorization Performance Benchmarks");
-    println!("Comparing safe iterator patterns vs traditional implementations");
-    println!("=================================================================\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "================================================================="
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Safe Vectorization Performance Benchmarks"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Comparing safe iterator patterns vs traditional implementations"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=================================================================\n"
+    );
 
     let mut suite = BenchmarkSuite::new();
 
@@ -167,7 +208,8 @@ pub fn main() -> KwaversResult<()> {
     let array_sizes = vec![32, 64, 128]; // Cubic array dimensions
 
     for &size in &array_sizes {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "Testing with {}³ arrays ({} elements)...",
             size,
             size * size * size
@@ -185,7 +227,7 @@ pub fn main() -> KwaversResult<()> {
         // Benchmark 4: Physics-specific operations
         benchmark_physics_operations(&mut suite, size)?;
 
-        println!();
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     suite.print_summary();
@@ -194,7 +236,7 @@ pub fn main() -> KwaversResult<()> {
 
 /// Benchmark 1: Basic Array Operations
 fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> KwaversResult<()> {
-    println!("  1. Basic Array Operations");
+    let _ = writeln!(std::io::stdout().lock(), "  1. Basic Array Operations");
 
     let _grid = Grid::new(size, size, size, 1e-3, 1e-3, 1e-3).unwrap();
     let a = Array3::<f64>::from_elem((size, size, size), 1.5);
@@ -253,7 +295,8 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
             accuracy_error: 0.0,
         });
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Addition: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
             safe_ops_per_sec,
             traditional_ops_per_sec,
@@ -299,7 +342,8 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
             accuracy_error: 0.0,
         });
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Scalar Multiply: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
             safe_ops_per_sec,
             traditional_ops_per_sec,
@@ -329,7 +373,11 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
             accuracy_error: 0.0,
         });
 
-        println!("    Parallel Addition: {:.1e} ops/s", parallel_ops_per_sec);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "    Parallel Addition: {:.1e} ops/s",
+            parallel_ops_per_sec
+        );
     }
 
     Ok(())
@@ -337,7 +385,7 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
 
 /// Benchmark 2: Linear Algebra Operations
 fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversResult<()> {
-    println!("  2. Linear Algebra Operations");
+    let _ = writeln!(std::io::stdout().lock(), "  2. Linear Algebra Operations");
 
     // Create test vectors for dot product
     let vec_size = size * size;
@@ -382,7 +430,8 @@ fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversR
             accuracy_error: 0.0,
         });
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Dot Product: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
             safe_ops_per_sec,
             traditional_ops_per_sec,
@@ -432,7 +481,8 @@ fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversR
             accuracy_error: 0.0,
         });
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    L2 Norm: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
             safe_ops_per_sec,
             traditional_ops_per_sec,
@@ -445,7 +495,10 @@ fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversR
 
 /// Benchmark 3: Signal Processing Operations  
 fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> KwaversResult<()> {
-    println!("  3. Signal Processing Operations");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  3. Signal Processing Operations"
+    );
 
     // Create test signals
     let signal_length = size * size;
@@ -513,7 +566,8 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
             accuracy_error: 0.0,
         });
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Convolution: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
             safe_ops_per_sec,
             traditional_ops_per_sec,
@@ -569,7 +623,8 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
             accuracy_error: 0.0,
         });
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Windowing: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
             safe_ops_per_sec,
             traditional_ops_per_sec,
@@ -582,7 +637,7 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
 
 /// Benchmark 4: Physics-Specific Operations
 fn benchmark_physics_operations(suite: &mut BenchmarkSuite, size: usize) -> KwaversResult<()> {
-    println!("  4. Physics-Specific Operations");
+    let _ = writeln!(std::io::stdout().lock(), "  4. Physics-Specific Operations");
 
     let _grid = Grid::new(size, size, size, 1e-3, 1e-3, 1e-3).unwrap();
     let mut pressure = Array3::<f64>::from_elem((size, size, size), 1.0);
@@ -663,7 +718,8 @@ fn benchmark_physics_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwav
             accuracy_error: 0.0,
         });
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    FDTD Update: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
             safe_ops_per_sec,
             traditional_ops_per_sec,
@@ -697,7 +753,11 @@ fn benchmark_physics_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwav
             accuracy_error: 0.0,
         });
 
-        println!("    Chunked Processing: {:.1e} ops/s", chunked_ops_per_sec);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "    Chunked Processing: {:.1e} ops/s",
+            chunked_ops_per_sec
+        );
     }
 
     Ok(())
@@ -706,7 +766,7 @@ fn benchmark_physics_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwav
 /// Benchmark memory access patterns
 #[allow(dead_code)]
 fn benchmark_memory_patterns(suite: &mut BenchmarkSuite, size: usize) -> KwaversResult<()> {
-    println!("  5. Memory Access Patterns");
+    let _ = writeln!(std::io::stdout().lock(), "  5. Memory Access Patterns");
 
     let array = Array3::<f64>::from_elem((size, size, size), 1.0);
 
@@ -732,7 +792,11 @@ fn benchmark_memory_patterns(suite: &mut BenchmarkSuite, size: usize) -> Kwavers
             accuracy_error: 0.0,
         });
 
-        println!("    Sequential Access: {:.1e} ops/s", ops_per_sec);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "    Sequential Access: {:.1e} ops/s",
+            ops_per_sec
+        );
         ops_per_sec
     };
 
@@ -770,7 +834,8 @@ fn benchmark_memory_patterns(suite: &mut BenchmarkSuite, size: usize) -> Kwavers
             accuracy_error: 0.0,
         });
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Random Access: {:.1e} ops/s (Efficiency: {:.1}%)",
             random_ops_per_sec,
             100.0 * random_ops_per_sec / sequential_ops_per_sec

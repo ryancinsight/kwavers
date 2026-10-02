@@ -58,5 +58,5 @@ fn test_create_focused_source() {
     let p = positions[0];
     let val = source.get_source_term(0.0, p.0, p.1, p.2, &grid);
     // Should run without error
-    println!("Source term at element 0: {}", val);
+    eprintln!("Source term at element 0: {}", val);
 }

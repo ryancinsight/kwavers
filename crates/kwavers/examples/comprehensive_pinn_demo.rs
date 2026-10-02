@@ -49,267 +49,520 @@
 //! cargo run --example comprehensive_pinn_demo -- --all
 //! ```
 
+use std::io::Write;
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 mod pinn_demo {
     /// Demonstrate basic 2D wave equation PINN training
     pub fn demonstrate_basic_pinn() {
-        println!("🧠 Basic 2D PINN Training Demonstration");
-        println!("=======================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🧠 Basic 2D PINN Training Demonstration"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "======================================="
+        );
 
         // This would use the existing PINN implementation
-        println!("   ✅ PINN model initialization");
-        println!("   ✅ Training data generation");
-        println!("   ✅ Loss function configuration");
-        println!("   ✅ Training loop execution");
-        println!("   ✅ Model convergence validation");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ PINN model initialization");
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Training data generation");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Loss function configuration"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Training loop execution");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Model convergence validation"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate multi-GPU distributed training
     pub fn demonstrate_distributed_training() {
-        println!("🚀 Multi-GPU Distributed Training");
-        println!("================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🚀 Multi-GPU Distributed Training"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "================================");
 
-        println!("   ✅ GPU device discovery and enumeration");
-        println!("   ✅ Domain decomposition strategies");
-        println!("   ✅ Load balancing algorithms");
-        println!("   ✅ Gradient aggregation and synchronization");
-        println!("   ✅ Fault tolerance mechanisms");
-        println!("   ✅ Training coordination and checkpointing");
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ GPU device discovery and enumeration"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Domain decomposition strategies"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Load balancing algorithms");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Gradient aggregation and synchronization"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Fault tolerance mechanisms");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Training coordination and checkpointing"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate JIT compilation and real-time inference
     pub fn demonstrate_jit_inference() {
-        println!("⚡ JIT Compilation & Real-Time Inference");
-        println!("======================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "⚡ JIT Compilation & Real-Time Inference"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "======================================"
+        );
 
-        println!("   ✅ Model compilation optimization");
-        println!("   ✅ Kernel caching and memory management");
-        println!("   ✅ Sub-microsecond inference latency");
-        println!("   ✅ Edge deployment compatibility");
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Model compilation optimization"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Kernel caching and memory management"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Sub-microsecond inference latency"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Edge deployment compatibility"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate model quantization and optimization
     pub fn demonstrate_quantization() {
-        println!("🗜️  Model Quantization & Optimization");
-        println!("===================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🗜️  Model Quantization & Optimization"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "==================================="
+        );
 
-        println!("   ✅ 8-bit and 4-bit quantization schemes");
-        println!("   ✅ Accuracy preservation techniques");
-        println!("   ✅ Memory footprint reduction (4-8x)");
-        println!("   ✅ Inference speed optimization");
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ 8-bit and 4-bit quantization schemes"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Accuracy preservation techniques"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Memory footprint reduction (4-8x)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Inference speed optimization"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate advanced physics domains
     pub fn demonstrate_physics_domains() {
-        println!("🌊 Advanced Physics Domains");
-        println!("==========================");
+        let _ = writeln!(std::io::stdout().lock(), "🌊 Advanced Physics Domains");
+        let _ = writeln!(std::io::stdout().lock(), "==========================");
 
-        println!("   🔵 Navier-Stokes Fluid Dynamics:");
-        println!("      ✅ Incompressible flow simulation");
-        println!("      ✅ Turbulence modeling (k-ε, SST)");
-        println!("      ✅ Free surface and multiphase flows");
-        println!("      ✅ High-Reynolds number regimes");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🔵 Navier-Stokes Fluid Dynamics:"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Incompressible flow simulation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Turbulence modeling (k-ε, SST)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Free surface and multiphase flows"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ High-Reynolds number regimes"
+        );
 
-        println!("   🔥 Heat Transfer:");
-        println!("      ✅ Conduction, convection, radiation");
-        println!("      ✅ Phase change and material interfaces");
-        println!("      ✅ Multi-physics thermal coupling");
-        println!("      ✅ Non-linear thermal properties");
+        let _ = writeln!(std::io::stdout().lock(), "   🔥 Heat Transfer:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Conduction, convection, radiation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Phase change and material interfaces"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Multi-physics thermal coupling"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Non-linear thermal properties"
+        );
 
-        println!("   🏗️  Structural Mechanics:");
-        println!("      ✅ Linear and nonlinear elasticity");
-        println!("      ✅ Plasticity models (von Mises)");
-        println!("      ✅ Contact mechanics and friction");
-        println!("      ✅ Dynamic loading analysis");
+        let _ = writeln!(std::io::stdout().lock(), "   🏗️  Structural Mechanics:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Linear and nonlinear elasticity"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Plasticity models (von Mises)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Contact mechanics and friction"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Dynamic loading analysis"
+        );
 
-        println!("   ⚡ Electromagnetics:");
-        println!("      ✅ Maxwell equations implementation");
-        println!("      ✅ Static and quasi-static fields");
-        println!("      ✅ Wave propagation in media");
-        println!("      ✅ Antenna and scattering problems");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "   ⚡ Electromagnetics:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Maxwell equations implementation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Static and quasi-static fields"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Wave propagation in media"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Antenna and scattering problems"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate meta-learning capabilities
     pub fn demonstrate_meta_learning() {
-        println!("🎓 Meta-Learning & Transfer Learning");
-        println!("===================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🎓 Meta-Learning & Transfer Learning"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "==================================="
+        );
 
-        println!("   🧠 Meta-Learning (MAML):");
-        println!("      ✅ Model-agnostic meta-learning");
-        println!("      ✅ Inner/outer loop optimization");
-        println!("      ✅ Physics task adaptation");
-        println!("      ✅ 5× faster convergence on new tasks");
+        let _ = writeln!(std::io::stdout().lock(), "   🧠 Meta-Learning (MAML):");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Model-agnostic meta-learning"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Inner/outer loop optimization"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Physics task adaptation");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ 5× faster convergence on new tasks"
+        );
 
-        println!("   🔄 Transfer Learning:");
-        println!("      ✅ Geometry adaptation (simple → complex)");
-        println!("      ✅ Domain adaptation layers");
-        println!("      ✅ Fine-tuning strategies");
-        println!("      ✅ Transfer accuracy preservation");
+        let _ = writeln!(std::io::stdout().lock(), "   🔄 Transfer Learning:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Geometry adaptation (simple → complex)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Domain adaptation layers"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Fine-tuning strategies");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Transfer accuracy preservation"
+        );
 
-        println!("   🎯 Few-Shot Learning:");
-        println!("      ✅ Rapid adaptation to new physics");
-        println!("      ✅ Minimal data requirements");
-        println!("      ✅ Cross-domain generalization");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "   🎯 Few-Shot Learning:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Rapid adaptation to new physics"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Minimal data requirements"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Cross-domain generalization"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate uncertainty quantification
     pub fn demonstrate_uncertainty() {
-        println!("📊 Uncertainty Quantification");
-        println!("============================");
+        let _ = writeln!(std::io::stdout().lock(), "📊 Uncertainty Quantification");
+        let _ = writeln!(std::io::stdout().lock(), "============================");
 
-        println!("   🎲 Bayesian PINNs:");
-        println!("      ✅ Monte Carlo Dropout");
-        println!("      ✅ Deep ensemble methods");
-        println!("      ✅ 95% confidence intervals");
+        let _ = writeln!(std::io::stdout().lock(), "   🎲 Bayesian PINNs:");
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Monte Carlo Dropout");
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Deep ensemble methods");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ 95% confidence intervals"
+        );
 
-        println!("   🎯 Conformal Prediction:");
-        println!("      ✅ Guaranteed coverage bounds");
-        println!("      ✅ Distribution-free uncertainty");
-        println!("      ✅ Safety-critical applications");
+        let _ = writeln!(std::io::stdout().lock(), "   🎯 Conformal Prediction:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Guaranteed coverage bounds"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Distribution-free uncertainty"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Safety-critical applications"
+        );
 
-        println!("   📈 Reliability Metrics:");
-        println!("      ✅ Expected calibration error");
-        println!("      ✅ Predictive entropy analysis");
-        println!("      ✅ Uncertainty-aware decision making");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "   📈 Reliability Metrics:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Expected calibration error"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Predictive entropy analysis"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Uncertainty-aware decision making"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate cloud deployment capabilities
     pub fn demonstrate_cloud_deployment() {
-        println!("☁️  Cloud Deployment & Scaling");
-        println!("=============================");
+        let _ = writeln!(std::io::stdout().lock(), "☁️  Cloud Deployment & Scaling");
+        let _ = writeln!(std::io::stdout().lock(), "=============================");
 
-        println!("   🔧 Multi-Cloud Support:");
-        println!("      ✅ AWS SageMaker integration");
-        println!("      ✅ Google Cloud Vertex AI");
-        println!("      ✅ Azure Machine Learning");
-        println!("      ✅ Unified deployment API");
+        let _ = writeln!(std::io::stdout().lock(), "   🔧 Multi-Cloud Support:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ AWS SageMaker integration"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Google Cloud Vertex AI");
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Azure Machine Learning");
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Unified deployment API");
 
-        println!("   📈 Auto-Scaling:");
-        println!("      ✅ GPU utilization monitoring");
-        println!("      ✅ Request throughput scaling");
-        println!("      ✅ Cost-optimized instance selection");
-        println!("      ✅ 10× scaling efficiency");
+        let _ = writeln!(std::io::stdout().lock(), "   📈 Auto-Scaling:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ GPU utilization monitoring"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Request throughput scaling"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Cost-optimized instance selection"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ 10× scaling efficiency");
 
-        println!("   🏥 Production Monitoring:");
-        println!("      ✅ Prometheus metrics collection");
-        println!("      ✅ Grafana dashboards");
-        println!("      ✅ Alert configuration");
-        println!("      ✅ <5min MTTR guarantee");
+        let _ = writeln!(std::io::stdout().lock(), "   🏥 Production Monitoring:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Prometheus metrics collection"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Grafana dashboards");
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Alert configuration");
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ <5min MTTR guarantee");
 
-        println!("   🚀 CI/CD Pipeline:");
-        println!("      ✅ Automated testing and deployment");
-        println!("      ✅ Multi-stage validation");
-        println!("      ✅ Rollback procedures");
-        println!("      ✅ Security scanning");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "   🚀 CI/CD Pipeline:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ✅ Automated testing and deployment"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Multi-stage validation");
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Rollback procedures");
+        let _ = writeln!(std::io::stdout().lock(), "      ✅ Security scanning");
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate performance benchmarks
     pub fn demonstrate_performance() {
-        println!("⚡ Performance Benchmarks");
-        println!("========================");
+        let _ = writeln!(std::io::stdout().lock(), "⚡ Performance Benchmarks");
+        let _ = writeln!(std::io::stdout().lock(), "========================");
 
-        println!("   🧮 Training Performance:");
-        println!("      📊 Single GPU: 2.3s/epoch");
-        println!("      📊 Multi-GPU (4×): 0.8s/epoch (85% efficiency)");
-        println!("      📊 Meta-Learning: 5× faster convergence");
+        let _ = writeln!(std::io::stdout().lock(), "   🧮 Training Performance:");
+        let _ = writeln!(std::io::stdout().lock(), "      📊 Single GPU: 2.3s/epoch");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 Multi-GPU (4×): 0.8s/epoch (85% efficiency)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 Meta-Learning: 5× faster convergence"
+        );
 
-        println!("   🏃 Inference Performance:");
-        println!("      📊 Standard: <100μs per prediction");
-        println!("      📊 JIT Compiled: <1μs per prediction");
-        println!("      📊 Quantized: <10μs with 4-bit precision");
+        let _ = writeln!(std::io::stdout().lock(), "   🏃 Inference Performance:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 Standard: <100μs per prediction"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 JIT Compiled: <1μs per prediction"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 Quantized: <10μs with 4-bit precision"
+        );
 
-        println!("   💾 Memory Efficiency:");
-        println!("      📊 Standard: 1.2GB for wave equation");
-        println!("      📊 Quantized: 0.15GB (8× reduction)");
-        println!("      📊 Edge Optimized: <50MB for embedded");
+        let _ = writeln!(std::io::stdout().lock(), "   💾 Memory Efficiency:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 Standard: 1.2GB for wave equation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 Quantized: 0.15GB (8× reduction)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 Edge Optimized: <50MB for embedded"
+        );
 
-        println!("   🎯 Accuracy Metrics:");
-        println!("      📊 Wave Equation: <0.1% vs analytical");
-        println!("      📊 Navier-Stokes: 95% vs CFD benchmarks");
-        println!("      📊 Heat Transfer: 98% vs FEM solutions");
-        println!("      📊 Uncertainty: 95% confidence intervals");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "   🎯 Accuracy Metrics:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 Wave Equation: <0.1% vs analytical"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 Navier-Stokes: 95% vs CFD benchmarks"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 Heat Transfer: 98% vs FEM solutions"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📊 Uncertainty: 95% confidence intervals"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate real-world applications
     pub fn demonstrate_applications() {
-        println!("🌍 Real-World Applications");
-        println!("=========================");
+        let _ = writeln!(std::io::stdout().lock(), "🌍 Real-World Applications");
+        let _ = writeln!(std::io::stdout().lock(), "=========================");
 
-        println!("   🏥 Medical Applications:");
-        println!("      🔊 Ultrasound wave simulation");
-        println!("      🧠 Brain tissue modeling");
-        println!("      💓 Cardiac flow dynamics");
-        println!("      🦴 Bone fracture analysis");
+        let _ = writeln!(std::io::stdout().lock(), "   🏥 Medical Applications:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      🔊 Ultrasound wave simulation"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "      🧠 Brain tissue modeling");
+        let _ = writeln!(std::io::stdout().lock(), "      💓 Cardiac flow dynamics");
+        let _ = writeln!(std::io::stdout().lock(), "      🦴 Bone fracture analysis");
 
-        println!("   ✈️  Aerospace Applications:");
-        println!("      🌪️  Turbulent flow simulation");
-        println!("      🔥 Heat transfer in engines");
-        println!("      🏗️ Structural integrity analysis");
-        println!("      📡 Antenna design optimization");
+        let _ = writeln!(std::io::stdout().lock(), "   ✈️  Aerospace Applications:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      🌪️  Turbulent flow simulation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      🔥 Heat transfer in engines"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      🏗️ Structural integrity analysis"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      📡 Antenna design optimization"
+        );
 
-        println!("   🏭 Industrial Applications:");
-        println!("      🔧 Predictive maintenance");
-        println!("      🏗️ Process optimization");
-        println!("      🔍 Quality control");
-        println!("      ⚡ Real-time monitoring");
+        let _ = writeln!(std::io::stdout().lock(), "   🏭 Industrial Applications:");
+        let _ = writeln!(std::io::stdout().lock(), "      🔧 Predictive maintenance");
+        let _ = writeln!(std::io::stdout().lock(), "      🏗️ Process optimization");
+        let _ = writeln!(std::io::stdout().lock(), "      🔍 Quality control");
+        let _ = writeln!(std::io::stdout().lock(), "      ⚡ Real-time monitoring");
 
-        println!("   🌡️ Environmental Applications:");
-        println!("      🌊 Ocean current modeling");
-        println!("      🌪️ Atmospheric flow simulation");
-        println!("      🔥 Wildfire propagation");
-        println!("      🌊 Flood prediction");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   🌡️ Environmental Applications:"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "      🌊 Ocean current modeling");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      🌪️ Atmospheric flow simulation"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "      🔥 Wildfire propagation");
+        let _ = writeln!(std::io::stdout().lock(), "      🌊 Flood prediction");
 
-        println!("   🧪 Scientific Research:");
-        println!("      🔬 Plasma physics simulation");
-        println!("      ⚛️ Quantum mechanics modeling");
-        println!("      🌌 Cosmological structure formation");
-        println!("      🧬 Molecular dynamics");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "   🧪 Scientific Research:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      🔬 Plasma physics simulation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      ⚛️ Quantum mechanics modeling"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "      🌌 Cosmological structure formation"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "      🧬 Molecular dynamics");
+        let _ = writeln!(std::io::stdout().lock());
     }
 }
 
 #[cfg(not(feature = "pinn"))]
 mod pinn_demo {
     pub fn demonstrate_basic_pinn() {
-        println!("❌ PINN feature not enabled. Use --features pinn to enable PINN capabilities.");
+        eprintln!("❌ PINN feature not enabled. Use --features pinn to enable PINN capabilities.");
     }
     pub fn demonstrate_distributed_training() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_jit_inference() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_quantization() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_physics_domains() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_meta_learning() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_uncertainty() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_cloud_deployment() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_performance() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_applications() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
 }
 
@@ -317,13 +570,28 @@ fn main() {
     let start_time = Instant::now();
     let args: Vec<String> = std::env::args().collect();
 
-    println!("🎯 Comprehensive PINN Ecosystem Demonstration");
-    println!("=============================================");
-    println!();
-    println!("🚀 Complete Physics-Informed Neural Network Framework");
-    println!("   Featuring: 2D/3D PINNs • Multi-GPU Training • Meta-Learning");
-    println!("   Advanced Physics • Uncertainty Quantification • Cloud Deployment");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🎯 Comprehensive PINN Ecosystem Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "============================================="
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🚀 Complete Physics-Informed Neural Network Framework"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Featuring: 2D/3D PINNs • Multi-GPU Training • Meta-Learning"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Advanced Physics • Uncertainty Quantification • Cloud Deployment"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Parse command line arguments
     let demo_mode = if args.len() > 1 {
@@ -364,9 +632,15 @@ fn main() {
             pinn_demo::demonstrate_applications();
         }
         "--all" => {
-            println!("🎭 Running Complete Ecosystem Demonstration");
-            println!("===========================================");
-            println!();
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "🎭 Running Complete Ecosystem Demonstration"
+            );
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "==========================================="
+            );
+            let _ = writeln!(std::io::stdout().lock());
 
             pinn_demo::demonstrate_basic_pinn();
             pinn_demo::demonstrate_distributed_training();
@@ -380,9 +654,15 @@ fn main() {
             pinn_demo::demonstrate_applications();
         }
         _ => {
-            println!("🎭 Running Complete Ecosystem Demonstration");
-            println!("===========================================");
-            println!();
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "🎭 Running Complete Ecosystem Demonstration"
+            );
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "==========================================="
+            );
+            let _ = writeln!(std::io::stdout().lock());
 
             pinn_demo::demonstrate_basic_pinn();
             pinn_demo::demonstrate_distributed_training();
@@ -398,17 +678,42 @@ fn main() {
     }
 
     let elapsed = start_time.elapsed();
-    println!("🏆 Demonstration Complete!");
-    println!("==========================");
-    println!("   ⏱️  Total runtime: {:.2}s", elapsed.as_secs_f64());
-    println!("   ✅ All components demonstrated successfully");
-    println!("   🚀 PINN ecosystem ready for production deployment");
-    println!();
-    println!("📚 Next Steps:");
-    println!("   • Run specific demos: --basic, --physics, --meta, --uncertainty");
-    println!("   • Track GPU training through the Coeus + Hephaestus provider migration");
-    println!("   • Deploy to cloud: Check cloud deployment documentation");
-    println!("   • Explore examples: cargo run --example [example_name]");
-    println!();
-    println!("🌟 The most comprehensive PINN framework available!");
+    let _ = writeln!(std::io::stdout().lock(), "🏆 Demonstration Complete!");
+    let _ = writeln!(std::io::stdout().lock(), "==========================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ⏱️  Total runtime: {:.2}s",
+        elapsed.as_secs_f64()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ All components demonstrated successfully"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   🚀 PINN ecosystem ready for production deployment"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(std::io::stdout().lock(), "📚 Next Steps:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Run specific demos: --basic, --physics, --meta, --uncertainty"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Track GPU training through the Coeus + Hephaestus provider migration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Deploy to cloud: Check cloud deployment documentation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Explore examples: cargo run --example [example_name]"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🌟 The most comprehensive PINN framework available!"
+    );
 }

@@ -6,9 +6,13 @@
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_grid::Grid;
 use leto::Array3;
+use std::io::Write;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Kwavers Acoustic Simulation - Minimal Demo\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Kwavers Acoustic Simulation - Minimal Demo\n"
+    );
 
     // Create a small 3D grid
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3)?; // 32x32x32 points, 1mm spacing
@@ -35,19 +39,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfl = 0.3;
     let dt = cfl * dx / c;
 
-    println!("Simulation Parameters:");
-    println!("  Grid: {}x{}x{} points", grid.nx, grid.ny, grid.nz);
-    println!("  Spacing: {:.1} mm", dx * 1000.0);
-    println!("  Sound speed: {:.1} m/s", c);
-    println!("  Density: {:.1} kg/m³", DENSITY_WATER);
-    println!("  CFL number: {:.2}", cfl);
-    println!("  Timestep: {:.2} ns", dt * 1e9);
+    let _ = writeln!(std::io::stdout().lock(), "Simulation Parameters:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Grid: {}x{}x{} points",
+        grid.nx,
+        grid.ny,
+        grid.nz
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  Spacing: {:.1} mm", dx * 1000.0);
+    let _ = writeln!(std::io::stdout().lock(), "  Sound speed: {:.1} m/s", c);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Density: {:.1} kg/m³",
+        DENSITY_WATER
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  CFL number: {:.2}", cfl);
+    let _ = writeln!(std::io::stdout().lock(), "  Timestep: {:.2} ns", dt * 1e9);
 
     // Simple wave propagation using finite differences
     let mut pressure_new = pressure.clone();
     let mut pressure_old = pressure.clone();
 
-    println!("\nSimulating wave propagation...");
+    let _ = writeln!(std::io::stdout().lock(), "\nSimulating wave propagation...");
     for step in 0..10 {
         // Second-order wave equation: ∂²p/∂t² = c²∇²p
         for i in 1..31 {
@@ -76,14 +90,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Calculate total energy
         let energy: f64 = pressure.iter().map(|p| p * p).sum();
-        println!("  Step {}: Energy = {:.2e} Pa²", step + 1, energy);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Step {}: Energy = {:.2e} Pa²",
+            step + 1,
+            energy
+        );
     }
 
-    println!("\nSimulation complete!");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "\nSimulation complete!");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Despite {} compilation warnings, the physics is correct.",
         529
     );
-    println!("Production readiness requires addressing these warnings.");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Production readiness requires addressing these warnings."
+    );
     Ok(())
 }

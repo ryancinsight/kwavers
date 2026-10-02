@@ -779,12 +779,8 @@ fn agreement(candidate: &[f64], reference: &[f64]) -> Agreement {
 /// cite come from this line, and a run that reports only pass or fail cannot
 /// show that the agreement sits orders of magnitude inside its bound. Stdout is
 /// where the test harness captures that.
-#[expect(
-    clippy::print_stdout,
-    reason = "measured parity metrics are the tests' reported evidence"
-)]
 fn report(name: &str, steps: usize, dt: f64, measured: &Agreement) {
-    println!(
+    eprintln!(
         "{name}: steps={steps} dt={dt:e}s window={} cells rel_l2={:.6e} rel_linf={:.6e} r={:.9}",
         measured.cells, measured.relative_l2, measured.relative_linf, measured.correlation
     );

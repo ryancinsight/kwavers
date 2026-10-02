@@ -33,6 +33,8 @@ use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 use coeus_core::MoiraiBackend;
+#[cfg(feature = "pinn")]
+use std::io::Write;
 
 #[cfg(feature = "pinn")]
 type Backend = MoiraiBackend;
@@ -143,8 +145,14 @@ fn compute_l2_error(
 
 #[cfg(feature = "pinn")]
 fn main() -> KwaversResult<()> {
-    println!("🧠 Physics-Informed Neural Network for 2D Wave Equation");
-    println!("======================================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🧠 Physics-Informed Neural Network for 2D Wave Equation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "======================================================"
+    );
 
     // Configuration
     let wave_speed = 343.0; // m/s (speed of sound in air)
@@ -153,17 +161,34 @@ fn main() -> KwaversResult<()> {
     let n_collocation_points = 1000;
     let epochs = 100;
 
-    println!("📋 Configuration:");
-    println!("   Wave speed: {} m/s", wave_speed);
-    println!("   Domain: {}m x {}m", domain_size, domain_size);
-    println!("   Training samples: {}", n_training_samples);
-    println!("   Collocation points: {}", n_collocation_points);
-    println!("   Training epochs: {}", epochs);
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "📋 Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Wave speed: {} m/s",
+        wave_speed
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Domain: {}m x {}m",
+        domain_size,
+        domain_size
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Training samples: {}",
+        n_training_samples
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Collocation points: {}",
+        n_collocation_points
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   Training epochs: {}", epochs);
+    let _ = writeln!(std::io::stdout().lock());
 
     // Initialize backend
-    println!("🔥 Backend: Moirai (CPU)");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "🔥 Backend: Moirai (CPU)");
+    let _ = writeln!(std::io::stdout().lock());
 
     // Create PINN configuration
     let pinn_config = PinnConfig2D {
@@ -179,40 +204,58 @@ fn main() -> KwaversResult<()> {
         ..Default::default()
     };
 
-    println!("🧠 PINN Configuration:");
-    println!("   Hidden layers: {:?}", pinn_config.hidden_layers);
-    println!("   Learning rate: {}", pinn_config.learning_rate);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "🧠 PINN Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Hidden layers: {:?}",
+        pinn_config.hidden_layers
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Learning rate: {}",
+        pinn_config.learning_rate
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Loss weights: data={:.1}, pde={:.1}, boundary={:.1}, initial={:.1}",
         pinn_config.loss_weights.data,
         pinn_config.loss_weights.pde,
         pinn_config.loss_weights.boundary,
         pinn_config.loss_weights.initial
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Create geometry (unit square)
     let geometry = WaveGeometry2D::rectangular(0.0, domain_size, 0.0, domain_size);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "📐 Geometry: Unit square [0,{}] x [0,{}]",
-        domain_size, domain_size
+        domain_size,
+        domain_size
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Create PINN trainer
     let trainer = PinnTrainer2D::<Backend>::new_trainer(pinn_config.clone(), geometry)?;
-    println!("✅ PINN Trainer: Created successfully");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "✅ PINN Trainer: Created successfully"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Generate training data
-    println!("📊 Generating training data...");
+    let _ = writeln!(std::io::stdout().lock(), "📊 Generating training data...");
     let (x_train, y_train, t_train, u_train) =
         generate_training_data(n_training_samples, domain_size, wave_speed);
-    println!("   Training points: {}", x_train.len());
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Training points: {}",
+        x_train.len()
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Train PINN
-    println!("🚀 Training PINN...");
+    let _ = writeln!(std::io::stdout().lock(), "🚀 Training PINN...");
     let start_time = Instant::now();
     let mut trainer = trainer;
     let metrics = trainer.train(
@@ -226,50 +269,70 @@ fn main() -> KwaversResult<()> {
     )?;
     let training_time = start_time.elapsed();
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "✅ Training completed in {:.2}s",
         training_time.as_secs_f64()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Final total loss: {:.6e}",
         metrics.total_loss.last().unwrap()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Final data loss: {:.6e}",
         metrics.data_loss.last().unwrap()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Final PDE loss: {:.6e}",
         metrics.pde_loss.last().unwrap()
     );
-    println!("   Final BC loss: {:.6e}", metrics.bc_loss.last().unwrap());
-    println!("   Final IC loss: {:.6e}", metrics.ic_loss.last().unwrap());
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Final BC loss: {:.6e}",
+        metrics.bc_loss.last().unwrap()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Final IC loss: {:.6e}",
+        metrics.ic_loss.last().unwrap()
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Generate test data for validation
-    println!("🧪 Validating PINN predictions...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🧪 Validating PINN predictions..."
+    );
     let (x_test, y_test, t_test) = generate_test_grid(10, 10, 5, domain_size, 0.01);
-    println!("   Test points: {}", x_test.len());
+    let _ = writeln!(std::io::stdout().lock(), "   Test points: {}", x_test.len());
 
     // Make predictions
     let predictions = trainer.pinn().predict(&x_test, &y_test, &t_test)?;
-    println!("   Predictions completed");
+    let _ = writeln!(std::io::stdout().lock(), "   Predictions completed");
 
     // Compute error
     let l2_error = compute_l2_error(&x_test, &y_test, &t_test, &predictions, wave_speed);
-    println!("   L2 Error: {:.6e}", l2_error);
-    println!();
+    eprintln!("   L2 Error: {:.6e}", l2_error);
+    let _ = writeln!(std::io::stdout().lock());
 
     // Performance analysis
-    println!("📈 Performance Analysis:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "📈 Performance Analysis:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Training time: {:.2}s ({:.1} ms/epoch)",
         training_time.as_secs_f64(),
         training_time.as_millis() as f64 / epochs as f64
     );
 
     let loss_reduction = metrics.total_loss[0] / metrics.total_loss.last().unwrap();
-    println!("   Loss reduction: {:.2e}x", loss_reduction);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Loss reduction: {:.2e}x",
+        loss_reduction
+    );
 
     let convergence_epoch = metrics
         .total_loss
@@ -278,14 +341,15 @@ fn main() -> KwaversResult<()> {
         .find(|(_, &loss)| loss < 1e-3)
         .map(|(epoch, _)| epoch)
         .unwrap_or(epochs);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Convergence: {} epochs to reach 1e-3 loss",
         convergence_epoch
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Demonstrate prediction at specific points
-    println!("🎯 Example Predictions:");
+    let _ = writeln!(std::io::stdout().lock(), "🎯 Example Predictions:");
     let test_points = vec![(0.25, 0.25, 0.0), (0.5, 0.5, 0.005), (0.75, 0.75, 0.01)];
 
     for (x, y, t) in test_points {
@@ -299,7 +363,7 @@ fn main() -> KwaversResult<()> {
         let pred = trainer.pinn().predict(&x_point, &y_point, &t_point)?;
         let analytical = analytical_solution_2d(x, y, t, wave_speed);
 
-        println!(
+        eprintln!(
             "   Point ({:.2}, {:.2}, {:.3}s): PINN={:.6}, Analytical={:.6}, Error={:.6}",
             x,
             y,
@@ -309,18 +373,30 @@ fn main() -> KwaversResult<()> {
             (pred[[0, 0]] as f64 - analytical).abs()
         );
     }
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Summary
-    println!("🎉 Example completed successfully!");
-    println!("   PINN successfully learned the 2D wave equation physics");
-    println!("   Demonstrated convergence with physics-informed loss");
-    println!("   Achieved accurate predictions across the domain");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🎉 Example completed successfully!"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   PINN successfully learned the 2D wave equation physics"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Demonstrated convergence with physics-informed loss"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Achieved accurate predictions across the domain"
+    );
 
     Ok(())
 }
 
 #[cfg(not(feature = "pinn"))]
 fn main() {
-    println!("❌ PINN feature not enabled. Run with: cargo run --example pinn_2d_wave_equation --features pinn");
+    eprintln!("❌ PINN feature not enabled. Run with: cargo run --example pinn_2d_wave_equation --features pinn");
 }

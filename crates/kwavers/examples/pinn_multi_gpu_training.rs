@@ -13,31 +13,60 @@ use kwavers_solver::inverse::pinn::ml::universal_solver::UniversalSolverGeometry
 use kwavers_solver::inverse::pinn::ml::{
     LoadBalancingAlgorithm, LossWeights2D, MultiGpuDecompositionStrategy, PinnConfig2D,
 };
+use std::io::Write;
 #[cfg(feature = "pinn")]
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 fn main() -> KwaversResult<()> {
-    println!("🚀 Multi-GPU PINN Training Example");
-    println!("==================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🚀 Multi-GPU PINN Training Example"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=================================="
+    );
 
     let wave_speed = 343.0; // m/s (speed of sound in air)
 
-    println!("📋 Configuration:");
-    println!("   Wave speed: {} m/s", wave_speed);
-    println!("   Target GPUs: Auto-detect available GPUs");
-    println!("   Decomposition: Spatial domain splitting");
-    println!("   Load balancing: Dynamic with work stealing");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "📋 Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Wave speed: {} m/s",
+        wave_speed
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Target GPUs: Auto-detect available GPUs"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Decomposition: Spatial domain splitting"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Load balancing: Dynamic with work stealing"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Demonstrate multi-GPU API structure
-    println!("🎮 Multi-GPU API Demonstration:");
-    println!("   Note: Full multi-GPU functionality requires 'gpu' feature");
-    println!("   Demonstrating API structure and configuration:");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "🎮 Multi-GPU API Demonstration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Note: Full multi-GPU functionality requires 'gpu' feature"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Demonstrating API structure and configuration:"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Show decomposition strategies
-    println!("🏗️  Domain Decomposition Strategies:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🏗️  Domain Decomposition Strategies:"
+    );
     let _spatial = MultiGpuDecompositionStrategy::Spatial {
         dimensions: 2,
         overlap: 0.05,
@@ -48,13 +77,22 @@ fn main() -> KwaversResult<()> {
         temporal_steps: 50,
         overlap: 0.03,
     };
-    println!("   ✅ Spatial decomposition: overlap = 5%");
-    println!("   ✅ Temporal decomposition: 100 steps per GPU");
-    println!("   ✅ Hybrid decomposition: spatial + temporal");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Spatial decomposition: overlap = 5%"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Temporal decomposition: 100 steps per GPU"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Hybrid decomposition: spatial + temporal"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Show load balancing algorithms
-    println!("⚖️  Load Balancing Algorithms:");
+    let _ = writeln!(std::io::stdout().lock(), "⚖️  Load Balancing Algorithms:");
     let _static_lb = LoadBalancingAlgorithm::Static;
     let _dynamic_lb = LoadBalancingAlgorithm::Dynamic {
         imbalance_threshold: 0.1,
@@ -64,13 +102,22 @@ fn main() -> KwaversResult<()> {
         history_window: 100,
         prediction_horizon: 10,
     };
-    println!("   ✅ Static: Equal distribution");
-    println!("   ✅ Dynamic: Work stealing (threshold = 10%)");
-    println!("   ✅ Predictive: ML-based load prediction");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "   ✅ Static: Equal distribution");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Dynamic: Work stealing (threshold = 10%)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Predictive: ML-based load prediction"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Create distributed training configuration
-    println!("🧠 Distributed Training Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🧠 Distributed Training Configuration:"
+    );
     let training_config = DistributedTrainingConfig {
         num_gpus: 1, // Fallback to single GPU
         gradient_aggregation: kwavers_solver::inverse::pinn::ml::GradientAggregation::Average,
@@ -78,24 +125,28 @@ fn main() -> KwaversResult<()> {
         communication_config: Default::default(),
         fault_tolerance: Default::default(),
     };
-    println!("   ✅ Gradient aggregation: Average");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Gradient aggregation: Average"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   ✅ Checkpoint interval: {} epochs",
         training_config.checkpoint_config.interval
     );
-    println!("   ✅ Fault tolerance: Enabled");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "   ✅ Fault tolerance: Enabled");
+    let _ = writeln!(std::io::stdout().lock());
 
     // Create geometry
-    println!("🏗️  Setting up Complex Geometry:");
+    let _ = writeln!(std::io::stdout().lock(), "🏗️  Setting up Complex Geometry:");
     let l_shape = UniversalSolverGeometry2D::rectangle(0.0, 1.0, 0.0, 1.0)
         .with_rectangle_obstacle(0.6, 1.0, 0.6, 1.0);
     let _geometry = l_shape;
-    println!("   ✅ L-shaped geometry created");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "   ✅ L-shaped geometry created");
+    let _ = writeln!(std::io::stdout().lock());
 
     // Create PINN configuration
-    println!("🧠 PINN Configuration:");
+    let _ = writeln!(std::io::stdout().lock(), "🧠 PINN Configuration:");
     let pinn_config = PinnConfig2D {
         hidden_layers: vec![200, 200, 200, 200], // Larger network for GPU
         learning_rate: 5e-4,
@@ -108,19 +159,34 @@ fn main() -> KwaversResult<()> {
         num_collocation_points: 20000,
         boundary_condition: kwavers_solver::inverse::pinn::ml::BoundaryCondition2D::Dirichlet,
     };
-    println!("   ✅ Hidden layers: {:?}", pinn_config.hidden_layers);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Hidden layers: {:?}",
+        pinn_config.hidden_layers
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   ✅ Collocation points: {}",
         pinn_config.num_collocation_points
     );
-    println!("   ✅ Learning rate: {}", pinn_config.learning_rate);
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Learning rate: {}",
+        pinn_config.learning_rate
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Training simulation (simplified for example)
-    println!("🚀 Training Simulation:");
-    println!("   Note: This demonstrates the API structure");
-    println!("   Full distributed training requires GPU hardware and 'gpu' feature");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "🚀 Training Simulation:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Note: This demonstrates the API structure"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Full distributed training requires GPU hardware and 'gpu' feature"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     let start_time = Instant::now();
     let n_epochs = 50; // Reduced for demo
@@ -128,7 +194,8 @@ fn main() -> KwaversResult<()> {
     for epoch in 0..n_epochs {
         if epoch % 10 == 0 {
             let progress = epoch as f32 / n_epochs as f32 * 100.0;
-            println!(
+            let _ = writeln!(
+                std::io::stdout().lock(),
                 "   Epoch {}/{} ({:.1}%): Simulating distributed training...",
                 epoch + 1,
                 n_epochs,
@@ -140,58 +207,116 @@ fn main() -> KwaversResult<()> {
     }
 
     let training_time = start_time.elapsed();
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   ✅ Training simulation completed in {:.2}s",
         training_time.as_secs_f64()
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Performance analysis
-    println!("📈 Performance Analysis:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "📈 Performance Analysis:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Training time: {:.2} seconds",
         training_time.as_secs_f64()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Average time per epoch: {:.3} seconds",
         training_time.as_secs_f64() / n_epochs as f64
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Estimated scaling efficiency: {:.1}% (single GPU baseline)",
         100.0
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("🎉 Multi-GPU PINN API Demonstration Complete!");
-    println!("   Demonstrated:");
-    println!("   • Domain decomposition strategy configuration");
-    println!("   • Load balancing algorithm selection");
-    println!("   • Distributed training configuration");
-    println!("   • PINN network setup for multi-GPU training");
-    println!("   • Training simulation and performance monitoring");
-    println!("   • API structure for fault tolerance and scaling");
-    println!();
-    println!("💡 To enable full multi-GPU functionality:");
-    println!("   • Use --features pinn,gpu when building");
-    println!("   • Ensure multiple GPUs are available");
-    println!("   • Run on systems with GPU acceleration support");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🎉 Multi-GPU PINN API Demonstration Complete!"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   Demonstrated:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Domain decomposition strategy configuration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Load balancing algorithm selection"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Distributed training configuration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • PINN network setup for multi-GPU training"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Training simulation and performance monitoring"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • API structure for fault tolerance and scaling"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "💡 To enable full multi-GPU functionality:"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Use --features pinn,gpu when building"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Ensure multiple GPUs are available"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Run on systems with GPU acceleration support"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("💡 Multi-GPU Training Insights:");
-    println!("   • Domain decomposition enables linear scaling across GPUs");
-    println!("   • Load balancing prevents bottlenecks and maximizes utilization");
-    println!("   • Fault tolerance ensures training continuity despite hardware failures");
-    println!("   • Communication overhead must be minimized for optimal scaling");
-    println!("   • Memory management is critical for large distributed models");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "💡 Multi-GPU Training Insights:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Domain decomposition enables linear scaling across GPUs"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Load balancing prevents bottlenecks and maximizes utilization"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Fault tolerance ensures training continuity despite hardware failures"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Communication overhead must be minimized for optimal scaling"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Memory management is critical for large distributed models"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     Ok(())
 }
 
 #[cfg(not(feature = "pinn"))]
 fn main() {
-    println!("🚫 PINN feature not enabled!");
-    println!("   This example requires the 'pinn' feature to be enabled.");
-    println!("   Run with: cargo run --example pinn_multi_gpu_training --features pinn");
+    eprintln!("🚫 PINN feature not enabled!");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   This example requires the 'pinn' feature to be enabled."
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Run with: cargo run --example pinn_multi_gpu_training --features pinn"
+    );
     std::process::exit(1);
 }

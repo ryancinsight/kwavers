@@ -40,6 +40,8 @@ use kwavers_solver::inverse::pinn::ml::{
 };
 #[cfg(feature = "pinn")]
 use std::collections::HashMap;
+#[cfg(feature = "pinn")]
+use std::io::Write;
 
 #[cfg(feature = "pinn")]
 type Backend = MoiraiBackend;
@@ -57,7 +59,10 @@ fn empty_physics_parameters() -> PinnDomainPhysicsParameters {
 /// Example: Electrostatic parallel plate capacitor
 #[cfg(feature = "pinn")]
 pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
-    println!("=== Electrostatic Capacitor Example ===");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=== Electrostatic Capacitor Example ==="
+    );
 
     let domain: ElectromagneticDomain<Backend> = ElectromagneticDomain::new(
         EMProblemType::Electrostatic,
@@ -97,8 +102,15 @@ pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
         Some(&config),
     )?;
 
-    println!("Electrostatic capacitor training completed");
-    println!("Final loss: {:.6e}", solution.stats.final_loss);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Electrostatic capacitor training completed"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Final loss: {:.6e}",
+        solution.stats.final_loss
+    );
 
     Ok(())
 }
@@ -106,7 +118,10 @@ pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
 /// Example: Magnetostatic current-carrying wire
 #[cfg(feature = "pinn")]
 pub fn magnetostatic_wire_example() -> KwaversResult<()> {
-    println!("=== Magnetostatic Wire Example ===");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=== Magnetostatic Wire Example ==="
+    );
 
     let domain: ElectromagneticDomain<Backend> = ElectromagneticDomain::new(
         EMProblemType::Magnetostatic,
@@ -144,8 +159,15 @@ pub fn magnetostatic_wire_example() -> KwaversResult<()> {
         Some(&config),
     )?;
 
-    println!("Magnetostatic wire training completed");
-    println!("Final loss: {:.6e}", solution.stats.final_loss);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Magnetostatic wire training completed"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Final loss: {:.6e}",
+        solution.stats.final_loss
+    );
 
     Ok(())
 }
@@ -153,7 +175,7 @@ pub fn magnetostatic_wire_example() -> KwaversResult<()> {
 /// Example: Electromagnetic wave propagation in free space
 #[cfg(feature = "pinn")]
 pub fn wave_propagation_example() -> KwaversResult<()> {
-    println!("=== Wave Propagation Example ===");
+    let _ = writeln!(std::io::stdout().lock(), "=== Wave Propagation Example ===");
 
     let domain: ElectromagneticDomain<Backend> = ElectromagneticDomain::new(
         EMProblemType::WavePropagation,
@@ -189,8 +211,15 @@ pub fn wave_propagation_example() -> KwaversResult<()> {
         Some(&config),
     )?;
 
-    println!("Wave propagation training completed");
-    println!("Final loss: {:.6e}", solution.stats.final_loss);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Wave propagation training completed"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Final loss: {:.6e}",
+        solution.stats.final_loss
+    );
 
     Ok(())
 }
@@ -198,7 +227,7 @@ pub fn wave_propagation_example() -> KwaversResult<()> {
 /// Example: Lossy dielectric waveguide
 #[cfg(feature = "pinn")]
 pub fn lossy_waveguide_example() -> KwaversResult<()> {
-    println!("=== Lossy Waveguide Example ===");
+    let _ = writeln!(std::io::stdout().lock(), "=== Lossy Waveguide Example ===");
 
     let domain: ElectromagneticDomain<Backend> = ElectromagneticDomain::new(
         EMProblemType::WavePropagation,
@@ -237,8 +266,15 @@ pub fn lossy_waveguide_example() -> KwaversResult<()> {
         Some(&config),
     )?;
 
-    println!("Lossy waveguide training completed");
-    println!("Final loss: {:.6e}", solution.stats.final_loss);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Lossy waveguide training completed"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Final loss: {:.6e}",
+        solution.stats.final_loss
+    );
 
     Ok(())
 }
@@ -246,7 +282,10 @@ pub fn lossy_waveguide_example() -> KwaversResult<()> {
 /// Example: Quasi-static electromagnetic induction
 #[cfg(feature = "pinn")]
 pub fn quasi_static_induction_example() -> KwaversResult<()> {
-    println!("=== Quasi-Static Induction Example ===");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=== Quasi-Static Induction Example ==="
+    );
 
     let domain: ElectromagneticDomain<Backend> = ElectromagneticDomain::new(
         EMProblemType::QuasiStatic,
@@ -290,8 +329,15 @@ pub fn quasi_static_induction_example() -> KwaversResult<()> {
         Some(&config),
     )?;
 
-    println!("Quasi-static induction training completed");
-    println!("Final loss: {:.6e}", solution.stats.final_loss);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Quasi-static induction training completed"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Final loss: {:.6e}",
+        solution.stats.final_loss
+    );
 
     Ok(())
 }
@@ -299,8 +345,14 @@ pub fn quasi_static_induction_example() -> KwaversResult<()> {
 /// Run all electromagnetic simulation examples
 #[cfg(feature = "pinn")]
 fn main() -> KwaversResult<()> {
-    println!("Electromagnetic PINN Simulation Examples");
-    println!("========================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Electromagnetic PINN Simulation Examples"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "========================================"
+    );
 
     // Run electrostatic example
     if let Err(e) = electrostatic_capacitor_example() {
@@ -327,7 +379,10 @@ fn main() -> KwaversResult<()> {
         eprintln!("Quasi-static induction example failed: {:?}", e);
     }
 
-    println!("All electromagnetic simulation examples completed!");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "All electromagnetic simulation examples completed!"
+    );
 
     Ok(())
 }

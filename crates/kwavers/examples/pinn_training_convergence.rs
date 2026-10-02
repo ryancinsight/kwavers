@@ -49,6 +49,8 @@ use kwavers_solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D};
 #[cfg(feature = "pinn")]
 use std::error::Error;
 #[cfg(feature = "pinn")]
+use std::io::Write;
+#[cfg(feature = "pinn")]
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
@@ -151,9 +153,10 @@ fn train_pinn(
     targets: &[[f64; 2]],
     config: &ExperimentConfig,
 ) -> Result<(ElasticPINN2D<AutodiffBackend>, Vec<f64>), Box<dyn Error>> {
-    println!("Starting PINN training...");
-    println!("Configuration: {:?}", config);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "Starting PINN training...");
+    let _ = writeln!(std::io::stdout().lock(), "Configuration: {:?}", config);
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Training samples: {} (points/axis: {})",
         inputs.len(),
         config.num_points
@@ -229,7 +232,8 @@ fn train_pinn(
         loss_history.push(loss_value);
 
         if epoch % 100 == 0 {
-            println!(
+            let _ = writeln!(
+                std::io::stdout().lock(),
                 "Epoch {}/{}: Loss = {:.6e}, Time = {:.2}s",
                 epoch,
                 config.epochs,
@@ -239,7 +243,8 @@ fn train_pinn(
         }
     }
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Training completed in {:.2}s",
         start_time.elapsed().as_secs_f64()
     );
@@ -254,12 +259,20 @@ fn h_refinement_study(
     domain_size: f64,
     t_max: f64,
 ) -> Result<Vec<(usize, f64)>, Box<dyn Error>> {
-    println!("\n=== H-Refinement Convergence Study ===");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n=== H-Refinement Convergence Study ==="
+    );
 
     let mut convergence_data = Vec::new();
 
     for &num_points in resolutions {
-        println!("\nResolution: {}×{}", num_points, num_points);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\nResolution: {}×{}",
+            num_points,
+            num_points
+        );
 
         // Generate training data
         let (inputs, targets) = generate_training_data(solution, num_points, domain_size, t_max);
@@ -288,19 +301,26 @@ fn h_refinement_study(
 
         convergence_data.push((num_points, final_loss));
 
-        println!("Final L2 error: {:.6e}", final_loss);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "Final L2 error: {:.6e}",
+            final_loss
+        );
     }
 
     // Compute convergence rate
-    println!("\n=== Convergence Analysis ===");
+    let _ = writeln!(std::io::stdout().lock(), "\n=== Convergence Analysis ===");
     if convergence_data.len() >= 2 {
         let n = convergence_data.len();
         let (h1, e1) = convergence_data[n - 2];
         let (h2, e2) = convergence_data[n - 1];
 
         let rate = (e1.ln() - e2.ln()) / ((h2 as f64 / h1 as f64).ln());
-        println!("Convergence rate: {:.2}", rate);
-        println!("Expected rate: ~2.0 for second-order scheme");
+        let _ = writeln!(std::io::stdout().lock(), "Convergence rate: {:.2}", rate);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "Expected rate: ~2.0 for second-order scheme"
+        );
     }
 
     Ok(convergence_data)
@@ -312,7 +332,7 @@ fn validate_gradients(
     model: &ElasticPINN2D<AutodiffBackend>,
     test_point: [f64; 3],
 ) -> Result<(), Box<dyn Error>> {
-    println!("\n=== Gradient Validation ===");
+    let _ = writeln!(std::io::stdout().lock(), "\n=== Gradient Validation ===");
 
     let eps = 1e-5;
     let backend = AutodiffBackend::default();
@@ -375,10 +395,19 @@ fn validate_gradients(
 
     let fd_grad_x = (u_plus - u_minus) / (2.0 * eps);
 
-    println!("Test point: {:?}", test_point);
-    println!("Autodiff ∂u/∂x: {:.6e}", autodiff_grad_x);
-    println!("FD ∂u/∂x:       {:.6e}", fd_grad_x);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "Test point: {:?}", test_point);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Autodiff ∂u/∂x: {:.6e}",
+        autodiff_grad_x
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "FD ∂u/∂x:       {:.6e}",
+        fd_grad_x
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Relative error: {:.6e}",
         ((autodiff_grad_x - fd_grad_x) / fd_grad_x).abs()
     );
@@ -388,9 +417,18 @@ fn validate_gradients(
 
 #[cfg(feature = "pinn")]
 fn main() -> Result<(), Box<dyn Error>> {
-    println!("=============================================================");
-    println!("  PINN Training with Convergence Analysis");
-    println!("=============================================================\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "============================================================="
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  PINN Training with Convergence Analysis"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=============================================================\n"
+    );
 
     // Physical parameters (water-like medium)
     let density: f64 = 1000.0; // kg/m³
@@ -398,22 +436,23 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mu: f64 = 0.0; // Pa (shear modulus, ~0 for fluids)
     let c_p: f64 = ((lambda + 2.0 * mu) / density).sqrt(); // P-wave speed ≈ 1500 m/s
 
-    println!("Physical Parameters:");
-    println!("  Density: {} kg/m³", density);
-    println!("  Lambda: {:.2e} Pa", lambda);
-    println!("  Mu: {:.2e} Pa", mu);
-    println!("  P-wave speed: {:.2} m/s\n", c_p);
+    let _ = writeln!(std::io::stdout().lock(), "Physical Parameters:");
+    let _ = writeln!(std::io::stdout().lock(), "  Density: {} kg/m³", density);
+    let _ = writeln!(std::io::stdout().lock(), "  Lambda: {:.2e} Pa", lambda);
+    let _ = writeln!(std::io::stdout().lock(), "  Mu: {:.2e} Pa", mu);
+    let _ = writeln!(std::io::stdout().lock(), "  P-wave speed: {:.2} m/s\n", c_p);
 
     // Analytical solution
     let wavelength = 0.01; // 1 cm
     let amplitude = 1e-6; // 1 μm
     let solution = PlaneWaveAnalytical::new(amplitude, wavelength, c_p);
 
-    println!("Analytical Solution:");
-    println!("  Type: P-wave plane wave");
-    println!("  Amplitude: {} m", amplitude);
-    println!("  Wavelength: {} m", wavelength);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "Analytical Solution:");
+    let _ = writeln!(std::io::stdout().lock(), "  Type: P-wave plane wave");
+    let _ = writeln!(std::io::stdout().lock(), "  Amplitude: {} m", amplitude);
+    let _ = writeln!(std::io::stdout().lock(), "  Wavelength: {} m", wavelength);
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Frequency: {:.2} kHz\n",
         solution.omega / (2.0 * std::f64::consts::PI) / 1000.0
     );
@@ -423,10 +462,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let t_max = 1e-5; // 10 μs
 
     // Single training run
-    println!("=== Single Training Run ===");
+    let _ = writeln!(std::io::stdout().lock(), "=== Single Training Run ===");
     let num_points = 32;
     let (inputs, targets) = generate_training_data(&solution, num_points, domain_size, t_max);
-    println!("Generated {} training samples", inputs.len());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Generated {} training samples",
+        inputs.len()
+    );
 
     let pinn_config = Config {
         hidden_layers: vec![64, 64, 64, 64],
@@ -447,26 +490,70 @@ fn main() -> Result<(), Box<dyn Error>> {
     let convergence_data = h_refinement_study(&solution, &resolutions, domain_size, t_max)?;
 
     // Summary
-    println!("\n=============================================================");
-    println!("  Summary");
-    println!("=============================================================");
-    println!("✓ PINN training completed successfully");
-    println!("✓ Gradient validation performed (autodiff vs FD)");
-    println!("✓ H-refinement convergence study completed");
-    println!("\nConvergence Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n============================================================="
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  Summary");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "============================================================="
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "✓ PINN training completed successfully"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "✓ Gradient validation performed (autodiff vs FD)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "✓ H-refinement convergence study completed"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "\nConvergence Results:");
     for (h, error) in convergence_data {
-        println!("  h = {}: L2 error = {:.6e}", h, error);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  h = {}: L2 error = {:.6e}",
+            h,
+            error
+        );
     }
 
-    println!("\n=============================================================");
-    println!("  Recommendations for Next Steps");
-    println!("=============================================================");
-    println!("1. Run longer training (5000-10000 epochs) for better convergence");
-    println!("2. Implement proper optimizer (Adam with learning rate scheduler)");
-    println!("3. Add PDE residual loss to training (currently data-only)");
-    println!("4. Generate convergence plots (log-log error vs resolution)");
-    println!("5. Compare against FEM/FDTD solutions");
-    println!("6. Extend to 3D and heterogeneous media");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n============================================================="
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  Recommendations for Next Steps");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "============================================================="
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "1. Run longer training (5000-10000 epochs) for better convergence"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "2. Implement proper optimizer (Adam with learning rate scheduler)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "3. Add PDE residual loss to training (currently data-only)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "4. Generate convergence plots (log-log error vs resolution)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "5. Compare against FEM/FDTD solutions"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "6. Extend to 3D and heterogeneous media"
+    );
 
     Ok(())
 }

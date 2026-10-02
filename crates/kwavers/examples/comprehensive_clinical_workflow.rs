@@ -46,6 +46,7 @@ mod results;
 
 #[cfg(feature = "gpu")]
 use results::*;
+use std::io::Write;
 
 #[cfg(feature = "gpu")]
 struct LiverAssessmentWorkflow {
@@ -62,10 +63,16 @@ struct LiverAssessmentWorkflow {
 #[cfg(feature = "gpu")]
 impl LiverAssessmentWorkflow {
     fn new(patient_id: &str, liver_volume_mm3: (f64, f64, f64)) -> KwaversResult<Self> {
-        println!("Initializing liver assessment for patient: {patient_id}");
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "Initializing liver assessment for patient: {patient_id}"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "Liver volume: {:.1} x {:.1} x {:.1} mm³",
-            liver_volume_mm3.0, liver_volume_mm3.1, liver_volume_mm3.2
+            liver_volume_mm3.0,
+            liver_volume_mm3.1,
+            liver_volume_mm3.2
         );
 
         let grid_scale = 0.5;
@@ -77,9 +84,12 @@ impl LiverAssessmentWorkflow {
             5e-4,
             5e-4,
         )?;
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "Computational grid: {}x{}x{} cells",
-            grid.nx, grid.ny, grid.nz
+            grid.nx,
+            grid.ny,
+            grid.nz
         );
 
         let liver_tissue = Self::create_liver_tissue_model(&grid);
@@ -110,14 +120,32 @@ impl LiverAssessmentWorkflow {
 
 #[cfg(not(feature = "gpu"))]
 fn main() -> KwaversResult<()> {
-    println!("Comprehensive Clinical Workflow Example");
-    println!("========================================");
-    println!();
-    println!("This example demonstrates a complete liver assessment workflow");
-    println!("integrating advanced ultrasound simulation capabilities.");
-    println!();
-    println!("Note: GPU features required for full workflow execution.");
-    println!("Run with --features gpu to enable complete functionality.");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Comprehensive Clinical Workflow Example"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "========================================"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "This example demonstrates a complete liver assessment workflow"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "integrating advanced ultrasound simulation capabilities."
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Note: GPU features required for full workflow execution."
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Run with --features gpu to enable complete functionality."
+    );
     Ok(())
 }
 

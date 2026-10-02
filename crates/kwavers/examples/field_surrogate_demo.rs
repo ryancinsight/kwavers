@@ -109,7 +109,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     make_penttinen_kernel(1.0e6, 30.0e6, grid),
                 ]
             } else {
-                println!(
+                let _ = writeln!(
+                    std::io::stdout().lock(),
                     "[demo] loaded {} real-PSTD kernel(s) from {}",
                     loaded.len(),
                     path.display()
@@ -145,7 +146,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         acc.max(k.field.iter().fold(0.0_f64, |a, &v| a.max(v.abs())))
     }) as f32;
     let mut sampler = KernelCubeSampler::new(&kernels, None);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "[demo] sampler: {} voxels, halves {:?} m, transforms {:?}, p_max={p_max_pa:.3e} Pa",
         sampler.len(),
         sampler.coord_halves,
@@ -158,7 +160,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // sampling distribution on near-focal voxels (probability ∝ p²),
     // pushing peak prediction toward 85+ % at matched training budget.
     sampler.set_sampling(SamplingMode::ImportanceByMagnitude { exponent: 2.0 });
-    println!("[demo] enabled importance sampling (exponent=2.0)");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "[demo] enabled importance sampling (exponent=2.0)"
+    );
 
     // Phase C-6: bump capacity to 256-wide × 4-layer (~330k params)
     // — empirically the smaller 128×3 stack saturates at ~70 % of
@@ -227,9 +232,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let m = trainer.step(batch)?;
         history.push((m.data, m.helmholtz, m.peak_prominence, m.total));
         if step % log_every == 0 {
-            println!(
+            let _ = writeln!(
+                std::io::stdout().lock(),
                 "[demo] step {step:>5}: data={:.5e}, helm={:.5e}, prom={:.5e}, total={:.5e}",
-                m.data, m.helmholtz, m.peak_prominence, m.total,
+                m.data,
+                m.helmholtz,
+                m.peak_prominence,
+                m.total,
             );
         }
     }
@@ -254,9 +263,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dyt_path = target_dir.join("dyt_scalars.csv");
     let mut fd = File::create(&dyt_path).expect("open dyt csv");
     writeln!(fd, "layer,alpha,gamma,beta").unwrap();
-    println!("[demo] learned DyT scalars (α, γ, β) per activation:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "[demo] learned DyT scalars (α, γ, β) per activation:"
+    );
     for (i, (alpha, gamma, beta)) in scalars.iter().enumerate() {
-        println!("    layer {i:>2}: α = {alpha:+.4}  γ = {gamma:+.4}  β = {beta:+.4}");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "    layer {i:>2}: α = {alpha:+.4}  γ = {gamma:+.4}  β = {beta:+.4}"
+        );
         writeln!(fd, "{i},{alpha},{gamma},{beta}").unwrap();
     }
 
@@ -326,7 +341,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap();
         }
         let rmse = (sum_sq / n_samples as f32).sqrt();
-        println!(
+        let _ = writeln!(std::io::stdout().lock(),
             "[demo] f0={:.2} MHz: peak target={:.3}, peak pred={:.3} ({:>5.1}% of target), axial RMSE={:.3}",
             f0 / 1e6,
             peak_target,
@@ -335,7 +350,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             rmse,
         );
     }
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "[demo] wrote {} and {}",
         csv_path.display(),
         line_path.display()

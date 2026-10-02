@@ -34,37 +34,71 @@ use kwavers_phantom::PhantomBuilder;
 use kwavers_physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
 use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
 use leto::Array3;
+use std::io::Write;
 use std::time::Instant;
 
 fn main() -> Result<()> {
-    println!("=== Monte Carlo vs. Diffusion Solver Validation ===\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=== Monte Carlo vs. Diffusion Solver Validation ===\n"
+    );
 
     // Test 1: High scattering regime (diffusion should be accurate)
-    println!("Test 1: High Scattering Regime (μ_s' >> μ_a)");
-    println!("Expected: Good agreement between MC and diffusion\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Test 1: High Scattering Regime (μ_s' >> μ_a)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Expected: Good agreement between MC and diffusion\n"
+    );
     validate_high_scattering()?;
 
     // Test 2: Low scattering regime (diffusion breaks down)
-    println!("\nTest 2: Low Scattering Regime (μ_s' ~ μ_a)");
-    println!("Expected: Diffusion overestimates penetration\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\nTest 2: Low Scattering Regime (μ_s' ~ μ_a)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Expected: Diffusion overestimates penetration\n"
+    );
     validate_low_scattering()?;
 
     // Test 3: Layered tissue phantom
-    println!("\nTest 3: Layered Tissue Phantom");
-    println!("Expected: Both methods capture layer boundaries\n");
+    let _ = writeln!(std::io::stdout().lock(), "\nTest 3: Layered Tissue Phantom");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Expected: Both methods capture layer boundaries\n"
+    );
     validate_layered_tissue()?;
 
     // Test 4: Blood vessel phantom
-    println!("\nTest 4: Blood Vessel Phantom");
-    println!("Expected: MC captures fine structure, diffusion smooths\n");
+    let _ = writeln!(std::io::stdout().lock(), "\nTest 4: Blood Vessel Phantom");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Expected: MC captures fine structure, diffusion smooths\n"
+    );
     validate_blood_vessel()?;
 
-    println!("\n=== Validation Complete ===");
-    println!("\nKey Findings:");
-    println!("1. Diffusion approximation is accurate in high-scattering regime");
-    println!("2. Monte Carlo is required for low-scattering or ballistic regimes");
-    println!("3. MC provides higher fidelity at ~100x computational cost");
-    println!("4. Use diffusion for real-time applications, MC for validation");
+    let _ = writeln!(std::io::stdout().lock(), "\n=== Validation Complete ===");
+    let _ = writeln!(std::io::stdout().lock(), "\nKey Findings:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "1. Diffusion approximation is accurate in high-scattering regime"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "2. Monte Carlo is required for low-scattering or ballistic regimes"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "3. MC provides higher fidelity at ~100x computational cost"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "4. Use diffusion for real-time applications, MC for validation"
+    );
 
     Ok(())
 }
@@ -84,7 +118,10 @@ fn validate_high_scattering() -> Result<()> {
     let cz = 0.0;
 
     // Monte Carlo simulation
-    println!("  Running Monte Carlo (1M photons)...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Running Monte Carlo (1M photons)..."
+    );
     let mc_solver = MonteCarloSolver::new(grid.clone(), optical_map.clone());
     let mc_source = PhotonSource::pencil_beam([cx, cy, cz], [0.0, 0.0, 1.0]);
     let mc_config = SimulationConfig::default()
@@ -95,7 +132,7 @@ fn validate_high_scattering() -> Result<()> {
     let mc_result = mc_solver.simulate(&mc_source, &mc_config)?;
     let mc_time = mc_start.elapsed();
 
-    println!("  Running Diffusion solver...");
+    let _ = writeln!(std::io::stdout().lock(), "  Running Diffusion solver...");
     let diff_start = Instant::now();
     let diff_fluence = solve_diffusion_fluence(&grid, &optical_map, [cx, cy, cz])?;
     let diff_time = diff_start.elapsed();
@@ -104,17 +141,40 @@ fn validate_high_scattering() -> Result<()> {
     let mc_fluence = mc_result.normalized_fluence();
     let (mean_error, max_error, correlation) = compare_fluence(&mc_fluence, &diff_fluence, dims);
 
-    println!("  Results:");
-    println!("    MC runtime:        {:?}", mc_time);
-    println!("    Diffusion runtime: {:?}", diff_time);
-    println!("    Mean rel. error:   {:.2}%", mean_error * 100.0);
-    println!("    Max rel. error:    {:.2}%", max_error * 100.0);
-    println!("    Correlation:       {:.4}", correlation);
+    let _ = writeln!(std::io::stdout().lock(), "  Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    MC runtime:        {:?}",
+        mc_time
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Diffusion runtime: {:?}",
+        diff_time
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Mean rel. error:   {:.2}%",
+        mean_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Max rel. error:    {:.2}%",
+        max_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Correlation:       {:.4}",
+        correlation
+    );
 
     if mean_error < 0.10 && correlation > 0.90 {
-        println!("  ✓ PASS: Good agreement in high scattering regime");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  ✓ PASS: Good agreement in high scattering regime"
+        );
     } else {
-        println!("  ⚠ WARNING: Unexpected deviation in high scattering regime");
+        eprintln!("  ⚠ WARNING: Unexpected deviation in high scattering regime");
     }
 
     Ok(())
@@ -142,7 +202,10 @@ fn validate_low_scattering() -> Result<()> {
     let cz = 0.0;
 
     // Monte Carlo (ground truth)
-    println!("  Running Monte Carlo (500k photons)...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Running Monte Carlo (500k photons)..."
+    );
     let mc_solver = MonteCarloSolver::new(grid.clone(), optical_map.clone());
     let mc_source = PhotonSource::pencil_beam([cx, cy, cz], [0.0, 0.0, 1.0]);
     let mc_config = SimulationConfig::default().num_photons(500_000);
@@ -151,7 +214,7 @@ fn validate_low_scattering() -> Result<()> {
     let mc_result = mc_solver.simulate(&mc_source, &mc_config)?;
     let mc_time = mc_start.elapsed();
 
-    println!("  Running Diffusion solver...");
+    let _ = writeln!(std::io::stdout().lock(), "  Running Diffusion solver...");
     let diff_start = Instant::now();
     let diff_fluence = solve_diffusion_fluence(&grid, &optical_map, [cx, cy, cz])?;
     let diff_time = diff_start.elapsed();
@@ -160,19 +223,45 @@ fn validate_low_scattering() -> Result<()> {
     let mc_fluence = mc_result.normalized_fluence();
     let (mean_error, max_error, correlation) = compare_fluence(&mc_fluence, &diff_fluence, dims);
 
-    println!("  Results:");
-    println!("    MC runtime:        {:?}", mc_time);
-    println!("    Diffusion runtime: {:?}", diff_time);
-    println!("    Mean rel. error:   {:.2}%", mean_error * 100.0);
-    println!("    Max rel. error:    {:.2}%", max_error * 100.0);
-    println!("    Correlation:       {:.4}", correlation);
+    let _ = writeln!(std::io::stdout().lock(), "  Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    MC runtime:        {:?}",
+        mc_time
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Diffusion runtime: {:?}",
+        diff_time
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Mean rel. error:   {:.2}%",
+        mean_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Max rel. error:    {:.2}%",
+        max_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Correlation:       {:.4}",
+        correlation
+    );
 
     // Validation: Low scattering should show larger error
     if mean_error > 0.20 {
-        println!("  ✓ PASS: Expected deviation in low scattering regime");
-        println!("         (Diffusion approximation breaks down)");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  ✓ PASS: Expected deviation in low scattering regime"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "         (Diffusion approximation breaks down)"
+        );
     } else {
-        println!("  ⚠ WARNING: Unexpectedly good agreement (MC may need more photons)");
+        eprintln!("  ⚠ WARNING: Unexpectedly good agreement (MC may need more photons)");
     }
 
     Ok(())
@@ -183,7 +272,10 @@ fn validate_layered_tissue() -> Result<()> {
     let grid = Grid3D::new(25, 25, 40, 0.001, 0.001, 0.001)?;
 
     // Create layered phantom (skin/fat/muscle)
-    println!("  Building layered tissue phantom...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Building layered tissue phantom..."
+    );
     let phantom = PhantomBuilder::layered_tissue()
         .dimensions(dims)
         .wavelength(800.0)
@@ -196,7 +288,10 @@ fn validate_layered_tissue() -> Result<()> {
     let cy = dims.dy * (dims.ny as f64) / 2.0;
 
     // Monte Carlo
-    println!("  Running Monte Carlo (500k photons)...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Running Monte Carlo (500k photons)..."
+    );
     let mc_solver = MonteCarloSolver::new(grid.clone(), phantom.clone());
     let mc_source = PhotonSource::pencil_beam([cx, cy, 0.0], [0.0, 0.0, 1.0]);
     let mc_config = SimulationConfig::default().num_photons(500_000);
@@ -206,7 +301,7 @@ fn validate_layered_tissue() -> Result<()> {
     let mc_time = mc_start.elapsed();
 
     // Diffusion
-    println!("  Running Diffusion solver...");
+    let _ = writeln!(std::io::stdout().lock(), "  Running Diffusion solver...");
     let diff_start = Instant::now();
     let diff_fluence = solve_diffusion_fluence(&grid, &phantom, [cx, cy, 0.0])?;
     let diff_time = diff_start.elapsed();
@@ -214,20 +309,43 @@ fn validate_layered_tissue() -> Result<()> {
     let mc_fluence = mc_result.normalized_fluence();
     let (mean_error, max_error, correlation) = compare_fluence(&mc_fluence, &diff_fluence, dims);
 
-    println!("  Results:");
-    println!("    MC runtime:        {:?}", mc_time);
-    println!("    Diffusion runtime: {:?}", diff_time);
-    println!("    Mean rel. error:   {:.2}%", mean_error * 100.0);
-    println!("    Max rel. error:    {:.2}%", max_error * 100.0);
-    println!("    Correlation:       {:.4}", correlation);
+    let _ = writeln!(std::io::stdout().lock(), "  Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    MC runtime:        {:?}",
+        mc_time
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Diffusion runtime: {:?}",
+        diff_time
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Mean rel. error:   {:.2}%",
+        mean_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Max rel. error:    {:.2}%",
+        max_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Correlation:       {:.4}",
+        correlation
+    );
 
     // Analyze depth profile
     analyze_depth_profile(&mc_fluence, &diff_fluence, dims, "Layered Tissue");
 
     if correlation > 0.80 {
-        println!("  ✓ PASS: Both methods capture layered structure");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  ✓ PASS: Both methods capture layered structure"
+        );
     } else {
-        println!("  ⚠ WARNING: Poor correlation in layered tissue");
+        eprintln!("  ⚠ WARNING: Poor correlation in layered tissue");
     }
 
     Ok(())
@@ -238,7 +356,10 @@ fn validate_blood_vessel() -> Result<()> {
     let grid = Grid3D::new(30, 30, 30, 0.001, 0.001, 0.001)?;
 
     // Create vascular phantom
-    println!("  Building blood vessel phantom...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Building blood vessel phantom..."
+    );
     let cx = dims.dx * (dims.nx as f64) / 2.0;
     let cy = dims.dy * (dims.ny as f64) / 2.0;
 
@@ -250,7 +371,10 @@ fn validate_blood_vessel() -> Result<()> {
         .build()?;
 
     // Monte Carlo
-    println!("  Running Monte Carlo (500k photons)...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Running Monte Carlo (500k photons)..."
+    );
     let mc_solver = MonteCarloSolver::new(grid.clone(), phantom.clone());
     let mc_source = PhotonSource::pencil_beam([cx, cy, 0.0], [0.0, 0.0, 1.0]);
     let mc_config = SimulationConfig::default().num_photons(500_000);
@@ -260,7 +384,7 @@ fn validate_blood_vessel() -> Result<()> {
     let mc_time = mc_start.elapsed();
 
     // Diffusion
-    println!("  Running Diffusion solver...");
+    let _ = writeln!(std::io::stdout().lock(), "  Running Diffusion solver...");
     let diff_start = Instant::now();
     let diff_fluence = solve_diffusion_fluence(&grid, &phantom, [cx, cy, 0.0])?;
     let diff_time = diff_start.elapsed();
@@ -268,21 +392,50 @@ fn validate_blood_vessel() -> Result<()> {
     let mc_fluence = mc_result.normalized_fluence();
     let (mean_error, max_error, correlation) = compare_fluence(&mc_fluence, &diff_fluence, dims);
 
-    println!("  Results:");
-    println!("    MC runtime:        {:?}", mc_time);
-    println!("    Diffusion runtime: {:?}", diff_time);
-    println!("    Mean rel. error:   {:.2}%", mean_error * 100.0);
-    println!("    Max rel. error:    {:.2}%", max_error * 100.0);
-    println!("    Correlation:       {:.4}", correlation);
+    let _ = writeln!(std::io::stdout().lock(), "  Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    MC runtime:        {:?}",
+        mc_time
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Diffusion runtime: {:?}",
+        diff_time
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Mean rel. error:   {:.2}%",
+        mean_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Max rel. error:    {:.2}%",
+        max_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Correlation:       {:.4}",
+        correlation
+    );
 
-    println!("  Interpretation:");
-    println!("    MC captures sharp vessel boundaries and absorption hotspots");
-    println!("    Diffusion smooths small-scale heterogeneity (typical for diffusive process)");
+    let _ = writeln!(std::io::stdout().lock(), "  Interpretation:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    MC captures sharp vessel boundaries and absorption hotspots"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Diffusion smooths small-scale heterogeneity (typical for diffusive process)"
+    );
 
     if correlation > 0.75 {
-        println!("  ✓ PASS: Reasonable agreement for vascular phantom");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  ✓ PASS: Reasonable agreement for vascular phantom"
+        );
     } else {
-        println!("  ⚠ INFO: Lower correlation expected for heterogeneous structures");
+        eprintln!("  ⚠ INFO: Lower correlation expected for heterogeneous structures");
     }
 
     Ok(())
@@ -362,13 +515,20 @@ fn analyze_depth_profile(
     dims: GridDimensions,
     label: &str,
 ) {
-    println!("  Depth Profile Analysis ({}):", label);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Depth Profile Analysis ({}):",
+        label
+    );
 
     let cx = dims.nx / 2;
     let cy = dims.ny / 2;
 
-    println!("    z (mm) | MC Fluence | Diff Fluence | Rel. Error");
-    println!("    -------|------------|--------------|------------");
+    eprintln!("    z (mm) | MC Fluence | Diff Fluence | Rel. Error");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    -------|------------|--------------|------------"
+    );
 
     for k in (0..dims.nz).step_by(5) {
         let idx = k * (dims.nx * dims.ny) + cy * dims.nx + cx;
@@ -381,9 +541,13 @@ fn analyze_depth_profile(
         };
 
         let z_mm = (k as f64 + 0.5) * dims.dz * 1000.0;
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    {:.1}    | {:.3e}   | {:.3e}   | {:.1}%",
-            z_mm, mc, diff, rel_err
+            z_mm,
+            mc,
+            diff,
+            rel_err
         );
     }
 }

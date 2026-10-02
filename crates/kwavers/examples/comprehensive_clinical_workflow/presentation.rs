@@ -2,57 +2,79 @@
 
 use super::LiverAssessmentWorkflow;
 use kwavers_core::error::KwaversResult;
+use std::io::Write;
 
 pub(super) fn run() -> KwaversResult<()> {
     let mut workflow = LiverAssessmentWorkflow::new("LIVER_PATIENT_001", (120.0, 80.0, 60.0))?;
     let report = workflow.execute_assessment()?;
 
-    println!("\n=== LIVER ASSESSMENT REPORT ===");
-    println!("Patient ID: {}", report.patient_id);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n=== LIVER ASSESSMENT REPORT ==="
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Patient ID: {}",
+        report.patient_id
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Processing Time: {:.2}s",
         report.processing_time.as_secs_f64()
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("B-MODE IMAGING:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "B-MODE IMAGING:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Axial Resolution: {:.1} mm",
         report.b_mode_result.axial_resolution
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Lateral Resolution: {:.1} mm",
         report.b_mode_result.lateral_resolution
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Contrast Ratio: {:.1} dB",
         report.b_mode_result.contrast_ratio
     );
-    println!("  Voxels: {}", report.b_mode_result.envelope.size());
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Voxels: {}",
+        report.b_mode_result.envelope.size()
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("SHEAR WAVE ELASTOGRAPHY:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "SHEAR WAVE ELASTOGRAPHY:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Mean Stiffness: {:.1} kPa",
         report.swe_result.fibrosis_metrics.mean_stiffness
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Fibrosis Stage: F{}",
         report.swe_result.fibrosis_metrics.fibrosis_stage
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Stiffness Standard Deviation: {:.1} kPa",
         report.swe_result.fibrosis_metrics.stiffness_std
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Nonlinear Parameter: {:.3}",
         report.swe_result.fibrosis_metrics.nonlinear_parameter
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Displacement Frames: {}",
         report.swe_result.displacement_history.len()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Nonlinear Voxels: {}",
         report
             .swe_result
@@ -60,31 +82,37 @@ pub(super) fn run() -> KwaversResult<()> {
             .nonlinearity_parameter
             .size()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Confidence: {:.1}%",
         report.uncertainty_result.swe_uncertainty.confidence_score * 100.0
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("CONTRAST-ENHANCED ULTRASOUND:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "CONTRAST-ENHANCED ULTRASOUND:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Peak Enhancement: {:.1} dB",
         report.ceus_result.perfusion_metrics.peak_enhancement
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Perfusion Rate: {:.1} mL/min/100g",
         report.ceus_result.perfusion_metrics.perfusion_rate
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Wash-in / Wash-out: {:.1}s / {:.1}s",
         report.ceus_result.perfusion_metrics.wash_in_time,
         report.ceus_result.perfusion_metrics.wash_out_time
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Contrast Samples: {}",
         report.ceus_result.contrast_signal.size()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Confidence: {:.1}%",
         report
             .uncertainty_result
@@ -92,34 +120,56 @@ pub(super) fn run() -> KwaversResult<()> {
             .confidence_score
             * 100.0
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("CLINICAL DIAGNOSIS:");
-    println!("  {}", report.diagnosis.diagnosis_text);
-    println!("  Perfusion Status: {}", report.diagnosis.perfusion_status);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "CLINICAL DIAGNOSIS:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  {}",
+        report.diagnosis.diagnosis_text
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Perfusion Status: {}",
+        report.diagnosis.perfusion_status
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Overall Confidence: {:.1}%",
         report.diagnosis.confidence_level * 100.0
     );
     for recommendation in &report.diagnosis.recommendations {
-        println!("  Recommendation: {recommendation}");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Recommendation: {recommendation}"
+        );
     }
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("TREATMENT PLAN:");
-    println!("  {}", report.treatment_plan.recommended_actions);
-    println!("  Follow-up: {}", report.treatment_plan.follow_up_schedule);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "TREATMENT PLAN:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  {}",
+        report.treatment_plan.recommended_actions
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Follow-up: {}",
+        report.treatment_plan.follow_up_schedule
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Therapeutic Considerations: {}",
         report.treatment_plan.therapeutic_considerations
     );
     for test in &report.treatment_plan.additional_tests {
-        println!("  Additional Test: {test}");
+        let _ = writeln!(std::io::stdout().lock(), "  Additional Test: {test}");
     }
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("SAFETY ASSESSMENT:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "SAFETY ASSESSMENT:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Acoustic Safety: {}",
         if report.safety_assessment.acoustic_safety {
             "PASS"
@@ -127,7 +177,8 @@ pub(super) fn run() -> KwaversResult<()> {
             "FAIL"
         }
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Thermal Safety: {}",
         if report.safety_assessment.thermal_safety {
             "PASS"
@@ -135,7 +186,8 @@ pub(super) fn run() -> KwaversResult<()> {
             "FAIL"
         }
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Overall Safety: {}",
         if report.safety_assessment.overall_safe {
             "PASS"
@@ -143,15 +195,25 @@ pub(super) fn run() -> KwaversResult<()> {
             "FAIL"
         }
     );
-    println!("  Notes: {}", report.safety_assessment.safety_notes);
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Notes: {}",
+        report.safety_assessment.safety_notes
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("CLINICAL VALIDATION REPORT:");
-    println!("{}", report.validation_report);
-    println!();
-    println!("=== WORKFLOW COMPLETE ===");
-    println!("This example demonstrates the integration of advanced ultrasound");
-    println!("simulation capabilities for comprehensive clinical decision support.");
+    let _ = writeln!(std::io::stdout().lock(), "CLINICAL VALIDATION REPORT:");
+    let _ = writeln!(std::io::stdout().lock(), "{}", report.validation_report);
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(std::io::stdout().lock(), "=== WORKFLOW COMPLETE ===");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "This example demonstrates the integration of advanced ultrasound"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "simulation capabilities for comprehensive clinical decision support."
+    );
 
     Ok(())
 }

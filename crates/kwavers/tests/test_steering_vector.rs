@@ -65,7 +65,7 @@ fn test_calculate_steering() {
     let b_s1 = result[[0, 0]];
     let b_s2 = result[[1, 0]];
 
-    println!("Broadside: s1={}, s2={}", b_s1, b_s2);
+    eprintln!("Broadside: s1={}, s2={}", b_s1, b_s2);
     // Magnitudes should be 1.0
     assert!((b_s1.norm() - 1.0).abs() < 1e-6);
     assert!((b_s2.norm() - 1.0).abs() < 1e-6);
@@ -89,7 +89,7 @@ fn test_calculate_steering() {
     let e_s1 = result[[0, 1]];
     let e_s2 = result[[1, 1]];
 
-    println!("Endfire: s1={}, s2={}", e_s1, e_s2);
+    eprintln!("Endfire: s1={}, s2={}", e_s1, e_s2);
     assert!((e_s1.norm() - 1.0).abs() < 1e-6);
     assert!((e_s2.norm() - 1.0).abs() < 1e-6);
 

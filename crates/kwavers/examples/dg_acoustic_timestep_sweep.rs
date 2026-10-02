@@ -63,15 +63,26 @@ fn main() -> Result<()> {
     write_plot(&png_path, &rows)?;
     write_csv(&csv_path, &rows)?;
 
-    println!("DG/FDTD/PSTD acoustic Gaussian timestep sweep");
-    println!("png: {}", png_path.display());
-    println!("csv: {}", csv_path.display());
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "DG/FDTD/PSTD acoustic Gaussian timestep sweep"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "png: {}", png_path.display());
+    let _ = writeln!(std::io::stdout().lock(), "csv: {}", csv_path.display());
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<8} {:>10} {:>14} {:>14} {:>14} {:>14} {:>14}",
-        "steps", "dt", "DG", "FDTD", "FDTD+k", "PSTD", "DG-PSTD"
+        "steps",
+        "dt",
+        "DG",
+        "FDTD",
+        "FDTD+k",
+        "PSTD",
+        "DG-PSTD"
     );
     for row in &rows {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "{:<8} {:>10.4e} {:>14.6e} {:>14.6e} {:>14.6e} {:>14.6e} {:>14.6e}",
             row.steps,
             row.dt,

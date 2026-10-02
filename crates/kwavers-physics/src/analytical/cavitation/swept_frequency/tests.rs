@@ -155,7 +155,7 @@ fn swept_enhancement_larger_for_ms_than_us_pulse() {
     let amp = 0.15e6;
     let ms = swept_vs_monochromatic_engagement(&d, &m, &s, amp, 1e-3, &cfg);
     let us = swept_vs_monochromatic_engagement(&d, &m, &s, amp, 2e-6, &cfg);
-    println!("ms={ms:?}\nus={us:?}");
+    eprintln!("ms={ms:?}\nus={us:?}");
     // The ms pulse engages a larger fraction of the nuclei population by sweeping
     // (it covers the whole band and the bubbles ring up); the µs (≈ single-cycle)
     // pulse cannot traverse the band nor ring up, so it engages strictly less.

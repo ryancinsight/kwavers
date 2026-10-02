@@ -6,6 +6,7 @@ use super::{
     seismic_acquisition, seismic_planar_artifacts, seismic_planar_auxiliary, Array3, KwaversError,
     KwaversResult, BRAIN_C_MAX, BRAIN_C_MIN, COLORBAR_H, C_HI, C_LO, PANEL,
 };
+use std::io::Write;
 use std::path::PathBuf;
 
 /// Inputs to the planar artifact writer.
@@ -104,60 +105,77 @@ pub(super) fn write_outputs(request: PlanarOutput<'_>) -> KwaversResult<()> {
         })?;
     }
 
-    println!("\n  Output directory  : {}", absolute_dir.display());
-    println!("\n  Wrote images and data:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  Output directory  : {}",
+        absolute_dir.display()
+    );
+    let _ = writeln!(std::io::stdout().lock(), "\n  Wrote images and data:");
     let three_plane_desc = if ct_vol.is_some() {
         "PNG 3×2: CT coronal|axial|sagittal (top) / FWI true|reconstructed|difference (bottom)"
     } else {
         "PNG: true skull (FWI grid) | FWI reconstructed | difference — coronal x-z"
     };
-    println!("    {}  ({three_plane_desc})", three_plane_path.display());
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    {}  ({three_plane_desc})",
+        three_plane_path.display()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    {}  (PPM 4-panel: true | initial | reconstructed | error)",
         velocity_ppm_path.display()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    {}  (PNG CT-derived brain/skull prior + transducer)",
         brain_prior_path.display()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    {}  (PPM RTM zero-lag cross-correlation)",
         rtm_path.display()
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    {}  (CSV depth profile at x = NX/2)",
         csv_path.display()
     );
     if brain_reconstructed.is_some() {
-        println!(
+        let _ = writeln!(std::io::stdout().lock(),
             "    {}  (PNG brain tissue: true|reconstructed|difference, [{BRAIN_C_MIN:.0},{BRAIN_C_MAX:.0}] m/s colormap)",
             brain_tissue_path.display()
         );
     }
     if ct_vol.is_some() {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  Image size        : {}×{} px (3×{PANEL} wide, 2×({PANEL}+{COLORBAR_H}) tall)",
             3 * PANEL,
             2 * (PANEL + COLORBAR_H)
         );
     } else {
-        println!(
+        let _ =
+            writeln!(std::io::stdout().lock(),
             "  Image size        : {PANEL}×{PANEL} px per panel, 3 panels, {COLORBAR_H}px colorbar"
         );
     }
-    println!(
+    let _ =
+        writeln!(std::io::stdout().lock(),
         "  Colormap          : blue (1500 m/s, water/brain) → red ({C_HI:.0} m/s, cortical bone)"
     );
     if ct_vol.is_some() {
-        println!(
+        let _ = writeln!(std::io::stdout().lock(),
             "  PNG layout        : 3×2 grid — top: CT coronal | axial | sagittal (bone window); bottom: FWI true | reconstructed | difference"
         );
     } else {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  PNG panels        : true skull | reconstructed | difference (x-z coronal, y=0)"
         );
     }
-    println!(
+    let _ =
+        writeln!(std::io::stdout().lock(),
         "  Markers           : white = transmitting elements | yellow = active transducer samples"
     );
     Ok(())

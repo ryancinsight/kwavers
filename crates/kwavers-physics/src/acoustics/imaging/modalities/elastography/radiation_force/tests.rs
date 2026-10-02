@@ -24,12 +24,10 @@ mod tests {
     #[test]
     fn test_push_parameters_validation() {
         PushPulseParameters::new(-1.0, 100e-6, 1000.0, 0.04, 2.0)
-            .err()
-            .expect("negative frequency must be rejected");
+            .expect_err("negative frequency must be rejected");
 
         PushPulseParameters::new(5.0 * MHZ_TO_HZ, -100e-6, 1000.0, 0.04, 2.0)
-            .err()
-            .expect("negative duration must be rejected");
+            .expect_err("negative duration must be rejected");
     }
 
     #[test]

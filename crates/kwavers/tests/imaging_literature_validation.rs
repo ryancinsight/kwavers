@@ -173,7 +173,7 @@ mod photoacoustic_tests {
             0.10, // 10% tolerance for tissue variability
         );
 
-        println!("{}", validation.report(gamma));
+        eprintln!("{}", validation.report(gamma));
         validation
             .validate(gamma)
             .expect("Grüneisen validation failed");
@@ -213,7 +213,7 @@ mod photoacoustic_tests {
             PAI_TOLERANCE,
         );
 
-        println!("{}", validation.report(pressure_realistic));
+        eprintln!("{}", validation.report(pressure_realistic));
         validation
             .validate(pressure_realistic)
             .expect("Initial pressure validation failed");
@@ -242,16 +242,16 @@ mod photoacoustic_tests {
         // Thermal confinement requires τ_th >> τ_pulse
         let confinement_ratio = tau_th / tau_pulse;
 
-        println!("Thermal diffusion time: {:.2e} s", tau_th);
-        println!("Pulse duration: {:.2e} s", tau_pulse);
-        println!("Thermal confinement ratio: {:.1e}", confinement_ratio);
+        eprintln!("Thermal diffusion time: {:.2e} s", tau_th);
+        eprintln!("Pulse duration: {:.2e} s", tau_pulse);
+        eprintln!("Thermal confinement ratio: {:.1e}", confinement_ratio);
 
         // For stress confinement, need τ_acoustic << τ_pulse
         let c = 1500.0; // m/s
         let tau_acoustic = l / c; // s
 
-        println!("Acoustic transit time: {:.2e} s", tau_acoustic);
-        println!("Stress confinement ratio: {:.1e}", tau_pulse / tau_acoustic);
+        eprintln!("Acoustic transit time: {:.2e} s", tau_acoustic);
+        eprintln!("Stress confinement ratio: {:.1e}", tau_pulse / tau_acoustic);
 
         assert!(
             confinement_ratio > 10.0,
@@ -284,7 +284,7 @@ mod photoacoustic_tests {
 
             let test_value = (min_m + max_m) / 2.0;
 
-            println!(
+            eprintln!(
                 "{}: μₐ range [{:.1}, {:.1}] cm⁻¹ (test value: {:.1} cm⁻¹)",
                 tissue,
                 min_cm,
@@ -349,7 +349,7 @@ mod arfi_tests {
             0.15,                  // 15% tolerance for tissue variability
         );
 
-        println!("{}", validation.report(force));
+        eprintln!("{}", validation.report(force));
         validation
             .validate(force)
             .expect("Radiation force validation failed");
@@ -378,7 +378,7 @@ mod arfi_tests {
             ARFI_TOLERANCE,
         );
 
-        println!("{}", validation.report(cs));
+        eprintln!("{}", validation.report(cs));
         validation
             .validate(cs)
             .expect("Shear wave speed validation failed");
@@ -409,7 +409,7 @@ mod arfi_tests {
             let cs = shear_wave_speed(*mu, *rho);
             let error = ((cs - expected) / expected).abs();
 
-            println!(
+            eprintln!(
                 "{}: μ={:.0}Pa, ρ={:.0}kg/m³, cₛ={:.2}m/s (expected {:.2}m/s, error {:.1}%)",
                 tissue,
                 mu,
@@ -436,7 +436,7 @@ mod arfi_tests {
         let durations: Vec<f64> = vec![10.0e-6, 50.0e-6, 100.0e-6, 500.0e-6, 1000.0e-6];
 
         for duration in durations {
-            println!("ARFI push duration: {:.0} μs", duration * 1e6);
+            eprintln!("ARFI push duration: {:.0} μs", duration * 1e6);
             assert!(
                 (10.0e-6..=1000.0e-6).contains(&duration),
                 "Duration should be 10-1000 μs"
@@ -457,7 +457,7 @@ mod arfi_tests {
         let mu_complex = eunomia::Complex64::new(mu, omega * eta);
         let mu_magnitude = mu_complex.norm();
 
-        println!("Kelvin-Voigt modulus: {:.2} Pa", mu_magnitude);
+        eprintln!("Kelvin-Voigt modulus: {:.2} Pa", mu_magnitude);
         assert!(
             mu_magnitude > mu,
             "Viscous component should increase modulus"
@@ -510,7 +510,7 @@ mod ceus_tests {
             CEUS_TOLERANCE,
         );
 
-        println!("{}", validation.report(f0));
+        eprintln!("{}", validation.report(f0));
         validation
             .validate(f0)
             .expect("Resonance frequency validation failed");
@@ -529,7 +529,7 @@ mod ceus_tests {
             let h2_h1_db = -30.0 + 20.0 * (pnp_pa / 100e3).log10().max(0.0);
             let h2_h1_linear = 10f64.powf(h2_h1_db / 20.0);
 
-            println!(
+            eprintln!(
                 "PNP = {:.0} kPa: H₂/H₁ = {:.1} dB ({:.3} linear)",
                 pnp_pa / 1000.0,
                 h2_h1_db,
@@ -553,7 +553,7 @@ mod ceus_tests {
         let pnp = threshold_pa;
         let subharmonic_present = pnp >= threshold_pa;
 
-        println!("Subharmonic threshold: {:.0} kPa", threshold_pa / 1000.0);
+        eprintln!("Subharmonic threshold: {:.0} kPa", threshold_pa / 1000.0);
         assert!(
             subharmonic_present,
             "Subharmonic should be present at threshold"
@@ -579,9 +579,9 @@ mod ceus_tests {
 
         let enhancement = sigma / sigma_geom;
 
-        println!("Scattering cross-section: {:.2e} m²", sigma);
-        println!("Geometric cross-section: {:.2e} m²", sigma_geom);
-        println!("Enhancement factor: {:.1}x", enhancement);
+        eprintln!("Scattering cross-section: {:.2e} m²", sigma);
+        eprintln!("Geometric cross-section: {:.2e} m²", sigma_geom);
+        eprintln!("Enhancement factor: {:.1}x", enhancement);
 
         // At resonance, enhancement should be significant (>10x)
         assert!(enhancement > 10.0, "Resonance enhancement should be >10x");
@@ -608,7 +608,7 @@ mod ceus_tests {
             // Empirical fit from literature
             let km_ratio = 1.0 + 1.5 * pnp / (rho * c * c);
 
-            println!(
+            eprintln!(
                 "PNP = {:.0} kPa: linear ratio = {:.3}, K-M ratio = {:.3}",
                 pnp / 1000.0,
                 linear_ratio,
@@ -655,10 +655,10 @@ mod integration_tests {
         let f0 = resonance_frequency(r0, 1.4, 101325.0, 1000.0);
         assert!((1.0e6..2.0e6).contains(&f0));
 
-        println!("Multimodal phantom:");
-        println!("  Photoacoustic: {:.1} Pa", pa_pressure);
-        println!("  Shear wave speed: {:.2} m/s", cs);
-        println!("  Bubble resonance: {:.2} MHz", f0 / 1e6);
+        eprintln!("Multimodal phantom:");
+        eprintln!("  Photoacoustic: {:.1} Pa", pa_pressure);
+        eprintln!("  Shear wave speed: {:.2} m/s", cs);
+        eprintln!("  Bubble resonance: {:.2} MHz", f0 / 1e6);
     }
 
     /// Test 16: Imaging parameter compatibilities
@@ -673,16 +673,16 @@ mod integration_tests {
 
         // Acoustic impedance (used in all modalities)
         let z = density * sound_speed;
-        println!("Acoustic impedance: {:.2e} kg/(m²·s)", z);
+        eprintln!("Acoustic impedance: {:.2e} kg/(m²·s)", z);
         assert!((1.5e6..1.7e6).contains(&z));
 
         // Shear wave speed (ARFI)
         let cs = shear_wave_speed(shear_modulus, density);
-        println!("Shear wave speed: {:.2} m/s", cs);
+        eprintln!("Shear wave speed: {:.2} m/s", cs);
 
         // Longitudinal wavelength at 5 MHz
         let wavelength = sound_speed / 5.0e6;
-        println!("Wavelength @ 5MHz: {:.2e} m", wavelength);
+        eprintln!("Wavelength @ 5MHz: {:.2e} m", wavelength);
 
         // All values should be physically consistent
         assert!(cs < sound_speed / 100.0); // Shear << longitudinal
@@ -700,28 +700,28 @@ mod report {
 
     #[test]
     fn test_validation_summary() {
-        println!("\n========================================");
-        println!("Sprint 222: Imaging Literature Validation");
-        println!("========================================");
+        eprintln!("\n========================================");
+        eprintln!("Sprint 222: Imaging Literature Validation");
+        eprintln!("========================================");
 
-        println!("\n--- Photoacoustic Imaging (Treeby 2010) ---");
-        println!("✓ Grüneisen parameter: Γ = 0.12 ± 10%");
-        println!("✓ Initial pressure: p₀ = ΓμₐΦ");
-        println!("✓ Thermal confinement: τ_th << τ_pulse");
+        eprintln!("\n--- Photoacoustic Imaging (Treeby 2010) ---");
+        eprintln!("✓ Grüneisen parameter: Γ = 0.12 ± 10%");
+        eprintln!("✓ Initial pressure: p₀ = ΓμₐΦ");
+        eprintln!("✓ Thermal confinement: τ_th << τ_pulse");
 
-        println!("\n--- ARFI/Elastography (Pinton 2009) ---");
-        println!("✓ Shear wave speed: cₛ = √(μ/ρ)");
-        println!("✓ Liver: cₛ ≈ 1.54 m/s ± 2%");
-        println!("✓ Radiation force: F = 2αI/c");
+        eprintln!("\n--- ARFI/Elastography (Pinton 2009) ---");
+        eprintln!("✓ Shear wave speed: cₛ = √(μ/ρ)");
+        eprintln!("✓ Liver: cₛ ≈ 1.54 m/s ± 2%");
+        eprintln!("✓ Radiation force: F = 2αI/c");
 
-        println!("\n--- CEUS Bubble Dynamics (Keller 1980) ---");
-        println!("✓ Resonance frequency: f₀ ≈ 1.6 MHz (R₀=2μm)");
-        println!("✓ Harmonic response: H₂/H₁ validated");
-        println!("✓ Scattering enhancement: >10x at resonance");
+        eprintln!("\n--- CEUS Bubble Dynamics (Keller 1980) ---");
+        eprintln!("✓ Resonance frequency: f₀ ≈ 1.6 MHz (R₀=2μm)");
+        eprintln!("✓ Harmonic response: H₂/H₁ validated");
+        eprintln!("✓ Scattering enhancement: >10x at resonance");
 
-        println!("\n========================================");
-        println!("Validation Complete: 6 literature sources");
-        println!("========================================");
+        eprintln!("\n========================================");
+        eprintln!("Validation Complete: 6 literature sources");
+        eprintln!("========================================");
     }
 }
 
@@ -1243,12 +1243,12 @@ mod pa_backprojection_tests {
 
         let snr_db = 20.0 * (peak_value / noise_rms).log10();
 
-        println!(
+        eprintln!(
             "PA reconstruction SNR = {:.1} dB (requirement: > 20 dB)",
             snr_db
         );
-        println!("  peak_value = {:.4e}", peak_value);
-        println!("  noise_rms  = {:.4e}", noise_rms);
+        eprintln!("  peak_value = {:.4e}", peak_value);
+        eprintln!("  noise_rms  = {:.4e}", noise_rms);
 
         // Generate figure: reconstruction profile normalised to peak value.
         let p0_norm: Vec<f64> = p0_recon
@@ -1294,7 +1294,7 @@ mod pa_backprojection_tests {
         let peak_r = r_test[peak_idx].abs();
         let tolerance_m = 0.5e-3; // 0.5 mm
 
-        println!(
+        eprintln!(
             "Peak location: r = {:.2} mm (tolerance ±0.5 mm)",
             r_test[peak_idx] * 1000.0
         );
@@ -1389,7 +1389,7 @@ mod ceus_ctr_tests {
         let mi_actual = mechanical_index(p_neg_mpa, f0_mhz);
         let ctr = ctr_db(mi_actual);
 
-        println!(
+        eprintln!(
             "MI = {:.3}, p_neg = {:.3} MPa, CTR = {:.1} dB (requirement: > 6 dB)",
             mi_actual, p_neg_mpa, ctr
         );
@@ -1413,7 +1413,7 @@ mod ceus_ctr_tests {
         let p_neg_max_mpa = 0.19 * f0_mhz.sqrt();
         let mi = mechanical_index(p_neg_max_mpa, f0_mhz);
 
-        println!(
+        eprintln!(
             "p_neg = {:.3} MPa, f₀ = {:.1} MHz, MI = {:.3} (threshold 0.2)",
             p_neg_max_mpa, f0_mhz, mi
         );
@@ -1432,9 +1432,9 @@ mod ceus_ctr_tests {
         let mi_values = [0.05, 0.10, 0.15, 0.20];
         let ctrs: Vec<f64> = mi_values.iter().map(|&mi| ctr_db(mi)).collect();
 
-        println!("CTR vs MI:");
+        eprintln!("CTR vs MI:");
         for (mi, ctr) in mi_values.iter().zip(ctrs.iter()) {
-            println!("  MI = {:.2}: CTR = {:.1} dB", mi, ctr);
+            eprintln!("  MI = {:.2}: CTR = {:.1} dB", mi, ctr);
             assert!(*ctr > 6.0, "CTR {:.1} dB < 6 dB at MI = {:.2}", ctr, mi);
         }
 
@@ -1524,16 +1524,16 @@ mod elastography_shear_modulus_tests {
 
         let relative_error = (mu_computed - mu_reference).abs() / mu_reference;
 
-        println!("Greenleaf 2003 gelatin 6% phantom:");
-        println!(
+        eprintln!("Greenleaf 2003 gelatin 6% phantom:");
+        eprintln!(
             "  True c_s = {:.2} m/s,  Measured c_s = {:.4} m/s",
             cs_true, cs_measured
         );
-        println!(
+        eprintln!(
             "  μ_reference = {:.0} Pa,  μ_computed = {:.2} Pa",
             mu_reference, mu_computed
         );
-        println!(
+        eprintln!(
             "  Relative error = {:.3}% (threshold: 5%)",
             relative_error * 100.0
         );
@@ -1560,7 +1560,7 @@ mod elastography_shear_modulus_tests {
 
         let relative_error = (cs_measured - cs_true).abs() / cs_true;
 
-        println!(
+        eprintln!(
             "ARFI c_s measurement: {:.4} m/s (true: {:.2} m/s, error: {:.3}%)",
             cs_measured,
             cs_true,
@@ -1587,7 +1587,7 @@ mod elastography_shear_modulus_tests {
 
         for (tissue, cs, rho, mu_min, mu_max) in cases {
             let mu = shear_modulus_from_speed(cs, rho);
-            println!(
+            eprintln!(
                 "{}: c_s = {:.2} m/s, μ = {:.0} Pa (range [{:.0}, {:.0}] Pa)",
                 tissue, cs, mu, mu_min, mu_max
             );

@@ -6,6 +6,7 @@ use super::{
     FwiParameters, FwiProcessor, Grid, KwaversResult, RegularizationParameters, DX,
     SOUND_SPEED_WATER_SIM, STEP_SIZE,
 };
+use std::io::Write;
 use std::time::Instant;
 
 /// Value-semantic outputs produced by the planar skull inversion stage.
@@ -80,7 +81,8 @@ pub(super) fn run_skull_inversion(
             let observed = tmp_fwi.generate_synthetic_data(&true_model, &geometry, grid)?;
             shots_fine.push((geometry, observed));
         }
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  {} observed gathers at {} kHz ({:.1} s)",
             seismic_acquisition::N_SHOTS,
             seismic_acquisition::F0_HZ * 1e-3,
@@ -113,9 +115,10 @@ pub(super) fn run_skull_inversion(
             .try_fold(0.0, |total, value| value.map(|value| total + value))?
     };
 
-    println!("\n  Quality before inversion:");
+    let _ = writeln!(std::io::stdout().lock(), "\n  Quality before inversion:");
     seismic_metrics::print_quality_report(&true_model, &initial_model);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Joint J₀ (150 kHz) : {j_initial:.6e} Pa²·s  ({} shots)",
         seismic_acquisition::N_SHOTS
     );
@@ -141,7 +144,8 @@ pub(super) fn run_skull_inversion(
             let observed = fwi_scale.generate_synthetic_data(&true_model, &geometry, grid)?;
             scale_shots.push((geometry, observed));
         }
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "\n  ── Scale {} / {} : f₀ = {:.0} kHz, {} iter, nt = {}, mute_r = {} ──",
             scale_index + 1,
             scales.len(),
@@ -158,7 +162,8 @@ pub(super) fn run_skull_inversion(
             .copied()
             .fold(f64::NEG_INFINITY, f64::max);
         let c_now_min = current_model.iter().copied().fold(f64::INFINITY, f64::min);
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Scale {} done ({:.1} s): c ∈ [{:.0}, {:.0}] m/s",
             scale_index + 1,
             scale_started_at.elapsed().as_secs_f32(),
@@ -168,7 +173,8 @@ pub(super) fn run_skull_inversion(
     }
 
     let reconstructed = current_model;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "\n  FWI completed in {:.1} s",
         inversion_at.elapsed().as_secs_f32()
     );
@@ -198,10 +204,16 @@ pub(super) fn run_skull_inversion(
             .try_fold(0.0, |total, value| value.map(|value| total + value))?
     };
     let j_reduction_pct = (1.0 - j_final / j_initial) * 100.0;
-    println!("\n  Quality after inversion:");
+    let _ = writeln!(std::io::stdout().lock(), "\n  Quality after inversion:");
     seismic_metrics::print_quality_report(&true_model, &reconstructed);
-    println!("  Joint J (150 kHz) : {j_final:.6e} Pa²·s");
-    println!("  J reduction       : {j_reduction_pct:7.1} %  (150 kHz joint L2)");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Joint J (150 kHz) : {j_final:.6e} Pa²·s"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  J reduction       : {j_reduction_pct:7.1} %  (150 kHz joint L2)"
+    );
 
     Ok(PlanarInversionResult {
         true_model,

@@ -22,31 +22,51 @@ use kwavers_analysis::signal_processing::doppler::{
 };
 use leto::Array3;
 use std::f64::consts::PI;
+use std::io::Write;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("╔════════════════════════════════════════════════════════════╗");
-    println!("║     Kwavers: Doppler Velocity Estimation Example          ║");
-    println!("╚════════════════════════════════════════════════════════════╝\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╔════════════════════════════════════════════════════════════╗"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "║     Kwavers: Doppler Velocity Estimation Example          ║"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╚════════════════════════════════════════════════════════════╝\n"
+    );
 
     // ========================================================================
     // 1. Configure Doppler Imaging for Vascular Application
     // ========================================================================
 
-    println!("📋 Configuration:");
-    println!("  └─ Creating vascular imaging parameters (7.5 MHz, 5 kHz PRF)");
+    let _ = writeln!(std::io::stdout().lock(), "📋 Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Creating vascular imaging parameters (7.5 MHz, 5 kHz PRF)"
+    );
 
     let doppler_config = AutocorrelationConfig::vascular();
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ Center frequency: {} MHz",
         doppler_config.center_frequency / 1e6
     );
-    println!("  └─ PRF: {} kHz", doppler_config.prf / 1e3);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ PRF: {} kHz",
+        doppler_config.prf / 1e3
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ Ensemble size: {} pulses",
         doppler_config.ensemble_size
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ Nyquist velocity: ±{:.2} m/s\n",
         doppler_config.nyquist_velocity()
     );
@@ -55,15 +75,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 2. Create Synthetic I/Q Data
     // ========================================================================
 
-    println!("🔬 Generating Synthetic I/Q Data:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🔬 Generating Synthetic I/Q Data:"
+    );
 
     let ensemble_size = doppler_config.ensemble_size;
     let n_depths = 128; // Imaging depth samples
     let n_beams = 64; // Lateral beams
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ Dimensions: {} pulses × {} depths × {} beams",
-        ensemble_size, n_depths, n_beams
+        ensemble_size,
+        n_depths,
+        n_beams
     );
 
     // Generate synthetic blood flow signal with known velocity
@@ -71,8 +97,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let doppler_frequency =
         2.0 * doppler_config.center_frequency * target_velocity / doppler_config.speed_of_sound;
 
-    println!("  └─ Simulated flow velocity: {:.2} m/s", target_velocity);
-    println!("  └─ Doppler shift: {:.1} Hz\n", doppler_frequency);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Simulated flow velocity: {:.2} m/s",
+        target_velocity
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Doppler shift: {:.1} Hz\n",
+        doppler_frequency
+    );
 
     let mut iq_data = Array3::<Complex64>::zeros((ensemble_size, n_depths, n_beams));
 
@@ -103,12 +137,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Estimate Velocity using Autocorrelation Method
     // ========================================================================
 
-    println!("🎯 Estimating Velocity (Kasai Autocorrelation Method):");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🎯 Estimating Velocity (Kasai Autocorrelation Method):"
+    );
 
     let estimator = AutocorrelationEstimator::new(doppler_config.clone());
     let (velocity, variance) = estimator.estimate(&iq_data.view())?;
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ Velocity map computed: {} × {}",
         velocity.shape()[0],
         velocity.shape()[1]
@@ -128,12 +166,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ Peak velocity: {:.3} m/s at depth={}, beam={}",
-        max_velocity, max_pos.0, max_pos.1
+        max_velocity,
+        max_pos.0,
+        max_pos.1
     );
-    println!("  └─ Target velocity: {:.3} m/s", target_velocity);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Target velocity: {:.3} m/s",
+        target_velocity
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ Estimation error: {:.1}%\n",
         ((max_velocity - target_velocity) / target_velocity * 100.0).abs()
     );
@@ -142,7 +188,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 4. Apply Variance-Based Quality Filtering
     // ========================================================================
 
-    println!("🔍 Applying Quality Filter:");
+    let _ = writeln!(std::io::stdout().lock(), "🔍 Applying Quality Filter:");
 
     let filtered_velocity = estimator.filter_by_variance(&velocity, &variance);
 
@@ -156,20 +202,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let total_pixels = n_depths * n_beams;
     let confidence_pct = (high_confidence_pixels as f64 / total_pixels as f64) * 100.0;
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ Variance threshold: {}",
         doppler_config.variance_threshold
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ High-confidence pixels: {} / {} ({:.1}%)\n",
-        high_confidence_pixels, total_pixels, confidence_pct
+        high_confidence_pixels,
+        total_pixels,
+        confidence_pct
     );
 
     // ========================================================================
     // 5. Generate Color Flow Image
     // ========================================================================
 
-    println!("🎨 Generating Color Flow Image:");
+    let _ = writeln!(std::io::stdout().lock(), "🎨 Generating Color Flow Image:");
 
     let color_flow_config = ColorFlowConfig {
         autocorrelation: doppler_config,
@@ -180,19 +230,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let color_flow = ColorFlowImaging::new(color_flow_config);
     let flow_result = color_flow.process(&iq_data.view())?;
 
-    println!("  └─ Color flow map generated");
-    println!("  └─ Spatial averaging: 3×3 kernel");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "  └─ Color flow map generated");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Spatial averaging: 3×3 kernel"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ Center frequency: {:.1} MHz",
         flow_result.center_frequency / 1e6
     );
-    println!("  └─ PRF: {:.1} kHz\n", flow_result.prf / 1e3);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ PRF: {:.1} kHz\n",
+        flow_result.prf / 1e3
+    );
 
     // ========================================================================
     // 6. Display Statistics
     // ========================================================================
 
-    println!("📊 Velocity Statistics:");
+    let _ = writeln!(std::io::stdout().lock(), "📊 Velocity Statistics:");
 
     // Compute statistics in vessel region
     let mut vessel_velocities = Vec::new();
@@ -214,19 +272,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             / vessel_velocities.len() as f64)
             .sqrt();
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  └─ Mean velocity (vessel): {:.3} ± {:.3} m/s",
-            mean_velocity, std_dev
+            mean_velocity,
+            std_dev
         );
-        println!("  └─ Samples used: {}", vessel_velocities.len());
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  └─ Samples used: {}",
+            vessel_velocities.len()
+        );
     }
 
-    println!("\n✅ Doppler velocity estimation complete!");
-    println!("\n💡 Clinical Applications:");
-    println!("  • Vascular stenosis detection");
-    println!("  • Cardiac valve flow assessment");
-    println!("  • Fetal umbilical artery monitoring");
-    println!("  • Perfusion analysis");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n✅ Doppler velocity estimation complete!"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "\n💡 Clinical Applications:");
+    let _ = writeln!(std::io::stdout().lock(), "  • Vascular stenosis detection");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  • Cardiac valve flow assessment"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  • Fetal umbilical artery monitoring"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  • Perfusion analysis");
 
     Ok(())
 }

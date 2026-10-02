@@ -59,6 +59,7 @@ mod fwi_demo {
     use kwavers_source::{GridSource, SourceMode};
     use leto::{Array2, Array3};
     use std::f64::consts::PI;
+    use std::io::Write;
     use std::path::PathBuf;
     use std::time::Instant;
 
@@ -100,13 +101,15 @@ mod fwi_demo {
         });
 
         let Some(ct) = load_nifti(&ct_path) else {
-            println!(
+            let _ = writeln!(
+                std::io::stdout().lock(),
                 "Could not read CT NIfTI at {ct_path}.\n\
                  Place a real head CT there or set KWAVERS_CT_PATH. No synthetic fallback is used."
             );
             return Ok(());
         };
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "Loaded CT {:?} spacing {:.3}×{:.3}×{:.3} mm  HU [{:.0}, {:.0}]",
             ct.data.shape(),
             ct.spacing_mm[0],
@@ -121,7 +124,8 @@ mod fwi_demo {
         let ct_slice = resample_head_slice(&ct.data, ct.spacing_mm, slice_index, GRID)?;
         let acoustic = AcousticSlice::from_ct_hu(ct_slice.hu.clone(), ct_slice.spacing_m)?;
         let dx = ct_slice.spacing_m;
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "Slice {slice_index} resampled to {GRID}×{GRID} @ {:.2} mm",
             dx * 1.0e3
         );
@@ -183,7 +187,10 @@ mod fwi_demo {
             }
         }
         if elems.len() < 3 {
-            println!("Could not place ≥3 ring elements in water — increase PAD/r_ring.");
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "Could not place ≥3 ring elements in water — increase PAD/r_ring."
+            );
             return Ok(());
         }
 
@@ -191,7 +198,7 @@ mod fwi_demo {
         let dt = 0.3 * dx / (c_hi * 3.0_f64.sqrt());
         let transit = n as f64 * dx / C_WATER;
         let nt = ((transit * 1.3) / dt).ceil() as usize;
-        println!(
+        let _ = writeln!(std::io::stdout().lock(),
             "FWI grid {n}×{n}×2; {} ring elements; nt={nt}, dt={dt:.2e}s; brain voxels {brain_voxels}; c_max {c_hi:.0} m/s",
             elems.len()
         );
@@ -221,7 +228,8 @@ mod fwi_demo {
         // κ≈1 and is inaccurate for the c≈2900 m/s skull (it anti-correlates here).
         let fwi = FwiProcessor::new(params).with_density(density.clone())?;
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "Generating {} shots (FDTD forward through the CT medium) …",
             elems.len()
         );
@@ -232,13 +240,17 @@ mod fwi_demo {
             let obs = fwi.generate_synthetic_data(&true_c, &geom, &grid)?;
             shots.push((geom, obs));
         }
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  forward data generated in {:.1} s",
             t_fwd.elapsed().as_secs_f64()
         );
 
         // ── Masked FWI: skull/water frozen, brain reconstructed ──────────────
-        println!("Running masked FWI ({ITERS} iters; skull frozen to CT) …");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "Running masked FWI ({ITERS} iters; skull frozen to CT) …"
+        );
         let t_inv = Instant::now();
         let recon = fwi.invert_multi_source_masked(
             &shots,
@@ -249,7 +261,11 @@ mod fwi_demo {
             C_BRAIN_MAX,
             &grid,
         )?;
-        println!("  inversion done in {:.1} s", t_inv.elapsed().as_secs_f64());
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  inversion done in {:.1} s",
+            t_inv.elapsed().as_secs_f64()
+        );
 
         // ── Reconstruction fidelity vs the CT-true brain (k=0 plane) ─────────
         let (mut r_brain, mut t_brain) = (Vec::new(), Vec::new());
@@ -267,12 +283,18 @@ mod fwi_demo {
             let hi = v.iter().copied().fold(f64::NEG_INFINITY, f64::max);
             hi - lo
         };
-        println!("\n── reconstruction ──");
-        println!("  brain voxels reconstructed : {}", r_brain.len());
-        println!(
+        let _ = writeln!(std::io::stdout().lock(), "\n── reconstruction ──");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  brain voxels reconstructed : {}",
+            r_brain.len()
+        );
+        let _ =
+            writeln!(std::io::stdout().lock(),
             "  recon ↔ CT-true brain : Pearson {fidelity:+.3}  (FWI fidelity through the skull)"
         );
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  CT-true Δc {:.1} m/s | recon Δc {:.1} m/s",
             dyn_range(&t_brain),
             dyn_range(&r_brain)
@@ -283,13 +305,14 @@ mod fwi_demo {
             Some(mri) => {
                 let (mri_slice, coverage) =
                     resample_mri_to_ct_grid(&ct, &mri, &ct_slice, slice_index);
-                println!(
+                let _ = writeln!(
+                    std::io::stdout().lock(),
                     "\n── validation vs MRI {:?} (in-bounds coverage {:.0}%) ──",
                     mri.data.shape(),
                     coverage * 100.0
                 );
                 if coverage < 0.5 {
-                    println!("  WARNING: low MRI↔CT coverage — affines may not be co-registered.");
+                    eprintln!("  WARNING: low MRI↔CT coverage — affines may not be co-registered.");
                 }
                 let (mut rv, mut tv, mut mv) = (Vec::new(), Vec::new(), Vec::new());
                 for gi in 0..GRID {
@@ -301,15 +324,18 @@ mod fwi_demo {
                         }
                     }
                 }
-                println!(
+                let _ = writeln!(
+                    std::io::stdout().lock(),
                     "  FWI reconstruction ↔ MRI anatomy : Pearson {:+.3}",
                     pearson(&rv, &mv)
                 );
-                println!(
+                let _ = writeln!(
+                    std::io::stdout().lock(),
                     "  CT model           ↔ MRI anatomy : Pearson {:+.3}  (reference)",
                     pearson(&tv, &mv)
                 );
-                println!(
+                let _ =
+                    writeln!(std::io::stdout().lock(),
                     "  Interpretation: data propagated through the real skull; the FWI recovers \
                      the CT brain contrast through the known skull. Agreement with independent MRI \
                      anatomy reflects how much true soft-tissue structure CT/US can resolve — CT \
@@ -318,7 +344,7 @@ mod fwi_demo {
                 Some(mri_slice)
             }
             None => {
-                println!("\nNo MRI at {mri_path} (set KWAVERS_MRI_PATH) — skipping validation.");
+                eprintln!("\nNo MRI at {mri_path} (set KWAVERS_MRI_PATH) — skipping validation.");
                 None
             }
         };
@@ -337,7 +363,11 @@ mod fwi_demo {
         if let Some(mri_slice) = mri_grid {
             save_pgm(&out_dir.join("transcranial_mri_reference.pgm"), &mri_slice)?;
         }
-        println!("\nFigures (PGM) written to {}", out_dir.display());
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\nFigures (PGM) written to {}",
+            out_dir.display()
+        );
         Ok(())
     }
 

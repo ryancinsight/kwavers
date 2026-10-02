@@ -9,38 +9,66 @@ use kwavers_analysis::validation::clinical::{
 };
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
+use std::io::Write;
 use std::time::Instant;
 
 impl LiverAssessmentWorkflow {
     pub(super) fn execute_assessment(&mut self) -> KwaversResult<LiverAssessmentReport> {
         let start_time = Instant::now();
-        println!("\n=== Starting Comprehensive Liver Assessment ===");
-        println!("Patient ID: {}", self.patient_id);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\n=== Starting Comprehensive Liver Assessment ==="
+        );
+        let _ = writeln!(std::io::stdout().lock(), "Patient ID: {}", self.patient_id);
         let _gpu_stats = self.gpu_memory.statistics();
 
-        println!("\n--- Phase 1: B-mode Imaging ---");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\n--- Phase 1: B-mode Imaging ---"
+        );
         let b_mode_result = self.perform_b_mode_imaging();
 
-        println!("\n--- Phase 2: Shear Wave Elastography ---");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\n--- Phase 2: Shear Wave Elastography ---"
+        );
         let swe_result = super::modalities::perform_shear_wave_elastography(self)?;
 
-        println!("\n--- Phase 3: Contrast-Enhanced Ultrasound ---");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\n--- Phase 3: Contrast-Enhanced Ultrasound ---"
+        );
         let ceus_result = super::modalities::perform_contrast_enhanced_ultrasound(self)?;
 
-        println!("\n--- Phase 4: Uncertainty Quantification ---");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\n--- Phase 4: Uncertainty Quantification ---"
+        );
         let uncertainty_result = self.perform_uncertainty_analysis(&swe_result, &ceus_result)?;
 
-        println!("\n--- Phase 5: Clinical Decision Support ---");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\n--- Phase 5: Clinical Decision Support ---"
+        );
         let diagnosis =
             self.generate_clinical_diagnosis(&swe_result, &ceus_result, &uncertainty_result);
 
-        println!("\n--- Phase 6: Treatment Planning ---");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\n--- Phase 6: Treatment Planning ---"
+        );
         let treatment_plan = self.generate_treatment_plan(&diagnosis);
 
-        println!("\n--- Phase 7: Safety Validation ---");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\n--- Phase 7: Safety Validation ---"
+        );
         let safety_assessment = self.perform_safety_assessment();
 
-        println!("\n--- Phase 8: Clinical Validation ---");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "\n--- Phase 8: Clinical Validation ---"
+        );
         let quality_metrics = ImageQualityMetrics {
             contrast_resolution: b_mode_result.contrast_ratio,
             axial_resolution: b_mode_result.axial_resolution,
@@ -78,8 +106,9 @@ impl LiverAssessmentWorkflow {
         );
 
         let processing_time = start_time.elapsed();
-        println!("\n=== Assessment Complete ===");
-        println!(
+        let _ = writeln!(std::io::stdout().lock(), "\n=== Assessment Complete ===");
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "Total processing time: {:.2}s",
             processing_time.as_secs_f64()
         );
@@ -101,11 +130,16 @@ impl LiverAssessmentWorkflow {
     fn perform_b_mode_imaging(&self) -> BModeResult {
         let envelope = Array3::<f32>::from_elem(self.liver_grid.dimensions(), 0.0);
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "B-mode imaging: {}x{} pixels",
-            self.liver_grid.nx, self.liver_grid.ny
+            self.liver_grid.nx,
+            self.liver_grid.ny
         );
-        println!("Estimated resolution: axial=0.3mm, lateral=0.8mm");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "Estimated resolution: axial=0.3mm, lateral=0.8mm"
+        );
 
         BModeResult {
             envelope,
@@ -127,7 +161,8 @@ impl LiverAssessmentWorkflow {
             .uncertainty_analyzer
             .quantify_beamforming_uncertainty(&ceus_result.perfusion_map, 0.90)?;
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "Uncertainty analysis: SWE confidence = {:.1}%, CEUS confidence = {:.1}%",
             swe_uncertainty.confidence_score * 100.0,
             perfusion_uncertainty.confidence_score * 100.0

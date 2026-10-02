@@ -87,7 +87,6 @@
 //!   exploration geophysics. *Geophysics*, 74(6), WCC1–WCC26.
 
 #![expect(
-    clippy::print_stdout,
     clippy::print_stderr,
     reason = "The example's console report is its user-visible output contract"
 )]
@@ -137,6 +136,7 @@ use brain_prior::BrainPriorMode;
 use seismic_input::SeismicInputMode;
 
 use seismic_imaging::render::{put_pixel, velocity_color, write_png};
+use std::io::Write;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grid constants
@@ -275,15 +275,30 @@ fn print_quality_report_brain(true_model: &Array3<f64>, reconstructed: &Array3<f
 fn main() -> KwaversResult<()> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("warn"));
 
-    println!("╔══════════════════════════════════════════════════════════╗");
-    println!("║   Transcranial Ultrasound FWI — Brain Reconstruction     ║");
-    println!("╚══════════════════════════════════════════════════════════╝\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╔══════════════════════════════════════════════════════════╗"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "║   Transcranial Ultrasound FWI — Brain Reconstruction     ║"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╚══════════════════════════════════════════════════════════╝\n"
+    );
 
     // ── 1. Skull phantom ──────────────────────────────────────────────────
-    println!("[ 1 / 7 ]  Building skull phantom …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "[ 1 / 7 ]  Building skull phantom …"
+    );
     let input_mode = SeismicInputMode::from_env("KWAVERS_SEISMIC_INPUT_MODE")
         .map_err(KwaversError::InvalidInput)?;
-    println!("  Input mode       : {input_mode:?}");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Input mode       : {input_mode:?}"
+    );
     let (phantom, ct_vol) = seismic_phantom::build_phantom_for_demo(&input_mode)
         .map_err(|error| KwaversError::InvalidInput(error.to_string()))?;
 
@@ -306,35 +321,58 @@ fn main() -> KwaversResult<()> {
         .copied()
         .fold(f64::NEG_INFINITY, f64::max);
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Grid            : {NX}×{NY}×{NZ} voxels @ {:.0} mm",
         DX * 1e3
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Domain          : {:.0}×{:.0} mm",
         NX as f64 * DX * 1e3,
         NZ as f64 * DX * 1e3
     );
-    println!("  HU range        : [{hu_min:.0}, {hu_max:.0}]");
-    println!("  Sound-speed     : [{c_min:.0}, {c_max:.0}] m/s");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  HU range        : [{hu_min:.0}, {hu_max:.0}]"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Sound-speed     : [{c_min:.0}, {c_max:.0}] m/s"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Head radius     : {:.0} mm  (R_HEAD = {R_HEAD} voxels)",
         R_HEAD * DX * 1e3
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Skull thickness : ~{:.0} mm  (outer cortical → inner cortical)",
         (R_SKULL_OUT - R_SKULL_IN) * DX * 1e3
     );
-    println!("  Brain radius    : {:.0} mm", R_BRAIN * DX * 1e3);
-    println!("  Layers          : water coupling / scalp / cortical bone / diploe / brain");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Brain radius    : {:.0} mm",
+        R_BRAIN * DX * 1e3
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Layers          : water coupling / scalp / cortical bone / diploe / brain"
+    );
 
     // ── 2. Grid ───────────────────────────────────────────────────────────
-    println!("\n[ 2 / 7 ]  Constructing computational grid …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 2 / 7 ]  Constructing computational grid …"
+    );
     let grid = Grid::new(NX, NY, NZ, DX, DX, DX)?;
-    println!("  Grid OK");
+    let _ = writeln!(std::io::stdout().lock(), "  Grid OK");
 
     // ── 3. Multi-scale FWI parameters ────────────────────────────────────
-    println!("\n[ 3 / 7 ]  Configuring multi-scale FWI …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 3 / 7 ]  Configuring multi-scale FWI …"
+    );
 
     // CFL-stable timestep: dt ≤ 0.3 × dx / (c_max × √3).
     // Fixed across all scales — determined by maximum velocity, not frequency.
@@ -346,15 +384,20 @@ fn main() -> KwaversResult<()> {
     let scales = seismic_planar_schedule::configure(dt, t_transit);
 
     // ── 4. Full-ring acquisition geometry ─────────────────────────────────
-    println!("\n[ 4 / 7 ]  Building full-ring acquisition geometry …");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 4 / 7 ]  Building full-ring acquisition geometry …"
+    );
+    let _ = writeln!(std::io::stdout().lock(),
         "  Full aperture    : {TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT} elements, 650 kHz design authority"
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  FWI section      : {} active full-ring samples",
         seismic_acquisition::FWI_ACTIVE_ELEMENTS
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Transmits        : {} shots; receivers/shot = {} on same full ring",
         seismic_acquisition::N_SHOTS,
         seismic_acquisition::N_RECEIVERS
@@ -364,7 +407,8 @@ fn main() -> KwaversResult<()> {
         .enumerate()
     {
         let (ix, iz) = seismic_acquisition::ACTIVE_TRANSDUCER_POSITIONS[element_index];
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  Shot {:1}: (x={:2}, y=0, z={:2}) = ({:.1} mm, {:.1} mm)",
             s,
             ix,
@@ -375,7 +419,10 @@ fn main() -> KwaversResult<()> {
     }
 
     // ── 5. Multi-scale FWI ────────────────────────────────────────────────
-    println!("\n[ 5 / 7 ]  Running multi-scale transcranial FWI …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 5 / 7 ]  Running multi-scale transcranial FWI …"
+    );
 
     let inversion =
         seismic_planar_inversion::run_skull_inversion(&phantom, &grid, dt, t_transit, scales)?;
@@ -387,16 +434,25 @@ fn main() -> KwaversResult<()> {
     // ── 6. Stage-2 brain tissue FWI (Guasch 2020 style) ─────────────────
     let brain_prior =
         BrainPriorMode::from_env("KWAVERS_BRAIN_PRIOR").map_err(KwaversError::InvalidInput)?;
-    println!("\n[ 6 / 7 ]  Stage-2 brain tissue FWI ({brain_prior:?}) …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 6 / 7 ]  Stage-2 brain tissue FWI ({brain_prior:?}) …"
+    );
 
     let brain_result = seismic_brain_inversion::run_brain_fwi(&phantom, &brain_prior, &grid, dt)?;
-    println!("  Quality (brain voxels only, r < R_SKULL_IN):");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Quality (brain voxels only, r < R_SKULL_IN):"
+    );
     print_quality_report_brain(&brain_result.true_model, &brain_result.reconstructed);
     let brain_true_model = Some(brain_result.true_model);
     let brain_reconstructed = Some(brain_result.reconstructed);
 
     // ── 7. RTM — zero-lag cross-correlation imaging ───────────────────────
-    println!("\n[ 7 / 7 ]  Reverse Time Migration (reflectivity image) …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 7 / 7 ]  Reverse Time Migration (reflectivity image) …"
+    );
 
     let rtm_image = seismic_rtm::run_rtm(&shots_fine, &grid)?;
 
@@ -419,8 +475,12 @@ fn main() -> KwaversResult<()> {
     })?;
 
     // ── Summary ───────────────────────────────────────────────────────────
-    println!("\n═══════════════════════════════════════════════════════════");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n═══════════════════════════════════════════════════════════"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Reconstructed velocity range: [{:.0}, {:.0}] m/s",
         reconstructed.iter().copied().fold(f64::INFINITY, f64::min),
         reconstructed
@@ -428,20 +488,50 @@ fn main() -> KwaversResult<()> {
             .copied()
             .fold(f64::NEG_INFINITY, f64::max),
     );
-    println!("  True velocity range         : [{c_min:.0}, {c_max:.0}] m/s");
-    println!();
-    println!("  Physics verified against:");
-    println!("    Aubry (2003)              — HU → c, ρ bone-volume-fraction model");
-    println!("    Marsac (2017)             — skull acoustic properties + geometry");
-    println!("    Guasch (2020)             — transcranial FWI methodology");
-    println!("    Ricker (1953)             — source wavelet");
-    println!("    Tarantola (1984)          — adjoint-state FWI gradient");
-    println!("    Virieux & Operto (2009)   — FWI objective and chain rule");
-    println!();
-    println!("  To use an explicit CT input:");
-    println!("    set KWAVERS_SEISMIC_INPUT_MODE=ct:path\\to\\ct_dicom_or_nifti");
-    println!("    cargo run --example seismic_imaging_demo");
-    println!("═══════════════════════════════════════════════════════════");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  True velocity range         : [{c_min:.0}, {c_max:.0}] m/s"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(std::io::stdout().lock(), "  Physics verified against:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Aubry (2003)              — HU → c, ρ bone-volume-fraction model"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Marsac (2017)             — skull acoustic properties + geometry"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Guasch (2020)             — transcranial FWI methodology"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Ricker (1953)             — source wavelet"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Tarantola (1984)          — adjoint-state FWI gradient"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Virieux & Operto (2009)   — FWI objective and chain rule"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(std::io::stdout().lock(), "  To use an explicit CT input:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    set KWAVERS_SEISMIC_INPUT_MODE=ct:path\\to\\ct_dicom_or_nifti"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    cargo run --example seismic_imaging_demo"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "═══════════════════════════════════════════════════════════"
+    );
 
     Ok(())
 }

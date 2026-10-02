@@ -12,46 +12,82 @@ use dg_acoustic_common::{
     run_native_acoustic_diagnostic, ELEMENTS, POLYNOMIAL_ORDER, STEPS,
 };
 use kwavers_core::error::KwaversResult;
+use std::io::Write;
 
 fn main() -> KwaversResult<()> {
     let diagnostic = run_native_acoustic_diagnostic()?;
     let series = run_embedded_gaussian_series()?;
 
-    println!("DG native 1-D acoustic diagnostic");
-    println!("elements: {ELEMENTS}, polynomial_order: {POLYNOMIAL_ORDER}, steps: {STEPS}");
-    println!("system: p_t + rho*c^2*u_x = 0, u_t + p_x/rho = 0");
-    println!();
-    println!(
-        "{:<36} {:>16.6e}",
-        "pressure_relative_l2", diagnostic.pressure_relative_l2
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "DG native 1-D acoustic diagnostic"
     );
-    println!(
-        "{:<36} {:>16.6e}",
-        "velocity_relative_l2", diagnostic.velocity_relative_l2
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "elements: {ELEMENTS}, polynomial_order: {POLYNOMIAL_ORDER}, steps: {STEPS}"
     );
-    println!(
-        "{:<36} {:>16.6e}",
-        "pressure_characteristic_l2", diagnostic.pressure_characteristic_l2
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "system: p_t + rho*c^2*u_x = 0, u_t + p_x/rho = 0"
     );
-    println!(
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "velocity_characteristic_l2", diagnostic.velocity_characteristic_l2
+        "pressure_relative_l2",
+        diagnostic.pressure_relative_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "pressure_mass_error", diagnostic.pressure_mass_error
+        "velocity_relative_l2",
+        diagnostic.velocity_relative_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<36} {:>16.6e}",
-        "velocity_mass_error", diagnostic.velocity_mass_error
+        "pressure_characteristic_l2",
+        diagnostic.pressure_characteristic_l2
     );
-    println!("{:<36} {:>16.6e}", "energy_ratio", diagnostic.energy_ratio);
-    println!();
-    println!("embedded 1-D Gaussian pressure matrix");
-    println!("fixture: localized p0 Gaussian, zero initial velocity, homogeneous lossless medium");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<36} {:>16.6e}",
+        "velocity_characteristic_l2",
+        diagnostic.velocity_characteristic_l2
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<36} {:>16.6e}",
+        "pressure_mass_error",
+        diagnostic.pressure_mass_error
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<36} {:>16.6e}",
+        "velocity_mass_error",
+        diagnostic.velocity_mass_error
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<36} {:>16.6e}",
+        "energy_ratio",
+        diagnostic.energy_ratio
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "embedded 1-D Gaussian pressure matrix"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "fixture: localized p0 Gaussian, zero initial velocity, homogeneous lossless medium"
+    );
     print_solver_matrix(&series.matrix);
-    println!();
-    println!("common p4-quadrature Gaussian pressure matrix");
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "common p4-quadrature Gaussian pressure matrix"
+    );
     print_common_solver_matrix(&series.common_matrix);
 
     Ok(())

@@ -10,22 +10,35 @@ use kwavers_solver::inverse::pinn::ml::{
     EdgeRuntime, JitCompiler, LossWeights2D, MlQuantizer, OptimizationLevel, PinnConfig2D,
     QuantizationScheme, WaveGeometry2D,
 };
+use std::io::Write;
 #[cfg(feature = "pinn")]
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 fn main() -> KwaversResult<()> {
-    println!("🚀 Real-Time PINN Inference Demonstration");
-    println!("==========================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🚀 Real-Time PINN Inference Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=========================================="
+    );
 
     let _wave_speed = 343.0; // m/s (speed of sound in air)
 
-    println!("📋 Performance Targets:");
-    println!("   Single inference: <500μs");
-    println!("   Batch processing: <10ms (32 samples)");
-    println!("   Memory usage: <100MB");
-    println!("   Accuracy loss: <5% from quantization");
-    println!();
+    let _ = writeln!(std::io::stdout().lock(), "📋 Performance Targets:");
+    let _ = writeln!(std::io::stdout().lock(), "   Single inference: <500μs");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Batch processing: <10ms (32 samples)"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   Memory usage: <100MB");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Accuracy loss: <5% from quantization"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Create a sample PINN model configuration
     let pinn_config = PinnConfig2D {
@@ -41,67 +54,108 @@ fn main() -> KwaversResult<()> {
         boundary_condition: kwavers_solver::inverse::pinn::ml::BoundaryCondition2D::Dirichlet,
     };
 
-    println!("🧠 Model Configuration:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "🧠 Model Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Architecture: {} layers",
         pinn_config.hidden_layers.len()
     );
-    println!("   Hidden sizes: {:?}", pinn_config.hidden_layers);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Hidden sizes: {:?}",
+        pinn_config.hidden_layers
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   Collocation points: {}",
         pinn_config.num_collocation_points
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Create geometry for wave equation
     let _geometry = WaveGeometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
-    println!("🏗️  Geometry: Rectangular domain [0,1] × [0,1]");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🏗️  Geometry: Rectangular domain [0,1] × [0,1]"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Demonstrate JIT compilation
-    println!("⚡ JIT Compilation Demonstration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "⚡ JIT Compilation Demonstration:"
+    );
     demonstrate_jit_compilation()?;
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Demonstrate quantization
-    println!("🗜️  Quantization Demonstration:");
+    let _ = writeln!(std::io::stdout().lock(), "🗜️  Quantization Demonstration:");
     demonstrate_quantization()?;
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Demonstrate edge deployment
-    println!("📱 Edge Deployment Demonstration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "📱 Edge Deployment Demonstration:"
+    );
     demonstrate_edge_deployment()?;
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // Performance benchmark
-    println!("📊 Performance Benchmark:");
+    let _ = writeln!(std::io::stdout().lock(), "📊 Performance Benchmark:");
     run_performance_benchmark()?;
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
-    println!("🎉 Real-Time Inference Demonstration Complete!");
-    println!("   Demonstrated:");
-    println!("   • JIT compilation for optimized execution");
-    println!("   • Model quantization with accuracy preservation");
-    println!("   • Edge deployment on constrained hardware");
-    println!("   • Real-time performance benchmarking");
-    println!("   • Memory-constrained operation");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🎉 Real-Time Inference Demonstration Complete!"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "   Demonstrated:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • JIT compilation for optimized execution"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Model quantization with accuracy preservation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Edge deployment on constrained hardware"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Real-time performance benchmarking"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • Memory-constrained operation"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     Ok(())
 }
 
 #[cfg(feature = "pinn")]
 fn demonstrate_jit_compilation() -> KwaversResult<()> {
-    println!("   Creating JIT compiler...");
+    let _ = writeln!(std::io::stdout().lock(), "   Creating JIT compiler...");
     let compiler = JitCompiler::new(OptimizationLevel::Aggressive);
 
-    println!("   ✅ Compiler created with aggressive optimization");
-    println!("   📈 Expected performance: 10-50× speedup vs interpreted execution");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ Compiler created with aggressive optimization"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   📈 Expected performance: 10-50× speedup vs interpreted execution"
+    );
 
     let stats = compiler.get_stats();
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   📊 Compiler stats: {} kernels compiled, {:.1}ms avg compile time",
-        stats.kernels_compiled, stats.avg_compile_time_ms
+        stats.kernels_compiled,
+        stats.avg_compile_time_ms
     );
 
     Ok(())
@@ -109,7 +163,10 @@ fn demonstrate_jit_compilation() -> KwaversResult<()> {
 
 #[cfg(feature = "pinn")]
 fn demonstrate_quantization() -> KwaversResult<()> {
-    println!("   Testing quantization schemes...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Testing quantization schemes..."
+    );
 
     let schemes = vec![
         ("No quantization", QuantizationScheme::None),
@@ -132,30 +189,56 @@ fn demonstrate_quantization() -> KwaversResult<()> {
 
     for (name, scheme) in schemes {
         let _quantizer = MlQuantizer::new(scheme);
-        println!("   ✅ {}: Configured", name);
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ {}: Configured", name);
     }
 
-    println!("   📈 Expected compression: 4-8× memory reduction");
-    println!("   🎯 Accuracy preservation: >95% of original performance");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   📈 Expected compression: 4-8× memory reduction"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   🎯 Accuracy preservation: >95% of original performance"
+    );
 
     Ok(())
 }
 
 #[cfg(feature = "pinn")]
 fn demonstrate_edge_deployment() -> KwaversResult<()> {
-    println!("   Initializing edge runtime (64MB memory limit)...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Initializing edge runtime (64MB memory limit)..."
+    );
 
     let runtime = EdgeRuntime::new(64); // 64MB
     let hardware_caps = runtime.get_hardware_caps();
 
-    println!("   ✅ Edge runtime initialized");
-    println!("   🔧 Hardware: {:?}", hardware_caps.architecture);
-    println!("   💾 Memory: {} MB", hardware_caps.total_memory_mb);
-    println!("   ⚡ SIMD width: {} bits", hardware_caps.simd_width);
-    println!("   🎯 Cache line: {} bytes", hardware_caps.cache_line_size);
+    let _ = writeln!(std::io::stdout().lock(), "   ✅ Edge runtime initialized");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   🔧 Hardware: {:?}",
+        hardware_caps.architecture
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   💾 Memory: {} MB",
+        hardware_caps.total_memory_mb
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ⚡ SIMD width: {} bits",
+        hardware_caps.simd_width
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   🎯 Cache line: {} bytes",
+        hardware_caps.cache_line_size
+    );
 
     let perf_stats = runtime.get_performance_stats();
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   📊 Performance: {:.1}μs avg latency, {:.0} samples/sec throughput",
         perf_stats.avg_latency_us,
         perf_stats.inference_count as f64 / 1000.0
@@ -166,7 +249,10 @@ fn demonstrate_edge_deployment() -> KwaversResult<()> {
 
 #[cfg(feature = "pinn")]
 fn run_performance_benchmark() -> KwaversResult<()> {
-    println!("   Running inference latency benchmark...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Running inference latency benchmark..."
+    );
 
     let mut total_time = 0u128;
     let num_samples = 1000;
@@ -187,18 +273,32 @@ fn run_performance_benchmark() -> KwaversResult<()> {
     let avg_latency = total_time as f64 / num_samples as f64;
     let throughput = 1_000_000.0 / avg_latency; // samples per second
 
-    println!("   📈 Benchmark Results:");
-    println!("   ⚡ Average latency: {:.1} μs", avg_latency);
-    println!("   🚀 Throughput: {:.0} samples/sec", throughput);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "   📈 Benchmark Results:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ⚡ Average latency: {:.1} μs",
+        avg_latency
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   🚀 Throughput: {:.0} samples/sec",
+        throughput
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   🎯 Target achievement: {}%",
         if avg_latency < 500.0 { "100" } else { "85" }
     );
 
     // Memory usage simulation
     let memory_usage = simulate_memory_usage();
-    println!("   💾 Memory usage: {} KB", memory_usage / 1024);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   💾 Memory usage: {} KB",
+        memory_usage / 1024
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "   📊 Memory efficiency: {:.1}%",
         (memory_usage as f32 / (64.0 * 1024.0 * 1024.0)) * 100.0
     );
@@ -244,6 +344,12 @@ fn simulate_memory_usage() -> usize {
 
 #[cfg(not(feature = "pinn"))]
 fn main() {
-    println!("This example requires the 'pinn' feature to be enabled.");
-    println!("Run with: cargo run --example pinn_real_time_inference --features pinn");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "This example requires the 'pinn' feature to be enabled."
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Run with: cargo run --example pinn_real_time_inference --features pinn"
+    );
 }

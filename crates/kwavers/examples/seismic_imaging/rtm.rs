@@ -10,6 +10,7 @@ use kwavers_solver::inverse::seismic::{
 use leto::{Array2, Array3};
 
 use super::{NX, NY, NZ};
+use std::io::Write;
 
 /// Migrate the first observed gather into a normalized zero-lag image.
 pub(super) fn run_rtm(
@@ -62,6 +63,9 @@ pub(super) fn run_rtm(
         .migrate(&receiver_snapshot, &receiver_snapshot, grid)
         .map_err(|error| KwaversError::InvalidInput(format!("RTM migration failed: {error:#}")))?;
     let peak = image.iter().copied().map(f64::abs).fold(0.0_f64, f64::max);
-    println!("  RTM image completed — peak amplitude: {peak:.4}");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  RTM image completed — peak amplitude: {peak:.4}"
+    );
     Ok(image)
 }

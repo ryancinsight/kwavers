@@ -16,7 +16,6 @@
 // - MNI ICBM 2009c: https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/
 
 #![expect(
-    clippy::print_stdout,
     clippy::print_stderr,
     reason = "The example's console report is its user-visible output contract"
 )]
@@ -55,6 +54,7 @@ mod brain_prior;
 mod seismic_input;
 use brain_prior::BrainPriorMode;
 use seismic_input::SeismicInputMode;
+use std::io::Write;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grid constants — TRUE 3D (NY = 48, not 2)
@@ -170,14 +170,26 @@ const COLORBAR_H: usize = 20; // colorbar height below each panel
 fn main() -> KwaversResult<()> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("warn"));
 
-    println!("╔══════════════════════════════════════════════════════════╗");
-    println!("║  3D Transcranial Ultrasound FWI — Brain Reconstruction   ║");
-    println!("╚══════════════════════════════════════════════════════════╝\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╔══════════════════════════════════════════════════════════╗"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "║  3D Transcranial Ultrasound FWI — Brain Reconstruction   ║"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╚══════════════════════════════════════════════════════════╝\n"
+    );
 
     // ── [ 1 / 7 ]  3D skull phantom ──────────────────────────────────────
     let input_mode = SeismicInputMode::from_env("KWAVERS_SEISMIC_INPUT_MODE")
         .map_err(KwaversError::InvalidInput)?;
-    println!("[ 1 / 7 ]  Building 3D skull phantom ({input_mode:?}) …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "[ 1 / 7 ]  Building 3D skull phantom ({input_mode:?}) …"
+    );
     let (phantom, _ct_vol) = seismic_volume_phantom::build_phantom_3d(&input_mode)
         .map_err(|error| KwaversError::InvalidInput(error.to_string()))?;
 
@@ -199,39 +211,60 @@ fn main() -> KwaversResult<()> {
         .iter()
         .copied()
         .fold(f64::NEG_INFINITY, f64::max);
-    println!("  HU range        : [{hu_min:.0}, {hu_max:.0}]");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  HU range        : [{hu_min:.0}, {hu_max:.0}]"
+    );
 
     // ── [ 2 / 7 ]  T1 MRI ────────────────────────────────────────────────
-    println!("\n[ 2 / 7 ]  Loading explicit T1 MRI input …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 2 / 7 ]  Loading explicit T1 MRI input …"
+    );
 
-    let t1_result = match &input_mode {
-        SeismicInputMode::CtMri { mri, .. } => {
-            let result = seismic_volume_brain_model::load_t1_mri(mri).with_context(|| {
-                format!(
-                    "explicit T1 MRI input could not be loaded: {}",
-                    mri.display()
-                )
-            })?;
-            let [t1_nx, t1_ny, t1_nz] = result.0.shape();
-            println!(
+    let t1_result =
+        match &input_mode {
+            SeismicInputMode::CtMri { mri, .. } => {
+                let result = seismic_volume_brain_model::load_t1_mri(mri).with_context(|| {
+                    format!(
+                        "explicit T1 MRI input could not be loaded: {}",
+                        mri.display()
+                    )
+                })?;
+                let [t1_nx, t1_ny, t1_nz] = result.0.shape();
+                let _ =
+                    writeln!(std::io::stdout().lock(),
                 "  T1 loaded       : {t1_nx}×{t1_ny}×{t1_nz} voxels @ [{:.2},{:.2},{:.2}] mm",
                 result.1[0], result.1[1], result.1[2]
             );
-            Some(result)
-        }
-        SeismicInputMode::Synthetic | SeismicInputMode::Ct(_) => {
-            println!("  T1 mode         : disabled for this explicit input selection");
-            None
-        }
-    };
+                Some(result)
+            }
+            SeismicInputMode::Synthetic | SeismicInputMode::Ct(_) => {
+                let _ = writeln!(
+                    std::io::stdout().lock(),
+                    "  T1 mode         : disabled for this explicit input selection"
+                );
+                None
+            }
+        };
 
     // ── [ 3 / 7 ]  Computational grid ────────────────────────────────────
-    println!("\n[ 3 / 7 ]  Constructing 3D computational grid …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 3 / 7 ]  Constructing 3D computational grid …"
+    );
     let grid = Grid::new(NX, NY, NZ, DX, DX, DX)?;
-    println!("  Grid OK  ({NX}×{NY}×{NZ} @ {:.0} mm)", DX * 1e3);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Grid OK  ({NX}×{NY}×{NZ} @ {:.0} mm)",
+        DX * 1e3
+    );
 
     // ── [ 4 / 7 ]  Multi-scale FWI parameters ────────────────────────────
-    println!("\n[ 4 / 7 ]  Configuring multi-scale FWI …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 4 / 7 ]  Configuring multi-scale FWI …"
+    );
 
     // CFL-stable timestep for 3D PSTD: dt ≤ 0.3 × dx / (c_max × √3).
     // Use actual phantom c_max (not the 2D-demo hardcoded 2621 m/s) with 10 % safety margin.
@@ -247,8 +280,13 @@ fn main() -> KwaversResult<()> {
     // Multi-scale frequency schedule: 40 kHz (5 iter) → 80 kHz (7 iter) → 150 kHz (10 iter).
     let scales: &[(f64, usize)] = &[(40_000.0, 5), (80_000.0, 7), (150_000.0, 10)];
 
-    println!("  dt              : {:.1} ns", dt * 1e9);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  dt              : {:.1} ns",
+        dt * 1e9
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Scales          : {} → {} → {} kHz  ({}-{}-{} iterations)",
         scales[0].0 * 1e-3,
         scales[1].0 * 1e-3,
@@ -259,12 +297,21 @@ fn main() -> KwaversResult<()> {
     );
 
     // ── [ 5 / 7 ]  Fibonacci-sphere acquisition geometry ─────────────────
-    println!("\n[ 5 / 7 ]  Building Fibonacci-sphere acquisition geometry …");
-    println!("  Array aperture   : {N_SPHERE_ELEMENTS} elements at R={R_ARRAY_3D} voxels");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 5 / 7 ]  Building Fibonacci-sphere acquisition geometry …"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Array aperture   : {N_SPHERE_ELEMENTS} elements at R={R_ARRAY_3D} voxels"
+    );
+    let _ = writeln!(std::io::stdout().lock(),
         "  Bowl reference   : {TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT} elements (full hemispherical array)"
     );
-    println!("  Transmits        : {N_SHOTS_3D} shots; receivers/shot = {N_RECEIVERS_3D}");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Transmits        : {N_SHOTS_3D} shots; receivers/shot = {N_RECEIVERS_3D}"
+    );
 
     let cx_grid = (NX / 2) as f64;
     let cy_grid = (NY / 2) as f64;
@@ -284,7 +331,8 @@ fn main() -> KwaversResult<()> {
 
     for (shot_num, &elem_idx) in transmit_indices.iter().enumerate() {
         let [ix, iy, iz] = all_elements[elem_idx];
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  Shot {:2}: (ix={:2}, iy={:2}, iz={:2}) = ({:.1} mm, {:.1} mm, {:.1} mm)",
             shot_num,
             ix,
@@ -297,7 +345,10 @@ fn main() -> KwaversResult<()> {
     }
 
     // ── [ 6 / 7 ]  Multi-scale 3D skull FWI ─────────────────────────────
-    println!("\n[ 6 / 7 ]  Running multi-scale 3D transcranial FWI …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 6 / 7 ]  Running multi-scale 3D transcranial FWI …"
+    );
     let reconstructed = seismic_volume_skull_inversion::run_skull_inversion(
         &phantom,
         &grid,
@@ -311,7 +362,10 @@ fn main() -> KwaversResult<()> {
     // ── [ 7 / 7 ]  Stage-2 brain tissue FWI ─────────────────────────────
     let brain_prior =
         BrainPriorMode::from_env("KWAVERS_BRAIN_PRIOR").map_err(KwaversError::InvalidInput)?;
-    println!("\n[ 7 / 7 ]  Stage-2 3D brain tissue FWI ({brain_prior:?}) …");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n[ 7 / 7 ]  Stage-2 3D brain tissue FWI ({brain_prior:?}) …"
+    );
 
     let brain_result = seismic_volume_brain_inversion::run_brain_inversion(
         &phantom,
@@ -337,16 +391,43 @@ fn main() -> KwaversResult<()> {
     )?;
 
     // ── Summary footer ────────────────────────────────────────────────────
-    println!("\n  Physics references:");
-    println!("    Aubry (2003) — HU bone-volume-fraction acoustic model");
-    println!("    Marsac (2017) — transcranial FWI protocol (150 kHz–650 kHz)");
-    println!("    Guasch (2020) — full-waveform inversion of the human brain");
-    println!("    Treeby & Cox (2010) — fractional-Laplacian absorption model");
-    println!("    Virieux & Operto (2009) — review of FWI in geophysics");
-    println!("    Duck (1990) — tissue acoustic properties");
-    println!("    chris T1/T2 MRI (niivue-images, Rorden 2024) — individual subject MRI");
-    println!("    CT_Philips NIfTI (niivue-images) — CT input");
-    println!("    MNI ICBM 2009c (Fonov 2009) — atlas tissue probability maps");
+    let _ = writeln!(std::io::stdout().lock(), "\n  Physics references:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Aubry (2003) — HU bone-volume-fraction acoustic model"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Marsac (2017) — transcranial FWI protocol (150 kHz–650 kHz)"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Guasch (2020) — full-waveform inversion of the human brain"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Treeby & Cox (2010) — fractional-Laplacian absorption model"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Virieux & Operto (2009) — review of FWI in geophysics"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Duck (1990) — tissue acoustic properties"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    chris T1/T2 MRI (niivue-images, Rorden 2024) — individual subject MRI"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    CT_Philips NIfTI (niivue-images) — CT input"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    MNI ICBM 2009c (Fonov 2009) — atlas tissue probability maps"
+    );
 
     Ok(())
 }

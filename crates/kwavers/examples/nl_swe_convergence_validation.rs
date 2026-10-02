@@ -13,38 +13,60 @@ use kwavers_solver::forward::elastic::nonlinear::{
     HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
 };
 use std::f64::consts::PI;
+use std::io::Write;
 
 /// Simple demonstration of convergence testing
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🔬 NL-SWE Convergence Validation Example");
-    println!("========================================\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🔬 NL-SWE Convergence Validation Example"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "========================================\n"
+    );
 
     // Demonstrate hyperelastic model validation
-    println!("1. Hyperelastic Model Validation");
-    println!("--------------------------------");
+    let _ = writeln!(std::io::stdout().lock(), "1. Hyperelastic Model Validation");
+    let _ = writeln!(std::io::stdout().lock(), "--------------------------------");
 
     validate_neo_hookean_model()?;
     validate_ogden_principal_stretches()?;
 
-    println!("\n2. Harmonic Generation Validation");
-    println!("---------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n2. Harmonic Generation Validation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "---------------------------------"
+    );
 
     validate_harmonic_generation()?;
 
-    println!("\n3. Convergence Study Setup");
-    println!("---------------------------");
+    let _ = writeln!(std::io::stdout().lock(), "\n3. Convergence Study Setup");
+    let _ = writeln!(std::io::stdout().lock(), "---------------------------");
 
     demonstrate_convergence_setup()?;
 
-    println!("\n✅ Convergence validation example completed successfully!");
-    println!("📊 Run the full test suite with: cargo test --test nl_swe_convergence_tests");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n✅ Convergence validation example completed successfully!"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "📊 Run the full test suite with: cargo test --test nl_swe_convergence_tests"
+    );
 
     Ok(())
 }
 
 /// Validate Neo-Hookean model against analytical solution
 fn validate_neo_hookean_model() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Testing Neo-Hookean model against analytical uniaxial compression...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Testing Neo-Hookean model against analytical uniaxial compression..."
+    );
 
     let model = HyperelasticModel::neo_hookean_soft_tissue();
 
@@ -66,14 +88,26 @@ fn validate_neo_hookean_model() -> Result<(), Box<dyn std::error::Error>> {
 
     let relative_error = ((sigma_xx - analytical_stress) / analytical_stress).abs();
 
-    println!("  Numerical stress: {:.3} Pa", sigma_xx);
-    println!("  Analytical stress: {:.3} Pa", analytical_stress);
-    println!("  Relative error: {:.2}%", relative_error * 100.0);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Numerical stress: {:.3} Pa",
+        sigma_xx
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Analytical stress: {:.3} Pa",
+        analytical_stress
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Relative error: {:.2}%",
+        relative_error * 100.0
+    );
 
     if relative_error < 0.01 {
-        println!("  ✅ Validation PASSED");
+        let _ = writeln!(std::io::stdout().lock(), "  ✅ Validation PASSED");
     } else {
-        println!("  ❌ Validation FAILED");
+        eprintln!("  ❌ Validation FAILED");
     }
 
     Ok(())
@@ -81,7 +115,10 @@ fn validate_neo_hookean_model() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Validate Ogden model principal stretch computation
 fn validate_ogden_principal_stretches() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Testing Ogden model principal stretch computation...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Testing Ogden model principal stretch computation..."
+    );
 
     let model = HyperelasticModel::Ogden {
         mu: vec![1000.0, 200.0],
@@ -99,13 +136,19 @@ fn validate_ogden_principal_stretches() -> Result<(), Box<dyn std::error::Error>
 
     let principal_stretches = model.principal_stretches(&deformation_gradient);
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Input stretches: λx={:.3}, λy={:.3}, λz={:.3}",
-        lambda_x, lambda_y, lambda_y
+        lambda_x,
+        lambda_y,
+        lambda_y
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Computed principal stretches: [{:.6}, {:.6}, {:.6}]",
-        principal_stretches[0], principal_stretches[1], principal_stretches[2]
+        principal_stretches[0],
+        principal_stretches[1],
+        principal_stretches[2]
     );
 
     // Check ordering (should be sorted ascending)
@@ -117,13 +160,17 @@ fn validate_ogden_principal_stretches() -> Result<(), Box<dyn std::error::Error>
         .map(|(&computed, &expected)| (computed - expected).abs() / expected.abs())
         .fold(0.0, f64::max);
 
-    println!("  Properly sorted: {}", is_sorted);
-    println!("  Maximum relative error: {:.2e}", max_error);
+    let _ = writeln!(std::io::stdout().lock(), "  Properly sorted: {}", is_sorted);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Maximum relative error: {:.2e}",
+        max_error
+    );
 
     if is_sorted && max_error < 1e-12 {
-        println!("  ✅ Validation PASSED");
+        let _ = writeln!(std::io::stdout().lock(), "  ✅ Validation PASSED");
     } else {
-        println!("  ❌ Validation FAILED");
+        eprintln!("  ❌ Validation FAILED");
     }
 
     Ok(())
@@ -131,7 +178,7 @@ fn validate_ogden_principal_stretches() -> Result<(), Box<dyn std::error::Error>
 
 /// Validate harmonic generation
 fn validate_harmonic_generation() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Testing harmonic generation...");
+    let _ = writeln!(std::io::stdout().lock(), "Testing harmonic generation...");
 
     let grid = Grid::new(32, 8, 8, 0.001, 0.001, 0.001)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
@@ -168,14 +215,29 @@ fn validate_harmonic_generation() -> Result<(), Box<dyn std::error::Error>> {
         0.0
     };
 
-    println!("  Fundamental energy: {:.2e}", fundamental_energy);
-    println!("  Second harmonic energy: {:.2e}", second_harmonic_energy);
-    println!("  Harmonic ratio (A₂/A₁): {:.2e}", harmonic_ratio.sqrt());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Fundamental energy: {:.2e}",
+        fundamental_energy
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Second harmonic energy: {:.2e}",
+        second_harmonic_energy
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Harmonic ratio (A₂/A₁): {:.2e}",
+        harmonic_ratio.sqrt()
+    );
 
     if harmonic_ratio > 0.0 && harmonic_ratio < fundamental_energy {
-        println!("  ✅ Harmonic generation working correctly");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  ✅ Harmonic generation working correctly"
+        );
     } else {
-        println!("  ❌ Harmonic generation validation inconclusive");
+        eprintln!("  ❌ Harmonic generation validation inconclusive");
     }
 
     Ok(())
@@ -183,14 +245,26 @@ fn validate_harmonic_generation() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Demonstrate convergence study setup
 fn demonstrate_convergence_setup() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Setting up convergence study framework...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Setting up convergence study framework..."
+    );
 
     let grid_sizes = [16, 32, 64, 128];
     let mut results = Vec::new();
 
-    println!("  Testing convergence with grid refinement:");
-    println!("  Grid Size | dx (mm) | Expected Convergence");
-    println!("  ----------|----------|-------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Testing convergence with grid refinement:"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Grid Size | dx (mm) | Expected Convergence"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  ----------|----------|-------------------"
+    );
 
     for &nx in &grid_sizes {
         let dx = 0.01 / nx as f64; // 1cm domain
@@ -200,7 +274,8 @@ fn demonstrate_convergence_setup() -> Result<(), Box<dyn std::error::Error>> {
             "limited by model"
         };
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  {:8} | {:.4}  | {}",
             nx,
             dx * 1000.0,
@@ -212,8 +287,14 @@ fn demonstrate_convergence_setup() -> Result<(), Box<dyn std::error::Error>> {
         results.push((nx, dx));
     }
 
-    println!("  ✅ Convergence study framework ready");
-    println!("  📊 Full convergence analysis available in test suite");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  ✅ Convergence study framework ready"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  📊 Full convergence analysis available in test suite"
+    );
 
     Ok(())
 }

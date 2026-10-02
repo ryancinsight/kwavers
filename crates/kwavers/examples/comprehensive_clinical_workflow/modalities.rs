@@ -15,6 +15,7 @@ use kwavers_solver::inverse::elastography::{
     NonlinearInversion, NonlinearInversionConfig, ShearWaveInversion, ShearWaveInversionConfig,
 };
 use leto::{Array4, SliceArg};
+use std::io::Write;
 
 fn estimate_elastic_time_step<M: Medium>(
     grid: &Grid,
@@ -123,11 +124,16 @@ pub(super) fn perform_shear_wave_elastography(
         nonlinear_inversion.reconstruct(&harmonic_field, &workflow.liver_grid)?;
     let fibrosis_metrics = workflow.calculate_fibrosis_metrics(&stiffness_map, &nonlinear_analysis);
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "SWE completed: Mean stiffness = {:.1} kPa",
         fibrosis_metrics.mean_stiffness
     );
-    println!("Fibrosis stage: {}", fibrosis_metrics.fibrosis_stage);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Fibrosis stage: {}",
+        fibrosis_metrics.fibrosis_stage
+    );
 
     Ok(SWEResult {
         stiffness_map,
@@ -151,11 +157,13 @@ pub(super) fn perform_contrast_enhanced_ultrasound(
         .estimate_perfusion(&contrast_signal, &perfusion_model)?;
     let perfusion_metrics = workflow.calculate_perfusion_metrics(&perfusion_map);
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "CEUS completed: Peak enhancement = {:.1} dB",
         perfusion_metrics.peak_enhancement
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Perfusion rate: {:.2} mL/min/100g",
         perfusion_metrics.perfusion_rate
     );

@@ -28,16 +28,20 @@ use kwavers_grid::Grid;
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
 use leto::Array3;
+use std::io::Write;
 use std::time::Instant;
 
 fn main() -> Result<()> {
-    println!("=== Blood Oxygenation Estimation with Photoacoustic Imaging ===\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=== Blood Oxygenation Estimation with Photoacoustic Imaging ===\n"
+    );
 
     // ========================================================================
     // 1. Setup: Wavelengths and Grid
     // ========================================================================
-    println!("Phase 1: Configuration");
-    println!("----------------------");
+    let _ = writeln!(std::io::stdout().lock(), "Phase 1: Configuration");
+    let _ = writeln!(std::io::stdout().lock(), "----------------------");
 
     // Wavelength selection (optimized for hemoglobin spectroscopy)
     let wavelengths = vec![
@@ -46,11 +50,16 @@ fn main() -> Result<()> {
         800.0, // NIR window - HbO₂ peak
         850.0, // NIR window - balanced penetration
     ];
-    println!("Wavelengths: {:?} nm", wavelengths);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Wavelengths: {:?} nm",
+        wavelengths
+    );
 
     // Computational grid (5mm × 5mm × 5mm at 0.2mm resolution)
     let grid = Grid::new(25, 25, 25, 0.2e-3, 0.2e-3, 0.2e-3)?;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Grid: {}×{}×{} voxels ({:.1}×{:.1}×{:.1} mm)",
         grid.nx,
         grid.ny,
@@ -59,19 +68,19 @@ fn main() -> Result<()> {
         grid.ny as f64 * grid.dy * 1e3,
         grid.nz as f64 * grid.dz * 1e3
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // ========================================================================
     // 2. Create Heterogeneous Phantom
     // ========================================================================
-    println!("Phase 2: Phantom Construction");
-    println!("------------------------------");
+    let _ = writeln!(std::io::stdout().lock(), "Phase 2: Phantom Construction");
+    let _ = writeln!(std::io::stdout().lock(), "------------------------------");
 
     let (nx, ny, nz) = grid.dimensions();
 
     // Background: soft tissue (low absorption)
     let background = OpticalPropertyData::soft_tissue();
-    println!("Background: Soft tissue");
+    let _ = writeln!(std::io::stdout().lock(), "Background: Soft tissue");
 
     // Arterial blood vessel (98% oxygenation)
     // Whole-blood hemoglobin as tetramer molarity, with representative
@@ -79,7 +88,8 @@ fn main() -> Result<()> {
     let (total_hb, so2_arterial, so2_venous) = (2.3e-3_f64, 0.98_f64, 0.75_f64);
     let arterial_hbo2 = total_hb * so2_arterial;
     let arterial_hb = total_hb * (1.0 - so2_arterial);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Arterial blood: sO₂ = {:.1}%, [Hb_total] = {:.2} mM",
         so2_arterial * 100.0,
         total_hb * 1e3
@@ -88,7 +98,8 @@ fn main() -> Result<()> {
     // Venous blood vessel (75% oxygenation)
     let venous_hbo2 = total_hb * so2_venous;
     let venous_hb = total_hb * (1.0 - so2_venous);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Venous blood: sO₂ = {:.1}%, [Hb_total] = {:.2} mM",
         so2_venous * 100.0,
         total_hb * 1e3
@@ -99,18 +110,25 @@ fn main() -> Result<()> {
     let tumor_so2 = 0.5; // 50% oxygenation (hypoxic)
     let tumor_hbo2 = tumor_total_hb * tumor_so2;
     let tumor_hb = tumor_total_hb * (1.0 - tumor_so2);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Tumor (hypoxic): sO₂ = {:.1}%, [Hb_total] = {:.2} mM",
         tumor_so2 * 100.0,
         tumor_total_hb * 1e3
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // ========================================================================
     // 3. Multi-Wavelength Optical Absorption Maps
     // ========================================================================
-    println!("Phase 3: Multi-Wavelength Fluence Simulation");
-    println!("----------------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Phase 3: Multi-Wavelength Fluence Simulation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "----------------------------------------------"
+    );
 
     let mut absorption_maps = Vec::new();
     let diffusion_config = DiffusionSolverConfig {
@@ -123,7 +141,12 @@ fn main() -> Result<()> {
 
     for (wl_idx, &wavelength) in wavelengths.iter().enumerate() {
         let start = Instant::now();
-        println!("Wavelength {}: {:.0} nm", wl_idx + 1, wavelength);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "Wavelength {}: {:.0} nm",
+            wl_idx + 1,
+            wavelength
+        );
 
         // Create optical property map for this wavelength
         let mut optical_map = Array3::from_elem((nx, ny, nz), background);
@@ -223,7 +246,8 @@ fn main() -> Result<()> {
 
         absorption_maps.push(absorption);
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  Fluence computed: max = {:.2e} W/m², mean = {:.2e} W/m²",
             fluence.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
             if fluence.is_empty() {
@@ -232,15 +256,19 @@ fn main() -> Result<()> {
                 fluence.iter().sum::<f64>() / fluence.len() as f64
             }
         );
-        println!("  Time: {:.2} ms", start.elapsed().as_secs_f64() * 1e3);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Time: {:.2} ms",
+            start.elapsed().as_secs_f64() * 1e3
+        );
     }
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // ========================================================================
     // 4. Spectral Unmixing
     // ========================================================================
-    println!("Phase 4: Spectral Unmixing");
-    println!("--------------------------");
+    let _ = writeln!(std::io::stdout().lock(), "Phase 4: Spectral Unmixing");
+    let _ = writeln!(std::io::stdout().lock(), "--------------------------");
 
     let unmixing_start = Instant::now();
 
@@ -256,23 +284,25 @@ fn main() -> Result<()> {
 
     let oxygenation_result = estimate_oxygenation(&absorption_maps, &oxygenation_config)?;
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Unmixing completed in {:.2} ms",
         unmixing_start.elapsed().as_secs_f64() * 1e3
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Output dimensions: {}×{}×{}",
         oxygenation_result.so2_map.shape()[0],
         oxygenation_result.so2_map.shape()[1],
         oxygenation_result.so2_map.shape()[2]
     );
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 
     // ========================================================================
     // 5. Results Analysis
     // ========================================================================
-    println!("Phase 5: Results Analysis");
-    println!("-------------------------");
+    let _ = writeln!(std::io::stdout().lock(), "Phase 5: Results Analysis");
+    let _ = writeln!(std::io::stdout().lock(), "-------------------------");
 
     // Extract region-specific results
     let mut arterial_so2_samples = Vec::new();
@@ -329,41 +359,50 @@ fn main() -> Result<()> {
         (mean, std_dev, min)
     }
 
-    println!("\nRegion-Specific Oxygen Saturation:");
-    println!("-----------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\nRegion-Specific Oxygen Saturation:"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "-----------------------------------"
+    );
 
     let (arterial_mean, arterial_std, _) = compute_stats(&arterial_so2_samples);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Arterial vessel:  sO₂ = {:.1}% ± {:.1}% (expected: {:.1}%)",
         arterial_mean * 100.0,
         arterial_std * 100.0,
         so2_arterial * 100.0
     );
-    println!(
+    eprintln!(
         "  Error: {:.1}%",
         ((arterial_mean - so2_arterial) / so2_arterial * 100.0).abs()
     );
 
     let (venous_mean, venous_std, _) = compute_stats(&venous_so2_samples);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Venous vessel:    sO₂ = {:.1}% ± {:.1}% (expected: {:.1}%)",
         venous_mean * 100.0,
         venous_std * 100.0,
         so2_venous * 100.0
     );
-    println!(
+    eprintln!(
         "  Error: {:.1}%",
         ((venous_mean - so2_venous) / so2_venous * 100.0).abs()
     );
 
     let (tumor_mean, tumor_std, _) = compute_stats(&tumor_so2_samples);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "Tumor (hypoxic):  sO₂ = {:.1}% ± {:.1}% (expected: {:.1}%)",
         tumor_mean * 100.0,
         tumor_std * 100.0,
         tumor_so2 * 100.0
     );
-    println!(
+    eprintln!(
         "  Error: {:.1}%",
         ((tumor_mean - tumor_so2) / tumor_so2 * 100.0).abs()
     );
@@ -371,36 +410,61 @@ fn main() -> Result<()> {
     // ========================================================================
     // 6. Clinical Interpretation
     // ========================================================================
-    println!("\n=== Clinical Interpretation ===");
-    println!("-------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n=== Clinical Interpretation ==="
+    );
+    let _ = writeln!(std::io::stdout().lock(), "-------------------------------");
 
     if tumor_mean < 0.6 {
-        println!("✓ Tumor hypoxia detected (sO₂ < 60%)");
-        println!("  → Increased radioresistance likely, consider dose escalation");
-        println!("  → Poor prognosis indicator, aggressive treatment recommended");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "✓ Tumor hypoxia detected (sO₂ < 60%)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  → Increased radioresistance likely, consider dose escalation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  → Poor prognosis indicator, aggressive treatment recommended"
+        );
     }
 
     let arterial_venous_contrast = (arterial_mean - venous_mean).abs();
     if arterial_venous_contrast > 0.15 {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "✓ Clear arterial-venous discrimination (ΔsO₂ = {:.1}%)",
             arterial_venous_contrast * 100.0
         );
-        println!("  → Vascular mapping successful, suitable for treatment planning");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  → Vascular mapping successful, suitable for treatment planning"
+        );
     }
 
-    println!("\n=== Validation Summary ===");
-    println!("-------------------------");
+    let _ = writeln!(std::io::stdout().lock(), "\n=== Validation Summary ===");
+    let _ = writeln!(std::io::stdout().lock(), "-------------------------");
     let arterial_error = ((arterial_mean - so2_arterial) / so2_arterial * 100.0).abs();
     let venous_error = ((venous_mean - so2_venous) / so2_venous * 100.0).abs();
     let tumor_error = ((tumor_mean - tumor_so2) / tumor_so2 * 100.0).abs();
 
     if arterial_error < 5.0 && venous_error < 5.0 && tumor_error < 10.0 {
-        println!("✓ PASS: All regions within acceptable error (<5-10%)");
-        println!("✓ PASS: Spectral unmixing successfully recovered known sO₂ values");
-        println!("✓ PASS: Multi-wavelength photoacoustic oxygenation imaging validated");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "✓ PASS: All regions within acceptable error (<5-10%)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "✓ PASS: Spectral unmixing successfully recovered known sO₂ values"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "✓ PASS: Multi-wavelength photoacoustic oxygenation imaging validated"
+        );
     } else {
-        println!(
+        eprintln!(
             "⚠ WARNING: Some regions exceed error threshold (arterial: {:.1}%, venous: {:.1}%, tumor: {:.1}%)",
             arterial_error, venous_error, tumor_error
         );

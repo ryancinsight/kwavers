@@ -9,6 +9,7 @@ use anyhow::Context as _;
 use coeus_core::MoiraiBackend;
 use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
 use ritk_io::ImageReader;
+use std::io::Write;
 use std::path::Path;
 
 /// Load and normalize a T1 MRI NIfTI volume.
@@ -18,7 +19,11 @@ use std::path::Path;
 pub(super) fn load_t1_mri(path: &Path) -> anyhow::Result<(Array3<f64>, [f64; 3])> {
     let backend = MoiraiBackend;
 
-    println!("  T1 NIfTI file   : {}", path.display());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  T1 NIfTI file   : {}",
+        path.display()
+    );
     let img = ImageReader::read(&NativeNiftiReader::new(backend), path)
         .with_context(|| format!("T1 NIfTI read failed for '{}'", path.display()))?;
 

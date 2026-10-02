@@ -52,15 +52,24 @@ fn main() -> Result<()> {
     write_plot(&png_path, &rows)?;
     write_csv(&csv_path, &rows)?;
 
-    println!("DG acoustic Gaussian p-refinement convergence");
-    println!("png: {}", png_path.display());
-    println!("csv: {}", csv_path.display());
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "DG acoustic Gaussian p-refinement convergence"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "png: {}", png_path.display());
+    let _ = writeln!(std::io::stdout().lock(), "csv: {}", csv_path.display());
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<18} {:>8} {:>18} {:>18} {:>18}",
-        "polynomial_order", "dofs", "nodal_l2", "common_l2", "mass_error"
+        "polynomial_order",
+        "dofs",
+        "nodal_l2",
+        "common_l2",
+        "mass_error"
     );
     for row in &rows {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "{:<18} {:>8} {:>18.6e} {:>18.6e} {:>18.6e}",
             row.polynomial_order,
             row.degrees_of_freedom,

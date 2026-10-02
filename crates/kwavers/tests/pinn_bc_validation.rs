@@ -124,7 +124,7 @@ mod bc_loss_tests {
         let initial_bc_loss = metrics.bc_loss[0];
         let final_bc_loss = *metrics.bc_loss.last().unwrap();
 
-        println!(
+        eprintln!(
             "BC loss: initial={:.6}, final={:.6}",
             initial_bc_loss, final_bc_loss
         );
@@ -201,7 +201,7 @@ mod bc_loss_tests {
         let initial_bc = metrics.bc_loss[0];
         let final_bc = *metrics.bc_loss.last().unwrap();
 
-        println!(
+        eprintln!(
             "Dirichlet BC test: initial_loss={:.6}, final_loss={:.6}, improvement={:.1}%",
             initial_bc,
             final_bc,

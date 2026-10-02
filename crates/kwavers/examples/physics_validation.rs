@@ -9,9 +9,13 @@ use kwavers_medium::HomogeneousMedium;
 use leto::Array3;
 use leto::SliceArg;
 use std::f64::consts::PI;
+use std::io::Write;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("=== Physics Validation Examples ===\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "=== Physics Validation Examples ===\n"
+    );
 
     // Test 1: Heat diffusion with Gaussian initial condition
     test_heat_diffusion()?;
@@ -27,8 +31,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Validate heat diffusion against analytical solution
 fn test_heat_diffusion() -> Result<(), Box<dyn std::error::Error>> {
-    println!("1. Heat Diffusion Validation");
-    println!("   Testing numerical solution against analytical Gaussian spreading");
+    let _ = writeln!(std::io::stdout().lock(), "1. Heat Diffusion Validation");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Testing numerical solution against analytical Gaussian spreading"
+    );
 
     let nx = 64;
     let dx = 1e-3; // 1mm
@@ -114,34 +121,75 @@ fn test_heat_diffusion() -> Result<(), Box<dyn std::error::Error>> {
     let avg_error = sum_error / count as f64;
     let final_max = temperature.iter().fold(0.0f64, |a, &b| a.max(b));
 
-    println!("   Initial conditions:");
-    println!("     - Grid: {}×{} points", nx, nx);
-    println!("     - Spatial step: {:.1} mm", dx * 1000.0);
-    println!("     - Initial width σ₀: {:.1} mm", sigma0 * 1000.0);
-    println!("     - Initial max temperature: {:.2} K", initial_max);
+    let _ = writeln!(std::io::stdout().lock(), "   Initial conditions:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     - Grid: {}×{} points",
+        nx,
+        nx
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     - Spatial step: {:.1} mm",
+        dx * 1000.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     - Initial width σ₀: {:.1} mm",
+        sigma0 * 1000.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     - Initial max temperature: {:.2} K",
+        initial_max
+    );
 
-    println!("   After {:.1} ms:", t_final * 1000.0);
-    println!("     - Final width σ: {:.1} mm", sigma_t * 1000.0);
-    println!("     - Final max temperature: {:.2} K", final_max);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   After {:.1} ms:",
+        t_final * 1000.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     - Final width σ: {:.1} mm",
+        sigma_t * 1000.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     - Final max temperature: {:.2} K",
+        final_max
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "     - Expected max (analytical): {:.2} K",
         t0 * amplitude_ratio
     );
-    println!("     - Maximum relative error: {:.2}%", max_error * 100.0);
-    println!("     - Average relative error: {:.2}%", avg_error * 100.0);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     - Maximum relative error: {:.2}%",
+        max_error * 100.0
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "     - Average relative error: {:.2}%",
+        avg_error * 100.0
+    );
 
     if max_error < 0.05 {
-        println!("   ✓ PASSED: Error within 5% tolerance\n");
+        eprintln!("   ✓ PASSED: Error within 5% tolerance\n");
     } else {
-        println!("   ✗ FAILED: Error exceeds tolerance\n");
+        eprintln!("   ✗ FAILED: Error exceeds tolerance\n");
     }
     Ok(())
 }
 
 /// Test numerical dispersion for wave propagation
 fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
-    println!("2. Wave Dispersion Analysis");
-    println!("   Testing phase velocity error for different wavelengths");
+    let _ = writeln!(std::io::stdout().lock(), "2. Wave Dispersion Analysis");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Testing phase velocity error for different wavelengths"
+    );
 
     let nx = 256;
     let dx = 1e-3;
@@ -150,9 +198,16 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
 
     let points_per_wavelength = vec![4.0, 8.0, 16.0, 32.0, 64.0];
 
-    println!("   CFL number: {:.2}", c * dt / dx);
-    println!("   Points/λ | Phase Error | Status");
-    println!("   ---------|-------------|--------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   CFL number: {:.2}",
+        c * dt / dx
+    );
+    eprintln!("   Points/λ | Phase Error | Status");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ---------|-------------|--------"
+    );
 
     for ppw in points_per_wavelength {
         let wavelength = ppw * dx;
@@ -247,17 +302,29 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
             "✗ Poor"
         };
 
-        println!("   {:8.1} | {:11.4} rad | {}", ppw, phase_error, status);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   {:8.1} | {:11.4} rad | {}",
+            ppw,
+            phase_error,
+            status
+        );
     }
 
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
     Ok(())
 }
 
 /// Test acoustic absorption
 fn test_acoustic_absorption() -> Result<(), Box<dyn std::error::Error>> {
-    println!("3. Acoustic Absorption Validation");
-    println!("   Testing absorption against Beer-Lambert law");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "3. Acoustic Absorption Validation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Testing absorption against Beer-Lambert law"
+    );
 
     let nx = 200;
     let dx = 1e-3;
@@ -270,9 +337,16 @@ fn test_acoustic_absorption() -> Result<(), Box<dyn std::error::Error>> {
     let test_alphas = vec![0.5, 1.0, 2.0]; // Np/m
     let frequency = 1e6; // 1 MHz
 
-    println!("   Frequency: {:.1} MHz", frequency / 1e6);
-    println!("   α (Np/m) | Distance | Expected | Measured | Error");
-    println!("   ---------|----------|----------|----------|-------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Frequency: {:.1} MHz",
+        frequency / 1e6
+    );
+    eprintln!("   α (Np/m) | Distance | Expected | Measured | Error");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ---------|----------|----------|----------|-------"
+    );
 
     for alpha_np in test_alphas {
         // NOTE: Can't directly set absorption parameters due to private fields
@@ -303,7 +377,8 @@ fn test_acoustic_absorption() -> Result<(), Box<dyn std::error::Error>> {
 
         let error = ((amplitude - a_expected) / a_expected).abs();
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   {:8.1} | {:8.1} cm | {:8.4} | {:8.4} | {:.2}%",
             alpha_np,
             distance * 100.0,
@@ -313,6 +388,9 @@ fn test_acoustic_absorption() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    println!("\n   ✓ All absorption tests show excellent agreement (<0.1% error)");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n   ✓ All absorption tests show excellent agreement (<0.1% error)"
+    );
     Ok(())
 }

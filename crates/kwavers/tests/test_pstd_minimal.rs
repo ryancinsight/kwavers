@@ -18,7 +18,7 @@ use std::sync::Arc;
 #[test]
 fn test_pstd_sine_wave_polarity() -> KwaversResult<()> {
     // Test 1: Verify that a positive sine wave source produces positive pressure
-    println!("\n=== Test 1: Sine Wave Polarity ===");
+    eprintln!("\n=== Test 1: Sine Wave Polarity ===");
 
     let nx = 32;
     let ny = 32;
@@ -56,12 +56,12 @@ fn test_pstd_sine_wave_polarity() -> KwaversResult<()> {
     let mut solver = PSTDSolver::new(pstd_config, grid.clone(), &medium, Default::default())?;
 
     // Debug: Check what the source signal produces
-    println!("\nDEBUG: Source signal amplitude at various times:");
+    eprintln!("\nDEBUG: Source signal amplitude at various times:");
     let test_signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
     for i in 0..5 {
         let t_test = i as f64 * dt;
         let amp_test = test_signal.amplitude(t_test);
-        println!("  t={:.3e} s: amplitude={:.3e} Pa", t_test, amp_test);
+        eprintln!("  t={:.3e} s: amplitude={:.3e} Pa", t_test, amp_test);
     }
 
     solver.add_source(Box::new(source))?;
@@ -84,7 +84,7 @@ fn test_pstd_sine_wave_polarity() -> KwaversResult<()> {
             // Expected signal at this time (note: t is AFTER the step)
             let t_signal = i as f64 * dt; // Signal applied at beginning of step
             let expected = amplitude * (2.0 * std::f64::consts::PI * frequency * t_signal).sin();
-            println!(
+            eprintln!(
                 "t={:.3e} s: p_boundary={:.3e} Pa, rho={:.3e}, expected={:.3e} Pa, ratio={:.3e}",
                 t,
                 p,
@@ -101,9 +101,9 @@ fn test_pstd_sine_wave_polarity() -> KwaversResult<()> {
     let idx_quarter = (quarter_period / dt) as usize;
     if idx_quarter < nt {
         let p_at_peak = p_boundary[idx_quarter];
-        println!("\nAt t = T/4 (sine peak):");
-        println!("  Expected: ~{:.2e} Pa (positive)", amplitude);
-        println!("  Actual:   {:.2e} Pa", p_at_peak);
+        eprintln!("\nAt t = T/4 (sine peak):");
+        eprintln!("  Expected: ~{:.2e} Pa (positive)", amplitude);
+        eprintln!("  Actual:   {:.2e} Pa", p_at_peak);
 
         // Polarity check: should be positive
         assert!(
@@ -114,14 +114,14 @@ fn test_pstd_sine_wave_polarity() -> KwaversResult<()> {
 
         // Magnitude check: should be within order of magnitude
         let ratio = p_at_peak / amplitude;
-        println!("  Ratio: {:.3}", ratio);
+        eprintln!("  Ratio: {:.3}", ratio);
     }
 
     // Check that signal oscillates (not stuck at zero)
     let max_p = p_boundary
         .iter()
         .fold(f64::NEG_INFINITY, |m, &v| m.max(v.abs()));
-    println!("\nMax |p| over all timesteps: {:.2e} Pa", max_p);
+    eprintln!("\nMax |p| over all timesteps: {:.2e} Pa", max_p);
     assert!(
         max_p > 1.0,
         "Pressure should oscillate, max |p| = {} is too small",
@@ -134,7 +134,7 @@ fn test_pstd_sine_wave_polarity() -> KwaversResult<()> {
 #[test]
 fn test_pstd_pressure_equation_of_state() -> KwaversResult<()> {
     // Test 2: Verify p = c^2 * rho relationship
-    println!("\n=== Test 2: Equation of State ===");
+    eprintln!("\n=== Test 2: Equation of State ===");
 
     let nx = 32;
     let ny = 32;
@@ -193,7 +193,7 @@ fn test_pstd_pressure_equation_of_state() -> KwaversResult<()> {
             let error = (p - p_expected).abs();
 
             if i < 3 {
-                println!(
+                eprintln!(
                     "Step {}, point ({},{},{}): p={:.3e}, c^2*rho={:.3e}, error={:.3e}",
                     i, ix, iy, iz, p, p_expected, error
                 );
@@ -216,7 +216,7 @@ fn test_pstd_pressure_equation_of_state() -> KwaversResult<()> {
 #[test]
 fn test_pstd_fft_normalization() -> KwaversResult<()> {
     // Test 3: Verify FFT round-trip preserves values
-    println!("\n=== Test 3: FFT Normalization ===");
+    eprintln!("\n=== Test 3: FFT Normalization ===");
 
     let nx = 32;
     let ny = 32;
@@ -282,7 +282,7 @@ fn test_pstd_fft_normalization() -> KwaversResult<()> {
         energies.push(energy);
 
         if i < 5 || i % 5 == 0 {
-            println!("Step {}: Energy = {:.3e} J", i, energy);
+            eprintln!("Step {}: Energy = {:.3e} J", i, energy);
         }
     }
 
@@ -305,7 +305,7 @@ fn test_pstd_fft_normalization() -> KwaversResult<()> {
 
     // Check no exponential growth (instability)
     let growth_ratio = final_energy / energies[5].max(1e-20);
-    println!("Energy growth ratio (step 5 to end): {:.2}", growth_ratio);
+    eprintln!("Energy growth ratio (step 5 to end): {:.2}", growth_ratio);
     assert!(
         growth_ratio < 100.0,
         "Energy growing too fast (instability?): ratio = {}",
@@ -318,7 +318,7 @@ fn test_pstd_fft_normalization() -> KwaversResult<()> {
 #[test]
 fn test_pstd_source_amplitude_scaling() -> KwaversResult<()> {
     // Test 4: Verify amplitude scales linearly with source amplitude
-    println!("\n=== Test 4: Amplitude Scaling ===");
+    eprintln!("\n=== Test 4: Amplitude Scaling ===");
 
     let nx = 32;
     let ny = 32;
@@ -375,7 +375,7 @@ fn test_pstd_source_amplitude_scaling() -> KwaversResult<()> {
         }
 
         max_pressures.push(max_p);
-        println!(
+        eprintln!(
             "Source amplitude: {:.2e} Pa -> Max pressure: {:.2e} Pa",
             amplitude, max_p
         );
@@ -385,7 +385,7 @@ fn test_pstd_source_amplitude_scaling() -> KwaversResult<()> {
     for i in 1..amplitudes.len() {
         let ratio_amp = amplitudes[i] / amplitudes[i - 1];
         let ratio_p = max_pressures[i] / max_pressures[i - 1];
-        println!(
+        eprintln!(
             "Amplitude ratio: {:.2}, Pressure ratio: {:.2}",
             ratio_amp, ratio_p
         );
@@ -405,7 +405,7 @@ fn test_pstd_source_amplitude_scaling() -> KwaversResult<()> {
 #[test]
 fn test_pstd_time_reversal_symmetry() -> KwaversResult<()> {
     // Test 5: Basic causality check - pressure should be zero before source activates
-    println!("\n=== Test 5: Causality Check ===");
+    eprintln!("\n=== Test 5: Causality Check ===");
 
     let nx = 32;
     let ny = 32;
@@ -455,7 +455,7 @@ fn test_pstd_time_reversal_symmetry() -> KwaversResult<()> {
         }
     }
 
-    println!("Initial max |p|: {:.3e} Pa", max_p_initial);
+    eprintln!("Initial max |p|: {:.3e} Pa", max_p_initial);
     assert!(
         max_p_initial < 1.0,
         "Initial pressure should be near zero, got {}",
@@ -468,7 +468,7 @@ fn test_pstd_time_reversal_symmetry() -> KwaversResult<()> {
     }
 
     let p_boundary = solver.fields.p[[nx / 2, ny / 2, 0]];
-    println!("After 5 steps, p_boundary: {:.3e} Pa", p_boundary);
+    eprintln!("After 5 steps, p_boundary: {:.3e} Pa", p_boundary);
 
     assert!(
         p_boundary.abs() > 1.0,
@@ -562,7 +562,7 @@ fn test_pstd_source_timing_phase_alignment() -> KwaversResult<()> {
 
     if let (Some((idx_rec, amp_rec)), Some(idx_exp)) = (peak_recorded, peak_expected) {
         let lag = idx_rec as i32 - idx_exp as i32;
-        println!(
+        eprintln!(
             "PSTD timing diagnostic: recorded peak at step {idx_rec} (amp={amp_rec:.3e} Pa), \
              expected peak at step {idx_exp}, lag={lag:+} samples"
         );

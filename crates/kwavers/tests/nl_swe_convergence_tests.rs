@@ -287,9 +287,9 @@ impl HarmonicValidator {
         let second_harmonic_energy: f64 = final_field.u_second.iter().map(|&x| x * x).sum();
 
         // Debug output
-        println!("Fundamental energy: {:.2e}", fundamental_energy);
-        println!("Second harmonic energy: {:.2e}", second_harmonic_energy);
-        println!(
+        eprintln!("Fundamental energy: {:.2e}", fundamental_energy);
+        eprintln!("Second harmonic energy: {:.2e}", second_harmonic_energy);
+        eprintln!(
             "Max fundamental displacement: {:.2e}",
             final_field
                 .u_fundamental
@@ -297,7 +297,7 @@ impl HarmonicValidator {
                 .cloned()
                 .fold(f64::NEG_INFINITY, f64::max)
         );
-        println!(
+        eprintln!(
             "Max second harmonic displacement: {:.2e}",
             final_field
                 .u_second
@@ -617,9 +617,9 @@ mod convergence_tests {
             "Trace should be reasonable for incompressible material"
         );
 
-        println!("Ogden uniaxial compression test passed:");
-        println!("  λ₁ = {:.3}, λ₃ = {:.3}", lambda1, lambda3);
-        println!(
+        eprintln!("Ogden uniaxial compression test passed:");
+        eprintln!("  λ₁ = {:.3}, λ₃ = {:.3}", lambda1, lambda3);
+        eprintln!(
             "  σ₁₁ = {:.2e} Pa, σ₃₃ = {:.2e} Pa",
             stress[0][0], stress[2][2]
         );
@@ -971,7 +971,7 @@ mod convergence_tests {
                 _ => unreachable!(),
             }
 
-            println!("✓ {} - Max gradient: {:.2e}", description, max_gradient);
+            eprintln!("✓ {} - Max gradient: {:.2e}", description, max_gradient);
         }
     }
 
@@ -1076,7 +1076,7 @@ mod convergence_tests {
                 _ => unreachable!(),
             }
 
-            println!(
+            eprintln!(
                 "✓ Attenuation {} - RMS amp: {:.2e}, Max gradient: {:.2e}",
                 attenuation_regime, rms_amplitude, max_gradient
             );
@@ -1157,7 +1157,7 @@ mod convergence_tests {
                 );
             }
 
-            println!(
+            eprintln!(
                 "✓ β={:.3}, A={:.1e} - Shock distance: {:.1} pts, Steepening ratio: {:.2}",
                 beta, amplitude, ls_grid_points, steepening_ratio
             );

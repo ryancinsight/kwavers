@@ -20,25 +20,45 @@ use kwavers_boundary::smoothing::{
     SmoothingMethod, SubgridConfig,
 };
 use leto::Array3;
+use std::io::Write;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("╔════════════════════════════════════════════════════════════╗");
-    println!("║      Kwavers: Boundary Smoothing Example                  ║");
-    println!("╚════════════════════════════════════════════════════════════╝\n");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╔════════════════════════════════════════════════════════════╗"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "║      Kwavers: Boundary Smoothing Example                  ║"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╚════════════════════════════════════════════════════════════╝\n"
+    );
 
     // ========================================================================
     // 1. Create Curved Boundary Geometry (Spherical Transducer)
     // ========================================================================
 
-    println!("🏗️  Creating Curved Boundary:");
+    let _ = writeln!(std::io::stdout().lock(), "🏗️  Creating Curved Boundary:");
 
     let nx = 64;
     let ny = 64;
     let nz = 64;
     let dx = 0.1e-3; // 0.1 mm grid spacing
 
-    println!("  └─ Grid: {} × {} × {} cells", nx, ny, nz);
-    println!("  └─ Grid spacing: {} mm\n", dx * 1e3);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Grid: {} × {} × {} cells",
+        nx,
+        ny,
+        nz
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Grid spacing: {} mm\n",
+        dx * 1e3
+    );
 
     // Create spherical boundary (focused transducer)
     let radius = 15.0 * dx; // 1.5 mm radius
@@ -47,8 +67,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut geometry = Array3::<f64>::zeros((nx, ny, nz));
     let mut property_original = Array3::<f64>::zeros((nx, ny, nz));
 
-    println!("📐 Boundary Type: Spherical (R = {:.2} mm)", radius * 1e3);
-    println!("  └─ Center: ({}, {}, {})", center.0, center.1, center.2);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "📐 Boundary Type: Spherical (R = {:.2} mm)",
+        radius * 1e3
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Center: ({}, {}, {})",
+        center.0,
+        center.1,
+        center.2
+    );
 
     for i in 0..nx {
         for j in 0..ny {
@@ -87,7 +117,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ Boundary cells: {} ({:.1}% of total)\n",
         boundary_cells,
         (boundary_cells as f64 / (nx * ny * nz) as f64) * 100.0
@@ -97,10 +128,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 2. Measure Original Staircase Artifacts
     // ========================================================================
 
-    println!("📏 Measuring Staircase Artifacts:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "📏 Measuring Staircase Artifacts:"
+    );
 
     let original_artifacts = measure_boundary_roughness(&property_original, &geometry);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  └─ Original boundary roughness: {:.4}\n",
         original_artifacts
     );
@@ -109,9 +144,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Apply Subgrid Averaging
     // ========================================================================
 
-    println!("🔷 Method 1: Subgrid Averaging");
-    println!("  └─ Algorithm: Volume-weighted averaging");
-    println!("  └─ Kernel size: 3×3×3");
+    let _ = writeln!(std::io::stdout().lock(), "🔷 Method 1: Subgrid Averaging");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Algorithm: Volume-weighted averaging"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  └─ Kernel size: 3×3×3");
 
     let subgrid_config = BoundarySmoothingConfig {
         method: SmoothingMethod::Subgrid,
@@ -131,16 +169,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let subgrid_improvement =
         ((original_artifacts - subgrid_artifacts) / original_artifacts) * 100.0;
 
-    println!("  └─ Smoothed roughness: {:.4}", subgrid_artifacts);
-    println!("  └─ Improvement: {:.1}%\n", subgrid_improvement);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Smoothed roughness: {:.4}",
+        subgrid_artifacts
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Improvement: {:.1}%\n",
+        subgrid_improvement
+    );
 
     // ========================================================================
     // 4. Apply Ghost Cell Method
     // ========================================================================
 
-    println!("👻 Method 2: Ghost Cell Extrapolation");
-    println!("  └─ Algorithm: Polynomial extrapolation");
-    println!("  └─ Order: 2 (quadratic)");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "👻 Method 2: Ghost Cell Extrapolation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Algorithm: Polynomial extrapolation"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  └─ Order: 2 (quadratic)");
 
     let ghost_cell_config = BoundarySmoothingConfig {
         method: SmoothingMethod::GhostCell,
@@ -158,16 +210,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ghost_artifacts = measure_boundary_roughness(&property_ghost, &geometry);
     let ghost_improvement = ((original_artifacts - ghost_artifacts) / original_artifacts) * 100.0;
 
-    println!("  └─ Smoothed roughness: {:.4}", ghost_artifacts);
-    println!("  └─ Improvement: {:.1}%\n", ghost_improvement);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Smoothed roughness: {:.4}",
+        ghost_artifacts
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Improvement: {:.1}%\n",
+        ghost_improvement
+    );
 
     // ========================================================================
     // 5. Apply Immersed Interface Method
     // ========================================================================
 
-    println!("🔬 Method 3: Immersed Interface Method");
-    println!("  └─ Algorithm: Modified finite-difference stencils");
-    println!("  └─ Jump condition: Continuous");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🔬 Method 3: Immersed Interface Method"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Algorithm: Modified finite-difference stencils"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "  └─ Jump condition: Continuous");
 
     let iim_config = BoundarySmoothingConfig {
         method: SmoothingMethod::ImmersedInterface,
@@ -185,46 +251,97 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let iim_artifacts = measure_boundary_roughness(&property_iim, &geometry);
     let iim_improvement = ((original_artifacts - iim_artifacts) / original_artifacts) * 100.0;
 
-    println!("  └─ Smoothed roughness: {:.4}", iim_artifacts);
-    println!("  └─ Improvement: {:.1}%\n", iim_improvement);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Smoothed roughness: {:.4}",
+        iim_artifacts
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  └─ Improvement: {:.1}%\n",
+        iim_improvement
+    );
 
     // ========================================================================
     // 6. Comparison Summary
     // ========================================================================
 
-    println!("📊 Comparison Summary:");
-    println!("┌─────────────────────────────┬───────────┬────────────────┐");
-    println!("│ Method                      │ Roughness │ Improvement    │");
-    println!("├─────────────────────────────┼───────────┼────────────────┤");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "📊 Comparison Summary:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "┌─────────────────────────────┬───────────┬────────────────┐"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "│ Method                      │ Roughness │ Improvement    │"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "├─────────────────────────────┼───────────┼────────────────┤"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "│ Original (Staircase)        │  {:.4}   │      —         │",
         original_artifacts
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "│ Subgrid Averaging           │  {:.4}   │   {:>5.1}%      │",
-        subgrid_artifacts, subgrid_improvement
+        subgrid_artifacts,
+        subgrid_improvement
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "│ Ghost Cell Extrapolation    │  {:.4}   │   {:>5.1}%      │",
-        ghost_artifacts, ghost_improvement
+        ghost_artifacts,
+        ghost_improvement
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "│ Immersed Interface Method   │  {:.4}   │   {:>5.1}%      │",
-        iim_artifacts, iim_improvement
+        iim_artifacts,
+        iim_improvement
     );
-    println!("└─────────────────────────────┴───────────┴────────────────┘");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "└─────────────────────────────┴───────────┴────────────────┘"
+    );
 
-    println!("\n✅ Boundary smoothing complete!");
-    println!("\n💡 Application Benefits:");
-    println!("  • Reduced spurious reflections from grid edges");
-    println!("  • Improved accuracy for curved transducers");
-    println!("  • Better convergence in simulations");
-    println!("  • Enhanced image quality in ultrasound");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n✅ Boundary smoothing complete!"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "\n💡 Application Benefits:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  • Reduced spurious reflections from grid edges"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  • Improved accuracy for curved transducers"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  • Better convergence in simulations"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  • Enhanced image quality in ultrasound"
+    );
 
-    println!("\n📚 References:");
-    println!("  • LeVeque & Li (1994) - Immersed Interface Method");
-    println!("  • Mittal & Iaccarino (2005) - Immersed Boundary Methods");
-    println!("  • Treeby et al. (2012) - k-Wave smoothing techniques");
+    let _ = writeln!(std::io::stdout().lock(), "\n📚 References:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  • LeVeque & Li (1994) - Immersed Interface Method"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  • Mittal & Iaccarino (2005) - Immersed Boundary Methods"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  • Treeby et al. (2012) - k-Wave smoothing techniques"
+    );
 
     Ok(())
 }

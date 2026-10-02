@@ -27,6 +27,7 @@ use focused_water_tank_common::{
     run_comparison, write_metrics_csv, write_plot, write_profiles_csv, OUT_DIR,
 };
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 
 fn main() -> Result<()> {
@@ -42,16 +43,34 @@ fn main() -> Result<()> {
     write_metrics_csv(&metrics_path, &output)?;
     write_profiles_csv(&profiles_path, &output)?;
 
-    println!("Focused ultrasound water-tank comparison");
-    println!("png: {}", png_path.display());
-    println!("metrics: {}", metrics_path.display());
-    println!("profiles: {}", profiles_path.display());
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "Focused ultrasound water-tank comparison"
+    );
+    let _ = writeln!(std::io::stdout().lock(), "png: {}", png_path.display());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "metrics: {}",
+        metrics_path.display()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "profiles: {}",
+        profiles_path.display()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<10} {:>12} {:>12} {:>12} {:>12} {:>12}",
-        "field", "focus_mm", "peak_x", "peak_y", "lat_fwhm", "ax_fwhm"
+        "field",
+        "focus_mm",
+        "peak_x",
+        "peak_y",
+        "lat_fwhm",
+        "ax_fwhm"
     );
     for metric in &output.solver_metrics {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "{:<10} {:>12.4} {:>12.3} {:>12.3} {:>12.4} {:>12.4}",
             metric.name,
             metric.focus_error_mm,
@@ -61,20 +80,34 @@ fn main() -> Result<()> {
             metric.axial_fwhm_mm
         );
     }
-    println!();
-    println!("{:<20} {:>14} {:>14}", "pair", "norm_l2", "corr");
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<20} {:>14} {:>14}",
+        "pair",
+        "norm_l2",
+        "corr"
+    );
     for pair in &output.pairwise_metrics {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "{:<20} {:>14.6e} {:>14.6}",
             format!("{} vs {}", pair.lhs, pair.rhs),
             pair.normalized_l2,
             pair.correlation
         );
     }
-    println!();
-    println!("{:<20} {:>14} {:>14}", "axial pair", "norm_l2", "corr");
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<20} {:>14} {:>14}",
+        "axial pair",
+        "norm_l2",
+        "corr"
+    );
     for pair in &output.axial_pairwise_metrics {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "{:<20} {:>14.6e} {:>14.6}",
             format!("{} vs {}", pair.lhs, pair.rhs),
             pair.normalized_l2,

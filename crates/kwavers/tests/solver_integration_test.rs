@@ -67,5 +67,5 @@ fn test_kspace_solver_init_and_step() {
 
     // Check peak pressure moved or changed (very basic)
     let center_val = p_field[[cx, cy, cz]];
-    println!("Center pressure after 10 steps: {}", center_val);
+    eprintln!("Center pressure after 10 steps: {}", center_val);
 }

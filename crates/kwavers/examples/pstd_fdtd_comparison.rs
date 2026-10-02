@@ -39,6 +39,7 @@ use kwavers_solver::interface::solver::Solver;
 use kwavers_source::{GridSource, SourceMode};
 use leto::Array3 as NdArray3;
 use leto::Array3 as LetoArray3;
+use std::io::Write;
 use std::time::{Duration, Instant};
 
 const NX: usize = 16;
@@ -55,14 +56,21 @@ fn main() -> KwaversResult<()> {
     let medium = HomogeneousMedium::new(RHO0, C0, 0.0, 0.0, &grid);
     let dt = CFL * DX / C0;
 
-    println!("FDTD/PSTD pressure-field comparison");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "FDTD/PSTD pressure-field comparison"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "grid: {NX}^3, dx: {:.3} mm, dt: {:.3} ns, steps: {NT}",
         DX * 1e3,
         dt * 1e9
     );
-    println!("problem: homogeneous lossless Gaussian IVP, zero initial dp/dt");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "problem: homogeneous lossless Gaussian IVP, zero initial dp/dt"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     let fdtd = run_fdtd("FDTD", KSpaceCorrectionMode::None, &grid, &medium, dt, NT)?;
     let fdtd_kspace = run_fdtd(
@@ -98,17 +106,27 @@ fn main() -> KwaversResult<()> {
     print_comparison_table(&[fdtd_vs_pstd, kspace_vs_pstd, fdtd_vs_kspace]);
 
     let improvement = fdtd_vs_pstd.relative_l2 / kspace_vs_pstd.relative_l2.max(1.0e-12);
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
     if kspace_vs_pstd.relative_l2 < 1.0e-12 {
-        println!("alignment: k-space FDTD matches PSTD to machine precision on this fixture");
-        println!("relative-L2 improvement lower bound vs classical FDTD = {improvement:.3e}x");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "alignment: k-space FDTD matches PSTD to machine precision on this fixture"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "relative-L2 improvement lower bound vs classical FDTD = {improvement:.3e}x"
+        );
     } else {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "alignment: k-space FDTD relative-L2 improvement vs PSTD = {:.3}x",
             improvement
         );
     }
-    println!("interpretation: values > 1 mean the spectral FDTD derivative path is closer to PSTD");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "interpretation: values > 1 mean the spectral FDTD derivative path is closer to PSTD"
+    );
 
     Ok(())
 }
@@ -403,13 +421,18 @@ fn energy_centroid_cells(field: &LetoArray3<f64>) -> (f64, f64, f64) {
 }
 
 fn print_run_summary(runs: &[RunSummary]) {
-    println!("solver run summary");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "solver run summary");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<14} {:>12} {:>16} {:>16}",
-        "solver", "time_ms", "||p||_2", "max|p|"
+        "solver",
+        "time_ms",
+        "||p||_2",
+        "max|p|"
     );
     for run in runs {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "{:<14} {:>12.3} {:>16.6e} {:>16.6e}",
             run.name,
             run.elapsed.as_secs_f64() * 1e3,
@@ -417,17 +440,24 @@ fn print_run_summary(runs: &[RunSummary]) {
             run.peak_abs
         );
     }
-    println!();
+    let _ = writeln!(std::io::stdout().lock());
 }
 
 fn print_comparison_table(comparisons: &[Comparison]) {
-    println!("pairwise final-pressure metrics");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "pairwise final-pressure metrics");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<27} {:>12} {:>12} {:>12} {:>12} {:>14}",
-        "pair", "rel_l2", "max_rel", "corr", "energy", "centroid_dx"
+        "pair",
+        "rel_l2",
+        "max_rel",
+        "corr",
+        "energy",
+        "centroid_dx"
     );
     for comparison in comparisons {
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "{:<27} {:>12.5e} {:>12.5e} {:>12.6} {:>12.6} {:>14.6}",
             format!("{} vs {}", comparison.lhs, comparison.rhs),
             comparison.relative_l2,

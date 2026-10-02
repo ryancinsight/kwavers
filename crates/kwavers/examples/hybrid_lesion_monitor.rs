@@ -27,6 +27,7 @@ use kwavers::theranostic::monitor::{
 };
 use kwavers_core::error::KwaversResult;
 use leto::{Array2, Array3};
+use std::io::Write;
 
 const N: usize = 12; // slice pixels per side
 const SPACING_M: f64 = 1.0e-3;
@@ -102,9 +103,18 @@ fn to_2d_dc(recon_dc: &Array3<f64>) -> Array2<f64> {
 }
 
 fn main() -> KwaversResult<()> {
-    println!("╔════════════════════════════════════════════════════════════╗");
-    println!("║  Hybrid lesion monitor — FD-CBS + PAM + fusion (real-time)   ║");
-    println!("╚════════════════════════════════════════════════════════════╝");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╔════════════════════════════════════════════════════════════╗"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "║  Hybrid lesion monitor — FD-CBS + PAM + fusion (real-time)   ║"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "╚════════════════════════════════════════════════════════════╝"
+    );
 
     let cfg = fd::FdMonitorConfig {
         ring_elements: RING_ELEMENTS,
@@ -156,8 +166,14 @@ fn main() -> KwaversResult<()> {
 
     let background = background_slice();
 
-    println!("\n  frame | lesion r | recon centre Δc | PAM peak px | fused extent");
-    println!("  ------+----------+-----------------+-------------+-------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  frame | lesion r | recon centre Δc | PAM peak px | fused extent"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  ------+----------+-----------------+-------------+-------------"
+    );
     for frame in 0..N_FRAMES {
         // Lesion grows from 0.6 to ~2.6 voxels across frames.
         let radius = 0.6 + frame as f64 * 0.5;
@@ -188,9 +204,15 @@ fn main() -> KwaversResult<()> {
         let fused = fuse_lesion_map(&quant, &passive, FusionWeights::default())?;
         let extent = lesion_extent(&fused.agreement, 0.5);
 
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "   {:3}  | {:8.2} | {:15.2} | ({:2},{:2})    | {:11}",
-            frame, radius, centre_dc, pi, pj, extent
+            frame,
+            radius,
+            centre_dc,
+            pi,
+            pj,
+            extent
         );
         write_png(
             &format!("hybrid_lesion_frame{frame:02}.png"),
@@ -198,8 +220,17 @@ fn main() -> KwaversResult<()> {
         );
     }
 
-    println!("\n  Wrote {N_FRAMES} fused lesion-image frames (hybrid_lesion_frameNN.png).");
-    println!("  Quantitative Δc from FD-CBS full-wave inversion; source confirmed by");
-    println!("  PAM; fused agreement is the lesion the monitor reports growing.");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  Wrote {N_FRAMES} fused lesion-image frames (hybrid_lesion_frameNN.png)."
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Quantitative Δc from FD-CBS full-wave inversion; source confirmed by"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  PAM; fused agreement is the lesion the monitor reports growing."
+    );
     Ok(())
 }

@@ -1,5 +1,6 @@
 use eunomia::Complex64;
 use std::f64::consts::PI;
+use std::io::Write;
 
 fn main() {
     let n = 64usize;
@@ -70,6 +71,11 @@ fn main() {
                 max_rel_err = rel;
             }
         }
-        println!("tau={:.3}: max rel err = {:.3e}", tau, max_rel_err);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "tau={:.3}: max rel err = {:.3e}",
+            tau,
+            max_rel_err
+        );
     }
 }

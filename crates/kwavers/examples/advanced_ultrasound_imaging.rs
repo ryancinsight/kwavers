@@ -14,10 +14,17 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::advanced::{
     UltrasoundPlaneWaveConfig,
 };
 use leto::{Array1, Array2, Array3};
+use std::io::Write;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🩺 Advanced Ultrasound Imaging Demonstration");
-    println!("===========================================");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🩺 Advanced Ultrasound Imaging Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "==========================================="
+    );
 
     // Demonstrate synthetic aperture imaging
     demonstrate_synthetic_aperture()?;
@@ -28,16 +35,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Demonstrate coded excitation
     demonstrate_coded_excitation()?;
 
-    println!("\n✅ Advanced ultrasound imaging demonstration completed!");
-    println!("   Demonstrated: Synthetic aperture, plane wave imaging, coded excitation");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n✅ Advanced ultrasound imaging demonstration completed!"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Demonstrated: Synthetic aperture, plane wave imaging, coded excitation"
+    );
 
     Ok(())
 }
 
 /// Demonstrate synthetic aperture imaging
 fn demonstrate_synthetic_aperture() -> Result<(), Box<dyn std::error::Error>> {
-    println!("\n🎯 Synthetic Aperture (SA) Imaging Demonstration");
-    println!("-----------------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🎯 Synthetic Aperture (SA) Imaging Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "-----------------------------------------------"
+    );
 
     // Configure SA imaging
     let sa_config = SyntheticApertureConfig {
@@ -50,14 +69,27 @@ fn demonstrate_synthetic_aperture() -> Result<(), Box<dyn std::error::Error>> {
         num_tx_angles: 1,
     };
 
-    println!("SA Configuration:");
-    println!("  TX Elements: {}", sa_config.num_tx_elements);
-    println!("  RX Elements: {}", sa_config.num_rx_elements);
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "SA Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  TX Elements: {}",
+        sa_config.num_tx_elements
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  RX Elements: {}",
+        sa_config.num_rx_elements
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Element Spacing: {:.1} mm",
         sa_config.element_spacing * 1e3
     );
-    println!("  Center Frequency: {:.1} MHz", sa_config.frequency / 1e6);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Center Frequency: {:.1} MHz",
+        sa_config.frequency / 1e6
+    );
 
     // Create SA reconstruction processor
     let sa_reconstruction = SyntheticApertureReconstruction::new(sa_config.clone());
@@ -68,7 +100,10 @@ fn demonstrate_synthetic_aperture() -> Result<(), Box<dyn std::error::Error>> {
     let n_rx = sa_config.num_rx_elements;
     let n_tx = sa_config.num_tx_elements;
 
-    println!("  Generating synthetic RF data...");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Generating synthetic RF data..."
+    );
     let rf_data = generate_synthetic_sa_rf_data(n_samples, n_rx, n_tx, &sa_config);
 
     // Create image grid
@@ -77,32 +112,55 @@ fn demonstrate_synthetic_aperture() -> Result<(), Box<dyn std::error::Error>> {
     let image_depth = 50e-3; // 50mm depth
     let image_grid = create_image_grid(image_width, image_height, image_depth);
 
-    println!("  Reconstructing SA image...");
+    let _ = writeln!(std::io::stdout().lock(), "  Reconstructing SA image...");
     let sa_image = sa_reconstruction.reconstruct(&rf_data, &image_grid);
 
     // Analyze image quality
     let image_stats = analyze_image_quality(&sa_image);
-    println!("  SA Image Statistics:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "  SA Image Statistics:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    Image Size: {} x {}",
         sa_image.shape()[0],
         sa_image.shape()[1]
     );
-    println!("    Max Value: {:.3}", image_stats.max_value);
-    println!("    Mean Value: {:.3}", image_stats.mean_value);
-    println!("    Dynamic Range: {:.1} dB", image_stats.dynamic_range);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Max Value: {:.3}",
+        image_stats.max_value
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Mean Value: {:.3}",
+        image_stats.mean_value
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Dynamic Range: {:.1} dB",
+        image_stats.dynamic_range
+    );
 
     // SA provides excellent resolution but requires many transmissions
     let total_transmissions = sa_config.num_tx_elements * sa_config.num_rx_elements;
-    println!("    Total TX-RX Pairs: {}", total_transmissions);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Total TX-RX Pairs: {}",
+        total_transmissions
+    );
 
     Ok(())
 }
 
 /// Demonstrate plane wave imaging with multi-angle compounding
 fn demonstrate_plane_wave_imaging() -> Result<(), Box<dyn std::error::Error>> {
-    println!("\n🌊 Plane Wave Imaging (PWI) with Compounding");
-    println!("-------------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n🌊 Plane Wave Imaging (PWI) with Compounding"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "-------------------------------------------"
+    );
 
     // Configure plane wave imaging
     let base_config = UltrasoundPlaneWaveConfig {
@@ -123,16 +181,33 @@ fn demonstrate_plane_wave_imaging() -> Result<(), Box<dyn std::error::Error>> {
         20.0f64.to_radians(),  // 20 degrees
     ];
 
-    println!("PWI Configuration:");
-    println!("  Elements: {}", base_config.num_elements);
-    println!("  Compounding Angles: {}", angles.len());
-    println!("  Frequency: {:.1} MHz", base_config.frequency / 1e6);
+    let _ = writeln!(std::io::stdout().lock(), "PWI Configuration:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Elements: {}",
+        base_config.num_elements
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Compounding Angles: {}",
+        angles.len()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Frequency: {:.1} MHz",
+        base_config.frequency / 1e6
+    );
 
     // Create individual plane wave reconstructions
     let mut pw_images = Vec::new();
 
     for (i, &angle) in angles.iter().enumerate() {
-        println!("  Processing angle {}: {:.0}°", i + 1, angle.to_degrees());
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Processing angle {}: {:.0}°",
+            i + 1,
+            angle.to_degrees()
+        );
 
         let pw_config = UltrasoundPlaneWaveConfig {
             tx_angle: angle,
@@ -156,7 +231,11 @@ fn demonstrate_plane_wave_imaging() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Perform multi-angle compounding
-    println!("  Compounding {} angle images...", angles.len());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Compounding {} angle images...",
+        angles.len()
+    );
 
     let pw_compounding = PlaneWaveCompounding::new(&angles, base_config);
     let compounded_images = Array3::from_shape_vec(
@@ -172,27 +251,50 @@ fn demonstrate_plane_wave_imaging() -> Result<(), Box<dyn std::error::Error>> {
 
     // Analyze compounded image
     let image_stats = analyze_image_quality(&compounded_image);
-    println!("  Compounded Image Statistics:");
-    println!(
+    let _ = writeln!(std::io::stdout().lock(), "  Compounded Image Statistics:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "    Image Size: {} x {}",
         compounded_image.shape()[0],
         compounded_image.shape()[1]
     );
-    println!("    Max Value: {:.3}", image_stats.max_value);
-    println!("    Mean Value: {:.3}", image_stats.mean_value);
-    println!("    Dynamic Range: {:.1} dB", image_stats.dynamic_range);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Max Value: {:.3}",
+        image_stats.max_value
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Mean Value: {:.3}",
+        image_stats.mean_value
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Dynamic Range: {:.1} dB",
+        image_stats.dynamic_range
+    );
 
     // PWI provides high frame rates with good image quality through compounding
     let frame_rate = 1.0 / (angles.len() as f64 * 100e-6); // Assuming 100μs per angle
-    println!("    Estimated Frame Rate: {:.0} fps", frame_rate);
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "    Estimated Frame Rate: {:.0} fps",
+        frame_rate
+    );
 
     Ok(())
 }
 
 /// Demonstrate coded excitation with pulse compression
 fn demonstrate_coded_excitation() -> Result<(), Box<dyn std::error::Error>> {
-    println!("\n📡 Coded Excitation with Pulse Compression");
-    println!("-----------------------------------------");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n📡 Coded Excitation with Pulse Compression"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "-----------------------------------------"
+    );
 
     // Configure coded excitation
     let codes: Vec<(&str, ExcitationCode)> = vec![
@@ -209,7 +311,7 @@ fn demonstrate_coded_excitation() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (name, code) in codes {
-        println!("  Testing {} Code:", name);
+        let _ = writeln!(std::io::stdout().lock(), "  Testing {} Code:", name);
 
         let config = CodedExcitationConfig {
             code: code.clone(),
@@ -221,11 +323,16 @@ fn demonstrate_coded_excitation() -> Result<(), Box<dyn std::error::Error>> {
 
         // Generate excitation code
         let excitation_code = processor.generate_code();
-        println!("    Code Length: {} samples", excitation_code.len());
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "    Code Length: {} samples",
+            excitation_code.len()
+        );
 
         // Calculate theoretical SNR improvement
         let snr_improvement = processor.theoretical_snr_improvement();
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Theoretical SNR Improvement: {:.1} dB",
             20.0 * snr_improvement.log10()
         );
@@ -238,15 +345,18 @@ fn demonstrate_coded_excitation() -> Result<(), Box<dyn std::error::Error>> {
 
         // Analyze compression results
         let compression_stats = analyze_pulse_compression(&received_signal, &compressed_signal);
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Compression Ratio: {:.1}",
             compression_stats.compression_ratio
         );
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Peak Sidelobe Level: {:.1} dB",
             compression_stats.peak_sidelobe_db
         );
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Main Lobe Width: {:.0} samples",
             compression_stats.main_lobe_width
         );

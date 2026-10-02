@@ -1,6 +1,7 @@
 //! Value-semantic reconstruction metrics for the transcranial demonstration.
 
 use leto::Array3;
+use std::io::Write;
 
 /// Print model error metrics and return the unnormalised squared L2 error.
 pub(crate) fn print_quality_report(true_model: &Array3<f64>, reconstructed: &Array3<f64>) -> f64 {
@@ -40,14 +41,30 @@ pub(crate) fn print_quality_report(true_model: &Array3<f64>, reconstructed: &Arr
         / count
         * 100.0;
 
-    println!("  RMSE            : {rmse:8.1} m/s");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  RMSE            : {rmse:8.1} m/s"
+    );
     if denominator > f64::EPSILON {
-        println!("  Pearson r       : {:8.4}", covariance / denominator);
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Pearson r       : {:8.4}",
+            covariance / denominator
+        );
     } else {
-        println!("  Pearson r       :      N/A  (uniform model — undefined)");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  Pearson r       :      N/A  (uniform model — undefined)"
+        );
     }
-    println!("  Max |error|     : {maximum_error:8.1} m/s");
-    println!("  Voxels ±100 m/s : {within_100:7.1} %");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Max |error|     : {maximum_error:8.1} m/s"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Voxels ±100 m/s : {within_100:7.1} %"
+    );
     l2
 }
 

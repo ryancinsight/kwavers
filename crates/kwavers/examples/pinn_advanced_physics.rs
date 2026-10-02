@@ -36,199 +36,410 @@
 //! cargo run --example pinn_advanced_physics -- --all
 //! ```
 
+use std::io::Write;
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
 mod physics_demo {
     /// Demonstrate Navier-Stokes fluid dynamics
     pub fn demonstrate_navier_stokes() {
-        println!("🌊 Navier-Stokes Fluid Dynamics PINN");
-        println!("===================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🌊 Navier-Stokes Fluid Dynamics PINN"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "==================================="
+        );
 
-        println!("📐 Mathematical Formulation:");
-        println!("   ∂u/∂t + u·∇u = -∇p/ρ + ν∇²u  (Momentum)");
-        println!("   ∇·u = 0                         (Continuity)");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📐 Mathematical Formulation:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ∂u/∂t + u·∇u = -∇p/ρ + ν∇²u  (Momentum)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ∇·u = 0                         (Continuity)"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🔬 PINN Implementation:");
-        println!("   ✅ Incompressible flow assumption");
-        println!("   ✅ Pressure-velocity coupling");
-        println!("   ✅ Turbulence closure modeling");
-        println!("   ✅ Boundary condition enforcement");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🔬 PINN Implementation:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Incompressible flow assumption"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Pressure-velocity coupling");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Turbulence closure modeling"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Boundary condition enforcement"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🏗️  Validation Cases:");
-        println!("   ✅ Lid-driven cavity flow");
-        println!("   ✅ Channel flow with obstacles");
-        println!("   ✅ Boundary layer development");
-        println!("   ✅ Turbulent wake formation");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🏗️  Validation Cases:");
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Lid-driven cavity flow");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Channel flow with obstacles"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Boundary layer development");
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Turbulent wake formation");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📊 Performance Metrics:");
-        println!("   • Reynolds number range: 10² - 10⁶");
-        println!("   • CFD accuracy: >95% vs reference solutions");
-        println!("   • Training time: <2 minutes for convergence");
-        println!("   • Memory usage: 2.8GB for 3D domains");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📊 Performance Metrics:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Reynolds number range: 10² - 10⁶"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • CFD accuracy: >95% vs reference solutions"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Training time: <2 minutes for convergence"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Memory usage: 2.8GB for 3D domains"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate heat transfer physics
     pub fn demonstrate_heat_transfer() {
-        println!("🔥 Multi-Physics Heat Transfer PINN");
-        println!("===================================");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "🔥 Multi-Physics Heat Transfer PINN"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "==================================="
+        );
 
-        println!("📐 Mathematical Formulation:");
-        println!("   ρc∂T/∂t = ∇·(k∇T) + Q̇         (Energy)");
-        println!("   -k∇T·n̂ = h(T-T∞) + σ(T⁴-T∞⁴)  (BC)");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📐 Mathematical Formulation:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ρc∂T/∂t = ∇·(k∇T) + Q̇         (Energy)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   -k∇T·n̂ = h(T-T∞) + σ(T⁴-T∞⁴)  (BC)"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🔬 PINN Implementation:");
-        println!("   ✅ Conduction, convection, radiation");
-        println!("   ✅ Multi-material interface coupling");
-        println!("   ✅ Phase change and latent heat");
-        println!("   ✅ Non-linear thermal properties");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🔬 PINN Implementation:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Conduction, convection, radiation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Multi-material interface coupling"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Phase change and latent heat"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Non-linear thermal properties"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🏗️  Validation Cases:");
-        println!("   ✅ Heat conduction in composite materials");
-        println!("   ✅ Natural convection in enclosures");
-        println!("   ✅ Conjugate heat transfer (solid-fluid)");
-        println!("   ✅ Thermal shock and transient heating");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🏗️  Validation Cases:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Heat conduction in composite materials"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Natural convection in enclosures"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Conjugate heat transfer (solid-fluid)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Thermal shock and transient heating"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📊 Performance Metrics:");
-        println!("   • Temperature range: 0°C - 2000°C");
-        println!("   • FEM accuracy: >98% vs finite element");
-        println!("   • Multi-physics speedup: 15× vs coupled solvers");
-        println!("   • Memory usage: 0.9GB for complex geometries");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📊 Performance Metrics:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Temperature range: 0°C - 2000°C"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • FEM accuracy: >98% vs finite element"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Multi-physics speedup: 15× vs coupled solvers"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Memory usage: 0.9GB for complex geometries"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate structural mechanics
     pub fn demonstrate_structural_mechanics() {
-        println!("🏗️  Structural Mechanics PINN");
-        println!("============================");
+        let _ = writeln!(std::io::stdout().lock(), "🏗️  Structural Mechanics PINN");
+        let _ = writeln!(std::io::stdout().lock(), "============================");
 
-        println!("📐 Mathematical Formulation:");
-        println!("   ∇·σ + b = ρ∂²u/∂t²              (Momentum)");
-        println!("   σ = C:ε                          (Constitutive)");
-        println!("   ε = ∇ˢu                          (Kinematics)");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📐 Mathematical Formulation:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ∇·σ + b = ρ∂²u/∂t²              (Momentum)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   σ = C:ε                          (Constitutive)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ε = ∇ˢu                          (Kinematics)"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🔬 PINN Implementation:");
-        println!("   ✅ Linear and nonlinear elasticity");
-        println!("   ✅ Plasticity models (von Mises, Drucker-Prager)");
-        println!("   ✅ Contact mechanics and friction");
-        println!("   ✅ Dynamic loading and damping");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🔬 PINN Implementation:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Linear and nonlinear elasticity"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Plasticity models (von Mises, Drucker-Prager)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Contact mechanics and friction"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Dynamic loading and damping"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🏗️  Validation Cases:");
-        println!("   ✅ Cantilever beam deflection");
-        println!("   ✅ Plate with hole (stress concentration)");
-        println!("   ✅ Impact loading and wave propagation");
-        println!("   ✅ Thermal stress in composites");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🏗️  Validation Cases:");
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Cantilever beam deflection");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Plate with hole (stress concentration)"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Impact loading and wave propagation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Thermal stress in composites"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📊 Performance Metrics:");
-        println!("   • FEA accuracy: >92% vs finite element");
-        println!("   • Geometric nonlinearity: Large deformation");
-        println!("   • Training time: <3 minutes for convergence");
-        println!("   • Memory usage: 1.9GB for 3D structures");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📊 Performance Metrics:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • FEA accuracy: >92% vs finite element"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Geometric nonlinearity: Large deformation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Training time: <3 minutes for convergence"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Memory usage: 1.9GB for 3D structures"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate multi-physics coupling
     pub fn demonstrate_multi_physics() {
-        println!("🔗 Multi-Physics Coupling");
-        println!("========================");
+        let _ = writeln!(std::io::stdout().lock(), "🔗 Multi-Physics Coupling");
+        let _ = writeln!(std::io::stdout().lock(), "========================");
 
-        println!("🌊 Fluid-Structure Interaction:");
-        println!("   ✅ Fluid forces on elastic structures");
-        println!("   ✅ Deforming boundaries and meshes");
-        println!("   ✅ Added mass and damping effects");
-        println!("   ✅ Stability and convergence analysis");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🌊 Fluid-Structure Interaction:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Fluid forces on elastic structures"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Deforming boundaries and meshes"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Added mass and damping effects"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Stability and convergence analysis"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🔥 Thermo-Mechanical Coupling:");
-        println!("   ✅ Thermal expansion and stresses");
-        println!("   ✅ Heat generation from deformation");
-        println!("   ✅ Phase transformation effects");
-        println!("   ✅ Multi-scale coupling strategies");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🔥 Thermo-Mechanical Coupling:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Thermal expansion and stresses"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Heat generation from deformation"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Phase transformation effects"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Multi-scale coupling strategies"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("⚡ Electro-Thermo-Mechanical Coupling:");
-        println!("   ✅ Joule heating effects");
-        println!("   ✅ Piezoelectric coupling");
-        println!("   ✅ Thermal runaway prevention");
-        println!("   ✅ Multi-field constitutive models");
-        println!();
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "⚡ Electro-Thermo-Mechanical Coupling:"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Joule heating effects");
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Piezoelectric coupling");
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Thermal runaway prevention");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Multi-field constitutive models"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📊 Coupling Performance:");
-        println!("   • Coupling efficiency: 85-95% vs monolithic");
-        println!("   • Memory overhead: +25-55% vs single physics");
-        println!("   • Accuracy preservation: >90% vs reference");
-        println!("   • Parallel scaling: 12-18× speedup");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📊 Coupling Performance:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Coupling efficiency: 85-95% vs monolithic"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Memory overhead: +25-55% vs single physics"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Accuracy preservation: >90% vs reference"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Parallel scaling: 12-18× speedup"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 
     /// Demonstrate industrial applications
     pub fn demonstrate_industrial_applications() {
-        println!("🏭 Industrial Applications");
-        println!("========================");
+        let _ = writeln!(std::io::stdout().lock(), "🏭 Industrial Applications");
+        let _ = writeln!(std::io::stdout().lock(), "========================");
 
-        println!("🚗 Automotive Engineering:");
-        println!("   ✅ Aerodynamic drag optimization");
-        println!("   ✅ Engine cooling system design");
-        println!("   ✅ Crashworthiness analysis");
-        println!("   ✅ NVH (Noise/Vibration/Harshness)");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🚗 Automotive Engineering:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Aerodynamic drag optimization"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Engine cooling system design"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Crashworthiness analysis");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ NVH (Noise/Vibration/Harshness)"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("✈️  Aerospace Applications:");
-        println!("   ✅ Hypersonic vehicle design");
-        println!("   ✅ Turbomachinery optimization");
-        println!("   ✅ Composite structure analysis");
-        println!("   ✅ Thermal protection systems");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "✈️  Aerospace Applications:");
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Hypersonic vehicle design");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Turbomachinery optimization"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Composite structure analysis"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Thermal protection systems");
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("🏗️  Civil Engineering:");
-        println!("   ✅ Earthquake-resistant design");
-        println!("   ✅ Wind load analysis");
-        println!("   ✅ Soil-structure interaction");
-        println!("   ✅ Bridge dynamics and stability");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "🏗️  Civil Engineering:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Earthquake-resistant design"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Wind load analysis");
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Soil-structure interaction");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Bridge dynamics and stability"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("⚡ Energy Applications:");
-        println!("   ✅ Wind turbine blade optimization");
-        println!("   ✅ Nuclear reactor thermal analysis");
-        println!("   ✅ Battery thermal management");
-        println!("   ✅ Fuel cell performance modeling");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "⚡ Energy Applications:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Wind turbine blade optimization"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Nuclear reactor thermal analysis"
+        );
+        let _ = writeln!(std::io::stdout().lock(), "   ✅ Battery thermal management");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   ✅ Fuel cell performance modeling"
+        );
+        let _ = writeln!(std::io::stdout().lock());
 
-        println!("📊 Industrial Impact:");
-        println!("   • Design cycle reduction: 70-90%");
-        println!("   • Prototyping cost savings: 50-80%");
-        println!("   • Performance optimization: 10-30% improvement");
-        println!("   • Time-to-market acceleration: 3-6 months");
-        println!();
+        let _ = writeln!(std::io::stdout().lock(), "📊 Industrial Impact:");
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Design cycle reduction: 70-90%"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Prototyping cost savings: 50-80%"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Performance optimization: 10-30% improvement"
+        );
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "   • Time-to-market acceleration: 3-6 months"
+        );
+        let _ = writeln!(std::io::stdout().lock());
     }
 }
 
 #[cfg(not(feature = "pinn"))]
 mod physics_demo {
     pub fn demonstrate_navier_stokes() {
-        println!("❌ PINN feature not enabled. Use --features pinn to enable physics domains.");
+        eprintln!("❌ PINN feature not enabled. Use --features pinn to enable physics domains.");
     }
     pub fn demonstrate_heat_transfer() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_structural_mechanics() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_multi_physics() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
     pub fn demonstrate_industrial_applications() {
-        println!("❌ PINN feature not enabled.");
+        eprintln!("❌ PINN feature not enabled.");
     }
 }
 
@@ -236,12 +447,24 @@ fn main() {
     let start_time = Instant::now();
     let args: Vec<String> = std::env::args().collect();
 
-    println!("🌊 Advanced Physics Domains PINN Demonstration");
-    println!("=============================================");
-    println!();
-    println!("🔬 Exploring: Navier-Stokes • Heat Transfer • Structural Mechanics");
-    println!("   Applications: Aerospace • Automotive • Civil Engineering • Energy");
-    println!();
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🌊 Advanced Physics Domains PINN Demonstration"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "============================================="
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🔬 Exploring: Navier-Stokes • Heat Transfer • Structural Mechanics"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   Applications: Aerospace • Automotive • Civil Engineering • Energy"
+    );
+    let _ = writeln!(std::io::stdout().lock());
 
     // Parse command line arguments
     let demo_mode = if args.len() > 1 {
@@ -267,9 +490,15 @@ fn main() {
             physics_demo::demonstrate_industrial_applications();
         }
         "--all" => {
-            println!("🎭 Complete Advanced Physics Demonstration");
-            println!("==========================================");
-            println!();
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "🎭 Complete Advanced Physics Demonstration"
+            );
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "=========================================="
+            );
+            let _ = writeln!(std::io::stdout().lock());
 
             physics_demo::demonstrate_navier_stokes();
             physics_demo::demonstrate_heat_transfer();
@@ -278,9 +507,15 @@ fn main() {
             physics_demo::demonstrate_industrial_applications();
         }
         _ => {
-            println!("🎭 Complete Advanced Physics Demonstration");
-            println!("==========================================");
-            println!();
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "🎭 Complete Advanced Physics Demonstration"
+            );
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "=========================================="
+            );
+            let _ = writeln!(std::io::stdout().lock());
 
             physics_demo::demonstrate_navier_stokes();
             physics_demo::demonstrate_heat_transfer();
@@ -291,18 +526,52 @@ fn main() {
     }
 
     let elapsed = start_time.elapsed();
-    println!("🏆 Advanced Physics Demonstration Complete!");
-    println!("===========================================");
-    println!("   ⏱️  Total runtime: {:.2}s", elapsed.as_secs_f64());
-    println!("   ✅ All physics domains demonstrated");
-    println!("   🚀 Ready for industrial applications");
-    println!();
-    println!("📚 Physics-Specific Examples:");
-    println!("   • --navier-stokes: Fluid dynamics simulation");
-    println!("   • --heat-transfer: Thermal analysis and coupling");
-    println!("   • --structural: Mechanical stress and deformation");
-    println!("   • --multi-physics: Coupled physics problems");
-    println!("   • --industrial: Real-world engineering applications");
-    println!();
-    println!("🌟 PINN: Revolutionizing computational physics!");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🏆 Advanced Physics Demonstration Complete!"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "==========================================="
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ⏱️  Total runtime: {:.2}s",
+        elapsed.as_secs_f64()
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   ✅ All physics domains demonstrated"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   🚀 Ready for industrial applications"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(std::io::stdout().lock(), "📚 Physics-Specific Examples:");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • --navier-stokes: Fluid dynamics simulation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • --heat-transfer: Thermal analysis and coupling"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • --structural: Mechanical stress and deformation"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • --multi-physics: Coupled physics problems"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "   • --industrial: Real-world engineering applications"
+    );
+    let _ = writeln!(std::io::stdout().lock());
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "🌟 PINN: Revolutionizing computational physics!"
+    );
 }

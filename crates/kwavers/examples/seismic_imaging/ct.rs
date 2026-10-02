@@ -8,6 +8,7 @@ use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
 use ritk_io::format::png::native::PngSeriesReader as NativePngSeriesReader;
 use ritk_io::ImageReader;
 use ritk_io::{load_native_dicom_series, scan_dicom_directory};
+use std::io::Write;
 use std::path::Path;
 
 /// Raw CT volume in voxel space.
@@ -48,7 +49,11 @@ pub(crate) fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             });
 
         if has_png {
-            println!("  PNG series      : {}", path.display());
+            let _ = writeln!(
+                std::io::stdout().lock(),
+                "  PNG series      : {}",
+                path.display()
+            );
             let image = ImageReader::read(&NativePngSeriesReader::new(backend), path)
                 .map_err(|error| anyhow::anyhow!("PNG series load failed: {error:#}"))?;
             let [depth, rows, cols] = image.shape();
@@ -105,7 +110,8 @@ pub(crate) fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             anyhow::bail!("no DICOM series found in '{}'", path.display());
         }
         let selected = super::dicom::select_series(series);
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  DICOM series    : '{}' ({} files)",
             selected.series_description,
             selected.file_paths.len()
@@ -124,7 +130,11 @@ pub(crate) fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
                 path.display()
             );
         }
-        println!("  NIfTI file      : {}", path.display());
+        let _ = writeln!(
+            std::io::stdout().lock(),
+            "  NIfTI file      : {}",
+            path.display()
+        );
         ImageReader::read(&NativeNiftiReader::new(backend), path)
             .with_context(|| format!("NIfTI read failed for '{}'", path.display()))?
     };

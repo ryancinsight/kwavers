@@ -376,7 +376,7 @@ fn dalembert_solution(x: f64, t: f64, c: f64, x0: f64, sigma: f64, amplitude: f6
 /// showing the Gaussian pulse splitting into two half-amplitude pulses.
 #[test]
 fn test_pstd_vs_dalembert_1d_homogeneous() -> KwaversResult<()> {
-    println!("\n=== PSTD vs k-Wave Reference: 1D Homogeneous Medium ===");
+    eprintln!("\n=== PSTD vs k-Wave Reference: 1D Homogeneous Medium ===");
 
     // Configuration matching k-wave-python test_ivp_homogeneous_medium conceptually.
     let nx = 128;
@@ -427,7 +427,7 @@ fn test_pstd_vs_dalembert_1d_homogeneous() -> KwaversResult<()> {
             * amplitude
             * (-((x - x0).powi(2)) / (2.0 * sigma * sigma)).exp()
     };
-    println!(
+    eprintln!(
         "  IVP ux[x0+σ]: numerical={:.4e} m/s, expected≈{:.4e} m/s, ratio={:.4}",
         ux_after_ivp,
         expected_ux_ivp,
@@ -437,7 +437,7 @@ fn test_pstd_vs_dalembert_1d_homogeneous() -> KwaversResult<()> {
             f64::NAN
         }
     );
-    println!("  (IVP ratio ≈1.0 means correct staggered leapfrog initialization)");
+    eprintln!("  (IVP ratio ≈1.0 means correct staggered leapfrog initialization)");
 
     // Snapshot collection: save 6 pressure profiles for the comparison figure.
     // Target steps: 1, 11, 21, 31, 41, 60 (ct/σ ≈ 0.06, 0.66, 1.26, 1.86, 2.46, 3.60).
@@ -514,7 +514,7 @@ fn test_pstd_vs_dalembert_1d_homogeneous() -> KwaversResult<()> {
             }
 
             let snap_rms = (snap_rms_sq / nx as f64).sqrt();
-            println!(
+            eprintln!(
                 "  step={:3}: t={:.2e}s, ct/σ={:.2}, RMS={:.3}%, \
                  peak_num={:.4e}, peak_anal={:.4e}",
                 steps_done,
@@ -530,12 +530,12 @@ fn test_pstd_vs_dalembert_1d_homogeneous() -> KwaversResult<()> {
     let rms_relative_error = (rms_error / n_points as f64).sqrt();
     let peak_ratio = max_numerical / max_analytical.max(1e-10);
 
-    println!("Results:");
-    println!("  RMS relative error: {:.3}%", rms_relative_error * 100.0);
-    println!("  Numerical peak:   {:.3e} Pa", max_numerical);
-    println!("  Analytical peak:  {:.3e} Pa", max_analytical);
-    println!("  Peak ratio:       {:.3}", peak_ratio);
-    println!("  Comparison points: {}", n_points);
+    eprintln!("Results:");
+    eprintln!("  RMS relative error: {:.3}%", rms_relative_error * 100.0);
+    eprintln!("  Numerical peak:   {:.3e} Pa", max_numerical);
+    eprintln!("  Analytical peak:  {:.3e} Pa", max_analytical);
+    eprintln!("  Peak ratio:       {:.3}", peak_ratio);
+    eprintln!("  Comparison points: {}", n_points);
 
     save_dalembert_figure(&snapshots, nx, dx)
         .expect("d'Alembert figure must match the committed golden");
@@ -553,7 +553,7 @@ fn test_pstd_vs_dalembert_1d_homogeneous() -> KwaversResult<()> {
         peak_ratio
     );
 
-    println!("PASSED: PSTD matches k-Wave 1D homogeneous reference within tolerance");
+    eprintln!("PASSED: PSTD matches k-Wave 1D homogeneous reference within tolerance");
     Ok(())
 }
 
@@ -571,7 +571,7 @@ fn test_pstd_vs_dalembert_1d_homogeneous() -> KwaversResult<()> {
 /// κ(k) across the Nyquist band with markers at 80 % and 100 % Nyquist.
 #[test]
 fn test_pstd_k_space_operator_accuracy() -> KwaversResult<()> {
-    println!("\n=== PSTD k-Space Operator Validation ===");
+    eprintln!("\n=== PSTD k-Space Operator Validation ===");
 
     let nx = 256;
     let dx = 0.1e-3;
@@ -580,12 +580,12 @@ fn test_pstd_k_space_operator_accuracy() -> KwaversResult<()> {
     let wavelength = c0 / frequency;
     let points_per_wavelength = wavelength / dx;
 
-    println!("Grid: {} points, dx = {:.2e} m", nx, dx);
-    println!(
+    eprintln!("Grid: {} points, dx = {:.2e} m", nx, dx);
+    eprintln!(
         "Wavelength: {:.2e} m → {:.1} points per wavelength",
         wavelength, points_per_wavelength
     );
-    println!("Nyquist limit: {:.1} points per wavelength", 2.0);
+    eprintln!("Nyquist limit: {:.1} points per wavelength", 2.0);
 
     assert!(
         points_per_wavelength > 2.0,
@@ -599,7 +599,7 @@ fn test_pstd_k_space_operator_accuracy() -> KwaversResult<()> {
         let arg = c0 * k_max * dt / 2.0;
         arg.sin() / arg
     };
-    println!(
+    eprintln!(
         "k-space correction at Nyquist: {:.6}",
         correction_at_nyquist
     );
@@ -615,7 +615,7 @@ fn test_pstd_k_space_operator_accuracy() -> KwaversResult<()> {
         let arg = c0 * k_80 * dt / 2.0;
         arg.sin() / arg
     };
-    println!("k-space correction at 80%% Nyquist: {:.6}", correction_80);
+    eprintln!("k-space correction at 80%% Nyquist: {:.6}", correction_80);
 
     assert!(
         correction_80 > 0.8,
@@ -625,7 +625,7 @@ fn test_pstd_k_space_operator_accuracy() -> KwaversResult<()> {
 
     save_kspace_figure(c0, dt, dx).expect("k-space figure must match the committed golden");
 
-    println!("PASSED: k-space operator within valid range");
+    eprintln!("PASSED: k-space operator within valid range");
     Ok(())
 }
 
@@ -642,7 +642,7 @@ fn test_pstd_k_space_operator_accuracy() -> KwaversResult<()> {
 /// with a horizontal reference line at E₀.
 #[test]
 fn test_pstd_energy_conservation_homogeneous() -> KwaversResult<()> {
-    println!("\n=== PSTD Energy Conservation Test ===");
+    eprintln!("\n=== PSTD Energy Conservation Test ===");
 
     let nx = 64;
     let ny = 1;
@@ -662,11 +662,11 @@ fn test_pstd_energy_conservation_homogeneous() -> KwaversResult<()> {
     // E = ∫ A²·exp(-(x-x₀)²/σ²) / (ρ₀c²) dx ≈ A²·σ·√π / (ρ₀c²) in 1D
     let analytical_energy =
         amplitude * amplitude * sigma * std::f64::consts::PI.sqrt() / (rho0 * c0 * c0);
-    println!(
+    eprintln!(
         "Initial Gaussian: sigma={:.1e} m, A={:.1e} Pa",
         sigma, amplitude
     );
-    println!(
+    eprintln!(
         "Analytical 1D energy estimate: {:.3e} J/m²",
         analytical_energy
     );
@@ -717,7 +717,7 @@ fn test_pstd_energy_conservation_homogeneous() -> KwaversResult<()> {
     };
 
     let e0 = compute_energy(&solver);
-    println!("Initial numerical energy: {:.6e} J/m²", e0);
+    eprintln!("Initial numerical energy: {:.6e} J/m²", e0);
 
     // Run simulation and collect (step, energy) pairs every 5 steps.
     let mut energy_records: Vec<(usize, f64)> = vec![(0, e0)];
@@ -733,8 +733,8 @@ fn test_pstd_energy_conservation_homogeneous() -> KwaversResult<()> {
     energy_records.push((nt, e_final));
     let energy_drift = (e_final - e0) / e0.abs().max(1e-20);
 
-    println!("Final energy: {:.6e} J/m²", e_final);
-    println!("Energy drift: {:.3}%", energy_drift * 100.0);
+    eprintln!("Final energy: {:.6e} J/m²", e_final);
+    eprintln!("Energy drift: {:.3}%", energy_drift * 100.0);
 
     save_energy_figure(e0, &energy_records).expect("energy figure must match the committed golden");
 
@@ -746,7 +746,7 @@ fn test_pstd_energy_conservation_homogeneous() -> KwaversResult<()> {
         energy_drift * 100.0
     );
 
-    println!("PASSED: PSTD energy conservation within tolerance");
+    eprintln!("PASSED: PSTD energy conservation within tolerance");
     Ok(())
 }
 

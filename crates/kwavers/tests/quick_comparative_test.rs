@@ -17,8 +17,8 @@ fn leto_view3(field: &leto::Array3<f64>) -> leto::ArrayView3<'_, f64> {
 /// Quick comparison test - runs in under 10 seconds
 #[test]
 fn comparative_quick_test() {
-    println!("🚀 Quick Comparative Solver Test");
-    println!("===============================");
+    eprintln!("🚀 Quick Comparative Solver Test");
+    eprintln!("===============================");
 
     // Use small grid for fast execution
     let grid = Grid::new(16, 16, 16, 0.002, 0.002, 0.002).unwrap();
@@ -28,14 +28,14 @@ fn comparative_quick_test() {
 
     let time_steps = 5; // Very few steps for speed
 
-    println!(
+    eprintln!(
         "Grid: {}x{}x{}, Steps: {}",
         grid.nx, grid.ny, grid.nz, time_steps
     );
 
     // Run FDTD
     let fdtd_result = run_fdtd_quick(&grid, &medium, &source, time_steps);
-    println!(
+    eprintln!(
         "FDTD: {:.1}ms, Energy: {:.2e}, Stability: {:.3}",
         fdtd_result.execution_time.as_millis(),
         fdtd_result.energy,
@@ -44,7 +44,7 @@ fn comparative_quick_test() {
 
     // Run PSTD
     let pstd_result = run_pstd_quick(&grid, &medium, time_steps);
-    println!(
+    eprintln!(
         "PSTD: {:.1}ms, Energy: {:.2e}, Stability: {:.3}",
         pstd_result.execution_time.as_millis(),
         pstd_result.energy,
@@ -63,47 +63,47 @@ fn comparative_quick_test() {
 
     let stability_diff = (fdtd_result.stability - pstd_result.stability).abs();
 
-    println!("Comparisons:");
-    println!(
+    eprintln!("Comparisons:");
+    eprintln!(
         "  Energy difference: {:.2e} ({:.2}%)",
         energy_diff,
         energy_diff * 100.0
     );
-    println!("  Stability difference: {:.3}", stability_diff);
+    eprintln!("  Stability difference: {:.3}", stability_diff);
 
     // Check for significant discrepancies
     let mut warnings = 0;
 
     if energy_diff > 0.1 {
         // 10% energy difference
-        println!("  ⚠️  SIGNIFICANT ENERGY DISCREPANCY (>10%)");
-        println!("     Possible issue: Different energy conservation between solvers");
+        eprintln!("  ⚠️  SIGNIFICANT ENERGY DISCREPANCY (>10%)");
+        eprintln!("     Possible issue: Different energy conservation between solvers");
         warnings += 1;
     }
 
     if stability_diff > 0.2 {
         // 20% stability difference
-        println!("  ⚠️  SIGNIFICANT STABILITY DISCREPANCY (>20%)");
-        println!("     Possible issue: One solver is numerically unstable");
+        eprintln!("  ⚠️  SIGNIFICANT STABILITY DISCREPANCY (>20%)");
+        eprintln!("     Possible issue: One solver is numerically unstable");
         warnings += 1;
     }
 
     if fdtd_result.stability < 0.5 {
-        println!("  ⚠️  FDTD LOW STABILITY (<50%)");
-        println!("     Possible issue: FDTD numerical instability");
+        eprintln!("  ⚠️  FDTD LOW STABILITY (<50%)");
+        eprintln!("     Possible issue: FDTD numerical instability");
         warnings += 1;
     }
 
     if pstd_result.stability < 0.5 {
-        println!("  ⚠️  PSTD LOW STABILITY (<50%)");
-        println!("     Possible issue: PSTD numerical instability");
+        eprintln!("  ⚠️  PSTD LOW STABILITY (<50%)");
+        eprintln!("     Possible issue: PSTD numerical instability");
         warnings += 1;
     }
 
     if warnings == 0 {
-        println!("  ✅ GOOD AGREEMENT - No significant discrepancies detected");
+        eprintln!("  ✅ GOOD AGREEMENT - No significant discrepancies detected");
     } else {
-        println!(
+        eprintln!(
             "  ❌ {} WARNING(S) - Investigate solver implementations",
             warnings
         );

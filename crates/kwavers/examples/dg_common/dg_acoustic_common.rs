@@ -30,6 +30,7 @@ mod sampling;
 pub use lines::NamedLine;
 use lines::{absolute_error, center_line, dg_line, uniform_line};
 pub use sampling::CommonGaussianMatrix;
+use std::io::Write;
 #[derive(Debug, Clone, Copy)]
 pub struct NativeAcousticDiagnostic {
     pub pressure_relative_l2: f64,
@@ -196,21 +197,47 @@ pub fn run_embedded_gaussian_series() -> KwaversResult<EmbeddedGaussianSeries> {
 }
 
 pub fn print_solver_matrix(matrix: &EmbeddedGaussianMatrix) {
-    println!("{:<28} {:>16.6e}", "DG vs exact", matrix.dg_exact_l2);
-    println!("{:<28} {:>16.6e}", "FDTD vs exact", matrix.fdtd_exact_l2);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<28} {:>16.6e}",
-        "FDTD+k-space vs exact", matrix.kspace_exact_l2
+        "DG vs exact",
+        matrix.dg_exact_l2
     );
-    println!("{:<28} {:>16.6e}", "PSTD vs exact", matrix.pstd_exact_l2);
-    println!("{:<28} {:>16.6e}", "FDTD vs PSTD", matrix.fdtd_pstd_l2);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<28} {:>16.6e}",
-        "FDTD+k-space vs PSTD", matrix.kspace_pstd_l2
+        "FDTD vs exact",
+        matrix.fdtd_exact_l2
     );
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "{:<28} {:>16.6e}",
-        "DG pressure mass error", matrix.dg_pressure_mass_error
+        "FDTD+k-space vs exact",
+        matrix.kspace_exact_l2
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<28} {:>16.6e}",
+        "PSTD vs exact",
+        matrix.pstd_exact_l2
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<28} {:>16.6e}",
+        "FDTD vs PSTD",
+        matrix.fdtd_pstd_l2
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<28} {:>16.6e}",
+        "FDTD+k-space vs PSTD",
+        matrix.kspace_pstd_l2
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "{:<28} {:>16.6e}",
+        "DG pressure mass error",
+        matrix.dg_pressure_mass_error
     );
 }
 

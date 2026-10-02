@@ -6,6 +6,7 @@ use super::{
     FwiProcessor, Grid, KwaversResult, RegularizationParameters, F0_HZ, N_RECEIVERS_3D,
     SOUND_SPEED_WATER_SIM, STEP_SIZE,
 };
+use std::io::Write;
 use std::time::Instant;
 
 /// Run the multi-scale skull inversion and return the reconstructed velocity.
@@ -58,7 +59,8 @@ pub(super) fn run_skull_inversion(
             let obs = tmp_fwi.generate_synthetic_data(&true_model, &geom, grid)?;
             shots_fine.push((geom, obs));
         }
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "  {} observed gathers at {} kHz ({:.1} s)",
             transmit_indices.len(),
             F0_HZ * 1e-3,
@@ -100,9 +102,13 @@ pub(super) fn run_skull_inversion(
         j
     };
 
-    println!("\n  Quality before inversion (all voxels):");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  Quality before inversion (all voxels):"
+    );
     seismic_metrics::print_quality_report(&true_model, &initial_model);
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  J₀ ({:.0} kHz)    : {j_initial:.6e} Pa²·s  ({} shots)",
         F0_HZ * 1e-3,
         transmit_indices.len()
@@ -148,7 +154,8 @@ pub(super) fn run_skull_inversion(
             let obs = fwi_scale.generate_synthetic_data(&true_model, &geom, grid)?;
             scale_shots.push((geom, obs));
         }
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "\n  ── Scale {} / {} : f₀ = {:.0} kHz, {} iter, nt = {}, mute_r = {} ──",
             scale_idx + 1,
             scales.len(),
@@ -165,7 +172,8 @@ pub(super) fn run_skull_inversion(
             .copied()
             .fold(f64::NEG_INFINITY, f64::max);
         let c_now_min = current_model.iter().copied().fold(f64::INFINITY, f64::min);
-        println!(
+        let _ = writeln!(
+            std::io::stdout().lock(),
             "    Scale {} done ({:.1} s): c ∈ [{:.0}, {:.0}] m/s",
             scale_idx + 1,
             t_scale.elapsed().as_secs_f32(),
@@ -175,7 +183,8 @@ pub(super) fn run_skull_inversion(
     }
 
     let reconstructed = current_model;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "\n  FWI completed in {:.1} s",
         t_inv.elapsed().as_secs_f32()
     );
@@ -214,10 +223,17 @@ pub(super) fn run_skull_inversion(
         j
     };
 
-    println!("\n  Quality after inversion (all voxels):");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "\n  Quality after inversion (all voxels):"
+    );
     seismic_metrics::print_quality_report(&true_model, &reconstructed);
-    println!("  J₀              : {j_initial:.6e} Pa²·s");
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  J₀              : {j_initial:.6e} Pa²·s"
+    );
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  J_final         : {j_final:.6e} Pa²·s  (reduction: {:.1}×)",
         if j_final > 0.0 {
             j_initial / j_final

@@ -13,6 +13,7 @@ use super::seismic_acquisition;
 use super::seismic_brain_model;
 use super::seismic_imaging::medium::SkullModel;
 use super::{BRAIN_C_MAX, BRAIN_C_MIN, DX, F0_BRAIN_HZ, NX, N_BRAIN_ITER, STEP_SIZE_BRAIN};
+use std::io::Write;
 
 /// Value-semantic outputs produced by the successful brain inversion stage.
 pub(super) struct BrainInversionResult {
@@ -35,7 +36,10 @@ pub(super) fn run_brain_fwi(
     let skull_mask = seismic_brain_model::build_skull_mask(&phantom.acoustic().sound_speed);
     let n_frozen = skull_mask.iter().filter(|&&frozen| frozen).count();
     let n_free = skull_mask.len() - n_frozen;
-    println!("  Skull mask        : {n_frozen} frozen bone voxels, {n_free} free brain voxels");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  Skull mask        : {n_frozen} frozen bone voxels, {n_free} free brain voxels"
+    );
 
     let (brain_min, brain_max) = skull_mask
         .indexed_iter()
@@ -45,7 +49,10 @@ pub(super) fn run_brain_fwi(
             (f64::INFINITY, f64::NEG_INFINITY),
             |(min, max), velocity| (min.min(velocity), max.max(velocity)),
         );
-    println!("  True brain c      : [{brain_min:.1}, {brain_max:.1}] m/s");
+    let _ = writeln!(
+        std::io::stdout().lock(),
+        "  True brain c      : [{brain_min:.1}, {brain_max:.1}] m/s"
+    );
 
     let nt_brain = {
         let domain_transit_s = (NX as f64 * DX) / SOUND_SPEED_WATER_SIM;
@@ -84,7 +91,8 @@ pub(super) fn run_brain_fwi(
             }
         }
     }
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  {} / {} brain gathers at {:.0} kHz ({:.1} s)",
         brain_shots.len(),
         seismic_acquisition::N_SHOTS,
@@ -111,7 +119,8 @@ pub(super) fn run_brain_fwi(
         }
     }
 
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Running {N_BRAIN_ITER} iterations at {:.0} kHz (nt={nt_brain}) …",
         F0_BRAIN_HZ * 1e-3
     );
@@ -129,7 +138,8 @@ pub(super) fn run_brain_fwi(
         .map_err(|error| {
             KwaversError::InvalidInput(format!("brain FWI inversion failed: {error:#}"))
         })?;
-    println!(
+    let _ = writeln!(
+        std::io::stdout().lock(),
         "  Brain FWI done ({:.1} s)",
         inversion_at.elapsed().as_secs_f32()
     );

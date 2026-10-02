@@ -21,11 +21,11 @@ fn test_rayleigh_plesset_equilibrium() {
 
     // Verify that the equilibrium state was constructed correctly
     let expected_p_internal = params.p0 + 2.0 * params.sigma / params.r0;
-    println!(
+    eprintln!(
         "Expected p_internal at equilibrium: {} Pa",
         expected_p_internal
     );
-    println!("Actual p_internal in state: {} Pa", state.pressure_internal);
+    eprintln!("Actual p_internal in state: {} Pa", state.pressure_internal);
 
     // The equilibrium state should have the mathematically exact internal pressure
     assert_relative_eq!(state.pressure_internal, expected_p_internal, epsilon = 1e-6);
@@ -41,23 +41,23 @@ fn test_rayleigh_plesset_equilibrium() {
     let tolerance = 5000.0; // Accept Van der Waals pressure differences as physically accurate
 
     if accel.abs() >= tolerance {
-        println!("DEBUG: Advanced pressure analysis at equilibrium");
-        println!("  Bubble radius: {} μm", state.radius * 1e6);
-        println!(
+        eprintln!("DEBUG: Advanced pressure analysis at equilibrium");
+        eprintln!("  Bubble radius: {} μm", state.radius * 1e6);
+        eprintln!(
             "  Surface tension pressure: {} Pa",
             2.0 * params.sigma / state.radius
         );
-        println!(
+        eprintln!(
             "  Internal pressure (stored): {} Pa",
             state.pressure_internal
         );
-        println!("  External pressure: {} Pa", params.p0);
-        println!("  Vapor pressure: {} Pa", params.pv);
-        println!(
+        eprintln!("  External pressure: {} Pa", params.p0);
+        eprintln!("  Vapor pressure: {} Pa", params.pv);
+        eprintln!(
             "  Force imbalance: {} Pa",
             state.pressure_internal - params.p0 - 2.0 * params.sigma / state.radius
         );
-        println!("  Thermal effects enabled: {}", params.use_thermal_effects);
+        eprintln!("  Thermal effects enabled: {}", params.use_thermal_effects);
     }
 
     assert!(

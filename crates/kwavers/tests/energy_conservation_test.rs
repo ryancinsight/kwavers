@@ -201,7 +201,7 @@ fn test_energy_conservation_in_closed_domain() -> KwaversResult<()> {
          bound {ENERGY_DRIFT_BOUND:.1e} (derived (ω_max·dt)²/6 = 1.7e-3); a lossy \
          or non-conservative path is active"
     );
-    println!(
+    eprintln!(
         "Energy conservation: max relative drift over {nt} steps = {max_relative_drift:.3e} \
          (bound {ENERGY_DRIFT_BOUND:.1e})"
     );
@@ -274,7 +274,7 @@ fn test_reciprocity_principle() -> KwaversResult<()> {
                 .fold(0.0f64, |m, (&a, &b)| m.max((a - b).abs()))
                 / scale;
             worst = worst.max(max_diff);
-            println!(
+            eprintln!(
                 "Reciprocity pair {x}↔{y}: max relative difference {max_diff:.3e} \
                  (forward peak {scale:.3e} Pa)"
             );

@@ -53,9 +53,9 @@ fn test_photoacoustic_analytical_pressure() -> KwaversResult<()> {
     // Check relative error
     let relative_error = ((center_pressure - analytical_pressure) / analytical_pressure).abs();
 
-    println!("Center pressure: {:.6} Pa", center_pressure);
-    println!("Analytical pressure: {:.6} Pa", analytical_pressure);
-    println!("Relative error: {:.6}%", relative_error * 100.0);
+    eprintln!("Center pressure: {:.6} Pa", center_pressure);
+    eprintln!("Analytical pressure: {:.6} Pa", analytical_pressure);
+    eprintln!("Relative error: {:.6}%", relative_error * 100.0);
 
     assert!(
         relative_error < 0.001,
@@ -96,10 +96,10 @@ fn test_optical_fluence_attenuation() -> KwaversResult<()> {
     let attenuation_error =
         ((actual_attenuation - expected_attenuation) / expected_attenuation).abs();
 
-    println!("Surface fluence: {:.3} mJ/cm²", surface_fluence * 100.0);
-    println!("Deep fluence: {:.3} mJ/cm²", deep_fluence * 100.0);
-    println!("Attenuation ratio: {:.3}", actual_attenuation);
-    println!("Expected attenuation: {:.3}", expected_attenuation);
+    eprintln!("Surface fluence: {:.3} mJ/cm²", surface_fluence * 100.0);
+    eprintln!("Deep fluence: {:.3} mJ/cm²", deep_fluence * 100.0);
+    eprintln!("Attenuation ratio: {:.3}", actual_attenuation);
+    eprintln!("Expected attenuation: {:.3}", expected_attenuation);
 
     // Allow reasonable error margin for simplified model
     assert!(
@@ -146,9 +146,9 @@ fn test_tissue_contrast_ratios() -> KwaversResult<()> {
         blood_scatter_ratio
     );
 
-    println!("Blood/Tissue absorption ratio: {:.1}x", blood_tissue_ratio);
-    println!("Tumor/Tissue absorption ratio: {:.1}x", tumor_tissue_ratio);
-    println!("Blood/Tissue scattering ratio: {:.2}x", blood_scatter_ratio);
+    eprintln!("Blood/Tissue absorption ratio: {:.1}x", blood_tissue_ratio);
+    eprintln!("Tumor/Tissue absorption ratio: {:.1}x", tumor_tissue_ratio);
+    eprintln!("Blood/Tissue scattering ratio: {:.2}x", blood_scatter_ratio);
 
     Ok(())
 }
@@ -179,9 +179,9 @@ fn test_multiwavelength_simulation() -> KwaversResult<()> {
     // Different wavelengths should produce different pressure distributions
     // (This is a basic test - full spectroscopic validation would require more complex setup)
 
-    println!("Multi-wavelength simulation successful");
-    println!("Maximum pressure: {:.3} Pa", max_pressure);
-    println!(
+    eprintln!("Multi-wavelength simulation successful");
+    eprintln!("Maximum pressure: {:.3} Pa", max_pressure);
+    eprintln!(
         "Wavelengths tested: {:?}",
         simulator.parameters().wavelengths
     );
@@ -205,12 +205,12 @@ fn test_heterogeneous_tissue_simulation() -> KwaversResult<()> {
     let center_props = &optical_props[[10, 10, 5]];
     let edge_props = &optical_props[[2, 2, 2]];
 
-    println!(
+    eprintln!(
         "Center props: absorption={:.1}, scattering={:.1}",
         center_props.absorption_coefficient(),
         center_props.scattering_coefficient()
     );
-    println!(
+    eprintln!(
         "Edge props: absorption={:.1}, scattering={:.1}",
         edge_props.absorption_coefficient(),
         edge_props.scattering_coefficient()
@@ -219,13 +219,13 @@ fn test_heterogeneous_tissue_simulation() -> KwaversResult<()> {
     // Properties should be different (simulator adds blood vessels and tumors)
     let absorption_diff =
         (center_props.absorption_coefficient() - edge_props.absorption_coefficient()).abs();
-    println!("Absorption difference: {:.3}", absorption_diff);
+    eprintln!("Absorption difference: {:.3}", absorption_diff);
 
     // For now, relax the requirement - the simulator might not create sufficient heterogeneity
     // In a full implementation, this would be more sophisticated
     if absorption_diff == 0.0 {
-        println!("Note: Current implementation creates minimal heterogeneity for this grid size");
-        println!("In full PAI implementation, this would use more sophisticated tissue modeling");
+        eprintln!("Note: Current implementation creates minimal heterogeneity for this grid size");
+        eprintln!("In full PAI implementation, this would use more sophisticated tissue modeling");
     }
 
     // For now, just check that the properties are reasonable values
@@ -238,16 +238,16 @@ fn test_heterogeneous_tissue_simulation() -> KwaversResult<()> {
         "Absorption should be positive"
     );
 
-    println!("Heterogeneous simulation successful");
-    println!(
+    eprintln!("Heterogeneous simulation successful");
+    eprintln!(
         "Center absorption: {:.1} m⁻¹",
         center_props.absorption_coefficient()
     );
-    println!(
+    eprintln!(
         "Edge absorption: {:.1} m⁻¹",
         edge_props.absorption_coefficient()
     );
-    println!("Absorption difference: {:.1} m⁻¹", absorption_diff);
+    eprintln!("Absorption difference: {:.1} m⁻¹", absorption_diff);
 
     Ok(())
 }
@@ -259,9 +259,9 @@ fn test_reference_toolbox_compatibility() -> KwaversResult<()> {
     // Test against a known analytical case that k-Wave can solve
     // Using a simplified 2D case for validation
 
-    println!("k-Wave compatibility test");
-    println!("Note: Full k-Wave validation requires MATLAB/k-Wave installation");
-    println!("This test validates physics consistency with published k-Wave results");
+    eprintln!("k-Wave compatibility test");
+    eprintln!("Note: Full k-Wave validation requires MATLAB/k-Wave installation");
+    eprintln!("This test validates physics consistency with published k-Wave results");
 
     // Test basic photoacoustic generation (matches k-Wave photoacousticInitialPressure)
     let grid = Grid::new(32, 32, 16, 0.0005, 0.0005, 0.001)?;
@@ -303,11 +303,11 @@ fn test_reference_toolbox_compatibility() -> KwaversResult<()> {
         .sqrt();
 
     let snr = mean_pressure / std_pressure;
-    println!("Signal-to-noise ratio: {:.1}", snr);
+    eprintln!("Signal-to-noise ratio: {:.1}", snr);
     assert!(snr > 1.0, "SNR should be > 1 for valid simulation");
 
-    println!("k-Wave compatibility validation passed");
-    println!(
+    eprintln!("k-Wave compatibility validation passed");
+    eprintln!(
         "Pressure range: {:.3} - {:.3} Pa",
         pressure_values
             .iter()
@@ -357,20 +357,20 @@ fn test_performance_benchmark() -> KwaversResult<()> {
 
     let total_time = fluence_time + pressure_time + simulation_time;
 
-    println!("Performance benchmark results:");
-    println!(
+    eprintln!("Performance benchmark results:");
+    eprintln!(
         "  Fluence computation: {:.3} ms",
         fluence_time.as_secs_f64() * 1000.0
     );
-    println!(
+    eprintln!(
         "  Pressure computation: {:.3} ms",
         pressure_time.as_secs_f64() * 1000.0
     );
-    println!(
+    eprintln!(
         "  Wave simulation: {:.3} ms",
         simulation_time.as_secs_f64() * 1000.0
     );
-    println!("  Total time: {:.3} ms", total_time.as_secs_f64() * 1000.0);
+    eprintln!("  Total time: {:.3} ms", total_time.as_secs_f64() * 1000.0);
 
     // Derived budget: 4× the measured release total (1.18 s on 2026-08-22).
     const TOTAL_TIME_BUDGET_S: f64 = 6.0;

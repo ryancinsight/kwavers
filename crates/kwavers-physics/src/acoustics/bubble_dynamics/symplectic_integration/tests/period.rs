@@ -91,7 +91,7 @@ fn test_minnaert_period() {
     let period_meas = periods.iter().sum::<f64>() / periods.len() as f64;
     let rel_err = (period_meas - t_period).abs() / t_period;
 
-    println!(
+    eprintln!(
         "Minnaert period: measured {:.4} µs, exact {:.4} µs, error {:.4}%",
         period_meas * 1e6,
         t_period * 1e6,

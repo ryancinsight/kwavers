@@ -409,14 +409,14 @@ pub fn run_full_validation_suite_autodiff<T: AutodiffElasticWaveEquation>(
     // Report summary
     let passed = results.iter().filter(|r| r.passed).count();
     let total = results.len();
-    println!(
+    eprintln!(
         "\n{} Validation Summary: {}/{} tests passed",
         test_name, passed, total
     );
 
     for result in &results {
         let status = if result.passed { "✓" } else { "✗" };
-        println!("  {} {}: {}", status, result.test_name, result.details);
+        eprintln!("  {} {}: {}", status, result.test_name, result.details);
     }
 
     results

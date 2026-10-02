@@ -71,7 +71,7 @@ fn test_hamiltonian_no_drift() {
     }
 
     let h_spread = (h_max - h_min) / h0.abs().max(1e-30);
-    println!(
+    eprintln!(
         "H over 1000 periods: min={:.4e}  max={:.4e}  H₀={:.4e}  spread={:.2}%",
         h_min,
         h_max,
