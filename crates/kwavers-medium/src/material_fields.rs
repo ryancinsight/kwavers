@@ -15,7 +15,7 @@
 use kwavers_grid::Grid;
 use leto::Array3;
 
-use crate::{acoustic::AcousticProperties, CoreMedium};
+use crate::{acoustic::AcousticProperties, thermal::ThermalProperties, CoreMedium};
 
 /// Container for the acoustic properties a wave solver samples from a medium.
 #[derive(Debug, Clone)]
@@ -110,6 +110,88 @@ impl MaterialFields {
     #[must_use]
     pub fn is_lossless(&self) -> bool {
         self.alpha0_db.iter().all(|&a| a == 0.0)
+    }
+}
+
+/// Container for the thermal properties a heat solver samples from a medium.
+///
+/// The thermal solvers have the same shape as the wave solvers that use
+/// [`MaterialFields`]: `ThermalProperties::thermal_diffusivity` is a trait
+/// accessor on `&dyn Medium`, so reading it inside a per-cell update pays one
+/// virtual call per cell per step. `ThermalProperties` takes spatial
+/// coordinates only — never a temperature — so diffusivity is a property of
+/// the medium's spatial field, not of the evolving state, and sampling it once
+/// is the same value the loop would have computed.
+///
+/// Bioheat additionally needs density and specific heat for its perfusion term,
+/// so those are sampled here too rather than read per-cell.
+///
+/// Sampling is sound only because every implementor answers from a static
+/// spatial field or a stored scalar; a future implementor whose diffusivity
+/// depends on temperature would violate the `ThermalProperties` contract, which
+/// has no temperature parameter to express that dependence.
+#[derive(Debug, Clone)]
+pub struct ThermalMaterialFields {
+    /// Mass density `ρ` \[kg·m⁻³], per cell.
+    pub rho: Array3<f64>,
+    /// Specific heat at constant volume `C_v` \[J·(kg·K)⁻¹], per cell.
+    pub cp: Array3<f64>,
+    /// Thermal diffusivity `α` \[m²·s⁻¹], per cell.
+    pub alpha: Array3<f64>,
+}
+
+impl ThermalMaterialFields {
+    /// Create new zero-initialized thermal fields with the given shape.
+    #[must_use]
+    pub fn new(shape: (usize, usize, usize)) -> Self {
+        Self {
+            rho: Array3::zeros(shape),
+            cp: Array3::zeros(shape),
+            alpha: Array3::zeros(shape),
+        }
+    }
+
+    /// Sample the three thermal properties the heat solvers read per cell.
+    ///
+    /// A medium reporting [`CoreMedium::is_homogeneous`] is sampled once and
+    /// broadcast, turning `3·nx·ny·nz` virtual calls into three.
+    #[must_use]
+    pub fn sample<M>(medium: &M, grid: &Grid) -> Self
+    where
+        M: CoreMedium + ThermalProperties + ?Sized,
+    {
+        let shape = (grid.nx, grid.ny, grid.nz);
+        if medium.is_homogeneous() {
+            let (x, y, z) = grid.indices_to_coordinates(0, 0, 0);
+            return Self {
+                rho: Array3::from_elem(shape, medium.density(0, 0, 0)),
+                cp: Array3::from_elem(shape, medium.specific_heat(x, y, z, grid)),
+                alpha: Array3::from_elem(shape, medium.thermal_diffusivity(x, y, z, grid)),
+            };
+        }
+
+        let mut fields = Self::new(shape);
+        for k in 0..grid.nz {
+            for j in 0..grid.ny {
+                for i in 0..grid.nx {
+                    let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+                    let index = [i, j, k];
+                    fields.rho[index] = medium.density(i, j, k);
+                    fields.cp[index] = medium.specific_heat(x, y, z, grid);
+                    fields.alpha[index] = medium.thermal_diffusivity(x, y, z, grid);
+                }
+            }
+        }
+        fields
+    }
+
+    /// `ρ·C_v` \[J·(m³·K)⁻¹\] — volumetric heat capacity, per cell.
+    ///
+    /// The bioheat perfusion term divides by this product once per cell, so
+    /// computing it here keeps that division out of the traversal.
+    #[must_use]
+    pub fn volumetric_heat_capacity(&self) -> Array3<f64> {
+        self.rho.zip_map(&self.cp, |rho, cp| rho * cp)
     }
 }
 

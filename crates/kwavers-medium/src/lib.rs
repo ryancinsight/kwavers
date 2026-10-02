@@ -39,7 +39,7 @@ pub use config::{DomainMediumParameters, InterfaceTypeParameters, LayerParameter
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
 pub use heterogeneous::CtMediumBuilder;
 pub use homogeneous::HomogeneousMedium;
-pub use material_fields::MaterialFields;
+pub use material_fields::{MaterialFields, ThermalMaterialFields};
 pub use optical_map::{Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region};
 pub use validation_simulation::MediumValidator;
 
