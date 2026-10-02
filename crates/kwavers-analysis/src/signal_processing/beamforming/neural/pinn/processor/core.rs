@@ -35,7 +35,7 @@ impl std::fmt::Debug for NeuralBeamformingProcessor {
         f.debug_struct("NeuralBeamformingProcessor")
             .field("config", &self.config)
             .field("metrics", &self.metrics)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -98,7 +98,7 @@ impl NeuralBeamformingProcessor {
         }
 
         let uncertainty = self.compute_uncertainty(&volume)?;
-        let confidence = self.compute_confidence(&uncertainty)?;
+        let confidence = Self::compute_confidence(&uncertainty)?;
 
         let processing_time = start_time.elapsed().as_secs_f64() * 1000.0;
         self.metrics.total_processing_time = processing_time;
@@ -278,7 +278,7 @@ impl NeuralBeamformingProcessor {
         Ok(uncertainty)
     }
 
-    fn compute_confidence(&self, uncertainty: &Array3<f32>) -> KwaversResult<Array3<f32>> {
+    fn compute_confidence(uncertainty: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         let mut confidence = Array3::<f32>::zeros(uncertainty.shape());
         for ([i, j, k], &uncert) in uncertainty.indexed_iter() {
             confidence[[i, j, k]] = 1.0 / (1.0 + uncert);

@@ -5,7 +5,6 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_core::test_support::assert_rejects;
 
 use super::*;
 
@@ -120,6 +119,11 @@ fn test_processor_creation() {
 #[cfg(not(feature = "gpu"))]
 #[test]
 fn test_processor_creation_cpu_only() {
+    // Only the CPU-only build rejects provider-less construction, so the
+    // assertion helper is imported here rather than at module level where the
+    // gpu feature flags it unused.
+    use kwavers_core::test_support::assert_rejects;
+
     let config = BeamformingConfig3D::default();
     let result = BeamformingProcessor3D::new_wgpu(config);
 
