@@ -335,7 +335,7 @@ mod tests {
 
         // Phase derivative should be approximately constant (allowing for wrapping)
         // This is a basic sanity check
-        assert!(phase.len() == n);
+        assert_eq!(phase.len(), n);
     }
 
     #[test]
