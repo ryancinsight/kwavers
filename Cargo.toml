@@ -19,12 +19,12 @@ horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae", pack
 # These repos carry their own [workspace], so Cargo resolves their internal
 # inheritance against THEIR roots â€” no path scaffolding needed here. SSOT: members
 # inherit via `{ workspace = true }`.
-ritk-core = { version = "0.10.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
-ritk-io = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
-ritk-image = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
-ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
-ritk-spatial = { version = "0.2.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
-ritk-registration = { version = "0.54.0", git = "https://github.com/ryancinsight/ritk.git", rev = "52a28c33e1f6ca1078d243a0d3d1876c4a9afe8a" }
+ritk-core = { version = "0.10.0", git = "https://github.com/ryancinsight/ritk.git", rev = "c73096d1bf54463d6eb256bbe77b5728797a18da" }
+ritk-io = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git", rev = "c73096d1bf54463d6eb256bbe77b5728797a18da" }
+ritk-image = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "c73096d1bf54463d6eb256bbe77b5728797a18da" }
+ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "c73096d1bf54463d6eb256bbe77b5728797a18da" }
+ritk-spatial = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git", rev = "c73096d1bf54463d6eb256bbe77b5728797a18da" }
+ritk-registration = { version = "0.54.0", git = "https://github.com/ryancinsight/ritk.git", rev = "c73096d1bf54463d6eb256bbe77b5728797a18da" }
 coeus-core = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-tensor = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-autograd = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
@@ -41,7 +41,7 @@ hephaestus-core = { version = "0.19.0", git = "https://github.com/ryancinsight/h
 hephaestus-wgpu = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false, features = ["decomposition"] }
 hephaestus-cuda = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
 hermes-simd = { version = "0.7.0", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
-themis = { package = "themis-topology", version = "0.10.1", git = "https://github.com/ryancinsight/themis", default-features = false, features = ["std"] }
+themis = { package = "themis-topology", version = "0.11.0", git = "https://github.com/ryancinsight/themis", default-features = false, features = ["std"] }
 moirai-parallel = { version = "0.6.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
 leto = { version = "0.43.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { version = "0.43.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
