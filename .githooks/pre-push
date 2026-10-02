@@ -1223,22 +1223,43 @@ else
   echo "pre-push: source identity checker not reachable from this clone; CI enforces it" >&2
 fi
 
+# run_identity_step <step> <packages> <command...>: one source-identity run
+# for the whole step. The command gets `-p <package>` for every gated
+# package, so cargo builds them in one invocation, and the checker keeps one
+# record for each of <packages>, those that write an artifact in this step.
+# A run per package read the snapshot, took the leases and queued behind every
+# peer gate's cargo for each of them: a 12-package metis push was 36 runs, and
+# its leases were held across all 36 queues. Every step names the same `-p`
+# set, whatever it records: cargo unifies features across one invocation's
+# packages, so a record belongs to its set, and steps naming different sets
+# would each clean the artifacts the next one's record names.
 run_identity_step() {
-  local package_name="$1" step_name="$2"
+  local step_name="$1" packages="$2"
   shift 2
+  local package_name package_arguments=() selection_arguments=() selection=()
+  for package_name in $packages; do
+    package_arguments+=(--package "$package_name")
+  done
+  [ "${#package_arguments[@]}" -gt 0 ] || return 0
+  for package_name in $gate_packages; do
+    selection_arguments+=(--selection "$package_name")
+    selection+=(-p "$package_name")
+  done
   local identity_command
   identity_command=(
     "$python_bin" "$identity_checker" run
     --root "$gate_export"
-    --package "$package_name"
+    "${package_arguments[@]}"
+    "${selection_arguments[@]}"
     --target-dir "$identity_target_dir"
     --profile debug
     --target "$identity_target"
     --manifest "$gate_export/Cargo.toml"
     --command-cwd "$gate_export"
-    --command-key "atlas-pre-push:$package_name"
+    --command-key "atlas-pre-push"
     --
     "$@"
+    "${selection[@]}"
   )
   local verdict
   verdict="$(classify_gate_step "$gate_log" "${identity_command[@]}")"
@@ -1247,7 +1268,7 @@ run_identity_step() {
     identity)
       cat >&2 <<MESSAGE
 
-pre-push: source identity blocked $step_name for $package_name; no artifact was accepted.
+pre-push: source identity blocked $step_name for$packages; no artifact was accepted.
 MESSAGE
       grep -m 1 'atlas-build-identity:' "$gate_log" >&2 || true
       exit 1
@@ -1255,7 +1276,7 @@ MESSAGE
     ours)
       cat >&2 <<MESSAGE
 
-pre-push: $step_name fails for $package_name, so the source-identity build did not complete.
+pre-push: $step_name fails for$packages, so the source-identity build did not complete.
 MESSAGE
       grep -m 1 '^error' "$gate_log" >&2 || true
       exit 1
@@ -1319,9 +1340,7 @@ gate_log="$(mktemp "$tmp_base/pg-log.XXXXXX")"
 run_temps+=("$gate_log")
 
 if [ "$identity_enabled" -eq 1 ]; then
-  for package_name in $gate_packages; do
-    run_identity_step "$package_name" clippy cargo clippy "${identity_cargo_manifest_args[@]}" -p "$package_name" --all-targets --locked
-  done
+  run_identity_step clippy "$gate_packages" cargo clippy "${identity_cargo_manifest_args[@]}" --all-targets --locked
 else
   case "$(classify_gate_step "$gate_log" cargo clippy $gate_specs --all-targets)" in
     ours)
@@ -1346,12 +1365,14 @@ fi
 
 if command -v cargo-nextest >/dev/null 2>&1; then
   if [ "$identity_enabled" -eq 1 ]; then
+    testable_packages=""
     for package_name in $gate_packages; do
       case $'\n'"$untestable_packages"$'\n' in
         *$'\n'"$package_name"$'\n'*) continue ;;
       esac
-      run_identity_step "$package_name" tests cargo nextest run "${identity_cargo_manifest_args[@]}" -p "$package_name" --locked --no-tests=pass
+      testable_packages="$testable_packages $package_name"
     done
+    run_identity_step tests "$testable_packages" cargo nextest run "${identity_cargo_manifest_args[@]}" --locked --no-tests=pass
   else
     case "$(classify_gate_step "$gate_log" cargo nextest run $gate_specs --no-tests=pass)" in
       ours)
@@ -1402,20 +1423,18 @@ for package in json.load(sys.stdin)["packages"]:
     echo "pre-push: cargo metadata did not list the documented packages" >&2
     exit 1
   fi
+  rustdoc_packages=""
   for package_name in $gate_packages; do
     case "
 $documented_packages
 " in
       *"
 $package_name
-"*) ;;
-      *)
-        echo "pre-push: rustdoc skipped for $package_name; it has no documented lib or bin target" >&2
-        continue
-        ;;
+"*) rustdoc_packages="$rustdoc_packages $package_name" ;;
+      *) echo "pre-push: rustdoc skipped for $package_name; it has no documented lib or bin target" >&2 ;;
     esac
-    run_identity_step "$package_name" rustdoc env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps "${identity_cargo_manifest_args[@]}" -p "$package_name" --locked
   done
+  run_identity_step rustdoc "$rustdoc_packages" env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps "${identity_cargo_manifest_args[@]}" --locked
 else
   case "$(classify_gate_step "$gate_log" env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps $gate_specs)" in
     ours)
