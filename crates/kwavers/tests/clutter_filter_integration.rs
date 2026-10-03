@@ -331,35 +331,10 @@ fn test_realistic_fus_workflow() -> KwaversResult<()> {
     Ok(())
 }
 
+#[path = "clutter_filter_integration/separation_methods.rs"]
+mod separation_methods;
+
 #[test]
 fn test_all_separation_methods() -> KwaversResult<()> {
-    let (data, _, _) = generate_fus_data(30, 120, 5.0, 0.5, 0.02, 0.15);
-
-    // Test FixedRank
-    let config1 = AdaptiveFilterConfig {
-        separation_method: SubspaceSeparationMethod::FixedRank { clutter_rank: 2 },
-        ..Default::default()
-    };
-    let mut filter1 = AdaptiveFilter::new(config1)?;
-    let _result1 = filter1.filter(&data)?;
-
-    // Test AdaptiveThreshold
-    let config2 = AdaptiveFilterConfig {
-        separation_method: SubspaceSeparationMethod::AdaptiveThreshold { decay_factor: 0.1 },
-        ..Default::default()
-    };
-    let mut filter2 = AdaptiveFilter::new(config2)?;
-    let _result2 = filter2.filter(&data)?;
-
-    // Test CbrBased
-    let config3 = AdaptiveFilterConfig {
-        separation_method: SubspaceSeparationMethod::CbrBased {
-            target_cbr_db: 25.0,
-        },
-        ..Default::default()
-    };
-    let mut filter3 = AdaptiveFilter::new(config3)?;
-    let _result3 = filter3.filter(&data)?;
-
-    Ok(())
+    separation_methods::check_all_methods()
 }
