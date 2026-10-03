@@ -16,7 +16,7 @@
 use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use kwavers_medium::Medium;
+use kwavers_medium::{Medium, ThermalMaterialFields};
 use leto::{Array3, ArrayView3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
@@ -24,6 +24,22 @@ use kwavers_physics::thermal::diffusion::{
     BioheatParameters, CattaneoVernotte, HyperbolicParameters, PennesBioheat,
     ThermalDiffusionConfig, ThermalDoseCalculator,
 };
+
+/// A stable identity for a borrowed medium, used as the thermal cache key.
+///
+/// `&dyn Medium` is a fat pointer: (data pointer, vtable pointer). The *data*
+/// pointer is what identifies the medium, so that is what gets read; the
+/// vtable pointer varies with which impl the compiler selected and would make
+/// the same medium look like two different ones. Reading the data pointer also
+/// means coercing the same `&medium` at two call sites yields the same key,
+/// which is what the cache requires to actually hit.
+///
+/// The value is only ever compared for equality against another value derived
+/// the same way, and only while the borrow is alive, so it identifies the
+/// medium for the cache's lifetime without outliving it.
+fn medium_discriminant(medium: &dyn Medium) -> usize {
+    std::ptr::from_ref::<dyn Medium>(medium).cast::<()>() as usize
+}
 
 #[derive(Debug)]
 pub struct ThermalDiffusionSolver {
@@ -35,6 +51,13 @@ pub struct ThermalDiffusionSolver {
     dose_calculator: Option<ThermalDoseCalculator>,
     pub(super) laplacian_workspace: Array3<f64>,
     current_time: Time<f64>,
+    /// Sampled thermal coefficients and the medium pointer they came from.
+    ///
+    /// The discriminant is compared, not the pointed-to value: a `&dyn Medium`
+    /// is stable for the simulation's lifetime, so identity is the correct and
+    /// cheap cache key. Re-sampling on a different pointer keeps a swapped
+    /// medium from silently reusing the previous coefficients.
+    thermal_cache: Option<(usize, ThermalMaterialFields)>,
 }
 
 impl ThermalDiffusionSolver {
@@ -79,6 +102,34 @@ impl ThermalDiffusionSolver {
             dose_calculator,
             laplacian_workspace: Array3::zeros(shape),
             current_time: Time::from_base(0.0),
+            thermal_cache: None,
+        }
+    }
+
+    /// The medium's sampled thermal coefficients, sampling on first use.
+    ///
+    /// Takes the cache back out of `self` so the caller can hold the field
+    /// arrays while also borrowing `temperature` mutably; the sampling
+    /// allocation happens once per medium, not once per step.
+    fn take_thermal_fields(
+        &mut self,
+        medium: &dyn Medium,
+        grid: &Grid,
+    ) -> (usize, ThermalMaterialFields) {
+        let discriminant = medium_discriminant(medium);
+        let is_current = self
+            .thermal_cache
+            .as_ref()
+            .is_some_and(|(cached, _)| *cached == discriminant);
+
+        if is_current {
+            let (cached, fields) = self
+                .thermal_cache
+                .take()
+                .expect("cache presence checked above");
+            (cached, fields)
+        } else {
+            (discriminant, ThermalMaterialFields::sample(medium, grid))
         }
     }
 
@@ -319,6 +370,13 @@ impl ThermalDiffusionSolver {
             }
         }
 
+        // One virtual call per cell becomes one per medium: the diffusivity field
+        // is a property of the medium's static spatial field, not of the
+        // evolving temperature, so it is sampled once and reused. The cache is
+        // keyed on the medium's discriminant, so a caller that swaps media
+        // between steps re-samples rather than reading stale coefficients.
+        let (discriminant, fields) = self.take_thermal_fields(medium, grid);
+
         let [_, ny, nz] = shape;
         let slab_len = ny * nz;
         let source_slice = external_source
@@ -326,12 +384,7 @@ impl ThermalDiffusionSolver {
             .and_then(|source| source.as_slice());
 
         let update_cell = |i: usize, j: usize, k: usize, temp: &mut f64, lap: f64, source: f64| {
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let z = k as f64 * grid.dz;
-
-            let alpha = medium.thermal_diffusivity(x, y, z, grid);
-
+            let alpha = fields.alpha[[i, j, k]];
             *temp += dt_s * alpha.mul_add(lap, source);
         };
 
@@ -366,6 +419,11 @@ impl ThermalDiffusionSolver {
                     update_cell(i, j, k, temp, lap, source);
                 });
         }
+
+        // Retain the sampled fields for the next step. The allocation is reused
+        // rather than re-made, so steady-state stepping performs no sampling
+        // work at all.
+        self.thermal_cache = Some((discriminant, fields));
 
         Ok(())
     }
