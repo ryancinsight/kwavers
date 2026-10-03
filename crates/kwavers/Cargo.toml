@@ -361,6 +361,10 @@ required-features = ["pinn"]
 name = "simd_field_ops"
 harness = false
 
+[[bench]]
+name = "photoacoustic_pipeline"
+harness = false
+
 [[example]]
 name = "skull_ct_phase_correction"
 path = "examples/skull_ct_phase_correction.rs"
