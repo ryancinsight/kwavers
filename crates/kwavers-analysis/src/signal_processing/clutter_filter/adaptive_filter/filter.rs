@@ -1,6 +1,7 @@
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array2};
+use leto_ops::SymmetricEigenWorkspace;
 
 /// Adaptive clutter filter using eigendecomposition.
 ///
@@ -11,12 +12,20 @@ use leto::{Array1, Array2};
 /// 3. Apply adaptive thresholding based on CBR estimation
 /// 4. Reconstruct signal with clutter eigenmodes removed
 ///
+/// ## Eigensolver
+///
+/// The temporal covariance is real symmetric, so each pixel is decomposed by
+/// Householder tridiagonalization and implicit-shift QL
+/// ([`SymmetricEigenWorkspace`]): `O(n³)` work for ensemble length `n`, with
+/// backward error `O(n²·ε·‖R‖)`. Only the lower triangle of the covariance is
+/// built and read.
+///
 /// ## Memory
 ///
-/// The per-pixel working buffers (covariance matrix, sorted eigenvalues,
-/// sort index, filtered signal) are allocated once per [`AdaptiveFilter::filter`]
-/// call and reused across pixels, instead of five allocations per pixel. The
-/// remaining per-pixel allocations live inside the eigensolver itself.
+/// The per-pixel working buffers (covariance matrix, eigensolver workspace,
+/// sorted eigenvalues, filtered signal) are allocated once per
+/// [`AdaptiveFilter::filter`] call and reused across pixels, so the per-pixel
+/// path performs no allocation.
 ///
 /// ## References
 ///
@@ -32,8 +41,8 @@ pub struct AdaptiveFilter {
 #[derive(Debug)]
 struct PixelScratch {
     covariance: Array2<f64>,
+    eigen: SymmetricEigenWorkspace<f64>,
     sorted_eigenvalues: Array1<f64>,
-    indices: Vec<usize>,
     filtered: Array1<f64>,
 }
 
@@ -41,8 +50,8 @@ impl PixelScratch {
     fn new(n_frames: usize) -> Self {
         Self {
             covariance: Array2::zeros((n_frames, n_frames)),
+            eigen: SymmetricEigenWorkspace::new(),
             sorted_eigenvalues: Array1::zeros(n_frames),
-            indices: (0..n_frames).collect(),
             filtered: Array1::zeros(n_frames),
         }
     }
@@ -149,9 +158,8 @@ impl AdaptiveFilter {
 
         // Construct the temporal covariance R[i,j] = E[x(t+i) x(t+j)]. R
         // depends only on the lag |i-j|, so each lag's inner product is
-        // evaluated once — in the same ascending-t order the previous
-        // all-pairs loop used — and written to both triangles. The stored
-        // values are bitwise identical to computing every (i, j) pair.
+        // evaluated once and stored in the lower triangle, the only part the
+        // eigensolver reads.
         let mut cov = scratch.covariance.view_mut();
         for lag in 0..n_frames {
             let count = n_frames - lag;
@@ -161,51 +169,41 @@ impl AdaptiveFilter {
             }
             let value = sum / count as f64;
             for i in 0..count {
-                cov[[i, i + lag]] = value;
                 cov[[i + lag, i]] = value;
             }
         }
 
-        // The temporal covariance is symmetric by construction (R[i,j] = R[j,i]),
-        // so use the symmetric Jacobi eigensolver, which guarantees real
-        // eigenvalues and orthonormal eigenvectors. The general complex QR
-        // (`eig`) is unnecessary here and orders of magnitude slower on matrices
-        // this size (>60 s per 120×120 vs milliseconds), which per-pixel across
-        // an image made the adaptive filter unusable.
-        let decomposition = leto_ops::symmetric_eigen_jacobi(&scratch.covariance.view())?;
-        let eigenvalues = &decomposition.eigenvalues;
-        let eigenvectors = &decomposition.eigenvectors;
-
-        // Sort descending.
-        let indices = &mut scratch.indices;
-        for (i, index) in indices.iter_mut().enumerate() {
-            *index = i;
-        }
-        indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
-        for (new_idx, &old_idx) in indices.iter().enumerate() {
-            scratch.sorted_eigenvalues[new_idx] = eigenvalues[old_idx];
+        // R is symmetric by construction, so the symmetric eigensolver applies:
+        // real eigenvalues, orthonormal eigenvectors, `O(n³)` work. The
+        // eigenvalues come back ascending, the eigenvectors as contiguous rows
+        // in the same order, so descending order is the reversed iteration.
+        scratch.eigen.decompose(&scratch.covariance.view())?;
+        for (slot, &value) in scratch
+            .sorted_eigenvalues
+            .iter_mut()
+            .zip(scratch.eigen.eigenvalues().iter().rev())
+        {
+            *slot = value;
         }
 
         let clutter_rank = self.determine_clutter_rank(&scratch.sorted_eigenvalues)?;
         let cbr = self.estimate_cbr(&scratch.sorted_eigenvalues, clutter_rank);
         self.cbr_history.push(cbr);
 
-        // Project onto blood subspace: filtered = x − Σᵢ <x,eᵢ> eᵢ. Only the
-        // first `clutter_rank` sorted eigenvector columns are consumed, so the
-        // full sorted matrix is never materialized; column `indices[i]` holds
-        // the same values the materialized matrix had at column `i`.
+        // Project onto blood subspace: filtered = x − Σᵢ <x,eᵢ> eᵢ over the
+        // `clutter_rank` leading eigenvectors, the last rows of the ascending
+        // eigenvector sequence.
         let filtered = &mut scratch.filtered;
         for (dst, &src) in filtered.iter_mut().zip(signal.iter()) {
             *dst = src;
         }
-        for i in 0..clutter_rank.min(n_frames) {
-            let column = indices[i];
+        for eigenvector in scratch.eigen.eigenvectors().rev().take(clutter_rank) {
             let mut projection_coef = 0.0;
-            for (idx, &x_val) in signal.iter().enumerate() {
-                projection_coef += x_val * eigenvectors[[idx, column]];
+            for (&x_val, &e_val) in signal.iter().zip(eigenvector) {
+                projection_coef += x_val * e_val;
             }
-            for (idx, filtered_val) in filtered.iter_mut().enumerate() {
-                *filtered_val -= projection_coef * eigenvectors[[idx, column]];
+            for (filtered_val, &e_val) in filtered.iter_mut().zip(eigenvector) {
+                *filtered_val -= projection_coef * e_val;
             }
         }
 

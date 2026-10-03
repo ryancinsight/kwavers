@@ -156,3 +156,153 @@ fn test_cbr_history() {
     filter.clear_history();
     assert_eq!(filter.cbr_history().len(), 0);
 }
+
+/// Per-pixel result of the classical-Jacobi filter, the eigensolver the
+/// adaptive filter used before it moved to tridiagonal QL.
+struct JacobiReference {
+    filtered: Vec<f64>,
+    /// Eigenvalues, descending.
+    eigenvalues: Vec<f64>,
+    frobenius_norm: f64,
+    rank: usize,
+}
+
+fn jacobi_reference(signal: &[f64], rank_of: impl Fn(&[f64]) -> usize) -> JacobiReference {
+    let n = signal.len();
+    let lag_mean = |lag: usize| -> f64 {
+        let count = n - lag;
+        (0..count).map(|t| signal[t] * signal[t + lag]).sum::<f64>() / count_f64(count)
+    };
+    let covariance = Array2::from_shape_fn((n, n), |[i, j]| lag_mean(i.abs_diff(j)));
+    let frobenius_norm = covariance.iter().map(|v| v * v).sum::<f64>().sqrt();
+    let decomposition =
+        leto_ops::symmetric_eigen_jacobi(&covariance.view()).expect("invariant: symmetric input");
+    let mut order: Vec<usize> = (0..n).collect();
+    order.sort_by(|&a, &b| decomposition.eigenvalues[b].total_cmp(&decomposition.eigenvalues[a]));
+    let eigenvalues: Vec<f64> = order
+        .iter()
+        .map(|&k| decomposition.eigenvalues[k])
+        .collect();
+    let rank = rank_of(&eigenvalues);
+    let mut filtered = signal.to_vec();
+    for &column in order.iter().take(rank) {
+        let eigenvector = |row: usize| decomposition.eigenvectors[[row, column]];
+        let coefficient: f64 = (0..n).map(|row| signal[row] * eigenvector(row)).sum();
+        for (row, value) in filtered.iter_mut().enumerate() {
+            *value -= coefficient * eigenvector(row);
+        }
+    }
+    JacobiReference {
+        filtered,
+        eigenvalues,
+        frobenius_norm,
+        rank,
+    }
+}
+
+fn count_f64(count: usize) -> f64 {
+    f64::from(u32::try_from(count).expect("invariant: counts in this module fit in u32"))
+}
+
+/// The tridiagonal-QL filter agrees with the Jacobi filter on the
+/// `generate_fus_data(30, 120, 5.0, 0.5, 0.02, 0.15)` ensemble of the
+/// integration suite (tissue amplitude 5 at 0.02 cycles/frame, blood amplitude
+/// `0.5 (1 + i/10)` at 0.15), at pixels 0 and 29 (one Jacobi decomposition of
+/// a 120 x 120 covariance costs a few hundred milliseconds).
+///
+/// Both solvers return the exact eigendecomposition of `R + E` with
+/// `||E||_2 <= n^2 eps ||R||_F` (the envelope `leto-ops` documents for QL;
+/// Jacobi's is no larger), so the two covariances differ by at most
+/// `2 n^2 eps ||R||_F =: e`. The rank-`k` eigenspace of two matrices that far
+/// apart differs by `sin(theta) <= e / (gap - e)` (Davis-Kahan), `gap =
+/// lambda_k - lambda_(k+1)`, hence
+/// `||f_QL - f_Jacobi||_2 <= ||x||_2 e / (gap - e)`. The two pixels have large
+/// gaps and select different adaptive ranks (2 at pixel 0, 4 at pixel 29).
+fn assert_filter_matches_jacobi(
+    separation_method: SubspaceSeparationMethod,
+    rank_of: impl Fn(&[f64]) -> usize,
+    expected_ranks: [usize; 2],
+) {
+    const N_FRAMES: usize = 120;
+    const PIXELS: [usize; 2] = [0, 29];
+    let data = Array2::from_shape_fn((PIXELS.len(), N_FRAMES), |[row, frame]| {
+        let t = count_f64(frame);
+        let blood_scale = count_f64(PIXELS[row]) / 10.0 + 1.0;
+        5.0 * (TWO_PI * 0.02 * t).sin() + 0.5 * blood_scale * (TWO_PI * 0.15 * t).sin()
+    });
+    let mut filter = AdaptiveFilter::new(AdaptiveFilterConfig {
+        separation_method,
+        ..Default::default()
+    })
+    .unwrap();
+    let filtered = filter.filter(&data).unwrap();
+
+    let n = count_f64(N_FRAMES);
+    for (row, expected_rank) in expected_ranks.into_iter().enumerate() {
+        let signal: Vec<f64> = (0..N_FRAMES).map(|t| data[[row, t]]).collect();
+        let reference = jacobi_reference(&signal, &rank_of);
+        assert_eq!(
+            reference.rank, expected_rank,
+            "pixel {}: fixture rank",
+            PIXELS[row]
+        );
+
+        let backward_error = 2.0 * n * n * f64::EPSILON * reference.frobenius_norm;
+        let gap = reference.eigenvalues[reference.rank - 1] - reference.eigenvalues[reference.rank];
+        assert!(
+            gap > 10.0 * backward_error,
+            "pixel {}: gap {gap} too small",
+            PIXELS[row]
+        );
+        let signal_norm = signal.iter().map(|v| v * v).sum::<f64>().sqrt();
+        let tolerance = signal_norm * backward_error / (gap - backward_error);
+
+        let difference = (0..N_FRAMES)
+            .map(|t| (filtered[[row, t]] - reference.filtered[t]).powi(2))
+            .sum::<f64>()
+            .sqrt();
+        assert!(
+            difference <= tolerance,
+            "pixel {}: |f_QL - f_Jacobi| = {difference} exceeds {tolerance}",
+            PIXELS[row]
+        );
+        let removed = signal
+            .iter()
+            .zip(&reference.filtered)
+            .map(|(x, f)| (x - f).powi(2))
+            .sum::<f64>()
+            .sqrt();
+        assert!(
+            removed > 0.5 * signal_norm,
+            "pixel {}: reference removes the tissue",
+            PIXELS[row]
+        );
+    }
+}
+
+#[test]
+fn test_fixed_rank_matches_jacobi_reference() {
+    assert_filter_matches_jacobi(
+        SubspaceSeparationMethod::FixedRank { clutter_rank: 2 },
+        |_| 2,
+        [2, 2],
+    );
+}
+
+#[test]
+fn test_adaptive_threshold_matches_jacobi_reference() {
+    // Default noise floor 1e-6; rank = first eigenvalue below
+    // `0.1 lambda_max` or the floor, as `determine_clutter_rank` defines it.
+    assert_filter_matches_jacobi(
+        SubspaceSeparationMethod::AdaptiveThreshold { decay_factor: 0.1 },
+        |eigenvalues| {
+            let largest = eigenvalues[0];
+            eigenvalues
+                .iter()
+                .position(|&e| e < 0.1 * largest || e < 1e-6 * largest)
+                .unwrap_or(eigenvalues.len() / 2)
+                .max(1)
+        },
+        [2, 4],
+    );
+}
