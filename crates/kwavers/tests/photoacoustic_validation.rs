@@ -322,67 +322,95 @@ fn test_reference_toolbox_compatibility() -> KwaversResult<()> {
     Ok(())
 }
 
-/// Performance benchmark test (smoke gate, not a precision benchmark — that
-/// is the job of the criterion bench + benchmark-regression workflow).
+/// Full pipeline (fluence, initial pressure, wave simulation) on a
+/// 32×32×16 grid, checked against the photoacoustic generation theorem and
+/// the diffusion model's depth structure. Timing is measured by the
+/// `photoacoustic_pipeline` criterion bench, never asserted here.
 ///
-/// ## Budget derivation
+/// ## Derivation of the asserted properties
 ///
-/// Measured 2026-08-22 on the dev machine: fluence 904 ms + wave 590 ms =
-/// 1.49 s total (opt-level 1 test profile); 1.18 s in release. The previous
-/// hardcoded 1.0 s threshold was underived and fails on current hardware.
-/// Budget = 6.0 s = 4× the release measurement (measured 1.18 s), absorbing
-/// runner variance and the opt-level-1 profile while still failing any
-/// order-of-magnitude regression in the diffusion solve or the wave kernel.
+/// 1. Generation theorem, pointwise: `p₀ = Γ · s(λ) · μₐ · Φ`, with
+///    `s(λ) = 1` for the first wavelength (532 nm < 600 nm, the visible band
+///    of the wavelength scaling). `initial_pressure` evaluates the same
+///    product `Γ · μₐ · Φ` left to right, so the reference below differs by
+///    at most the rounding of the two multiplications that could be
+///    reassociated: `2ε` relative; the bound used is `4ε`, `ε = f64::EPSILON`.
+///    A non-default Γ makes a fallback to the water default observable.
+/// 2. Homogeneous optics: the blood vessel (centre 25 mm) and tumor (centre
+///    20 mm, radius 5 mm) of the phantom lie outside the grid, which spans
+///    6.4 mm per axis, so μₐ is uniform. Uniform illumination of the `z = 0`
+///    layer with zero-flux lateral faces makes the diffusion problem
+///    one-dimensional in `z`: `Φ(z) ∝ cosh(κ(L − z))` with zero flux at
+///    `z = L`, which is strictly decreasing for `z < L`. The discrete
+///    operator is an M-matrix, so the discrete solution decreases strictly
+///    with depth as well. The solver's residual tolerance (1e-6 relative)
+///    leaves the per-layer drop (about 1.4e-6 relative at the bottom
+///    layers, measured 5.7e-5 absolute on Φ ≈ 39.3) above the lateral
+///    spread of the converged field (1e-11), so the strict ordering holds.
 #[test]
-fn test_performance_benchmark() -> KwaversResult<()> {
-    use std::time::Instant;
+fn test_photoacoustic_pipeline_follows_generation_theorem() -> KwaversResult<()> {
+    const GRUNEISEN: f64 = 0.25;
 
     let grid = Grid::new(32, 32, 16, 0.0002, 0.0002, 0.0004)?;
+    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
-    let params = PhotoacousticParameters::default();
+    let params = PhotoacousticParameters {
+        gruneisen_parameters: vec![GRUNEISEN; 4],
+        ..Default::default()
+    };
 
     let mut simulator = PhotoacousticSimulator::new(grid, params, &medium)?;
-
-    let start_time = Instant::now();
-    let fluence = simulator.compute_fluence()?;
-    let fluence_time = start_time.elapsed();
-
-    let start_time = Instant::now();
-    let initial_pressure = simulator.compute_initial_pressure(&fluence)?;
-    let pressure_time = start_time.elapsed();
-
-    let start_time = Instant::now();
-    let result = simulator.simulate(&initial_pressure)?;
-    let simulation_time = start_time.elapsed();
-
-    let total_time = fluence_time + pressure_time + simulation_time;
-
-    eprintln!("Performance benchmark results:");
-    eprintln!(
-        "  Fluence computation: {:.3} ms",
-        fluence_time.as_secs_f64() * 1000.0
-    );
-    eprintln!(
-        "  Pressure computation: {:.3} ms",
-        pressure_time.as_secs_f64() * 1000.0
-    );
-    eprintln!(
-        "  Wave simulation: {:.3} ms",
-        simulation_time.as_secs_f64() * 1000.0
-    );
-    eprintln!("  Total time: {:.3} ms", total_time.as_secs_f64() * 1000.0);
-
-    // Derived budget: 4× the measured release total (1.18 s on 2026-08-22).
-    const TOTAL_TIME_BUDGET_S: f64 = 6.0;
     assert!(
-        total_time.as_secs_f64() < TOTAL_TIME_BUDGET_S,
-        "Simulation too slow: {:.3} s (budget {TOTAL_TIME_BUDGET_S} s, derived \
-         4× the 1.18 s release measurement of 2026-08-22)",
-        total_time.as_secs_f64()
+        simulator.parameters().wavelengths[0] < 600.0,
+        "the scaling s(λ) = 1 below holds for the visible band only"
     );
 
-    // Validate results are still correct
-    assert!(result.snr > 0.0);
+    let mu_a = simulator.optical_properties()[[0, 0, 0]].absorption_coefficient();
+    assert!(
+        simulator
+            .optical_properties()
+            .iter()
+            .all(|p| p.absorption_coefficient() == mu_a),
+        "the phantom inclusions must lie outside this grid"
+    );
+
+    let fluence = simulator.compute_fluence()?;
+    let initial_pressure = simulator.compute_initial_pressure(&fluence)?;
+
+    let tolerance = 4.0 * f64::EPSILON;
+    let mut max_pressure = f64::NEG_INFINITY;
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let expected = GRUNEISEN * mu_a * fluence[[i, j, k]];
+                let actual = initial_pressure.pressure[[i, j, k]];
+                assert!(
+                    (actual - expected).abs() <= tolerance * expected.abs(),
+                    "p0[{i},{j},{k}] = {actual:e}, Γ·μa·Φ = {expected:e}"
+                );
+                max_pressure = max_pressure.max(actual);
+            }
+        }
+    }
+    assert_eq!(initial_pressure.max_pressure, max_pressure);
+
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 1..nz {
+                assert!(
+                    fluence[[i, j, k]] < fluence[[i, j, k - 1]],
+                    "fluence must decrease with depth at ({i},{j}): layer {k} = {:.12e}, \
+                     layer {} = {:.12e}",
+                    fluence[[i, j, k]],
+                    k - 1,
+                    fluence[[i, j, k - 1]]
+                );
+            }
+        }
+    }
+
+    let result = simulator.simulate(&initial_pressure)?;
+    assert!(result.snr.is_finite() && result.snr > 0.0);
 
     Ok(())
 }
