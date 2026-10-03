@@ -17,11 +17,13 @@
 <a id="kw-ci-053"></a>- [KW-CI-053](backlog/kw-ci-053.md) — Update GPU PSTD parity contract [patch] — review
 <a id="kw-ci-094"></a>- [KW-CI-094](backlog/kw-ci-094.md) — The recurseml check errors on itself and is permanently red [patch] — todo
 <a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>- [KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08](backlog/kw-ci-per-pr-matrix-starvation-2026-09-08.md) — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — in-progress
+<a id="kw-clippy-pinn-gpu"></a>- [KW-CLIPPY-PINN-GPU](backlog/kw-clippy-pinn-gpu.md) — `cargo clippy --features pinn,gpu` is not warning-clean outside the solver [patch] — todo
 <a id="kw-dep-039"></a>- [KW-DEP-039](backlog/kw-dep-039.md) — Make Gaia an Atlas-local dependency [patch] — review
 <a id="kw-diag-037"></a>- [KW-DIAG-037](backlog/kw-diag-037.md) — Promote multimodal fusion to Diagnostics [major] — todo
 <a id="kw-dop-045"></a>- [KW-DOP-045](backlog/kw-dop-045.md) — Signed pulsed-wave spectral Doppler [minor] — review
 <a id="kw-edition-2021-behind-current-2026-09-09"></a>- [KW-EDITION-2021-BEHIND-CURRENT-2026-09-09](backlog/kw-edition-2021-behind-current-2026-09-09.md) — 25 crates on edition 2021, resolver 2 [patch] — todo
 <a id="kw-errors-docs-are-template-output-2026-09-09"></a>- [KW-ERRORS-DOCS-ARE-TEMPLATE-OUTPUT-2026-09-09](backlog/kw-errors-docs-are-template-output-2026-09-09.md) — 300 functions document an error they cannot return [patch] — todo
+<a id="kw-examples-oversized-923"></a>- [KW-EXAMPLES-OVERSIZED-923](backlog/kw-examples-oversized-923.md) — Examples and tests grown or touched by #923 stay over the 500-line target [patch] — todo
 <a id="kw-fft-050"></a>- [KW-FFT-050](backlog/kw-fft-050.md) — Direct Apollo axis FFT storage [patch] — review
 <a id="kw-fwi-pstd-adjoint-reciprocity"></a>- [KW-FWI-PSTD-ADJOINT-RECIPROCITY](backlog/kw-fwi-pstd-adjoint-reciprocity.md) — The PSTD adjoint-reciprocity check never ran [patch] — todo
 <a id="kw-gpu-048"></a>- [KW-GPU-048](backlog/kw-gpu-048.md) — GPU PSTD output and dispatch honesty [major] — review
@@ -42,6 +44,7 @@
 <a id="kw-sim-test-compile-graph"></a>- [KW-SIM-TEST-COMPILE-GRAPH](backlog/kw-sim-test-compile-graph.md) — Reduce simulation test build latency [patch] [perf] — in-progress
 <a id="kw-sol-054"></a>- [KW-SOL-054](backlog/kw-sol-054.md) — Repair AVX-512 FDTD layout contract [patch] — todo
 <a id="kw-swe-edge-growth-2026-09-17"></a>- [KW-SWE-EDGE-GROWTH-2026-09-17](backlog/kw-swe-edge-growth-2026-09-17.md) — Elastic displacement grows without bound when the initial field reaches the edges [patch] [fix] — todo
+<a id="kw-test-separation-methods-budget"></a>- [KW-TEST-SEPARATION-METHODS-BUDGET](backlog/kw-test-separation-methods-budget.md) — `test_all_separation_methods` exceeds the nextest slow bound [patch] — todo
 <a id="kwavers-aeq-met-66"></a>- [KWAVERS-AEQ-MET-66](backlog/kwavers-aeq-met-66.md) — Type thermal-diffusion quantities [major] [arch] — blocked
 <a id="kwavers-aeq-met-69"></a>- [KWAVERS-AEQ-MET-69](backlog/kwavers-aeq-met-69.md) — Type B-mode scan-conversion geometry [major] [arch] — in-progress
 <a id="kwavers-aeq-met-flex"></a>- [KWAVERS-AEQ-MET-FLEX](backlog/kwavers-aeq-met-flex.md) — Type the flexible-array dynamic metrics [arch] [major] — blocked
