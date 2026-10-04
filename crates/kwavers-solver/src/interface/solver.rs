@@ -13,6 +13,13 @@ use leto::Array3;
 use std::fmt::Debug;
 
 /// Fundamental solver trait
+// dyn: used as `Box<dyn Solver>` (open, plugin-extensible implementor set --
+// the plugin-based solver registers external implementations). Per the
+// zero-cost policy (ADR 012) this is a sanctioned dynamic-dispatch boundary:
+// the simulation controller holds one box per simulation and calls its
+// coarse methods (initialize, add_sensor, enable_feature, run) against a
+// step whose work is the full field update -- the dispatch is never
+// per-cell.
 pub trait Solver: Debug + Send + Sync {
     /// Get the solver name
     fn name(&self) -> &str;

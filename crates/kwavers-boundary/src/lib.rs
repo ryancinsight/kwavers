@@ -64,6 +64,10 @@ pub struct PmlExpFactors {
 /// ## Multi-physics note
 /// Kwavers supports optics in addition to acoustics. The runtime boundary trait
 /// therefore includes `apply_light(...)` for fluence/fluence-rate boundary handling.
+// dyn: used as `Box<dyn Boundary>` (open, plugin-extensible implementor set --
+// the plugin-based solver supplies its own). Per the zero-cost policy
+// (ADR 012) this is a sanctioned dynamic-dispatch boundary: boundary
+// application runs once per timestep per boundary, never per-cell.
 pub trait Boundary: Debug + Send + Sync {
     /// Downcast support for boundary-specific logic in solver internals.
     fn as_any_mut(&mut self) -> &mut dyn Any;

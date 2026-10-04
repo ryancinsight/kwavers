@@ -1,9 +1,16 @@
 [profile.default]
 # Per-test slow-warn at 10 s and forced termination at 60 s (six 10 s windows)
-# prevents runaway tests from blocking the lib suite. Global suite cap is 15 min.
+# prevents runaway tests from blocking the lib suite. The global cap covers
+# the serialised full-grid-sim group's sum: the heavy validations (kzk ~60-90 s,
+# PSTD sigma comparison 160 s measured, the viscoacoustic decay family at
+# 60-105 s each) run one at a time through the group's max-threads = 1, so
+# kwavers-solver's per-package run alone sums past the old 15-minute bound
+# under the gate's load -- the 910 s abort left 1090 tests unrun (measured
+# 2026-10-03). 25 minutes is the derived bound: the measured serial sum plus
+# the light suite's parallel time.
 # This matches the kwavers standards.yaml policy: "cargo nextest with a strict
 # 60-second [per-test] timeout when available".
-global-timeout = "15m"
+global-timeout = "25m"
 slow-timeout = { period = "10s", terminate-after = 6, grace-period = "5s" }
 
 [profile.ci]
@@ -81,10 +88,28 @@ filter = 'package(kwavers) & (binary(cpml_absorption_quality) | binary(energy_co
 test-group = 'full-grid-sim'
 threads-required = "num-test-threads"
 
+# The multi-simulation heavy validations carry the heavy-validation budget:
+# a 360 s finite termination derived from the simulations each runs, the
+# class the [profile.heavy] 300 s budget documents. The PSTD sigma
+# comparison runs four grazing-reflection simulations (two reference
+# heights per sigma factor; 160 s measured, its single-simulation siblings
+# 55-120 s under the full-suite load), and the 2-D diagonal decay
+# validation runs two 96x96x3000-step viscoacoustic simulations (m = 4
+# and m = 6), which exhausts the 120 s group bound under gate load.
+# Overrides apply first-match, so this block precedes the group override
+# below, which would otherwise cap the decay test at 120 s.
 [[profile.default.overrides]]
-filter = 'package(kwavers-solver) & (test(/forward::viscoacoustic::tests::/) | test(/kuznetsov/))'
+filter = 'test(pstd_sigma_factor_three_outperforms_the_kwave_default) | test(decay_matches_dispersion_2d_diagonal)'
 test-group = 'full-grid-sim'
 threads-required = "num-test-threads"
+slow-timeout = { period = "60s", terminate-after = 6, grace-period = "10s" }
+
+[[profile.default.overrides]]
+filter = 'package(kwavers-solver) & (test(/forward::viscoacoustic::tests::/) | test(/kuznetsov/) | test(/forward::nonlinear::kzk::validation::/))'
+test-group = 'full-grid-sim'
+threads-required = "num-test-threads"
+slow-timeout = { period = "30s", terminate-after = 4, grace-period = "10s" }
+
 
 [[profile.default.overrides]]
 filter = 'package(kwavers-gpu)'
