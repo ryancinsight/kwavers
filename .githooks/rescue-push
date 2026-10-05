@@ -59,19 +59,21 @@ fi
     exit 1
 }
 
+# One scanner process judges every commit the rescue introduces, each against
+# its first parent: a credential added and then removed is still published. The
+# base is the merge-base with the trusted default; none means an unrelated
+# history, scanned whole.
 base="$(git -C "$repo_root" merge-base "$allowlist_ref" "$local_sha" 2>/dev/null || true)"
-if [ -n "$base" ]; then
-    commits="$(git -C "$repo_root" rev-list --reverse "$base..$local_sha")" || exit 1
-else
-    commits="$(git -C "$repo_root" rev-list --reverse "$local_sha")" || exit 1
-fi
-while IFS= read -r commit; do
-    [ -n "$commit" ] || continue
-    read -r _ parent _ <<<"$(git -C "$repo_root" rev-list --parents -n 1 "$commit")"
-    args=(check --root "$repo_root" --rev "$commit" --allowlist-rev "$allowlist_ref")
-    [ -n "${parent:-}" ] && args+=(--base "$parent")
-    git -C "$stack_root" show "$scanner_ref:scripts/atlas-secret-scan.py" \
-        | "$python_bin" - "${args[@]}" || exit 1
-done <<<"$commits"
-
-exit 0
+args=(check --root "$repo_root" --rev "$local_sha" --allowlist-rev "$allowlist_ref")
+[ -n "$base" ] && args+=(--base "$base")
+scan_status=0
+git -C "$stack_root" show "$scanner_ref:scripts/atlas-secret-scan.py" \
+    | "$python_bin" -I - "${args[@]}" || scan_status=$?
+case "$scan_status" in
+    0) exit 0 ;;
+    1) exit 1 ;;
+    *)
+        echo "pre-push: BLOCKED -- the secret scan could not run (exit $scan_status), so the rescue was not scanned; the reason is the secret-scan line above." >&2
+        exit 1
+        ;;
+esac
