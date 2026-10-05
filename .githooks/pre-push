@@ -20,8 +20,14 @@
 # same overlay, which is why local verification never sees the problem, and
 # fails every `--locked` job in CI, which has no overlay.
 #
-# `scripts/lockfile.py --check` runs cargo from outside the overlay and is the
-# same check CI runs, so a push that would fail there never reaches a runner.
+# The stack's `scripts/lockfile.py --check` runs cargo from outside the overlay
+# and is the check the shared `lockfile-guard` workflow runs for a member whose
+# CI calls it; not every member's CI does, so the hook is the check a push is
+# certain to meet, ahead of any `--locked` CI job that fails on a flattened
+# lock. This hook runs the checker from the stack's fetched default, beside
+# the other stack tools; a
+# member's own copy of the script (counted by `member_lockfile_copies`) is
+# never run.
 #
 # Single source: this file is owned here and deployed outward to every
 # member's `.githooks/` by `scripts/atlas-lock-form.py sync-hooks`
@@ -38,7 +44,13 @@
 #     SKIP_LOCAL_GATE=1 git push       (fast gate section only)
 #
 # SKIP_LOCKFILE_CHECK is not honoured: a lock check that fails, or cannot
-# run, refuses the push either way. coeus's checker contract (scripts/tests/
+# run, refuses the push either way. The arms that let a push through
+# unchecked are a clone with no Atlas stack above it and a clone below a stack
+# that does not register it: neither has a checker owed, each says so, and the
+# lock is left to the `--locked` jobs of CI. A registered member, lane or
+# harness worktree never takes either arm: a stack without a fetched default,
+# or without the checker, refuses.
+# coeus's checker contract (scripts/tests/
 # test_hooks.py::test_skip_variable_cannot_hide_checker_failures) requires
 # that no variable can hide a checker failure, and this hook's own skip used
 # to exit 0 on an absent checker or interpreter -- hiding a failure exactly
@@ -88,6 +100,122 @@ outside_checkout() {
     unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR
     "$@"
   )
+}
+
+# The Atlas stack this checkout belongs to, or nothing: the nearest ancestor that
+# is a git repository root with no superproject of its own (one that git cannot
+# read around it is refused, not assumed to have none), registers members
+# under `repos/` in its `.gitmodules`, and has one of those members share this
+# checkout's object store. It is found by that identity and not by depth,
+# since a member at `repos/<name>`, a lane under `worktrees/` and a harness
+# worktree below a member sit at different depths beneath the same stack,
+# while a `.gitmodules` planted in a member (which is itself a submodule of the
+# stack, so never a stack), or a directory that only looks like a stack, owns
+# none of them.
+#
+# The member is resolved from the checkout's object store directly: a
+# member's store is `<stack>/.git/modules/<name>` or its own `.git`
+# directory, so the registered entry that names it is tried first and
+# confirmed by one git call, and every other member is probed only when
+# that finds nothing (a member whose gitdir lives elsewhere, or a clone the
+# stack does not register). The cost of a hit is therefore constant,
+# wherever the member sits in `.gitmodules`.
+#
+# Exit status: 0 with the stack on stdout, or with nothing for a clone with
+# no stack above it; 2 with a message when the stack cannot be established
+# (git cannot read a stack or one of its members, or cannot identify this
+# checkout): the caller refuses; 3 with the nearest readable stack on stdout
+# when a stack sits above this clone but registers none of this clone's
+# store (a `--shared` or `--reference` clone, a copy): the stack does not
+# claim it, so the caller passes with a message that names the stack.
+# Identical to the function in the other hook, which a test holds so.
+locate_stack() {
+  local probe="$1" hook="${BASH_SOURCE[0]##*/}" line section name top path store own_store unreadable
+  local index stack_common superproject facts outer unmatched=""
+  local path_pattern='^[[:space:]]*path[[:space:]]*=[[:space:]]*(repos/[^[:space:]]+)[[:space:]]*$'
+  local section_pattern='^[[:space:]]*\[submodule[[:space:]]+"(.*)"\][[:space:]]*$'
+  local -a registered names order rest
+  own_store="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+  if [ -z "$own_store" ]; then
+    echo "$hook: git cannot identify this checkout's object store, so the Atlas stack cannot be located; refusing" >&2
+    return 2
+  fi
+  while :; do
+    probe="${probe%/*}"
+    if [ -z "$probe" ]; then
+      if [ -n "$unmatched" ]; then
+        printf '%s\n' "$unmatched"
+        return 3
+      fi
+      return 0
+    fi
+    [ -f "$probe/.gitmodules" ] || continue
+    registered=()
+    names=()
+    section=""
+    while IFS= read -r line || [ -n "$line" ]; do
+      if [[ "$line" =~ $section_pattern ]]; then
+        section="${BASH_REMATCH[1]}"
+      elif [[ "$line" =~ $path_pattern ]]; then
+        registered+=("${BASH_REMATCH[1]}")
+        names+=("$section")
+      fi
+    done < "$probe/.gitmodules"
+    [ "${#registered[@]}" -gt 0 ] || continue
+    [ -e "$probe/.git" ] || continue
+    top=""
+    stack_common=""
+    superproject=""
+    facts="$(outside_checkout git -C "$probe" rev-parse --path-format=absolute --show-toplevel --git-common-dir --show-superproject-working-tree 2>/dev/null || true)"
+    { IFS= read -r top; IFS= read -r stack_common; IFS= read -r superproject; } <<<"$facts" || true
+    if [ -z "$top" ] || [ "$(cd "$top" && pwd)" != "$probe" ]; then
+      echo "$hook: the Atlas stack at $probe registers members but git cannot read it, so its lockfile checker cannot be used; refusing. If git reports dubious ownership and you trust that checkout: git config --global --add safe.directory $probe" >&2
+      return 2
+    fi
+    # The superproject query prints nothing both when the candidate has none
+    # and when git cannot read the repository around it, so it answers only if
+    # that repository is readable: a candidate inside one git cannot read may be
+    # a submodule of it (a member carrying its own `.gitmodules`), which no
+    # stack is.
+    outer="${probe%/*}"
+    while [ -n "$outer" ] && [ ! -e "$outer/.git" ]; do
+      outer="${outer%/*}"
+    done
+    if [ -n "$outer" ] && ! outside_checkout git -C "$outer" rev-parse --show-toplevel >/dev/null 2>&1; then
+      echo "$hook: the candidate Atlas stack at $probe sits inside a repository at $outer that git cannot read, so it cannot be told apart from a submodule; refusing. If git reports dubious ownership and you trust that checkout: git config --global --add safe.directory $outer" >&2
+      return 2
+    fi
+    [ -z "$superproject" ] || continue
+    order=()
+    rest=()
+    for index in "${!registered[@]}"; do
+      path="${registered[$index]}"
+      name="${names[$index]}"
+      if [ "$own_store" = "$top/$path/.git" ] \
+        || { [ -n "$name" ] && [ "$own_store" = "$stack_common/modules/$name" ]; }; then
+        order+=("$path")
+      else
+        rest+=("$path")
+      fi
+    done
+    unreadable=0
+    for path in ${order[@]+"${order[@]}"} ${rest[@]+"${rest[@]}"}; do
+      [ -e "$probe/$path/.git" ] || continue
+      if ! store="$(outside_checkout git -C "$probe/$path" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; then
+        unreadable=1
+        continue
+      fi
+      if [ "$store" = "$own_store" ]; then
+        printf '%s\n' "$probe"
+        return 0
+      fi
+    done
+    if [ "$unreadable" = 1 ]; then
+      echo "$hook: a member registered by the Atlas stack at $probe cannot be read by git, so this checkout cannot be matched to the stack; refusing. If git reports dubious ownership and you trust it: git config --global --add safe.directory $probe/<member>" >&2
+      return 2
+    fi
+    [ -n "$unmatched" ] || unmatched="$probe"
+  done
 }
 
 tmp_base="${TMPDIR:-/tmp}"
@@ -153,13 +281,60 @@ if [ ! -t 0 ]; then
   done
 fi
 
+if [ "${#push_lines[@]}" -gt 0 ]; then
+  for push_line in "${push_lines[@]}"; do
+    read -r local_ref local_sha remote_ref remote_sha extra <<<"$push_line"
+    [ -z "${extra:-}" ] || {
+      echo "pre-push: BLOCKED -- malformed ref update" >&2
+      exit 1
+    }
+    if [ "$local_sha" != "$zero" ] \
+      && ! outside_checkout git -C "$repo_root" cat-file -e "$local_sha^{commit}" 2>/dev/null; then
+      echo "pre-push: BLOCKED -- pushed local commit is unavailable" >&2
+      exit 1
+    fi
+    if [ "$local_sha" != "$zero" ] && [ "$remote_sha" != "$zero" ] \
+      && ! outside_checkout git -C "$repo_root" cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
+      echo "pre-push: BLOCKED -- remote commit is unavailable" >&2
+      exit 1
+    fi
+  done
+fi
+
+# A push of deletions alone carries nothing to judge, whatever state the stack
+# is in: it is settled before the stack is looked for.
+content_lines=()
+for push_line in ${push_lines[@]+"${push_lines[@]}"}; do
+  read -r _ push_sha _ <<<"$push_line"
+  [ -n "${push_sha:-}" ] && [ "$push_sha" != "$zero" ] || continue
+  content_lines+=("$push_line")
+done
+if [ "${#push_lines[@]}" -gt 0 ] && [ "${#content_lines[@]}" -eq 0 ]; then
+  echo "pre-push: the push carries no commits; nothing to gate" >&2
+  exit 0
+fi
+
+# The stack this checkout belongs to, located once for the rescue dispatch and
+# the stack tools below. A stack git cannot read refuses here; a stack that
+# does not register this clone is named in the messages below and gives it no
+# checker (see locate_stack).
+located=0
+unmatched_stack=""
+stack_root="$(locate_stack "$(cd "$repo_root" && pwd)")" || located=$?
+case "$located" in
+  0) ;;
+  3) unmatched_stack="$stack_root"; stack_root="" ;;
+  *) exit 1 ;;
+esac
+
 # Both Atlas and member hooks dispatch to the classifier committed at the
 # fetched stack default. The member revision cannot broaden its own exception.
 if [ "${ATLAS_RESCUE_MIXED:-0}" != 1 ] && [ "${#push_lines[@]}" -gt 0 ]; then
-  rescue_stack_root="$(cd "$repo_root/../.." && pwd)"
+  rescue_stack_root="$stack_root"
   rescue_stack_ref=""
   rescue_allowlist_ref=""
   for rescue_ref in origin/HEAD origin/main; do
+    [ -n "$rescue_stack_root" ] || break
     rescue_stack_ref="$(outside_checkout git -C "$rescue_stack_root" rev-parse --verify --quiet "$rescue_ref^{commit}" 2>/dev/null || true)"
     [ -n "$rescue_stack_ref" ] && break
   done
@@ -181,17 +356,7 @@ if [ "${ATLAS_RESCUE_MIXED:-0}" != 1 ] && [ "${#push_lines[@]}" -gt 0 ]; then
   fi
 fi
 
-content_lines=()
-for push_line in "${push_lines[@]}"; do
-  read -r _ push_sha _ <<<"$push_line"
-  [ -n "${push_sha:-}" ] && [ "$push_sha" != "$zero" ] || continue
-  content_lines+=("$push_line")
-done
 if [ "${#push_lines[@]}" -gt 0 ]; then
-  if [ "${#content_lines[@]}" -eq 0 ]; then
-    echo "pre-push: the push carries no commits; nothing to gate" >&2
-    exit 0
-  fi
   if [ "${#push_lines[@]}" -gt 1 ]; then
     export ATLAS_RESCUE_MIXED=1
     refs_status=0
@@ -375,78 +540,6 @@ for stable in "$tmp_base"/pg-??????????; do
   rm -rf "$stable" "$stable.lock" 2>/dev/null || true
 done
 
-# The skips above fall through to the code gate, so this whole section runs
-# only when the lock still wants verifying.
-if [ "$skip_lockfile" = "0" ]; then
-# The lock is checked on an export of the pushed revision, with that
-# revision's own checker, outside the stack: the working tree is neither the
-# push (a peer's branch, a plumbing push) nor stable (any cargo command inside
-# the stack flattens its lock), so a verdict on it was evidence about the
-# wrong state either way. The dependency-source check below reads the same
-# export.
-lock_rev="${pushed_tip:-${gate_tip:-HEAD}}"
-new_run_temp lock_root pl
-lock_export="$lock_root/tree"
-if ! export_revision "$(git rev-parse --verify "$lock_rev^{commit}")" "$lock_export"; then
-  echo "pre-push: could not export $lock_rev for the lockfile check" >&2
-  exit 1
-fi
-checker="$lock_export/scripts/lockfile.py"
-
-if [ ! -f "$checker" ]; then
-  # A guard that reports its own absence and lets the push through is the
-  # absence. The code gate below would still have run, but the lock is what
-  # this section is for, and an unverified lock is the failure it exists to
-  # stop -- so refuse here; there is no deliberate way through.
-  echo "pre-push: scripts/lockfile.py not present; lockfile not verified" >&2
-  exit 1
-elif [ -z "$python_bin" ]; then
-  echo "pre-push: no python interpreter found; lockfile not verified" >&2
-  exit 1
-elif ! (cd "$lock_export" && "$python_bin" "$checker" --check); then
-  cat >&2 <<MESSAGE
-
-pre-push: the Cargo.lock in $lock_rev does not resolve under --locked, so
-every CI job that passes --locked would fail on this push.
-
-The usual cause is a cargo command run from inside the Atlas stack, which
-strips the lock's git sources. Repair it with:
-
-    python3 scripts/lockfile.py --regenerate
-
-then stage the result and push again.
-MESSAGE
-  exit 1
-fi
-
-# Dependency sources. A lock advance can bring in git sources `deny.toml`
-# does not allow, and nothing above reads them: harmonia#19 merged on a green
-# `--locked` build and left CI red until harmonia#21 allowed three new
-# first-party sources. cargo-deny cannot run in this checkout -- it resolves
-# from the workspace root, so inside the stack the development overlay
-# answers, every git source reads as unencountered, `sources ok` is vacuous,
-# and the lock is rewritten -- so it runs on an export of the pushed revision
-# outside the stack, which is exactly what CI resolves. The working tree is
-# never touched.
-if [ -f "$lock_export/deny.toml" ]; then
-  if ! cargo deny --version >/dev/null 2>&1; then
-    echo "pre-push: cargo-deny is not installed, so the dependency sources of this" >&2
-    echo "lock change are unverified. Install it: cargo install --locked cargo-deny" >&2
-    exit 1
-  fi
-  if ! (cd "$lock_export" && cargo deny --locked check sources >&2); then
-    cat >&2 <<MESSAGE
-
-pre-push: the pushed Cargo.lock resolves a source deny.toml does not allow,
-so the CI supply-chain job would fail on this push. Allow the source in
-deny.toml (a first-party git source goes under [sources] allow-git) or drop
-the dependency.
-MESSAGE
-    exit 1
-  fi
-fi
-fi
-# End of the lockfile section; the code gate below runs unconditionally.
 
 # ---------------------------------------------------------------------------
 # Stack tools: the artifact-budget checker, the secret scanner, the debt
@@ -466,16 +559,19 @@ fi
 # this checkout instead: from a hephaestus lane, the stack's `origin/HEAD`
 # resolved to hephaestus's own and the ratchet was skipped as unreachable.
 # Every such process runs through `outside_checkout` (defined at the top).
-stack_root="$(cd "$repo_root/../.." && pwd)"
-stack_top="$(outside_checkout git -C "$stack_root" rev-parse --show-toplevel 2>/dev/null || true)"
 stack_baseline=""
 conformance_member=""
-if [ -n "$stack_top" ] && [ "$(cd "$stack_top" && pwd)" = "$stack_root" ]; then
+if [ -n "$stack_root" ]; then
   for ref in origin/HEAD origin/main; do
     stack_baseline="$(outside_checkout git -C "$stack_root" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
     [ -n "$stack_baseline" ] && break
   done
 fi
+member_baseline=""
+for ref in origin/HEAD origin/main; do
+  member_baseline="$(outside_checkout git -C "$repo_root" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
+  [ -n "$member_baseline" ] && break
+done
 stack_scripts=""
 if [ -n "$stack_baseline" ] \
   && outside_checkout git -C "$stack_root" cat-file -e "$stack_baseline:scripts" 2>/dev/null; then
@@ -529,6 +625,95 @@ if [ -n "$stack_baseline" ] \
   fi
 fi
 
+# The skips above fall through to the code gate, so this whole section runs
+# only when the lock still wants verifying.
+if [ "$skip_lockfile" = "0" ]; then
+# The lock is checked on an export of the pushed revision, outside the stack,
+# by the stack's own `scripts/lockfile.py` from the fetched default (Stack
+# tools, above): the working tree is neither the push (a peer's branch, a
+# plumbing push) nor stable (any cargo command inside the stack flattens its
+# lock), so a verdict on it was evidence about the wrong state either way. The
+# checker is always the stack's, never a member's own `scripts/lockfile.py`
+# (all 28 members carry one today, and retiring them is atlas#478's
+# `publish-hooks --retire`), so a member's copy cannot overrule it. The
+# dependency-source check below reads the same export.
+lock_rev="${pushed_tip:-${gate_tip:-HEAD}}"
+new_run_temp lock_root pl
+lock_export="$lock_root/tree"
+if ! export_revision "$(git rev-parse --verify "$lock_rev^{commit}")" "$lock_export"; then
+  echo "pre-push: could not export $lock_rev for the lockfile check" >&2
+  exit 1
+fi
+checker="${stack_scripts:+$stack_scripts/lockfile.py}"
+
+if [ -n "$unmatched_stack" ]; then
+  # No lockfile checker is owed to a clone the stack does not register, and a
+  # lock that gets through here meets the `--locked` CI jobs and is repaired by
+  # regenerating it; the credential gate, whose push cannot be taken back,
+  # refuses such a clone instead.
+  echo "pre-push: inside the Atlas stack at $unmatched_stack but not one of its registered members, so the stack's lockfile checker is not used and the lock is not verified here. Work in a registered member or a lane to have it checked" >&2
+elif [ -z "$stack_root" ]; then
+  echo "pre-push: no Atlas stack above this clone, so there is no lockfile checker to run; the lock is not verified here, and a flattened one fails the --locked CI jobs" >&2
+elif [ -z "$stack_baseline" ]; then
+  # Inside a stack the checker is owed, so a stack that cannot supply one
+  # refuses rather than passing as a clone outside any stack would.
+  echo "pre-push: the stack at $stack_root has neither origin/HEAD nor origin/main, so its lockfile checker cannot be extracted; lockfile not verified. Run: git -C $stack_root fetch origin" >&2
+  exit 1
+elif [ ! -f "$checker" ]; then
+  # A guard that reports its own absence and lets the push through is the
+  # absence. The stack is reachable here, so its fetched default is what
+  # lacks the checker (or could not be extracted), and the lock is what this
+  # section is for -- refuse; there is no deliberate way through.
+  echo "pre-push: the stack's scripts at ${stack_baseline:0:12} carry no lockfile.py; lockfile not verified" >&2
+  exit 1
+elif [ -z "$python_bin" ]; then
+  echo "pre-push: no python interpreter found; lockfile not verified" >&2
+  exit 1
+elif ! (cd "$lock_export" && "$python_bin" "$checker" --check --manifest-path "$lock_export/Cargo.toml"); then
+  cat >&2 <<MESSAGE
+
+pre-push: the Cargo.lock in $lock_rev does not resolve under --locked, so
+every CI job that passes --locked would fail on this push.
+
+The usual cause is a cargo command run from inside the Atlas stack, which
+strips the lock's git sources. Repair it from the member's root with:
+
+    python3 $stack_root/scripts/lockfile.py --regenerate --manifest-path Cargo.toml
+
+then stage the result and push again.
+MESSAGE
+  exit 1
+fi
+
+# Dependency sources. A lock advance can bring in git sources `deny.toml`
+# does not allow, and nothing above reads them: harmonia#19 merged on a green
+# `--locked` build and left CI red until harmonia#21 allowed three new
+# first-party sources. cargo-deny cannot run in this checkout -- it resolves
+# from the workspace root, so inside the stack the development overlay
+# answers, every git source reads as unencountered, `sources ok` is vacuous,
+# and the lock is rewritten -- so it runs on an export of the pushed revision
+# outside the stack, which is exactly what CI resolves. The working tree is
+# never touched.
+if [ -f "$lock_export/deny.toml" ]; then
+  if ! cargo deny --version >/dev/null 2>&1; then
+    echo "pre-push: cargo-deny is not installed, so the dependency sources of this" >&2
+    echo "lock change are unverified. Install it: cargo install --locked cargo-deny" >&2
+    exit 1
+  fi
+  if ! (cd "$lock_export" && cargo deny --locked check sources >&2); then
+    cat >&2 <<MESSAGE
+
+pre-push: the pushed Cargo.lock resolves a source deny.toml does not allow,
+so the CI supply-chain job would fail on this push. Allow the source in
+deny.toml (a first-party git source goes under [sources] allow-git) or drop
+the dependency.
+MESSAGE
+    exit 1
+  fi
+fi
+fi
+# End of the lockfile section; the code gate below runs unconditionally.
+
 # ---------------------------------------------------------------------------
 # Artifact budgets: PM boards under their line budget, tracked images under
 # their byte budget (scripts/atlas-artifact-budget.py, ratchet-to-budget: an
@@ -569,20 +754,44 @@ else
   echo "pre-push: artifact-budget checker not reachable from this clone; CI enforces it" >&2
 fi
 
-# Credentials: the lines the pushed range adds, scanned before they leave the
-# machine (scripts/atlas-secret-scan.py). A secret that reaches a remote is
-# published -- a rewritten history does not unpublish it -- so this is the one
-# check CI cannot stand in for: by the time a runner sees the push, the value
-# is already out. Same range as the budget check above.
+# Credentials: every commit the pushed range introduces, scanned before it
+# leaves the machine (scripts/atlas-secret-scan.py). A secret that reaches a
+# remote is published -- a rewritten history does not unpublish it -- so this
+# is the one check CI cannot stand in for: by the time a runner sees the push,
+# the value is already out, and a scan that could not run blocks the push. Same
+# range as the budget check above.
 secret_checker="${stack_scripts:+$stack_scripts/atlas-secret-scan.py}"
-if [ -f "$secret_checker" ] && [ -n "$python_bin" ]; then
-  if ! "$python_bin" "$secret_checker" check --root "$repo_root" --rev "$range_rev" "${range_args[@]}"; then
-    echo "pre-push: BLOCKED -- the pushed range adds a credential. Remove it from" >&2
-    echo "every commit in the range; if it ever reached a remote, rotate it." >&2
-    exit 1
+if [ ! -f "$secret_checker" ]; then
+  if [ -n "$unmatched_stack" ]; then
+    # The lock check above passes such a clone; a credential cannot be taken
+    # back once pushed, so this stage refuses it.
+    echo "pre-push: BLOCKED -- inside the Atlas stack at $unmatched_stack but not one of its registered members," >&2
+    echo "so the trusted credential scanner is not used and the pushed range was not scanned. Push from a registered member or a lane of it." >&2
+  else
+    echo "pre-push: BLOCKED -- the trusted credential scanner is not reachable from this clone;" >&2
+    echo "the pushed range was not scanned. Fetch the stack's default branch and push again." >&2
   fi
-else
-  echo "pre-push: secret scanner not reachable from this clone; the pushed range was not scanned" >&2
+  exit 1
+fi
+if [ -z "$python_bin" ]; then
+  echo "pre-push: BLOCKED -- no python interpreter; the pushed range was not scanned for credentials." >&2
+  exit 1
+fi
+if [ -z "$member_baseline" ]; then
+  echo "pre-push: BLOCKED -- member default revision is unavailable for the trusted allowlist." >&2
+  exit 1
+fi
+secret_status=0
+"$python_bin" -I "$secret_checker" check --root "$repo_root" --rev "$range_rev" \
+    --allowlist-rev "$member_baseline" "${range_args[@]}" || secret_status=$?
+if [ "$secret_status" -eq 1 ]; then
+  echo "pre-push: BLOCKED -- the pushed range adds a credential. Remove it from" >&2
+  echo "every commit in the range; if it ever reached a remote, rotate it." >&2
+  exit 1
+elif [ "$secret_status" -ne 0 ]; then
+  echo "pre-push: BLOCKED -- the secret scan could not run (exit $secret_status), so the pushed" >&2
+  echo "range was not scanned; the reason is the secret-scan line above." >&2
+  exit 1
 fi
 
 # Debt ratchet: the pushed revision's conformance classes may not rise above
@@ -1183,7 +1392,7 @@ MESSAGE
   grep -m 1 -A 3 -E '^error' "$log" >&2 || true
   cat >&2 <<'MESSAGE'
 
-Check with `python scripts/lockfile.py --check` in the member.
+Check with `python3 <stack>/scripts/lockfile.py --check --manifest-path Cargo.toml` in the member.
 MESSAGE
 }
 

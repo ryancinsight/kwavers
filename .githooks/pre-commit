@@ -17,12 +17,24 @@
 # with the poisoned version still in the index is precisely the case that would
 # otherwise slip through, and the index is what becomes the commit.
 #
+# The checker is the stack's `scripts/lockfile.py`, extracted from the stack's
+# fetched default branch (`origin/HEAD`, else `origin/main`), the way `pre-push`
+# runs the budget, secret, ratchet and identity tools; a member's own copy of
+# the script is never run. A commit that stages no `Cargo.lock` pays nothing:
+# the staged-path test below runs before the stack is touched.
+#
 # Install (git does not apply tracked hooks on its own):
 #
 #     git config core.hooksPath .githooks
 #
 # SKIP_LOCKFILE_CHECK is not honoured: a checker that fails, or cannot run,
-# refuses the commit either way. A checker contract (coeus
+# refuses the commit either way. The arms that let a commit through unchecked
+# are a clone with no Atlas stack above it and a clone below a stack that does
+# not register it: neither has a checker owed, each says so, and the lock is
+# left to the `--locked` jobs of CI. A registered member, lane or harness
+# worktree never takes either arm. A stack without a fetched default, without the
+# checker, or without a python interpreter refuses, because a guard that
+# reports its own absence and exits 0 is the absence. A checker contract (coeus
 # scripts/tests/test_hooks.py::test_skip_variable_cannot_hide_checker_failures)
 # requires that no variable can hide a checker failure, and a skip that exits
 # 0 without running anything hides it as completely as a failure would.
@@ -33,7 +45,6 @@ if [ "${SKIP_LOCKFILE_CHECK:-0}" = "1" ]; then
 fi
 
 repo_root="$(git -c safe.directory="$PWD" rev-parse --show-toplevel)"
-checker="$repo_root/scripts/lockfile.py"
 
 # Git does not propagate command-line configuration into hooks. Re-inject the
 # exact checkout path so the index-only child Git calls remain valid in
@@ -42,11 +53,173 @@ export GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0=safe.directory
 export GIT_CONFIG_VALUE_0="$repo_root"
 
-if [ ! -f "$checker" ]; then
-  # A guard that reports its own absence and exits 0 is the absence: the
-  # commit lands unverified and the message scrolls past. Refuse instead;
-  # there is no deliberate way through (see SKIP_LOCKFILE_CHECK above).
-  echo "pre-commit: scripts/lockfile.py not present; lockfile not verified" >&2
+# Only a commit that stages a lock is judged. `--check-staged` makes the same
+# test again; this one keeps an ordinary commit from extracting the stack.
+if [ -z "$(git diff --cached --name-only -- '*Cargo.lock')" ]; then
+  exit 0
+fi
+
+# Pin MSYS path conversion rather than inherit it (see `pre-push`): the stack
+# is addressed with `git -C`, and a global MSYS_NO_PATHCONV turns that path
+# into one that does not exist.
+unset MSYS_NO_PATHCONV
+
+# Git exports GIT_DIR and GIT_INDEX_FILE to hooks, and a git process aimed at
+# the stack must not inherit them (`pre-push`: Stack tools).
+outside_checkout() {
+  (
+    unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR
+    "$@"
+  )
+}
+
+# The Atlas stack this checkout belongs to, or nothing: the nearest ancestor that
+# is a git repository root with no superproject of its own (one that git cannot
+# read around it is refused, not assumed to have none), registers members
+# under `repos/` in its `.gitmodules`, and has one of those members share this
+# checkout's object store. It is found by that identity and not by depth,
+# since a member at `repos/<name>`, a lane under `worktrees/` and a harness
+# worktree below a member sit at different depths beneath the same stack,
+# while a `.gitmodules` planted in a member (which is itself a submodule of the
+# stack, so never a stack), or a directory that only looks like a stack, owns
+# none of them.
+#
+# The member is resolved from the checkout's object store directly: a
+# member's store is `<stack>/.git/modules/<name>` or its own `.git`
+# directory, so the registered entry that names it is tried first and
+# confirmed by one git call, and every other member is probed only when
+# that finds nothing (a member whose gitdir lives elsewhere, or a clone the
+# stack does not register). The cost of a hit is therefore constant,
+# wherever the member sits in `.gitmodules`.
+#
+# Exit status: 0 with the stack on stdout, or with nothing for a clone with
+# no stack above it; 2 with a message when the stack cannot be established
+# (git cannot read a stack or one of its members, or cannot identify this
+# checkout): the caller refuses; 3 with the nearest readable stack on stdout
+# when a stack sits above this clone but registers none of this clone's
+# store (a `--shared` or `--reference` clone, a copy): the stack does not
+# claim it, so the caller passes with a message that names the stack.
+# Identical to the function in the other hook, which a test holds so.
+locate_stack() {
+  local probe="$1" hook="${BASH_SOURCE[0]##*/}" line section name top path store own_store unreadable
+  local index stack_common superproject facts outer unmatched=""
+  local path_pattern='^[[:space:]]*path[[:space:]]*=[[:space:]]*(repos/[^[:space:]]+)[[:space:]]*$'
+  local section_pattern='^[[:space:]]*\[submodule[[:space:]]+"(.*)"\][[:space:]]*$'
+  local -a registered names order rest
+  own_store="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+  if [ -z "$own_store" ]; then
+    echo "$hook: git cannot identify this checkout's object store, so the Atlas stack cannot be located; refusing" >&2
+    return 2
+  fi
+  while :; do
+    probe="${probe%/*}"
+    if [ -z "$probe" ]; then
+      if [ -n "$unmatched" ]; then
+        printf '%s\n' "$unmatched"
+        return 3
+      fi
+      return 0
+    fi
+    [ -f "$probe/.gitmodules" ] || continue
+    registered=()
+    names=()
+    section=""
+    while IFS= read -r line || [ -n "$line" ]; do
+      if [[ "$line" =~ $section_pattern ]]; then
+        section="${BASH_REMATCH[1]}"
+      elif [[ "$line" =~ $path_pattern ]]; then
+        registered+=("${BASH_REMATCH[1]}")
+        names+=("$section")
+      fi
+    done < "$probe/.gitmodules"
+    [ "${#registered[@]}" -gt 0 ] || continue
+    [ -e "$probe/.git" ] || continue
+    top=""
+    stack_common=""
+    superproject=""
+    facts="$(outside_checkout git -C "$probe" rev-parse --path-format=absolute --show-toplevel --git-common-dir --show-superproject-working-tree 2>/dev/null || true)"
+    { IFS= read -r top; IFS= read -r stack_common; IFS= read -r superproject; } <<<"$facts" || true
+    if [ -z "$top" ] || [ "$(cd "$top" && pwd)" != "$probe" ]; then
+      echo "$hook: the Atlas stack at $probe registers members but git cannot read it, so its lockfile checker cannot be used; refusing. If git reports dubious ownership and you trust that checkout: git config --global --add safe.directory $probe" >&2
+      return 2
+    fi
+    # The superproject query prints nothing both when the candidate has none
+    # and when git cannot read the repository around it, so it answers only if
+    # that repository is readable: a candidate inside one git cannot read may be
+    # a submodule of it (a member carrying its own `.gitmodules`), which no
+    # stack is.
+    outer="${probe%/*}"
+    while [ -n "$outer" ] && [ ! -e "$outer/.git" ]; do
+      outer="${outer%/*}"
+    done
+    if [ -n "$outer" ] && ! outside_checkout git -C "$outer" rev-parse --show-toplevel >/dev/null 2>&1; then
+      echo "$hook: the candidate Atlas stack at $probe sits inside a repository at $outer that git cannot read, so it cannot be told apart from a submodule; refusing. If git reports dubious ownership and you trust that checkout: git config --global --add safe.directory $outer" >&2
+      return 2
+    fi
+    [ -z "$superproject" ] || continue
+    order=()
+    rest=()
+    for index in "${!registered[@]}"; do
+      path="${registered[$index]}"
+      name="${names[$index]}"
+      if [ "$own_store" = "$top/$path/.git" ] \
+        || { [ -n "$name" ] && [ "$own_store" = "$stack_common/modules/$name" ]; }; then
+        order+=("$path")
+      else
+        rest+=("$path")
+      fi
+    done
+    unreadable=0
+    for path in ${order[@]+"${order[@]}"} ${rest[@]+"${rest[@]}"}; do
+      [ -e "$probe/$path/.git" ] || continue
+      if ! store="$(outside_checkout git -C "$probe/$path" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; then
+        unreadable=1
+        continue
+      fi
+      if [ "$store" = "$own_store" ]; then
+        printf '%s\n' "$probe"
+        return 0
+      fi
+    done
+    if [ "$unreadable" = 1 ]; then
+      echo "$hook: a member registered by the Atlas stack at $probe cannot be read by git, so this checkout cannot be matched to the stack; refusing. If git reports dubious ownership and you trust it: git config --global --add safe.directory $probe/<member>" >&2
+      return 2
+    fi
+    [ -n "$unmatched" ] || unmatched="$probe"
+  done
+}
+
+located=0
+unmatched_stack=""
+stack_root="$(locate_stack "$(cd "$repo_root" && pwd)")" || located=$?
+case "$located" in
+  0) ;;
+  3) unmatched_stack="$stack_root"; stack_root="" ;;
+  *) exit 1 ;;
+esac
+if [ -n "$unmatched_stack" ]; then
+  # The stack names exactly its members and does not name this clone, so no
+  # lockfile checker is owed to it, and a lock that gets through here meets
+  # the `--locked` CI jobs and is repaired by regenerating it. That is why this
+  # check warns where the credential gate in `pre-push`, whose push cannot be
+  # taken back, refuses a clone it cannot scan. The registered member, or a
+  # lane of it, is where this check runs. Refusals stay where identity or
+  # readability is unknown.
+  echo "pre-commit: inside the Atlas stack at $unmatched_stack but not one of its registered members, so the stack's lockfile checker is not used and the staged Cargo.lock is not verified here. Work in a registered member or a lane to have it checked" >&2
+  exit 0
+fi
+if [ -z "$stack_root" ]; then
+  echo "pre-commit: no Atlas stack above this clone, so there is no lockfile checker to run; the staged Cargo.lock is not verified here, and a flattened one fails the --locked CI jobs" >&2
+  exit 0
+fi
+
+stack_baseline=""
+for ref in origin/HEAD origin/main; do
+  stack_baseline="$(outside_checkout git -C "$stack_root" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
+  [ -n "$stack_baseline" ] && break
+done
+if [ -z "$stack_baseline" ]; then
+  echo "pre-commit: the stack at $stack_root has neither origin/HEAD nor origin/main, so its lockfile checker cannot be extracted; lockfile not verified. Run: git -C $stack_root fetch origin" >&2
   exit 1
 fi
 
@@ -70,6 +243,16 @@ if [ -z "$python_bin" ]; then
   exit 1
 fi
 
-# --check-staged is index-only and runs no cargo, so an ordinary commit that
-# does not touch Cargo.lock pays nothing for this.
-exec "$python_bin" "$checker" --check-staged
+checker_dir="$(mktemp -d "${TMPDIR:-/tmp}/pre-commit-lock.XXXXXX")"
+trap 'rm -rf "$checker_dir"' EXIT
+if ! outside_checkout git -C "$stack_root" cat-file -e "$stack_baseline:scripts/lockfile.py" 2>/dev/null \
+  || ! outside_checkout git -C "$stack_root" archive "$stack_baseline" scripts/lockfile.py | tar -x -C "$checker_dir"; then
+  # The stack is reachable here, so its default is what lacks the checker;
+  # refuse, with no deliberate way through (see SKIP_LOCKFILE_CHECK above).
+  echo "pre-commit: the stack's scripts at ${stack_baseline:0:12} carry no lockfile.py; lockfile not verified" >&2
+  exit 1
+fi
+checker="$(cd "$checker_dir" && { pwd -W 2>/dev/null || pwd; })/scripts/lockfile.py"
+
+# --check-staged is index-only and runs no cargo.
+"$python_bin" "$checker" --check-staged
