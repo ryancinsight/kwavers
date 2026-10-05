@@ -121,7 +121,7 @@ jobs:
     # baseline as well as a head, across 23 packages.
     needs: changes
     if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
-    uses: ryancinsight/atlas/.github/workflows/semver-gate.yml@b44c45c3875c9c03ac9fc83994ee068c1805bb49
+    uses: ryancinsight/atlas/.github/workflows/semver-gate.yml@50802ef4c975bdb1e668b94a700d8310f0348e9c
     with:
       package: kwavers-alloc-probe,kwavers-analysis,kwavers-boundary,kwavers-core,kwavers-diagnostics,kwavers-driver,kwavers-field,kwavers-gpu,kwavers-grid,kwavers-imaging,kwavers-math,kwavers-medium,kwavers-mesh,kwavers-phantom,kwavers-physics,kwavers-receiver,kwavers-signal,kwavers-simulation,kwavers-solver,kwavers-source,kwavers-therapy,kwavers-transducer,kwavers
     permissions:
