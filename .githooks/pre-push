@@ -100,6 +100,8 @@ repo_root="$(git -c safe.directory="$PWD" rev-parse --show-toplevel)"
 export GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0=safe.directory
 export GIT_CONFIG_VALUE_0="$repo_root"
+repo_git_dir="$(git rev-parse --absolute-git-dir)"
+repo_store="$(git rev-parse --path-format=absolute --git-common-dir)"
 
 # Every temporary directory this run creates is registered here and removed
 # on any exit. The trap is set before the first one exists: the lock export
@@ -136,21 +138,21 @@ outside_checkout() {
 # stack does not register). The cost of a hit is therefore constant,
 # wherever the member sits in `.gitmodules`.
 #
-# Exit status: 0 with the stack on stdout, or with nothing for a clone with
-# no stack above it; 2 with a message when the stack cannot be established
-# (git cannot read a stack or one of its members, or cannot identify this
-# checkout): the caller refuses; 3 with the nearest readable stack on stdout
-# when a stack sits above this clone but registers none of this clone's
+# Exit status: 0 after setting the stack root and common directory, or with
+# both empty for a clone with no stack above it; 2 with a message when the
+# stack cannot be established (git cannot read a stack or one of its members,
+# or cannot identify this checkout): the caller refuses; 3 after setting the
+# nearest readable stack root and common directory when a stack sits above
+# this clone but registers none of this clone's
 # store (a `--shared` or `--reference` clone, a copy): the stack does not
 # claim it, so the caller passes with a message that names the stack.
 # Identical to the function in the other hook, which a test holds so.
 locate_stack() {
-  local probe="$1" hook="${BASH_SOURCE[0]##*/}" line section name top path store own_store unreadable
-  local index stack_common superproject facts outer parent prefix unmatched=""
+  local probe="$1" own_store="$2" hook="${BASH_SOURCE[0]##*/}" line section name top path store unreadable
+  local index stack_common superproject facts outer parent prefix unmatched="" unmatched_store=""
   local path_pattern='^[[:space:]]*path[[:space:]]*=[[:space:]]*(repos/[^[:space:]]+)[[:space:]]*$'
   local section_pattern='^[[:space:]]*\[submodule[[:space:]]+"(.*)"\][[:space:]]*$'
   local -a registered names order rest
-  own_store="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
   if [ -z "$own_store" ]; then
     echo "$hook: git cannot identify this checkout's object store, so the Atlas stack cannot be located; refusing" >&2
     return 2
@@ -201,7 +203,12 @@ locate_stack() {
     # A checkout whose own object store is the candidate stack's is the stack
     # root itself, so it matches the same way a registered member does.
     if [ "$own_store" = "$stack_common" ]; then
-      printf '%s\n' "$probe"
+      stack_root="$probe"
+      if ! stack_store="$(cd "$stack_common" && pwd)"; then
+        echo "$hook: git identified the Atlas stack store at $stack_common but it cannot be opened; refusing" >&2
+        return 2
+      fi
+      stack_member="<meta>"
       return 0
     fi
     order=()
@@ -224,7 +231,12 @@ locate_stack() {
         continue
       fi
       if [ "$store" = "$own_store" ]; then
-        printf '%s\n' "$probe"
+        stack_root="$probe"
+        if ! stack_store="$(cd "$stack_common" && pwd)"; then
+          echo "$hook: git identified the Atlas stack store at $stack_common but it cannot be opened; refusing" >&2
+          return 2
+        fi
+        stack_member="${path##*/}"
         return 0
       fi
     done
@@ -232,7 +244,10 @@ locate_stack() {
       echo "$hook: a member registered by the Atlas stack at $probe cannot be read by git, so this checkout cannot be matched to the stack; refusing. If git reports dubious ownership and you trust it: git config --global --add safe.directory $probe/<member>" >&2
       return 2
     fi
-    [ -n "$unmatched" ] || unmatched="$probe"
+    if [ -z "$unmatched" ]; then
+      unmatched="$probe"
+      unmatched_store="$stack_common"
+    fi
     fi
     fi
     fi
@@ -244,7 +259,8 @@ locate_stack() {
     fi
     if [ -z "$probe" ]; then
       if [ -n "$unmatched" ]; then
-        printf '%s\n' "$unmatched"
+        stack_root="$unmatched"
+        stack_store="$unmatched_store"
         return 3
       fi
       return 0
@@ -281,11 +297,9 @@ new_run_temp() {
 # Echoes the merge-base of `$1` with that branch, or nothing when neither
 # ref resolves.
 default_branch_base() {
-  local tip="$1" ref ref_sha base
+  local tip="$1" ref base
   for ref in origin/HEAD origin/main; do
-    ref_sha="$(git rev-parse --verify --quiet "$ref" 2>/dev/null || true)"
-    [ -n "$ref_sha" ] || continue
-    base="$(git merge-base "$ref_sha" "$tip" 2>/dev/null || true)"
+    base="$(git merge-base "$ref" "$tip" 2>/dev/null || true)"
     if [ -n "$base" ]; then
       printf '%s' "$base"
       return 0
@@ -354,10 +368,13 @@ fi
 # checker (see locate_stack).
 located=0
 unmatched_stack=""
-stack_root="$(locate_stack "$repo_root")" || located=$?
+stack_root=""
+stack_store=""
+stack_member=""
+locate_stack "$repo_root" "$repo_store" || located=$?
 case "$located" in
   0) ;;
-  3) unmatched_stack="$stack_root"; stack_root="" ;;
+  3) unmatched_stack="$stack_root"; stack_root=""; stack_store=""; stack_member="" ;;
   *) exit 1 ;;
 esac
 
@@ -516,19 +533,17 @@ fi
 # starts: a push must not repack the member it reads (moirai's auto-gc
 # fails on a foreign ref), and the export reads the member's objects.
 export_revision() {
-  local sha="$1" directory="$2" member_git objects
-  member_git="$(git rev-parse --absolute-git-dir)" || return 1
-  objects="$(git rev-parse --path-format=absolute --git-common-dir)/objects" || return 1
+  local sha="$1" directory="$2"
   # `git init` creates the directory: the lock export runs before a PATH
   # without an interpreter is refused, and such a PATH need not carry mkdir.
   if [ ! -d "$directory/.git" ]; then
     outside_checkout git init -q "$directory" || return 1
   fi
-  printf '%s\n' "$objects" > "$directory/.git/objects/info/alternates" \
+  printf '%s\n' "$repo_store/objects" > "$directory/.git/objects/info/alternates" \
     && outside_checkout git -C "$directory" config core.longpaths true \
     && outside_checkout git -C "$directory" config gc.auto 0 \
     && outside_checkout git -C "$directory" config maintenance.auto false \
-    && GIT_DIR="$member_git" GIT_WORK_TREE="$directory" GIT_INDEX_FILE="$directory/.git/index" \
+    && GIT_DIR="$repo_git_dir" GIT_WORK_TREE="$directory" GIT_INDEX_FILE="$directory/.git/index" \
       git -c core.longpaths=true -c core.sparseCheckout=false -c gc.auto=0 -c maintenance.auto=false \
         read-tree -u --reset "$sha" \
     && outside_checkout git -C "$directory" update-ref HEAD "$sha" \
@@ -592,7 +607,6 @@ done
 # resolved to hephaestus's own and the ratchet was skipped as unreachable.
 # Every such process runs through `outside_checkout` (defined at the top).
 stack_baseline=""
-conformance_member=""
 if [ -n "$stack_root" ]; then
   for ref in origin/HEAD origin/main; do
     stack_baseline="$(outside_checkout git -C "$stack_root" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
@@ -613,7 +627,7 @@ extract_stack_scripts() {
     || ! outside_checkout git -C "$stack_root" cat-file -e "$revision:scripts" 2>/dev/null; then
     return
   fi
-  checker_cache="$(cd "$stack_root" && cd "$(outside_checkout git rev-parse --git-common-dir)" && pwd)/atlas-checker"
+  checker_cache="$stack_store/atlas-checker"
   checker_dir="$checker_cache/$revision"
   if [ ! -d "$checker_dir/scripts" ]; then
     mkdir -p "$checker_cache"
@@ -887,40 +901,25 @@ if [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
   # gitlink, so it takes the stack scan. A member is the registered directory
   # sharing this checkout's object store; a lane therefore resolves to its
   # repository rather than to its worktree directory.
-  conformance_member=""
-  repo_store="$(outside_checkout git -C "$repo_root" rev-parse --path-format=absolute --git-common-dir)"
-  stack_store="$(outside_checkout git -C "$stack_root" rev-parse --path-format=absolute --git-common-dir)"
-  if [ "$repo_store" = "$stack_store" ]; then
-    conformance_member="<meta>"
-  else
-    for candidate in "$stack_root/repos/${repo_root##*/}" "$stack_root"/repos/*; do
-      [ -d "$candidate" ] || continue
-      candidate_store="$(outside_checkout git -C "$candidate" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || continue
-      if [ "$candidate_store" = "$repo_store" ]; then
-        conformance_member="${candidate##*/}"
-        break
-      fi
-    done
-  fi
-  if [ -z "$conformance_member" ]; then
+  if [ -z "$stack_member" ]; then
     echo "pre-push: not a registered stack member; debt ratchet not run" >&2
   else
     conformance_scripts="${prepared_stack_scripts:-$stack_scripts}"
     conformance_checker="${conformance_scripts:+$conformance_scripts/atlas-conformance.py}"
     if [ ! -f "$conformance_checker" ]; then
-      echo "pre-push: BLOCKED -- could not extract the stack's checker for $conformance_member." >&2
+      echo "pre-push: BLOCKED -- could not extract the stack's checker for $stack_member." >&2
       exit 1
     elif ! grep -q ATLAS_STACK_ROOT "$conformance_scripts/atlas_stack.py"; then
       # The selected checker predates revision scans and cannot judge a
       # committed revision without falling back to mutable checkout state.
-      echo "pre-push: the stack's checker for $conformance_member predates revision scans;" >&2
+      echo "pre-push: the stack's checker for $stack_member predates revision scans;" >&2
       echo "debt ratchet not run. Run: git -C $stack_root fetch origin" >&2
     else
       conformance_args=(check --baseline-rev "$stack_baseline")
-      if [ "$conformance_member" = "<meta>" ]; then
+      if [ "$stack_member" = "<meta>" ]; then
         conformance_args+=(--revision "$range_rev")
       else
-        conformance_args+=(--repo "$conformance_member" --member-path "$repo_root" \
+        conformance_args+=(--repo "$stack_member" --member-path "$repo_root" \
           --member-revision "$range_rev")
       fi
       set +e
@@ -931,7 +930,7 @@ if [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
       set -e
       if [ "$conformance_status" -eq 1 ]; then
         echo "pre-push: BLOCKED -- the pushed revision raises a debt class above the" >&2
-        echo "baseline atlas ${stack_baseline:0:12} records for $conformance_member." >&2
+        echo "baseline atlas ${stack_baseline:0:12} records for $stack_member." >&2
         echo "Fix the debt; never regenerate the baseline over it. Reproduce:" >&2
         echo "  ATLAS_STACK_ROOT=$stack_root python $conformance_checker ${conformance_args[*]}" >&2
         exit 1
@@ -1511,7 +1510,7 @@ print(value)'
     exit 1
   fi
   identity_enabled=1
-elif [ -n "$conformance_member" ]; then
+elif [ -n "$stack_member" ]; then
   echo "pre-push: BLOCKED -- the stack source identity checker is missing" >&2
   exit 1
 else

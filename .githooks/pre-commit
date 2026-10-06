@@ -63,6 +63,7 @@ fi
 # is addressed with `git -C`, and a global MSYS_NO_PATHCONV turns that path
 # into one that does not exist.
 unset MSYS_NO_PATHCONV
+repo_store="$(git rev-parse --path-format=absolute --git-common-dir)"
 
 # Git exports GIT_DIR and GIT_INDEX_FILE to hooks, and a git process aimed at
 # the stack must not inherit them (`pre-push`: Stack tools).
@@ -92,21 +93,21 @@ outside_checkout() {
 # stack does not register). The cost of a hit is therefore constant,
 # wherever the member sits in `.gitmodules`.
 #
-# Exit status: 0 with the stack on stdout, or with nothing for a clone with
-# no stack above it; 2 with a message when the stack cannot be established
-# (git cannot read a stack or one of its members, or cannot identify this
-# checkout): the caller refuses; 3 with the nearest readable stack on stdout
-# when a stack sits above this clone but registers none of this clone's
+# Exit status: 0 after setting the stack root and common directory, or with
+# both empty for a clone with no stack above it; 2 with a message when the
+# stack cannot be established (git cannot read a stack or one of its members,
+# or cannot identify this checkout): the caller refuses; 3 after setting the
+# nearest readable stack root and common directory when a stack sits above
+# this clone but registers none of this clone's
 # store (a `--shared` or `--reference` clone, a copy): the stack does not
 # claim it, so the caller passes with a message that names the stack.
 # Identical to the function in the other hook, which a test holds so.
 locate_stack() {
-  local probe="$1" hook="${BASH_SOURCE[0]##*/}" line section name top path store own_store unreadable
-  local index stack_common superproject facts outer parent prefix unmatched=""
+  local probe="$1" own_store="$2" hook="${BASH_SOURCE[0]##*/}" line section name top path store unreadable
+  local index stack_common superproject facts outer parent prefix unmatched="" unmatched_store=""
   local path_pattern='^[[:space:]]*path[[:space:]]*=[[:space:]]*(repos/[^[:space:]]+)[[:space:]]*$'
   local section_pattern='^[[:space:]]*\[submodule[[:space:]]+"(.*)"\][[:space:]]*$'
   local -a registered names order rest
-  own_store="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
   if [ -z "$own_store" ]; then
     echo "$hook: git cannot identify this checkout's object store, so the Atlas stack cannot be located; refusing" >&2
     return 2
@@ -157,7 +158,12 @@ locate_stack() {
     # A checkout whose own object store is the candidate stack's is the stack
     # root itself, so it matches the same way a registered member does.
     if [ "$own_store" = "$stack_common" ]; then
-      printf '%s\n' "$probe"
+      stack_root="$probe"
+      if ! stack_store="$(cd "$stack_common" && pwd)"; then
+        echo "$hook: git identified the Atlas stack store at $stack_common but it cannot be opened; refusing" >&2
+        return 2
+      fi
+      stack_member="<meta>"
       return 0
     fi
     order=()
@@ -180,7 +186,12 @@ locate_stack() {
         continue
       fi
       if [ "$store" = "$own_store" ]; then
-        printf '%s\n' "$probe"
+        stack_root="$probe"
+        if ! stack_store="$(cd "$stack_common" && pwd)"; then
+          echo "$hook: git identified the Atlas stack store at $stack_common but it cannot be opened; refusing" >&2
+          return 2
+        fi
+        stack_member="${path##*/}"
         return 0
       fi
     done
@@ -188,7 +199,10 @@ locate_stack() {
       echo "$hook: a member registered by the Atlas stack at $probe cannot be read by git, so this checkout cannot be matched to the stack; refusing. If git reports dubious ownership and you trust it: git config --global --add safe.directory $probe/<member>" >&2
       return 2
     fi
-    [ -n "$unmatched" ] || unmatched="$probe"
+    if [ -z "$unmatched" ]; then
+      unmatched="$probe"
+      unmatched_store="$stack_common"
+    fi
     fi
     fi
     fi
@@ -200,7 +214,8 @@ locate_stack() {
     fi
     if [ -z "$probe" ]; then
       if [ -n "$unmatched" ]; then
-        printf '%s\n' "$unmatched"
+        stack_root="$unmatched"
+        stack_store="$unmatched_store"
         return 3
       fi
       return 0
@@ -210,10 +225,13 @@ locate_stack() {
 
 located=0
 unmatched_stack=""
-stack_root="$(locate_stack "$repo_root")" || located=$?
+stack_root=""
+stack_store=""
+stack_member=""
+locate_stack "$repo_root" "$repo_store" || located=$?
 case "$located" in
   0) ;;
-  3) unmatched_stack="$stack_root"; stack_root="" ;;
+  3) unmatched_stack="$stack_root"; stack_root=""; stack_store=""; stack_member="" ;;
   *) exit 1 ;;
 esac
 if [ -n "$unmatched_stack" ]; then
