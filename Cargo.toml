@@ -3,7 +3,7 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-aequitas = { version = "0.2.0", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std", "serde"] }
+aequitas = { version = "0.2.1", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std", "serde"] }
 # The binding-side half of the same repository. It owns the quantity protocol
 # reader and `Dimensioned<D>`, so the extraction lives once upstream rather
 # than being reimplemented here. Unpublished by design: the wheel is its
@@ -41,7 +41,7 @@ hephaestus-core = { version = "0.19.0", git = "https://github.com/ryancinsight/h
 hephaestus-wgpu = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false, features = ["decomposition"] }
 hephaestus-cuda = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
 hermes-simd = { version = "0.8.0", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
-themis = { package = "themis-topology", version = "0.11.0", git = "https://github.com/ryancinsight/themis", default-features = false, features = ["std"] }
+themis = { package = "themis-topology", version = "0.11.1", git = "https://github.com/ryancinsight/themis", default-features = false, features = ["std"] }
 moirai-parallel = { version = "0.7.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
 leto = { version = "0.45.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { version = "0.45.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
