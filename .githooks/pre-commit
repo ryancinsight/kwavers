@@ -102,7 +102,7 @@ outside_checkout() {
 # Identical to the function in the other hook, which a test holds so.
 locate_stack() {
   local probe="$1" hook="${BASH_SOURCE[0]##*/}" line section name top path store own_store unreadable
-  local index stack_common superproject facts outer unmatched=""
+  local index stack_common superproject facts outer parent prefix unmatched=""
   local path_pattern='^[[:space:]]*path[[:space:]]*=[[:space:]]*(repos/[^[:space:]]+)[[:space:]]*$'
   local section_pattern='^[[:space:]]*\[submodule[[:space:]]+"(.*)"\][[:space:]]*$'
   local -a registered names order rest
@@ -112,15 +112,7 @@ locate_stack() {
     return 2
   fi
   while :; do
-    probe="${probe%/*}"
-    if [ -z "$probe" ]; then
-      if [ -n "$unmatched" ]; then
-        printf '%s\n' "$unmatched"
-        return 3
-      fi
-      return 0
-    fi
-    [ -f "$probe/.gitmodules" ] || continue
+    if [ -f "$probe/.gitmodules" ] && [ -e "$probe/.git" ]; then
     registered=()
     names=()
     section=""
@@ -132,14 +124,14 @@ locate_stack() {
         names+=("$section")
       fi
     done < "$probe/.gitmodules"
-    [ "${#registered[@]}" -gt 0 ] || continue
-    [ -e "$probe/.git" ] || continue
+    if [ "${#registered[@]}" -gt 0 ]; then
     top=""
     stack_common=""
     superproject=""
     facts="$(outside_checkout git -C "$probe" rev-parse --path-format=absolute --show-toplevel --git-common-dir --show-superproject-working-tree 2>/dev/null || true)"
     { IFS= read -r top; IFS= read -r stack_common; IFS= read -r superproject; } <<<"$facts" || true
-    if [ -z "$top" ] || [ "$(cd "$top" && pwd)" != "$probe" ]; then
+    prefix="$(outside_checkout git -C "$probe" rev-parse --show-prefix 2>/dev/null || true)"
+    if [ -z "$top" ] || [ -n "$prefix" ]; then
       echo "$hook: the Atlas stack at $probe registers members but git cannot read it, so its lockfile checker cannot be used; refusing. If git reports dubious ownership and you trust that checkout: git config --global --add safe.directory $probe" >&2
       return 2
     fi
@@ -150,13 +142,24 @@ locate_stack() {
     # stack is.
     outer="${probe%/*}"
     while [ -n "$outer" ] && [ ! -e "$outer/.git" ]; do
-      outer="${outer%/*}"
+      parent="${outer%/*}"
+      if [ "$parent" = "$outer" ]; then
+        outer=""
+      else
+        outer="$parent"
+      fi
     done
     if [ -n "$outer" ] && ! outside_checkout git -C "$outer" rev-parse --show-toplevel >/dev/null 2>&1; then
       echo "$hook: the candidate Atlas stack at $probe sits inside a repository at $outer that git cannot read, so it cannot be told apart from a submodule; refusing. If git reports dubious ownership and you trust that checkout: git config --global --add safe.directory $outer" >&2
       return 2
     fi
-    [ -z "$superproject" ] || continue
+    if [ -z "$superproject" ] && [ -z "$outer" ]; then
+    # A checkout whose own object store is the candidate stack's is the stack
+    # root itself, so it matches the same way a registered member does.
+    if [ "$own_store" = "$stack_common" ]; then
+      printf '%s\n' "$probe"
+      return 0
+    fi
     order=()
     rest=()
     for index in "${!registered[@]}"; do
@@ -186,12 +189,28 @@ locate_stack() {
       return 2
     fi
     [ -n "$unmatched" ] || unmatched="$probe"
+    fi
+    fi
+    fi
+    parent="${probe%/*}"
+    if [ "$parent" = "$probe" ]; then
+      probe=""
+    else
+      probe="$parent"
+    fi
+    if [ -z "$probe" ]; then
+      if [ -n "$unmatched" ]; then
+        printf '%s\n' "$unmatched"
+        return 3
+      fi
+      return 0
+    fi
   done
 }
 
 located=0
 unmatched_stack=""
-stack_root="$(locate_stack "$(cd "$repo_root" && pwd)")" || located=$?
+stack_root="$(locate_stack "$repo_root")" || located=$?
 case "$located" in
   0) ;;
   3) unmatched_stack="$stack_root"; stack_root="" ;;
