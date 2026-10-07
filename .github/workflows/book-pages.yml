@@ -34,7 +34,9 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     # Pull-request builds prove the book compiles only (see mdbook-test
     # below); pushes to main additionally test samples and deploy to Pages.
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    # No timeout-minutes here: a job that calls a reusable workflow
+    # (uses:) accepts only name/uses/with/secrets/needs/if/permissions;
+    # the bound lives inside the shared book-pages workflow itself.
     # Body owned once by Atlas (ADR 0035), pinned by SHA like any action. The
     # shared workflow keeps the pull-request build and skips deployment there,
     # so PRs still prove the book builds without publishing it.
