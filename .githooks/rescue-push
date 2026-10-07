@@ -3,11 +3,128 @@
 
 set -uo pipefail
 
+scanner_temp=""
+
+cleanup_scanner_temp() {
+    status=$?
+    if [ -n "$scanner_temp" ] && [ -d "$scanner_temp" ] \
+        && ! rm -rf -- "$scanner_temp"; then
+        echo "pre-push: BLOCKED -- could not remove the temporary credential scanner." >&2
+        [ "$status" -ne 0 ] || status=2
+    fi
+    exit "$status"
+}
+trap cleanup_scanner_temp EXIT
+
+run_secret_scan() {
+    local repo_root="$1" stack_root="$2" scanner_ref="$3"
+    local allowlist_ref="$4" local_sha="$5" base="$6"
+    local python_bin candidate scanner_root scan_status source temp_root
+    local -a sources args
+
+    git -C "$repo_root" cat-file -e "$local_sha^{commit}" 2>/dev/null || {
+        echo "pre-push: BLOCKED -- scan tip is unavailable" >&2
+        return 2
+    }
+    git -C "$repo_root" cat-file -e "$allowlist_ref^{commit}" 2>/dev/null || {
+        echo "pre-push: BLOCKED -- trusted allowlist revision is unavailable" >&2
+        return 2
+    }
+    git -C "$stack_root" cat-file -e "$scanner_ref^{commit}" 2>/dev/null || {
+        echo "pre-push: BLOCKED -- trusted credential scanner revision is unavailable" >&2
+        return 2
+    }
+    sources=(
+        scripts/atlas-secret-scan.py
+        scripts/process_tree.py
+        scripts/windows_process.py
+    )
+    for source in "${sources[@]}"; do
+        git -C "$stack_root" cat-file -e "$scanner_ref:$source" 2>/dev/null || {
+            if [ "$source" = scripts/atlas-secret-scan.py ]; then
+                echo "pre-push: BLOCKED -- trusted credential scanner is unavailable" >&2
+            else
+                echo "pre-push: BLOCKED -- trusted credential scanner dependency is unavailable: $source" >&2
+            fi
+            return 2
+        }
+    done
+
+    python_bin="${PYTHON:-}"
+    if [ -z "$python_bin" ]; then
+        for candidate in python3 python; do
+            if command -v "$candidate" >/dev/null 2>&1 \
+                && "$candidate" -c 'import sys' >/dev/null 2>&1; then
+                python_bin="$candidate"
+                break
+            fi
+        done
+    fi
+    [ -n "$python_bin" ] || {
+        echo "pre-push: BLOCKED -- no Python interpreter for the credential scan" >&2
+        return 2
+    }
+
+    temp_root="${TMPDIR:-${TEMP:-/tmp}}"
+    scanner_temp="$(mktemp -d "$temp_root/atlas-secret-scan.XXXXXX")" || {
+        echo "pre-push: BLOCKED -- could not create a temporary credential scanner." >&2
+        return 2
+    }
+    if command -v cygpath >/dev/null 2>&1; then
+        scanner_root="$(cygpath -m "$scanner_temp")" || {
+            echo "pre-push: BLOCKED -- could not resolve the temporary credential scanner." >&2
+            return 2
+        }
+    else
+        scanner_root="$(cd "$scanner_temp" && pwd -P)" || {
+            echo "pre-push: BLOCKED -- could not resolve the temporary credential scanner." >&2
+            return 2
+        }
+    fi
+    if ! git -C "$stack_root" archive "$scanner_ref" -- "${sources[@]}" \
+        | tar -x -C "$scanner_temp"; then
+        echo "pre-push: BLOCKED -- could not extract the trusted credential scanner." >&2
+        return 2
+    fi
+    for source in "${sources[@]}"; do
+        [ -f "$scanner_temp/$source" ] || {
+            echo "pre-push: BLOCKED -- extracted credential scanner is incomplete: $source" >&2
+            return 2
+        }
+    done
+
+    args=(check --root "$repo_root" --rev "$local_sha" --allowlist-rev "$allowlist_ref")
+    [ -z "$base" ] || args+=(--base "$base")
+    scan_status=0
+    "$python_bin" -I "$scanner_root/scripts/atlas-secret-scan.py" "${args[@]}" \
+        || scan_status=$?
+    return "$scan_status"
+}
+
+scan_only=0
+if [ "${1:-}" = "--scan" ]; then
+    scan_only=1
+    shift
+fi
+[ "$#" -ge 4 ] || {
+    echo "pre-push: BLOCKED -- malformed credential scanner invocation" >&2
+    exit 2
+}
 repo_root="$1"
 stack_root="$2"
 scanner_ref="$3"
 allowlist_ref="$4"
 shift 4
+
+if [ "$scan_only" -eq 1 ]; then
+    [ "$#" -eq 2 ] || {
+        echo "pre-push: BLOCKED -- malformed credential scanner invocation" >&2
+        exit 2
+    }
+    run_secret_scan "$repo_root" "$stack_root" "$scanner_ref" \
+        "$allowlist_ref" "$1" "$2"
+    exit $?
+fi
 
 # Any update, deletion, or multi-ref push belongs to the normal hook gate.
 [ "$#" -eq 1 ] || exit 3
@@ -35,40 +152,14 @@ git -C "$repo_root" cat-file -e "$local_sha^{commit}" 2>/dev/null || {
     echo "pre-push: BLOCKED -- rescue tip is unavailable" >&2
     exit 1
 }
-git -C "$repo_root" cat-file -e "$allowlist_ref^{commit}" 2>/dev/null || {
-    echo "pre-push: BLOCKED -- trusted allowlist revision is unavailable" >&2
-    exit 1
-}
-git -C "$stack_root" cat-file -e "$scanner_ref:scripts/atlas-secret-scan.py" 2>/dev/null || {
-    echo "pre-push: BLOCKED -- trusted credential scanner is unavailable" >&2
-    exit 1
-}
-
-python_bin="${PYTHON:-}"
-if [ -z "$python_bin" ]; then
-    for candidate in python3 python; do
-        if command -v "$candidate" >/dev/null 2>&1 \
-            && "$candidate" -c 'import sys' >/dev/null 2>&1; then
-            python_bin="$candidate"
-            break
-        fi
-    done
-fi
-[ -n "$python_bin" ] || {
-    echo "pre-push: BLOCKED -- no Python interpreter for the credential scan" >&2
-    exit 1
-}
-
 # One scanner process judges every commit the rescue introduces, each against
 # its first parent: a credential added and then removed is still published. The
 # base is the merge-base with the trusted default; none means an unrelated
 # history, scanned whole.
 base="$(git -C "$repo_root" merge-base "$allowlist_ref" "$local_sha" 2>/dev/null || true)"
-args=(check --root "$repo_root" --rev "$local_sha" --allowlist-rev "$allowlist_ref")
-[ -n "$base" ] && args+=(--base "$base")
 scan_status=0
-git -C "$stack_root" show "$scanner_ref:scripts/atlas-secret-scan.py" \
-    | "$python_bin" -I - "${args[@]}" || scan_status=$?
+run_secret_scan "$repo_root" "$stack_root" "$scanner_ref" "$allowlist_ref" \
+    "$local_sha" "$base" || scan_status=$?
 case "$scan_status" in
     0) exit 0 ;;
     1) exit 1 ;;
