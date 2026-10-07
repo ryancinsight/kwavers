@@ -327,7 +327,7 @@ dependencies = [
 [[package]]
 name = "athena-core"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/athena#84fbafb4f4c2c9dc078fbbe240dbc01780aaaf0e"
+source = "git+https://github.com/ryancinsight/athena#f80018fdd34b2bba320e6763f7be326c65b8cdae"
 dependencies = [
  "eunomia",
 ]
@@ -335,7 +335,7 @@ dependencies = [
 [[package]]
 name = "athena-leto"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/athena#84fbafb4f4c2c9dc078fbbe240dbc01780aaaf0e"
+source = "git+https://github.com/ryancinsight/athena#f80018fdd34b2bba320e6763f7be326c65b8cdae"
 dependencies = [
  "athena-core",
  "eunomia",
@@ -741,7 +741,7 @@ dependencies = [
 [[package]]
 name = "coeus-autograd"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#a738170ca930a8195d1c328f1b6c57aa2c9adebb"
+source = "git+https://github.com/ryancinsight/Coeus.git#89cb08b03a48a1588262125dbb242558fae31e8e"
 dependencies = [
  "apollo-fft",
  "coeus-core",
@@ -757,7 +757,7 @@ dependencies = [
 [[package]]
 name = "coeus-core"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#a738170ca930a8195d1c328f1b6c57aa2c9adebb"
+source = "git+https://github.com/ryancinsight/Coeus.git#89cb08b03a48a1588262125dbb242558fae31e8e"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -772,7 +772,7 @@ dependencies = [
 [[package]]
 name = "coeus-leto"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#a738170ca930a8195d1c328f1b6c57aa2c9adebb"
+source = "git+https://github.com/ryancinsight/Coeus.git#89cb08b03a48a1588262125dbb242558fae31e8e"
 dependencies = [
  "coeus-core",
  "leto",
@@ -782,7 +782,7 @@ dependencies = [
 [[package]]
 name = "coeus-nn"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#a738170ca930a8195d1c328f1b6c57aa2c9adebb"
+source = "git+https://github.com/ryancinsight/Coeus.git#89cb08b03a48a1588262125dbb242558fae31e8e"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
@@ -796,7 +796,7 @@ dependencies = [
 [[package]]
 name = "coeus-ops"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#a738170ca930a8195d1c328f1b6c57aa2c9adebb"
+source = "git+https://github.com/ryancinsight/Coeus.git#89cb08b03a48a1588262125dbb242558fae31e8e"
 dependencies = [
  "bytemuck",
  "coeus-core",
@@ -813,7 +813,7 @@ dependencies = [
 [[package]]
 name = "coeus-optim"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#a738170ca930a8195d1c328f1b6c57aa2c9adebb"
+source = "git+https://github.com/ryancinsight/Coeus.git#89cb08b03a48a1588262125dbb242558fae31e8e"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
@@ -827,7 +827,7 @@ dependencies = [
 [[package]]
 name = "coeus-sparse"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#a738170ca930a8195d1c328f1b6c57aa2c9adebb"
+source = "git+https://github.com/ryancinsight/Coeus.git#89cb08b03a48a1588262125dbb242558fae31e8e"
 dependencies = [
  "coeus-core",
  "coeus-tensor",
@@ -838,7 +838,7 @@ dependencies = [
 [[package]]
 name = "coeus-tensor"
 version = "0.10.0"
-source = "git+https://github.com/ryancinsight/Coeus.git#a738170ca930a8195d1c328f1b6c57aa2c9adebb"
+source = "git+https://github.com/ryancinsight/Coeus.git#89cb08b03a48a1588262125dbb242558fae31e8e"
 dependencies = [
  "bytemuck",
  "coeus-core",
@@ -1543,7 +1543,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1960,7 +1960,7 @@ dependencies = [
 [[package]]
 name = "hermes-simd"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/hermes.git#8d1725d54c3839b434fe46055c0416f674c75220"
+source = "git+https://github.com/ryancinsight/hermes.git#c7e86a5c02fc05faf1dd98a8343a13d4f5012e7e"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -1974,7 +1974,7 @@ dependencies = [
 [[package]]
 name = "hermes-simd-core"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/hermes.git#8d1725d54c3839b434fe46055c0416f674c75220"
+source = "git+https://github.com/ryancinsight/hermes.git#c7e86a5c02fc05faf1dd98a8343a13d4f5012e7e"
 dependencies = [
  "eunomia",
  "mnemosyne-memory",
@@ -1985,7 +1985,7 @@ dependencies = [
 [[package]]
 name = "hermes-simd-intrinsics"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/hermes.git#8d1725d54c3839b434fe46055c0416f674c75220"
+source = "git+https://github.com/ryancinsight/hermes.git#c7e86a5c02fc05faf1dd98a8343a13d4f5012e7e"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -1994,7 +1994,7 @@ dependencies = [
 [[package]]
 name = "hermes-simd-macros"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/hermes.git#8d1725d54c3839b434fe46055c0416f674c75220"
+source = "git+https://github.com/ryancinsight/hermes.git#c7e86a5c02fc05faf1dd98a8343a13d4f5012e7e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2004,7 +2004,7 @@ dependencies = [
 [[package]]
 name = "hermes-simd-types"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/hermes.git#8d1725d54c3839b434fe46055c0416f674c75220"
+source = "git+https://github.com/ryancinsight/hermes.git#c7e86a5c02fc05faf1dd98a8343a13d4f5012e7e"
 dependencies = [
  "hermes-simd-core",
  "hermes-simd-intrinsics",
@@ -2141,7 +2141,7 @@ dependencies = [
 [[package]]
 name = "hyperion"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/hyperion#a41a94a524ea7461a97ea3cba31d7770805576b2"
+source = "git+https://github.com/ryancinsight/hyperion#fc6ba1b77b1f0260cadf7769e95dc8df24b9df87"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -2349,7 +2349,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi 0.5.3",
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4439,7 +4439,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5284,7 +5284,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5341,7 +5341,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5770,10 +5770,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6520,7 +6520,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
