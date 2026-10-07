@@ -32,6 +32,9 @@ concurrency:
 jobs:
   book:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    # Pull-request builds prove the book compiles only (see mdbook-test
+    # below); pushes to main additionally test samples and deploy to Pages.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
     # Body owned once by Atlas (ADR 0035), pinned by SHA like any action. The
     # shared workflow keeps the pull-request build and skips deployment there,
     # so PRs still prove the book builds without publishing it.
@@ -45,7 +48,11 @@ jobs:
       # Read from docs/book/book.toml's build-dir = "../../target/book" rather
       # than assumed. mdbook-version stays at the shared 0.5.4 default, which is
       # the version this book already pinned.
+      # Pull requests prove the book builds only: compiling the package for
+      # code-sample testing measured 8.3m (run 37653456847), which alone
+      # exceeds the pull-request budget. Pushes to main keep the tested build
+      # ahead of the Pages deploy.
       output-path: target/book
-      mdbook-test: true
+      mdbook-test: ${{ github.event_name != 'pull_request' }}
       rust-toolchain: "1.97.0"
       cargo-package: kwavers
