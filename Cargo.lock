@@ -263,7 +263,7 @@ checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 [[package]]
 name = "asclepius"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/asclepius#d31030d353e3823c6b15e1c2ad31c5eaa5ab7ce6"
+source = "git+https://github.com/ryancinsight/asclepius#f746b577f50dac7530d036ae5fae86223ec8c039"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -327,7 +327,7 @@ dependencies = [
 [[package]]
 name = "athena-core"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/athena#f80018fdd34b2bba320e6763f7be326c65b8cdae"
+source = "git+https://github.com/ryancinsight/athena#84fbafb4f4c2c9dc078fbbe240dbc01780aaaf0e"
 dependencies = [
  "eunomia",
 ]
@@ -335,7 +335,7 @@ dependencies = [
 [[package]]
 name = "athena-leto"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/athena#f80018fdd34b2bba320e6763f7be326c65b8cdae"
+source = "git+https://github.com/ryancinsight/athena#84fbafb4f4c2c9dc078fbbe240dbc01780aaaf0e"
 dependencies = [
  "athena-core",
  "eunomia",
@@ -1543,7 +1543,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1960,7 +1960,7 @@ dependencies = [
 [[package]]
 name = "hermes-simd"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/hermes.git#c7e86a5c02fc05faf1dd98a8343a13d4f5012e7e"
+source = "git+https://github.com/ryancinsight/hermes.git#8d1725d54c3839b434fe46055c0416f674c75220"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -1974,7 +1974,7 @@ dependencies = [
 [[package]]
 name = "hermes-simd-core"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/hermes.git#c7e86a5c02fc05faf1dd98a8343a13d4f5012e7e"
+source = "git+https://github.com/ryancinsight/hermes.git#8d1725d54c3839b434fe46055c0416f674c75220"
 dependencies = [
  "eunomia",
  "mnemosyne-memory",
@@ -1985,7 +1985,7 @@ dependencies = [
 [[package]]
 name = "hermes-simd-intrinsics"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/hermes.git#c7e86a5c02fc05faf1dd98a8343a13d4f5012e7e"
+source = "git+https://github.com/ryancinsight/hermes.git#8d1725d54c3839b434fe46055c0416f674c75220"
 dependencies = [
  "eunomia",
  "hermes-simd-core",
@@ -1994,7 +1994,7 @@ dependencies = [
 [[package]]
 name = "hermes-simd-macros"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/hermes.git#c7e86a5c02fc05faf1dd98a8343a13d4f5012e7e"
+source = "git+https://github.com/ryancinsight/hermes.git#8d1725d54c3839b434fe46055c0416f674c75220"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2004,7 +2004,7 @@ dependencies = [
 [[package]]
 name = "hermes-simd-types"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/hermes.git#c7e86a5c02fc05faf1dd98a8343a13d4f5012e7e"
+source = "git+https://github.com/ryancinsight/hermes.git#8d1725d54c3839b434fe46055c0416f674c75220"
 dependencies = [
  "hermes-simd-core",
  "hermes-simd-intrinsics",
@@ -2349,7 +2349,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi 0.5.3",
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4439,7 +4439,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5284,7 +5284,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5341,7 +5341,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5770,10 +5770,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6520,7 +6520,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
