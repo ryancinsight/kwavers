@@ -78,30 +78,13 @@ fi
 # (both disable conversion), so it is genuinely unset here.
 unset MSYS_NO_PATHCONV
 
-# Capture the one-command prepared-tools selection before replacing inherited
-# command configuration with the safe-directory setting child Git calls need.
-prepared_tools_config="$(git -c safe.directory="$PWD" config --show-scope --get-all atlas.preparedTools 2>/dev/null || true)"
-prepared_tools=""
-prepared_tools_selected=0
-if [ -n "$prepared_tools_config" ]; then
-  if [[ "$prepared_tools_config" == *$'\n'* ]] \
-    || [ "${prepared_tools_config%%$'\t'*}" != "command" ]; then
-    echo "pre-push: BLOCKED -- atlas.preparedTools must be set once with git -c for this push." >&2
-    exit 1
-  fi
-  prepared_tools_selected=1
-  prepared_tools="${prepared_tools_config#*$'\t'}"
-fi
-
 # A managed worktree may be owned by a different filesystem account than the
-# process pushing from it. Re-inject the checkout path so child Git calls stay
-# valid without retaining other command-scoped configuration.
+# process pushing from it, and git does not propagate command-line config into
+# hooks. Re-inject the checkout path so child git calls stay valid.
 repo_root="$(git -c safe.directory="$PWD" rev-parse --show-toplevel)"
 export GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0=safe.directory
 export GIT_CONFIG_VALUE_0="$repo_root"
-repo_git_dir="$(git rev-parse --absolute-git-dir)"
-repo_store="$(git rev-parse --path-format=absolute --git-common-dir)"
 
 # Every temporary directory this run creates is registered here and removed
 # on any exit. The trap is set before the first one exists: the lock export
@@ -138,21 +121,21 @@ outside_checkout() {
 # stack does not register). The cost of a hit is therefore constant,
 # wherever the member sits in `.gitmodules`.
 #
-# Exit status: 0 after setting the stack root and common directory, or with
-# both empty for a clone with no stack above it; 2 with a message when the
-# stack cannot be established (git cannot read a stack or one of its members,
-# or cannot identify this checkout): the caller refuses; 3 after setting the
-# nearest readable stack root and common directory when a stack sits above
-# this clone but registers none of this clone's
+# Exit status: 0 with the stack on stdout, or with nothing for a clone with
+# no stack above it; 2 with a message when the stack cannot be established
+# (git cannot read a stack or one of its members, or cannot identify this
+# checkout): the caller refuses; 3 with the nearest readable stack on stdout
+# when a stack sits above this clone but registers none of this clone's
 # store (a `--shared` or `--reference` clone, a copy): the stack does not
 # claim it, so the caller passes with a message that names the stack.
 # Identical to the function in the other hook, which a test holds so.
 locate_stack() {
-  local probe="$1" own_store="$2" hook="${BASH_SOURCE[0]##*/}" line section name top path store unreadable
-  local index stack_common superproject facts outer parent prefix unmatched="" unmatched_store=""
+  local probe="$1" hook="${BASH_SOURCE[0]##*/}" line section name top path store own_store unreadable
+  local index stack_common superproject facts outer unmatched=""
   local path_pattern='^[[:space:]]*path[[:space:]]*=[[:space:]]*(repos/[^[:space:]]+)[[:space:]]*$'
   local section_pattern='^[[:space:]]*\[submodule[[:space:]]+"(.*)"\][[:space:]]*$'
   local -a registered names order rest
+  own_store="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
   if [ -z "$own_store" ]; then
     echo "$hook: git cannot identify this checkout's object store, so the Atlas stack cannot be located; refusing" >&2
     return 2
@@ -170,14 +153,14 @@ locate_stack() {
         names+=("$section")
       fi
     done < "$probe/.gitmodules"
-    if [ "${#registered[@]}" -gt 0 ]; then
+    [ "${#registered[@]}" -gt 0 ] || continue
+    [ -e "$probe/.git" ] || continue
     top=""
     stack_common=""
     superproject=""
     facts="$(outside_checkout git -C "$probe" rev-parse --path-format=absolute --show-toplevel --git-common-dir --show-superproject-working-tree 2>/dev/null || true)"
     { IFS= read -r top; IFS= read -r stack_common; IFS= read -r superproject; } <<<"$facts" || true
-    prefix="$(outside_checkout git -C "$probe" rev-parse --show-prefix 2>/dev/null || true)"
-    if [ -z "$top" ] || [ -n "$prefix" ]; then
+    if [ -z "$top" ] || [ "$(cd "$top" && pwd)" != "$probe" ]; then
       echo "$hook: the Atlas stack at $probe registers members but git cannot read it, so its lockfile checker cannot be used; refusing. If git reports dubious ownership and you trust that checkout: git config --global --add safe.directory $probe" >&2
       return 2
     fi
@@ -188,27 +171,18 @@ locate_stack() {
     # stack is.
     outer="${probe%/*}"
     while [ -n "$outer" ] && [ ! -e "$outer/.git" ]; do
-      parent="${outer%/*}"
-      if [ "$parent" = "$outer" ]; then
-        outer=""
-      else
-        outer="$parent"
-      fi
+      outer="${outer%/*}"
     done
     if [ -n "$outer" ] && ! outside_checkout git -C "$outer" rev-parse --show-toplevel >/dev/null 2>&1; then
       echo "$hook: the candidate Atlas stack at $probe sits inside a repository at $outer that git cannot read, so it cannot be told apart from a submodule; refusing. If git reports dubious ownership and you trust that checkout: git config --global --add safe.directory $outer" >&2
       return 2
     fi
-    if [ -z "$superproject" ] && [ -z "$outer" ]; then
+    [ -z "$superproject" ] || continue
     # A checkout whose own object store is the candidate stack's is the stack
-    # root itself, so it matches the same way a registered member does.
+    # root itself -- the Atlas tree pushing its own branches -- so it matches
+    # the same way a registered member does.
     if [ "$own_store" = "$stack_common" ]; then
-      stack_root="$probe"
-      if ! stack_store="$(cd "$stack_common" && pwd)"; then
-        echo "$hook: git identified the Atlas stack store at $stack_common but it cannot be opened; refusing" >&2
-        return 2
-      fi
-      stack_member="<meta>"
+      printf '%s\n' "$probe"
       return 0
     fi
     order=()
@@ -231,12 +205,7 @@ locate_stack() {
         continue
       fi
       if [ "$store" = "$own_store" ]; then
-        stack_root="$probe"
-        if ! stack_store="$(cd "$stack_common" && pwd)"; then
-          echo "$hook: git identified the Atlas stack store at $stack_common but it cannot be opened; refusing" >&2
-          return 2
-        fi
-        stack_member="${path##*/}"
+        printf '%s\n' "$probe"
         return 0
       fi
     done
@@ -244,23 +213,12 @@ locate_stack() {
       echo "$hook: a member registered by the Atlas stack at $probe cannot be read by git, so this checkout cannot be matched to the stack; refusing. If git reports dubious ownership and you trust it: git config --global --add safe.directory $probe/<member>" >&2
       return 2
     fi
-    if [ -z "$unmatched" ]; then
-      unmatched="$probe"
-      unmatched_store="$stack_common"
+    [ -n "$unmatched" ] || unmatched="$probe"
     fi
-    fi
-    fi
-    fi
-    parent="${probe%/*}"
-    if [ "$parent" = "$probe" ]; then
-      probe=""
-    else
-      probe="$parent"
-    fi
+    probe="${probe%/*}"
     if [ -z "$probe" ]; then
       if [ -n "$unmatched" ]; then
-        stack_root="$unmatched"
-        stack_store="$unmatched_store"
+        printf '%s\n' "$unmatched"
         return 3
       fi
       return 0
@@ -297,9 +255,11 @@ new_run_temp() {
 # Echoes the merge-base of `$1` with that branch, or nothing when neither
 # ref resolves.
 default_branch_base() {
-  local tip="$1" ref base
+  local tip="$1" ref ref_sha base
   for ref in origin/HEAD origin/main; do
-    base="$(git merge-base "$ref" "$tip" 2>/dev/null || true)"
+    ref_sha="$(git rev-parse --verify --quiet "$ref" 2>/dev/null || true)"
+    [ -n "$ref_sha" ] || continue
+    base="$(git merge-base "$ref_sha" "$tip" 2>/dev/null || true)"
     if [ -n "$base" ]; then
       printf '%s' "$base"
       return 0
@@ -368,13 +328,10 @@ fi
 # checker (see locate_stack).
 located=0
 unmatched_stack=""
-stack_root=""
-stack_store=""
-stack_member=""
-locate_stack "$repo_root" "$repo_store" || located=$?
+stack_root="$(locate_stack "$(cd "$repo_root" && pwd)")" || located=$?
 case "$located" in
   0) ;;
-  3) unmatched_stack="$stack_root"; stack_root=""; stack_store=""; stack_member="" ;;
+  3) unmatched_stack="$stack_root"; stack_root="" ;;
   *) exit 1 ;;
 esac
 
@@ -532,24 +489,25 @@ fi
 # gc and maintenance are off for the member-side read and the fetches it
 # starts: a push must not repack the member it reads (moirai's auto-gc
 # fails on a foreign ref), and the export reads the member's objects.
-export_revision() (
-  local sha="$1" directory="$2"
-  unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR
+export_revision() {
+  local sha="$1" directory="$2" member_git objects
+  member_git="$(git rev-parse --absolute-git-dir)" || return 1
+  objects="$(git rev-parse --path-format=absolute --git-common-dir)/objects" || return 1
   # `git init` creates the directory: the lock export runs before a PATH
   # without an interpreter is refused, and such a PATH need not carry mkdir.
   if [ ! -d "$directory/.git" ]; then
-    git init -q "$directory" || return 1
+    outside_checkout git init -q "$directory" || return 1
   fi
-  printf '%s\n' "$repo_store/objects" > "$directory/.git/objects/info/alternates" \
-    && git -C "$directory" config core.longpaths true \
-    && git -C "$directory" config gc.auto 0 \
-    && git -C "$directory" config maintenance.auto false \
-    && GIT_DIR="$repo_git_dir" GIT_WORK_TREE="$directory" GIT_INDEX_FILE="$directory/.git/index" \
+  printf '%s\n' "$objects" > "$directory/.git/objects/info/alternates" \
+    && outside_checkout git -C "$directory" config core.longpaths true \
+    && outside_checkout git -C "$directory" config gc.auto 0 \
+    && outside_checkout git -C "$directory" config maintenance.auto false \
+    && GIT_DIR="$member_git" GIT_WORK_TREE="$directory" GIT_INDEX_FILE="$directory/.git/index" \
       git -c core.longpaths=true -c core.sparseCheckout=false -c gc.auto=0 -c maintenance.auto=false \
         read-tree -u --reset "$sha" \
-    && git -C "$directory" update-ref HEAD "$sha" \
-    && git -C "$directory" clean -ffdxq
-)
+    && outside_checkout git -C "$directory" update-ref HEAD "$sha" \
+    && outside_checkout git -C "$directory" clean -ffdxq
+}
 
 # Exports a killed push left behind (ritk's reached 1.5 GB each). A directory
 # naming its owner (`.pre-push-owner`) goes only once that pid is gone. One
@@ -592,15 +550,17 @@ done
 
 
 # ---------------------------------------------------------------------------
-# Stack tools are owned by the stack and run from committed revisions, never
-# from the stack checkout. The artifact-budget checker, secret scanner, and
-# lock checker always come from the fetched default (`origin/HEAD`, else
-# `origin/main`). The conformance and source-identity checkers also default to
-# that revision. A provider-preparation push may select one immutable Atlas
-# commit for those two tools only with `git -c atlas.preparedTools=<full-sha>`.
-# The selected revision's `scripts/` is extracted once into the stack's git
-# directory. A standalone clone outside the stack has no baseline, and each
-# tool reports itself unreachable.
+# Stack tools: the artifact-budget checker, the secret scanner, the debt
+# ratchet, and the source identity checker are owned by the stack and run
+# from its fetched default branch (`origin/HEAD`, else `origin/main`), never
+# from the stack checkout. That checkout sits on whatever branch a peer left
+# there -- often one cut before a tool existed, or holding a dirty copy of
+# it -- and resolving tools from it skipped the secret scan as "not
+# reachable" and blocked registered members on a "missing" identity checker
+# that the default branch carried. The default's `scripts/` is extracted
+# once per revision into the stack's git directory. A standalone clone
+# outside the stack has no baseline, and each tool reports itself
+# unreachable.
 #
 # Git exports GIT_DIR to hooks -- an absolute path in a lane -- and a git or
 # checker process aimed at another repository inherits it and answers about
@@ -608,6 +568,7 @@ done
 # resolved to hephaestus's own and the ratchet was skipped as unreachable.
 # Every such process runs through `outside_checkout` (defined at the top).
 stack_baseline=""
+conformance_member=""
 if [ -n "$stack_root" ]; then
   for ref in origin/HEAD origin/main; do
     stack_baseline="$(outside_checkout git -C "$stack_root" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
@@ -619,17 +580,11 @@ for ref in origin/HEAD origin/main; do
   member_baseline="$(outside_checkout git -C "$repo_root" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
   [ -n "$member_baseline" ] && break
 done
-extract_stack_scripts() {
-  local revision="$1"
-  local checker_cache checker_dir staging checker_users checker_marker
-  local copy copy_in_use user
-  extracted_stack_scripts=""
-  if [ -z "$revision" ] \
-    || ! outside_checkout git -C "$stack_root" cat-file -e "$revision:scripts" 2>/dev/null; then
-    return
-  fi
-  checker_cache="$stack_store/atlas-checker"
-  checker_dir="$checker_cache/$revision"
+stack_scripts=""
+if [ -n "$stack_baseline" ] \
+  && outside_checkout git -C "$stack_root" cat-file -e "$stack_baseline:scripts" 2>/dev/null; then
+  checker_cache="$(cd "$stack_root" && cd "$(outside_checkout git rev-parse --git-common-dir)" && pwd)/atlas-checker"
+  checker_dir="$checker_cache/$stack_baseline"
   if [ ! -d "$checker_dir/scripts" ]; then
     mkdir -p "$checker_cache"
     staging="$(mktemp -d "$checker_cache/.staging.XXXXXX")"
@@ -674,46 +629,12 @@ extract_stack_scripts() {
     done
   fi
   if [ -d "$checker_dir/scripts" ]; then
-    extracted_stack_scripts="$checker_dir/scripts"
+    stack_scripts="$checker_dir/scripts"
   fi
-}
-
-stack_scripts=""
-if [ -n "$stack_baseline" ]; then
-  extract_stack_scripts "$stack_baseline"
-  stack_scripts="$extracted_stack_scripts"
-fi
-prepared_stack_scripts=""
-if [ "$prepared_tools_selected" -eq 1 ]; then
-  if [[ ! "$prepared_tools" =~ ^[0-9a-f]{40}$ ]]; then
-    echo "pre-push: BLOCKED -- atlas.preparedTools must name one full 40-character commit ID." >&2
-    exit 1
-  elif [ -z "$stack_root" ] || [ -n "$unmatched_stack" ]; then
-    echo "pre-push: BLOCKED -- atlas.preparedTools is valid only in the registered Atlas stack." >&2
-    exit 1
-  elif ! outside_checkout git -C "$stack_root" cat-file -e "$prepared_tools^{commit}" 2>/dev/null; then
-    echo "pre-push: BLOCKED -- atlas.preparedTools commit $prepared_tools is unavailable in the Atlas object store." >&2
-    exit 1
-  fi
-  new_run_temp prepared_root apt
-  if ! outside_checkout git -C "$stack_root" archive "$prepared_tools" scripts \
-    | tar -x -C "$prepared_root"; then
-    echo "pre-push: BLOCKED -- atlas.preparedTools commit $prepared_tools could not be extracted." >&2
-    exit 1
-  fi
-  prepared_stack_scripts="$prepared_root/scripts"
-  if [ ! -f "$prepared_stack_scripts/atlas-conformance.py" ] \
-    || [ ! -f "$prepared_stack_scripts/atlas-build-identity.py" ] \
-    || [ ! -f "$prepared_stack_scripts/atlas_stack.py" ]; then
-    echo "pre-push: BLOCKED -- atlas.preparedTools commit $prepared_tools lacks a required prepared tool." >&2
-    exit 1
-  fi
-  echo "pre-push: conformance and source identity use prepared Atlas tools $prepared_tools" >&2
 fi
 
 # The skips above fall through to the code gate, so this whole section runs
 # only when the lock still wants verifying.
-checker="${stack_scripts:+$stack_scripts/lockfile.py}"
 if [ "$skip_lockfile" = "0" ]; then
 # The lock is checked on an export of the pushed revision, outside the stack,
 # by the stack's own `scripts/lockfile.py` from the fetched default (Stack
@@ -731,6 +652,8 @@ if ! export_revision "$(git rev-parse --verify "$lock_rev^{commit}")" "$lock_exp
   echo "pre-push: could not export $lock_rev for the lockfile check" >&2
   exit 1
 fi
+checker="${stack_scripts:+$stack_scripts/lockfile.py}"
+
 if [ -n "$unmatched_stack" ]; then
   # No lockfile checker is owed to a clone the stack does not register, and a
   # lock that gets through here meets the `--locked` CI jobs and is repaired by
@@ -754,8 +677,6 @@ elif [ ! -f "$checker" ]; then
 elif [ -z "$python_bin" ]; then
   echo "pre-push: no python interpreter found; lockfile not verified" >&2
   exit 1
-elif [ "$stack_member" = "<meta>" ]; then
-  echo "pre-push: nested Cargo lock checks follow Atlas meta-root owner selection" >&2
 elif ! (cd "$lock_export" && "$python_bin" "$checker" --check --manifest-path "$lock_export/Cargo.toml"); then
   cat >&2 <<MESSAGE
 
@@ -890,51 +811,52 @@ fi
 #
 # Every input is a committed revision. The content is the pushed tip
 # (`--member-revision`), never the working tree a peer may hold on another
-# branch or dirty. The checker defaults to the stack's fetched revision. An
-# explicit prepared-tools selection changes the checker code, while the
-# comparison baseline remains the fetched default. The checker runs with
-# `ATLAS_STACK_ROOT` naming the live stack, since cited hashes resolve against
-# every member's object store and only the stack holds them all.
+# branch or dirty. The checker and its baseline both come from the stack's
+# fetched default branch: the stack checkout sits on whatever branch a peer
+# left there, often one cut before this check existed, and its scripts would
+# then decide the verdict (Stack tools, above). The checker runs with
+# `ATLAS_STACK_ROOT` naming the live stack, since cited hashes resolve
+# against every member's object store and only the stack holds them all.
 # Citations resolve through default branches and tags only, so a branch
 # deleted elsewhere cannot refuse a push that cites nothing new.
 if [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
   && outside_checkout git -C "$stack_root" cat-file -e "$stack_baseline:scripts/atlas-conformance.py" 2>/dev/null; then
-  # The root's pushed revision carries the meta row and every recorded
-  # gitlink, so it takes the stack scan. A member is the registered directory
-  # sharing this checkout's object store; a lane therefore resolves to its
-  # repository rather than to its worktree directory.
-  if [ -z "$stack_member" ]; then
+  # The member is the registered directory sharing this checkout's object
+  # store, so a lane (`worktrees/<repo>-<branch>`) resolves to its repository.
+  own_store="$(outside_checkout git -C "$repo_root" rev-parse --path-format=absolute --git-common-dir)"
+  conformance_member=""
+  for candidate in "$stack_root/repos/${repo_root##*/}" "$stack_root"/repos/*; do
+    [ -d "$candidate" ] || continue
+    candidate_store="$(outside_checkout git -C "$candidate" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || continue
+    if [ "$candidate_store" = "$own_store" ]; then
+      conformance_member="${candidate##*/}"
+      break
+    fi
+  done
+  if [ -z "$conformance_member" ]; then
     echo "pre-push: not a registered stack member; debt ratchet not run" >&2
   else
-    conformance_scripts="${prepared_stack_scripts:-$stack_scripts}"
-    conformance_checker="${conformance_scripts:+$conformance_scripts/atlas-conformance.py}"
+    conformance_checker="${stack_scripts:+$stack_scripts/atlas-conformance.py}"
     if [ ! -f "$conformance_checker" ]; then
-      echo "pre-push: BLOCKED -- could not extract the stack's checker for $stack_member." >&2
+      echo "pre-push: BLOCKED -- could not extract the stack's checker at ${stack_baseline:0:12}." >&2
       exit 1
-    elif ! grep -q ATLAS_STACK_ROOT "$conformance_scripts/atlas_stack.py"; then
-      # The selected checker predates revision scans and cannot judge a
-      # committed revision without falling back to mutable checkout state.
-      echo "pre-push: the stack's checker for $stack_member predates revision scans;" >&2
+    elif ! grep -q ATLAS_STACK_ROOT "$stack_scripts/atlas_stack.py"; then
+      # The stack's fetched default predates revision scans: fetch it.
+      echo "pre-push: the stack's checker at ${stack_baseline:0:12} predates revision scans;" >&2
       echo "debt ratchet not run. Run: git -C $stack_root fetch origin" >&2
     else
-      conformance_args=(check --baseline-rev "$stack_baseline")
-      if [ "$stack_member" = "<meta>" ]; then
-        conformance_args+=(--revision "$range_rev")
-      else
-        conformance_args+=(--repo "$stack_member" --member-path "$repo_root" \
-          --member-revision "$range_rev")
-      fi
       set +e
-      ATLAS_STACK_ROOT="$stack_root" outside_checkout "$python_bin" "$conformance_checker" \
-        "${conformance_args[@]}" \
+      ATLAS_STACK_ROOT="$stack_root" outside_checkout "$python_bin" "$conformance_checker" check \
+        --repo "$conformance_member" --member-path "$repo_root" \
+        --member-revision "$range_rev" --baseline-rev "$stack_baseline" \
         >&2
       conformance_status=$?
       set -e
       if [ "$conformance_status" -eq 1 ]; then
         echo "pre-push: BLOCKED -- the pushed revision raises a debt class above the" >&2
-        echo "baseline atlas ${stack_baseline:0:12} records for $stack_member." >&2
+        echo "baseline atlas ${stack_baseline:0:12} records for $conformance_member." >&2
         echo "Fix the debt; never regenerate the baseline over it. Reproduce:" >&2
-        echo "  ATLAS_STACK_ROOT=$stack_root python $conformance_checker ${conformance_args[*]}" >&2
+        echo "  ATLAS_STACK_ROOT=$stack_root python $conformance_checker check --repo $conformance_member --member-path $repo_root --member-revision $range_rev --baseline-rev $stack_baseline" >&2
         exit 1
       elif [ "$conformance_status" -ne 0 ]; then
         echo "pre-push: BLOCKED -- the debt ratchet could not run (exit $conformance_status)." >&2
@@ -1020,16 +942,10 @@ else
 fi
 
 if [ -n "$gate_base" ]; then
-  if ! gate_changed="$(git diff --name-only "$gate_base" "$gate_sha")"; then
-    echo "pre-push: BLOCKED -- could not discover changed paths between $gate_base and $gate_sha." >&2
-    exit 1
-  fi
+  gate_changed="$(git diff --name-only "$gate_base" "$gate_sha" 2>/dev/null || true)"
 else
   # No history shared with the default branch: every file is new.
-  if ! gate_changed="$(git ls-tree -r --name-only "$gate_sha")"; then
-    echo "pre-push: BLOCKED -- could not discover paths from $gate_sha." >&2
-    exit 1
-  fi
+  gate_changed="$(git ls-tree -r --name-only "$gate_sha")"
 fi
 
 if [ -z "$python_bin" ]; then
@@ -1175,31 +1091,9 @@ if ! export_revision "$gate_sha" "$gate_export"; then
   fi
 fi
 
-run_cargo_workspace_gate() {
-  local workspace_manifest="$1"
-  local gate_changed="$2"
-  local gate_manifest_path="$gate_export/$workspace_manifest"
-  local gate_command_cwd
-  gate_command_cwd="$(dirname "$gate_manifest_path")"
-  if [ ! -f "$gate_manifest_path" ]; then
-    echo "pre-push: BLOCKED -- selected Cargo workspace manifest $workspace_manifest is missing from $gate_sha" >&2
-    exit 1
-  fi
-  # Leading space: the steps render as `cargo doc --no-deps$gate_specs`, and
-  # without it the flag joins the subcommand ("--no-deps--manifest-path").
-  gate_manifest=" --manifest-path $gate_manifest_path"
-
-  if [ "$stack_member" = "<meta>" ] \
-    && printf '%s\n' "$gate_changed" | grep -qE '(^|/)Cargo\.(lock|toml)$'; then
-    if [ ! -f "$checker" ]; then
-      echo "pre-push: BLOCKED -- the stack lockfile checker is missing for $workspace_manifest" >&2
-      exit 1
-    elif ! (cd "$gate_command_cwd" \
-      && "$python_bin" "$checker" --check --manifest-path "$gate_manifest_path"); then
-      echo "pre-push: the lock for $workspace_manifest does not resolve under --locked on $gate_sha" >&2
-      exit 1
-    fi
-  fi
+# Leading space: the steps render as `cargo doc --no-deps$gate_specs`, and
+# without it the flag joins the subcommand ("--no-deps--manifest-path").
+gate_manifest=" --manifest-path $gate_export/Cargo.toml"
 
 # Packages with no target nextest can run (a `test = false` cdylib such as a
 # PyO3 extension) produce no test artifact, so the source-identity checker would
@@ -1207,7 +1101,7 @@ run_cargo_workspace_gate() {
 # Cargo metadata marks each target with `test`; a package none of whose targets
 # has it is skipped by the tests stage only. Its clippy and rustdoc stages stay.
 if ! untestable_packages="$(
-  cd "$gate_command_cwd" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+  cd "$gate_export" && cargo metadata --no-deps --format-version 1 $gate_manifest |
     "$python_bin" -c 'import json, sys
 sys.stdout.reconfigure(newline="\n")
 metadata = json.load(sys.stdin)
@@ -1228,7 +1122,7 @@ fi
 # `--no-deps` reads membership without resolving dependencies or changing the
 # lockfile. Each output record is `<repo-relative manifest><tab><package name>`.
 if ! workspace_members="$(
-  cd "$gate_command_cwd" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+  cd "$gate_export" && cargo metadata --no-deps --format-version 1 $gate_manifest |
     "$python_bin" -c 'import json, os, sys
 # LF records: text-mode stdout on Windows writes CRLF, and bash keeps the CR
 # in the package name, so a new-member push gated `helios-core<CR>` beside
@@ -1242,7 +1136,7 @@ for package in metadata["packages"]:
         continue
     manifest = os.path.realpath(package["manifest_path"])
     relative = os.path.relpath(manifest, root).replace(os.sep, "/")
-    print(f"{relative}\t{package['"'"'name'"'"']}")' "$gate_command_cwd"
+    print(f"{relative}\t{package['"'"'name'"'"']}")' "$gate_export"
 )"; then
   echo "pre-push: cargo metadata could not establish workspace membership" >&2
   echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
@@ -1268,7 +1162,7 @@ while IFS= read -r changed_path; do
   package_dir=""
   excluded_manifest=""
   while [ "$owner_dir" != "." ] && [ "$owner_dir" != "/" ]; do
-    manifest="$gate_command_cwd/$owner_dir/Cargo.toml"
+    manifest="$gate_export/$owner_dir/Cargo.toml"
     if [ -f "$manifest" ]; then
       if grep -qE '^\[package\]' "$manifest" 2>/dev/null; then
         package_dir="$owner_dir"
@@ -1287,8 +1181,8 @@ while IFS= read -r changed_path; do
     continue
   fi
   if [ -z "$package_dir" ] && [ "$changed_path" = "Cargo.toml" ] \
-    && [ -f "$gate_manifest_path" ] \
-    && grep -qE '^\[workspace\]' "$gate_manifest_path" 2>/dev/null; then
+    && [ -f "$gate_export/Cargo.toml" ] \
+    && grep -qE '^\[workspace\]' "$gate_export/Cargo.toml" 2>/dev/null; then
     while IFS=$'\t' read -r _workspace_manifest workspace_package; do
       [ -n "$workspace_package" ] || continue
       case " $gate_packages " in
@@ -1299,14 +1193,14 @@ while IFS= read -r changed_path; do
     continue
   fi
   if [ -z "$package_dir" ]; then
-    if [ -f "$gate_manifest_path" ] && grep -qE '^\[package\]' "$gate_manifest_path" 2>/dev/null; then
+    if [ -f "$gate_export/Cargo.toml" ] && grep -qE '^\[package\]' "$gate_export/Cargo.toml" 2>/dev/null; then
       package_dir="."
     else
       continue
     fi
   fi
-  manifest="$gate_command_cwd/$package_dir/Cargo.toml"
-  relative_manifest="${manifest#"$gate_command_cwd"/}"
+  manifest="$gate_export/$package_dir/Cargo.toml"
+  relative_manifest="${manifest#"$gate_export"/}"
   relative_manifest="${relative_manifest#./}"
   package_name="$(printf '%s\n' "$workspace_members" | awk -F '\t' -v manifest="$relative_manifest" '$1 == manifest { print $2; exit }')"
   if [ -z "$package_name" ]; then
@@ -1346,8 +1240,8 @@ fi
 # target at all. A nested virtual workspace, whose members deserve a real
 # gate, is still refused above.
 for standalone_manifest in $standalone_manifests; do
-  if ! (cd "$gate_command_cwd" && cargo metadata --locked --no-deps --format-version 1 \
-    --manifest-path "$gate_command_cwd/$standalone_manifest" >/dev/null 2>&1); then
+  if ! (cd "$gate_export" && cargo metadata --locked --no-deps --format-version 1 \
+    --manifest-path "$gate_export/$standalone_manifest" >/dev/null 2>&1); then
     cat >&2 <<MESSAGE
 
 pre-push: the lockfile of the standalone crate $standalone_manifest does not
@@ -1361,7 +1255,7 @@ To push anyway: SKIP_LOCAL_GATE=1 git push
 MESSAGE
     exit 1
   fi
-  if ! (cd "$gate_command_cwd" && cargo fmt --manifest-path "$gate_command_cwd/$standalone_manifest" -- --check >/dev/null); then
+  if ! (cd "$gate_export" && cargo fmt --manifest-path "$gate_export/$standalone_manifest" -- --check >/dev/null); then
     cat >&2 <<MESSAGE
 
 pre-push: \`cargo fmt --check\` fails for the standalone crate $standalone_manifest on $gate_sha.
@@ -1374,8 +1268,8 @@ MESSAGE
 done
 
 if [ -z "${gate_packages// /}" ]; then
-  echo "pre-push: no package owns the changed files in $workspace_manifest; local gate not needed" >&2
-  return 0
+  echo "pre-push: no package owns the changed files; local gate not needed" >&2
+  exit 0
 fi
 
 # Run one gate step and say whose failure it was.
@@ -1517,18 +1411,18 @@ done
 gate_specs="$gate_manifest$gate_package_specs --locked"
 gate_reproduce="From a checkout of $gate_sha outside the stack overlay:"
 
-identity_scripts="${prepared_stack_scripts:-$stack_scripts}"
-identity_checker="${identity_scripts:+$identity_scripts/atlas-build-identity.py}"
+identity_checker="${stack_scripts:+$stack_scripts/atlas-build-identity.py}"
 identity_target_dir=""
 identity_target="${CARGO_BUILD_TARGET:-host}"
 identity_enabled=0
+identity_cargo_manifest_args=(--manifest-path "$gate_export/Cargo.toml")
 if [ -f "$identity_checker" ]; then
   if [ -z "$python_bin" ]; then
     echo "pre-push: source identity checker is present but no python interpreter found" >&2
     exit 1
   fi
   if ! identity_target_dir="$(
-    cd "$gate_command_cwd" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+    cd "$gate_export" && cargo metadata --no-deps --format-version 1 $gate_manifest |
       "$python_bin" -c 'import json, sys
 value = json.load(sys.stdin).get("target_directory")
 if not isinstance(value, str) or not value:
@@ -1539,7 +1433,7 @@ print(value)'
     exit 1
   fi
   identity_enabled=1
-elif [ -n "$stack_member" ]; then
+elif [ -n "$conformance_member" ]; then
   echo "pre-push: BLOCKED -- the stack source identity checker is missing" >&2
   exit 1
 else
@@ -1567,8 +1461,8 @@ run_identity_sequence() {
     --target-dir "$identity_target_dir"
     --profile debug
     --target "$identity_target"
-    --manifest "$gate_manifest_path"
-    --command-cwd "$gate_command_cwd"
+    --manifest "$gate_export/Cargo.toml"
+    --command-cwd "$gate_export"
     --command-key "atlas-pre-push"
     --
     bash -c '
@@ -1589,7 +1483,7 @@ if [ "$run_rustdoc" = 1 ]; then
   env RUSTDOCFLAGS="-D warnings" "$cargo_command" doc --no-deps --manifest-path "$manifest" --locked "$@" || exit $?
 fi
 printf "%s\n" verification >"$stage_file"
-' atlas-pre-push-sequence "$stage_file" "$gate_manifest_path" "$run_tests" "$run_rustdoc"
+' atlas-pre-push-sequence "$stage_file" "$gate_export/Cargo.toml" "$run_tests" "$run_rustdoc"
     "${selection[@]}"
   )
   local verdict step_name
@@ -1626,7 +1520,7 @@ echo "pre-push: gating${gate_packages}" >&2
 
 # Formatting is workspace-wide and near-instant, and its failure is the
 # cheapest one to find here rather than on a runner.
-if ! (cd "$gate_command_cwd" && cargo fmt --all $gate_manifest -- --check >/dev/null); then
+if ! (cd "$gate_export" && cargo fmt --all $gate_manifest -- --check >/dev/null); then
   cat >&2 <<MESSAGE
 
 pre-push: \`cargo fmt --check\` fails on $gate_sha, so the architecture validation would.
@@ -1641,14 +1535,14 @@ fi
 # then failed CI on a `// SAFETY:` comment two lines above its block, because
 # nothing here ran the ratchet. It is text-only and fast, so it runs before the
 # compile steps; a member without the script has no ratchet to run.
-safety_ratchet="$gate_command_cwd/scripts/safety_ratchet.py"
+safety_ratchet="$gate_export/scripts/safety_ratchet.py"
 if [ -f "$safety_ratchet" ]; then
   if [ -z "$python_bin" ]; then
     echo "pre-push: scripts/safety_ratchet.py present but no python interpreter found" >&2
     echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
     exit 1
   fi
-  if ! (cd "$gate_command_cwd" && "$python_bin" "$safety_ratchet" check >&2); then
+  if ! (cd "$gate_export" && "$python_bin" scripts/safety_ratchet.py check >&2); then
     cat >&2 <<'MESSAGE'
 
 pre-push: the SAFETY ratchet fails, so CI's workspace job would. Put a
@@ -1692,7 +1586,7 @@ if [ "$identity_enabled" -eq 1 ]; then
   # false` one (consus-python) writes none, so an all-undocumented selection
   # skips the stage; cargo's own target list is the authority.
   if ! documented_packages="$(
-    cd "$gate_command_cwd" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+    cd "$gate_export" && cargo metadata --no-deps --format-version 1 $gate_manifest |
       "$python_bin" -c 'import json, sys
 sys.stdout.reconfigure(newline="\n")
 documented = {"lib", "rlib", "dylib", "cdylib", "staticlib", "proc-macro", "bin"}
@@ -1799,93 +1693,3 @@ MESSAGE
 fi
 
 echo "pre-push: local gate passed" >&2
-}
-
-select_meta_cargo_owners() {
-  local changed_file="$1" base_manifests="$2" candidate_manifests="$3" output="$4"
-  "$python_bin" - "$changed_file" "$base_manifests" "$candidate_manifests" "$output" <<'PY'
-import pathlib
-import sys
-
-changed = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()
-base = set(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8").splitlines())
-candidate = set(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8").splitlines())
-all_manifests = base | candidate
-selected = {}
-
-def owner(path):
-    directory = pathlib.PurePosixPath(path).parent
-    while directory != pathlib.PurePosixPath("."):
-        manifest = (directory / "Cargo.toml").as_posix()
-        if manifest in all_manifests:
-            return manifest
-        directory = directory.parent
-    return None
-
-global_inputs = {
-    "rust-toolchain",
-    "rust-toolchain.toml",
-    ".config/nextest.toml",
-}
-for path in changed:
-    if not path:
-        continue
-    if path in {"Cargo.toml", "Cargo.lock"}:
-        raise SystemExit(f"the Atlas meta root cannot own {path}; Cargo workspaces live below tools/")
-    if path in global_inputs or path.startswith(".cargo/"):
-        for manifest in candidate:
-            selected.setdefault(manifest, set()).add("Cargo.toml")
-        continue
-    manifest = owner(path)
-    if manifest is None:
-        continue
-    if manifest not in candidate:
-        raise SystemExit(f"selected Cargo workspace manifest {manifest} is missing from the pushed revision")
-    root = pathlib.PurePosixPath(manifest).parent
-    relative = pathlib.PurePosixPath(path).relative_to(root).as_posix()
-    selected.setdefault(manifest, set()).add(relative)
-
-with pathlib.Path(sys.argv[4]).open("w", encoding="utf-8", newline="\n") as stream:
-    for manifest in sorted(selected):
-        for path in sorted(selected[manifest]):
-            stream.write(f"{manifest}\t{path}\n")
-PY
-}
-
-if [ "$stack_member" = "<meta>" ]; then
-  meta_changed="$(mktemp "$tmp_base/pg-meta-changed.XXXXXX")"
-  meta_base_manifests="$(mktemp "$tmp_base/pg-meta-base.XXXXXX")"
-  meta_candidate_manifests="$(mktemp "$tmp_base/pg-meta-candidate.XXXXXX")"
-  meta_owners="$(mktemp "$tmp_base/pg-meta-owners.XXXXXX")"
-  run_temps+=("$meta_changed" "$meta_base_manifests" "$meta_candidate_manifests" "$meta_owners")
-  printf '%s\n' "$gate_changed" > "$meta_changed"
-  : > "$meta_base_manifests"
-  if [ -n "$gate_base" ]; then
-    if ! git ls-tree -r --name-only "$gate_base" -- tools \
-      | awk '/^tools\/.+\/Cargo\.toml$/ { print }' > "$meta_base_manifests"; then
-      echo "pre-push: BLOCKED -- could not inspect the base Cargo workspace owners" >&2
-      exit 1
-    fi
-  fi
-  if ! git ls-tree -r --name-only "$gate_sha" -- tools \
-    | awk '/^tools\/.+\/Cargo\.toml$/ { print }' > "$meta_candidate_manifests"; then
-    echo "pre-push: BLOCKED -- could not inspect the pushed Cargo workspace owners" >&2
-    exit 1
-  fi
-  if ! select_meta_cargo_owners \
-    "$meta_changed" "$meta_base_manifests" "$meta_candidate_manifests" "$meta_owners"; then
-    echo "pre-push: BLOCKED -- could not select the Atlas meta root's Cargo workspace owners" >&2
-    exit 1
-  fi
-  if [ ! -s "$meta_owners" ]; then
-    echo "pre-push: no nested Cargo workspace owns the changed files; native gate not applicable" >&2
-    exit 0
-  fi
-  while IFS= read -r workspace_manifest; do
-    [ -n "$workspace_manifest" ] || continue
-    workspace_changed="$(awk -F '\t' -v manifest="$workspace_manifest" '$1 == manifest { print $2 }' "$meta_owners")"
-    run_cargo_workspace_gate "$workspace_manifest" "$workspace_changed"
-  done < <(awk -F '\t' '!seen[$1]++ { print $1 }' "$meta_owners")
-else
-  run_cargo_workspace_gate "Cargo.toml" "$gate_changed"
-fi
