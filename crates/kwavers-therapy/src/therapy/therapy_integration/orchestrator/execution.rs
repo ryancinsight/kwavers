@@ -240,6 +240,7 @@ pub fn generate_kzk_acoustic_field(
         include_diffraction: true,
         include_absorption: true,
         include_nonlinearity: true,
+        diffraction_scheme: kwavers_solver::forward::nonlinear::kzk::DiffractionScheme::Parabolic,
         frequency,
     };
 
@@ -344,6 +345,7 @@ fn generate_kzk_collimated(
         include_diffraction: true,
         include_absorption: true,
         include_nonlinearity: true,
+        diffraction_scheme: kwavers_solver::forward::nonlinear::kzk::DiffractionScheme::Parabolic,
         frequency,
     };
 
