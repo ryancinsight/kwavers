@@ -10,8 +10,11 @@
 //! - [`GmresConvergenceInfo`], the convergence summary kwavers' coupled-step
 //!   reports carry, read out of an Athena
 //!   [`SolveReport`](athena_core::SolveReport);
-//! - [`KrylovWorkspace`], the bridge from a restart width chosen at runtime to
-//!   Athena's compile-time `Gmres<B, RESTART>`.
+//! - [`KrylovWorkspace`], the one runtime-to-compile-time restart bridge the
+//!   stack carries, owned by Athena's Leto backend (Atlas ADR 0062): the
+//!   ladder of `Gmres` instantiations and its dispatch live in
+//!   `athena-leto`, and this module re-exports it under the name kwavers'
+//!   call sites already speak.
 //!
 //! It is the single home for Krylov solves in this crate: the dense boundary
 //! element system ([`crate::forward::bem`]) and the matrix-free Newton-Krylov
@@ -19,16 +22,17 @@
 
 mod cg;
 mod config;
+mod failure;
 mod report;
-mod restart;
 
 #[cfg(test)]
 mod tests;
 
+pub use athena_leto::KrylovWorkspace;
 pub use cg::{solve_cg, CpuBackend, SliceOperator, SlicePreconditioner};
 pub use config::GMRESConfig;
 pub use report::GmresConvergenceInfo;
-pub use restart::KrylovWorkspace;
 
 pub(crate) use config::policy;
+pub(crate) use failure::{backend_failure, solve_failure};
 pub(crate) use report::convergence_failure;

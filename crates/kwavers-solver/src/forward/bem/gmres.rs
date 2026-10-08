@@ -21,7 +21,7 @@
 //!   algorithm for solving nonsymmetric linear systems." SIAM J. Sci. Stat.
 //!   Comput. 7(3), 856–869. DOI: 10.1137/0907058
 
-use crate::krylov::{convergence_failure, KrylovWorkspace};
+use crate::krylov::{backend_failure, convergence_failure, solve_failure, KrylovWorkspace};
 use athena_leto::{BorrowedDenseOperator, Jacobi};
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use leto::{Array1, Array2};
@@ -86,15 +86,18 @@ pub fn solve_gmres(
     let right_hand_side = contiguous(rhs);
     let mut solution = Array1::<f64>::zeros([dimension]);
     let policy = crate::krylov::policy(0.0, tol, budget(max_iter, restart)?)?;
-    let mut workspace = KrylovWorkspace::new(restart, dimension)?;
+    let mut workspace = KrylovWorkspace::new(restart, dimension)
+        .map_err(|error| backend_failure("GMRES workspace allocation", &error))?;
 
-    let report = workspace.solve(
-        &operator,
-        &preconditioner,
-        &right_hand_side,
-        &mut solution,
-        policy,
-    )?;
+    let report = workspace
+        .solve(
+            &operator,
+            &preconditioner,
+            &right_hand_side,
+            &mut solution,
+            policy,
+        )
+        .map_err(|error| solve_failure(&error))?;
     if report.converged() {
         Ok(solution)
     } else {
@@ -151,13 +154,6 @@ fn contiguous(vector: &Array1<f64>) -> Array1<f64> {
     } else {
         vector.to_contiguous()
     }
-}
-
-fn backend_failure(operation: &str, error: &athena_leto::LetoBackendError) -> KwaversError {
-    KwaversError::Numerical(NumericalError::SolverFailed {
-        method: operation.to_owned(),
-        reason: error.to_string(),
-    })
 }
 
 #[cfg(test)]

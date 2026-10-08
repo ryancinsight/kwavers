@@ -6,7 +6,6 @@
 
 mod cg;
 
-use super::restart::RestartWidth;
 use super::{GMRESConfig, GmresConvergenceInfo, KrylovWorkspace};
 use athena_core::{
     Identity, IterationObserver, IterationState, KrylovBackend, LinearOperator, Termination,
@@ -305,27 +304,6 @@ fn nonsymmetric_system_terminates_within_its_dimension() {
     );
     for (&value, &target) in solution.iter().zip(expected.iter()) {
         assert_relative_eq!(value, target, epsilon = 1e-13);
-    }
-}
-
-/// Every requested restart lands on the smallest rung at least as wide.
-#[test]
-fn the_restart_ladder_covers_every_request() {
-    for (requested, expected) in [
-        (1, RestartWidth::W8),
-        (8, RestartWidth::W8),
-        (9, RestartWidth::W16),
-        (30, RestartWidth::W32),
-        (64, RestartWidth::W64),
-        (100, RestartWidth::W128),
-        (200, RestartWidth::W256),
-        (10_000, RestartWidth::W256),
-    ] {
-        assert_eq!(
-            RestartWidth::covering(requested),
-            expected,
-            "request {requested}"
-        );
     }
 }
 

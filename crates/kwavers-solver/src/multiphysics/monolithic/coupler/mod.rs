@@ -82,7 +82,7 @@ pub struct MonolithicCoupler {
 
     /// Reusable Krylov workspace, held across Newton iterations and coupled
     /// steps so the Arnoldi basis is allocated once per system dimension.
-    pub(super) krylov_workspace: Option<KrylovWorkspace>,
+    pub(super) krylov_workspace: Option<KrylovWorkspace<f64>>,
 
     /// Grid cell spacings `(dx, dy, dz)` in metres from the active solve grid.
     pub(super) grid_spacing: (f64, f64, f64),
