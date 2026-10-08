@@ -565,7 +565,7 @@ export_revision() (
 new_run_temp age_marks pl
 touch -d '1 day ago' "$age_marks/day" 2>/dev/null || true
 touch -d '7 days ago' "$age_marks/week" 2>/dev/null || true
-for stale in "$tmp_base"/pre-push-lock.* "$tmp_base"/pre-push-gate.* "$tmp_base"/pl.* "$tmp_base"/pg.* "$tmp_base"/pg-log.*; do
+for stale in "$tmp_base"/pre-push-lock.* "$tmp_base"/pre-push-gate.* "$tmp_base"/pl.* "$tmp_base"/pg.* "$tmp_base"/pg-log.* "$tmp_base"/pg-casts.*; do
   [ -e "$stale" ] || continue
   stale_owner=""
   { read -r stale_owner < "$stale/.pre-push-owner"; } 2>/dev/null || true
@@ -1337,6 +1337,55 @@ MESSAGE
   exit 1
 fi
 
+# Bare `as` casts are the one debt the lint table allows while the cast family
+# burns down, so no other step fails on a new one. A registered member runs the
+# stack's cast gate (scripts/atlas_cast_gate.py): the clippy runs below go
+# through it, which adds `--force-warn clippy::as_conversions` with JSON output
+# and records the cast sites, and `check` refuses a cast on a line the push
+# adds, or a package count above its row in scripts/cast-baseline.json or above
+# its count at the pushed range's base, measured with the same selection. A
+# member reaches the stack scripts -- the conformance checker refuses the push
+# above otherwise -- so a stack copy without the gate is refused like a missing
+# identity checker: a gate that cannot judge never passes a push.
+#
+# This gate runs once per workspace, so the rows it records are globals
+# (cast_check_packages, cast_check_sites, cast_base_sites): each workspace
+# appends to them, and run_cast_check judges them once, in the tail, after
+# every workspace has contributed.
+if [ -n "$stack_member" ]; then
+  cast_gate="${stack_scripts:+$stack_scripts/atlas_cast_gate.py}"
+  if [ ! -f "$cast_gate" ] || [ -z "$python_bin" ]; then
+    echo "pre-push: BLOCKED -- the stack's cast gate is missing at ${stack_baseline:0:12}." >&2
+    exit 1
+  fi
+fi
+
+# run_cast_check: judge the recorded sites against the pushed range.
+run_cast_check() {
+  [ -n "$cast_gate" ] && [ "${#cast_check_sites[@]}" -gt 0 ] || return 0
+  local cast_status
+  set +e
+  "$python_bin" "$cast_gate" check --member "$stack_member" --repo "$repo_root" \
+    --base "$gate_base" --tip "$gate_sha" "${cast_check_packages[@]}" "${cast_check_sites[@]}" \
+    ${cast_base_sites[@]+"${cast_base_sites[@]}"} >&2
+  cast_status=$?
+  set -e
+  if [ "$cast_status" -eq 1 ]; then
+    cat >&2 <<MESSAGE
+
+pre-push: BLOCKED -- a bare \`as\` cast. Convert through std's form where one
+exists (From/TryFrom, cast_signed/cast_unsigned, to_bits/from_bits) or
+through eunomia's conversion module (FloatElement::from_count/from_integer,
+TryFromCount); never annotate the cast. Rows of scripts/cast-baseline.json
+in atlas only fall.
+MESSAGE
+    exit 1
+  elif [ "$cast_status" -ne 0 ]; then
+    echo "pre-push: BLOCKED -- the cast gate could not run (exit $cast_status)." >&2
+    exit 1
+  fi
+}
+
 # A standalone crate outside the parent workspace (cargo-fuzz is the common
 # case) cannot be named by a parent-workspace `-p`, and its targets need a
 # toolchain this host may lack (nightly, sanitizers), so its compile and run
@@ -1373,7 +1422,9 @@ MESSAGE
   echo "pre-push: standalone crate $standalone_manifest: lockfile and formatting checked; CI builds it" >&2
 done
 
-if [ -z "${gate_packages// /}" ]; then
+# A push changing only standalone crates still has their casts to judge,
+# below, under the identity leases; one changing nothing cargo builds ends here.
+if [ -z "${gate_packages// /}" ] && { [ -z "$cast_gate" ] || [ -z "${standalone_manifests// /}" ]; }; then
   echo "pre-push: no package owns the changed files in $workspace_manifest; local gate not needed" >&2
   return 0
 fi
@@ -1420,7 +1471,12 @@ normalise_diagnostic_path() {
 classify_gate_step() {
   local log="$1"
   shift
-  if (cd "$gate_export" && "$@" >"$log" 2>&1); then
+  # A step over another tree -- the pushed range's base, or a standalone
+  # crate's own workspace -- names its directory and package selection;
+  # the defaults are this workspace's export and its gate packages.
+  local step_directory="${step_root:-$gate_export}"
+  local step_names="${step_selection-$gate_packages}"
+  if (cd "$step_directory" && "$@" >"$log" 2>&1); then
     echo ok
     return 0
   fi
@@ -1445,7 +1501,7 @@ classify_gate_step() {
   fi
 
   local root_normalised inside=0 outside=0 location foreign_crate=0
-  root_normalised="$(normalise_diagnostic_path "$gate_export")"
+  root_normalised="$(normalise_diagnostic_path "$step_directory")"
 
   # Only locations under an `error` header count. A crate that fails to compile
   # still emits warnings for whatever did compile, and counting those made the
@@ -1476,7 +1532,7 @@ DIAGNOSTICS
   local failed_crate
   while IFS= read -r failed_crate; do
     [ -n "$failed_crate" ] || continue
-    case " $gate_packages " in
+    case " $step_names " in
       *" $failed_crate "*) ;;
       *) foreign_crate=$((foreign_crate + 1)) ;;
     esac
@@ -1550,10 +1606,23 @@ fi
 # so its package leases stay held from clippy through rustdoc and the final
 # source/dependency checks. Releasing them between stages allowed a peer to
 # replace the shared artifacts after clippy or tests had accepted them.
+#
+# A step over another tree -- normally this workspace's export -- sets
+# step_root, step_manifest, step_selection and step_key for its call, and
+# step_ours=return makes a failure of its own a status of 3 for the caller to
+# handle instead of a refusal; the defaults are this workspace's values.
+# With the cast gate in play the clippy stage runs through it, which records
+# this selection's cast sites beside the build.
 run_identity_sequence() {
   local run_tests="$1" run_rustdoc="$2" stage_file="$3"
+  local root="${step_root:-$gate_export}"
+  local manifest="${step_manifest:-$gate_manifest_path}"
+  local chosen="${step_selection-$gate_packages}"
+  local manifest_relative="${manifest#"$root"/}"
+  local command_cwd
+  command_cwd="$(dirname "$manifest")"
   local package_name package_arguments=() selection_arguments=() selection=()
-  for package_name in $gate_packages; do
+  for package_name in $chosen; do
     package_arguments+=(--package "$package_name")
     selection_arguments+=(--selection "$package_name")
     selection+=(-p "$package_name")
@@ -1561,25 +1630,34 @@ run_identity_sequence() {
   local identity_command
   identity_command=(
     "$python_bin" "$identity_checker" run
-    --root "$gate_export"
+    --root "$root"
     "${package_arguments[@]}"
     "${selection_arguments[@]}"
     --target-dir "$identity_target_dir"
     --profile debug
     --target "$identity_target"
-    --manifest "$gate_manifest_path"
-    --command-cwd "$gate_command_cwd"
-    --command-key "atlas-pre-push"
+    --manifest "$manifest"
+    --command-cwd "$command_cwd"
+    --command-key "${step_key:-atlas-pre-push}"
     --
     bash -c '
 stage_file="$1"
 manifest="$2"
 run_tests="$3"
 run_rustdoc="$4"
-shift 4
+command_root="$5"
+cast_python="$6"
+cast_gate="$7"
+cast_sites="$8"
+manifest_relative="$9"
+shift 9
 cargo_command="${CARGO:-cargo}"
 printf "%s\n" clippy >"$stage_file"
-"$cargo_command" clippy --manifest-path "$manifest" --all-targets --locked "$@" || exit $?
+if [ -n "$cast_gate" ]; then
+  "$cast_python" "$cast_gate" clippy --export "$command_root" --manifest "$manifest_relative" --sites "$cast_sites" "$@" || exit $?
+else
+  "$cargo_command" clippy --manifest-path "$manifest" --all-targets --locked "$@" || exit $?
+fi
 if [ "$run_tests" = 1 ]; then
   printf "%s\n" tests >"$stage_file"
   "$cargo_command" nextest run --manifest-path "$manifest" --locked --no-tests=pass "$@" || exit $?
@@ -1589,7 +1667,8 @@ if [ "$run_rustdoc" = 1 ]; then
   env RUSTDOCFLAGS="-D warnings" "$cargo_command" doc --no-deps --manifest-path "$manifest" --locked "$@" || exit $?
 fi
 printf "%s\n" verification >"$stage_file"
-' atlas-pre-push-sequence "$stage_file" "$gate_manifest_path" "$run_tests" "$run_rustdoc"
+' atlas-pre-push-sequence "$stage_file" "$manifest" "$run_tests" "$run_rustdoc" \
+    "$root" "$python_bin" "${cast_gate:-}" "${cast_sites:-}" "$manifest_relative"
     "${selection[@]}"
   )
   local verdict step_name
@@ -1607,6 +1686,7 @@ MESSAGE
       exit 1
       ;;
     ours)
+      [ "${step_ours:-}" = return ] && return 3
       cat >&2 <<MESSAGE
 
 pre-push: $step_name fails for$gate_packages, so the source-identity build did not complete.
@@ -1621,6 +1701,228 @@ MESSAGE
       ;;
   esac
 }
+
+# Cast sites for the count against the base, which runs first: base and tip
+# share unit hashes, so whichever builds last owns those artifacts, and the
+# tip's steps then reuse its own. The base costs one more build of the pushed
+# packages, so it runs only when the range can bring existing casts into a
+# pushed package without adding their lines (`base-triggers`: a rename, or a
+# manifest, package-root build script, cargo config or toolchain pin change).
+# A manifest whose base fails to compile leaves its own packages to their
+# rows, said on the push: a push must still be able to fix a broken default
+# branch. Any other base failure refuses, since the gate could not judge. A
+# package the base lacks counts zero; new history has no base and is held to
+# the rows.
+
+# package_names <manifest>: the workspace package names of <manifest>.
+package_names() {
+  (cd "$(dirname "$1")" && cargo metadata --no-deps --format-version 1 --manifest-path "$1") |
+    "$python_bin" -c 'import json, sys
+sys.stdout.reconfigure(newline="\n")
+print("\n".join(sorted(p["name"] for p in json.load(sys.stdin)["packages"])))'
+}
+
+# base_does_not_compile <log> <packages>: cargo reports one of the base's own
+# packages failing on diagnostics rustc emitted (`due to N previous error`: a
+# rustc error or a denied lint), and nothing else: no gate error; no compiler
+# that exited abnormally -- killed (exit 1 under `taskkill`, a signal), out of
+# memory, crashed, silent (exit 101 on a full disk), or panicked (an internal
+# compiler error), each of which cargo reports with `Caused by: process didn't
+# exit successfully`; and no unreadable or mismatched crate metadata
+# (E0460-E0464, E0514, E0519, E0786), which is a broken artifact in the shared
+# target rather than the base's source.
+base_does_not_compile() {
+  local log="$1" package_name compiled=1
+  for package_name in $2; do
+    grep -q -E "^error: could not compile \`$package_name\` .*due to [0-9]+ previous error" "$log" \
+      && compiled=0
+  done
+  [ "$compiled" -eq 0 ] \
+    && ! grep -q -E "^cast gate:|memory allocation of|exit code: 0xc|didn't exit successfully|panicked|internal compiler error" "$log" \
+    && ! grep -q -E '^error\[E(046[0-4]|0514|0519|0786)\]' "$log"
+}
+
+# run_identity_clippy <step name> <packages> <command...>: one leased clippy
+# run over step_root (default: this export) with step_manifest, step_selection
+# and step_key naming its tree and selection -- the base's clippy and a
+# standalone crate's, each under the source-identity checker's lease. A failure
+# classified as this machine's own returns 3 when step_ours=return, for
+# cast_base_step to judge against cargo's summary; anything else refuses here,
+# since a cast gate that cannot judge never passes a push.
+run_identity_clippy() {
+  local step_name="$1" packages="$2"
+  shift 2
+  local root="${step_root:-$gate_export}"
+  local manifest="${step_manifest:-$root/Cargo.toml}"
+  local chosen="${step_selection-$gate_packages}"
+  local package_name package_arguments=() selection_arguments=() selection=()
+  for package_name in $packages; do
+    package_arguments+=(--package "$package_name")
+  done
+  [ "${#package_arguments[@]}" -gt 0 ] || return 0
+  for package_name in $chosen; do
+    selection_arguments+=(--selection "$package_name")
+    selection+=(-p "$package_name")
+  done
+  local identity_command
+  identity_command=(
+    "$python_bin" "$identity_checker" run
+    --root "$root"
+    "${package_arguments[@]}"
+    "${selection_arguments[@]}"
+    --target-dir "$identity_target_dir"
+    --profile debug
+    --target "$identity_target"
+    --manifest "$manifest"
+    --command-cwd "$root"
+    --command-key "${step_key:-atlas-pre-push}"
+    --
+    "$@"
+    "${selection[@]}"
+  )
+  local verdict
+  verdict="$(classify_gate_step "$gate_log" "${identity_command[@]}")"
+  case "$verdict" in
+    ok) ;;
+    identity)
+      cat >&2 <<MESSAGE
+
+pre-push: source identity blocked $step_name for$packages; no artifact was accepted.
+MESSAGE
+      grep -m 1 'atlas-build-identity:' "$gate_log" >&2 || true
+      exit 1
+      ;;
+    ours)
+      [ "${step_ours:-}" = return ] && return 3
+      cat >&2 <<MESSAGE
+
+pre-push: $step_name fails for$packages, so the source-identity build did not complete.
+MESSAGE
+      grep -m 1 -E '^(error|cast gate:)' "$gate_log" >&2 || true
+      exit 1
+      ;;
+    environment)
+      report_broken_graph "source identity $step_name" "$gate_log"
+      echo "pre-push: source identity did not verify the pushed revision" >&2
+      exit 1
+      ;;
+  esac
+}
+
+# cast_base_step <manifest-relative> <packages>: the base's sites for those
+# packages, which then join the base comparison.
+cast_base_step() {
+  local relative="$1" wanted="$2" present="" package_name names sites
+  [ -n "$base_export" ] || return 0
+  sites="$(mktemp "$tmp_base/pg-casts.XXXXXX")"
+  run_temps+=("$sites")
+  printf '[]' > "$sites"
+  if [ -f "$base_export/$relative" ]; then
+    names="$(package_names "$base_export/$relative" | tr -d '\r')" || {
+      echo "pre-push: BLOCKED -- cargo metadata fails for $relative at the pushed base ${gate_base:0:12}, so the cast gate cannot judge it." >&2
+      exit 1
+    }
+    for package_name in $wanted; do
+      case $'\n'"$names"$'\n' in
+        *$'\n'"$package_name"$'\n'*) present="$present $package_name" ;;
+      esac
+    done
+  fi
+  if [ -n "${present// /}" ]; then
+    local status=0
+    step_root="$base_export" step_manifest="$base_export/$relative" step_selection="$present" \
+      step_key="atlas-pre-push-casts-base" step_ours=return \
+      run_identity_clippy "base clippy" "$present" "$python_bin" "$cast_gate" clippy \
+        --export "$base_export" --manifest "$relative" --sites "$sites" --present-only \
+      || status=$?
+    if [ "$status" -ne 0 ]; then
+      if base_does_not_compile "$gate_log" "$present"; then
+        echo "pre-push: $relative does not compile at the pushed base ${gate_base:0:12}, so its packages' cast counts are held to their rows alone" >&2
+        return 0
+      fi
+      cat >&2 <<MESSAGE
+
+pre-push: BLOCKED -- the cast gate's clippy run fails for $relative at the
+pushed base ${gate_base:0:12} for a reason other than a compile error, so the
+cast gate cannot judge it.
+MESSAGE
+      grep -m 3 -E '^(error|cast gate:)' "$gate_log" >&2 || true
+      exit 1
+    fi
+  fi
+  cast_base_sites+=(--base-sites "$sites")
+  for package_name in $wanted; do
+    cast_base_sites+=(--base-package "$package_name")
+  done
+}
+
+if [ -n "$cast_gate" ]; then
+  # The cast steps classify against their own log, taken before the workspace
+  # steps take theirs below.
+  gate_log="$(mktemp "$tmp_base/pg-log.XXXXXX")"
+  run_temps+=("$gate_log")
+  base_reasons=""
+  if [ -n "$gate_base" ]; then
+    base_reasons="$("$python_bin" "$cast_gate" base-triggers --repo "$repo_root" \
+      --base "$gate_base" --tip "$gate_sha" | tr -d '\r')" || {
+      echo "pre-push: BLOCKED -- the cast gate could not read the pushed range ${gate_base:0:12}..${gate_sha:0:12}" >&2
+      exit 1
+    }
+  fi
+  # One base export serves every workspace of this push.
+  if [ -n "$base_reasons" ] && [ -z "$base_export" ]; then
+    echo "pre-push: cast counts are compared with the pushed base (${base_reasons%%$'\n'*})" >&2
+    base_export="$gate_parent/base-${repo_root##*/}"
+    mkdir -p "$base_export"
+    base_export="$(cd "$base_export" && { pwd -W 2>/dev/null || pwd; })"
+    if ! export_revision "$gate_base" "$base_export"; then
+      rm -rf "$base_export" && mkdir -p "$base_export"
+      if ! export_revision "$gate_base" "$base_export"; then
+        echo "pre-push: BLOCKED -- could not export the pushed base $gate_base for the cast gate" >&2
+        exit 1
+      fi
+    fi
+  fi
+  if [ -n "${gate_packages// /}" ]; then
+    cast_base_step Cargo.toml "$gate_packages"
+  fi
+  for standalone_manifest in $standalone_manifests; do
+    standalone_names="$(package_names "$gate_export/$standalone_manifest" | tr -d '\r')" || {
+      echo "pre-push: BLOCKED -- cargo metadata fails for the standalone crate $standalone_manifest, so the cast gate cannot judge it." >&2
+      exit 1
+    }
+    cast_base_step "$standalone_manifest" "$standalone_names"
+    standalone_sites="$(mktemp "$tmp_base/pg-casts.XXXXXX")"
+    run_temps+=("$standalone_sites")
+    standalone_status=0
+    step_manifest="$gate_export/$standalone_manifest" step_selection="$standalone_names" \
+      step_key="atlas-pre-push-casts-standalone" step_ours=return \
+      run_identity_clippy "standalone clippy" "$standalone_names" "$python_bin" "$cast_gate" clippy \
+        --export "$gate_export" --manifest "$standalone_manifest" --sites "$standalone_sites" \
+      || standalone_status=$?
+    if [ "$standalone_status" -ne 0 ]; then
+      cat >&2 <<MESSAGE
+
+pre-push: BLOCKED -- clippy does not complete for the standalone crate
+$standalone_manifest on $gate_sha, so the cast gate cannot judge it.
+MESSAGE
+      grep -m 3 -E '^(error|cast gate:)' "$gate_log" >&2 || true
+      exit 1
+    fi
+    for package_name in $standalone_names; do
+      cast_check_packages+=(--package "$package_name")
+    done
+    cast_check_sites+=(--sites "$standalone_sites")
+  done
+fi
+
+# A push whose changed files belong only to standalone crates has judged their
+# casts; the workspace steps below have nothing to build. run_cast_check runs
+# once, in the tail, over every row this push recorded.
+if [ -z "${gate_packages// /}" ]; then
+  echo "pre-push: no workspace package owns the changed files; standalone crates checked" >&2
+  return 0
+fi
 
 echo "pre-push: gating${gate_packages}" >&2
 
@@ -1723,7 +2025,21 @@ $package_name
 
   gate_stage="$(mktemp "$tmp_base/pg-stage.XXXXXX")"
   run_temps+=("$gate_stage")
+  # With the cast gate in play, the sequence's clippy stage records this
+  # workspace's tip sites; they join the rows run_cast_check judges once,
+  # after every workspace has contributed.
+  cast_sites=""
+  if [ -n "$cast_gate" ]; then
+    cast_sites="$(mktemp "$tmp_base/pg-casts.XXXXXX")"
+    run_temps+=("$cast_sites")
+  fi
   run_identity_sequence "$run_tests" "$run_rustdoc" "$gate_stage"
+  if [ -n "$cast_gate" ]; then
+    cast_check_sites+=(--sites "$cast_sites")
+    for package_name in $gate_packages; do
+      cast_check_packages+=(--package "$package_name")
+    done
+  fi
 else
   case "$(classify_gate_step "$gate_log" cargo clippy $gate_specs --all-targets)" in
     ours)
@@ -1852,6 +2168,14 @@ with pathlib.Path(sys.argv[4]).open("w", encoding="utf-8", newline="\n") as stre
 PY
 }
 
+# The per-workspace cast rows are globals: they accumulate across the calls
+# below, and run_cast_check judges them once, after every workspace has
+# contributed. base_export is one base tree for the whole push.
+cast_gate=""
+base_export=""
+cast_check_packages=()
+cast_check_sites=()
+cast_base_sites=()
 if [ "$stack_member" = "<meta>" ]; then
   meta_changed="$(mktemp "$tmp_base/pg-meta-changed.XXXXXX")"
   meta_base_manifests="$(mktemp "$tmp_base/pg-meta-base.XXXXXX")"
@@ -1889,3 +2213,8 @@ if [ "$stack_member" = "<meta>" ]; then
 else
   run_cargo_workspace_gate "Cargo.toml" "$gate_changed"
 fi
+
+# The gate ran every workspace; the recorded cast sites are judged as one
+# range, once, whether the push carried workspace packages, standalone crates,
+# or both.
+run_cast_check
