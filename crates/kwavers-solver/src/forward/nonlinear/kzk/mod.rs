@@ -44,9 +44,12 @@ pub mod angular_spectrum_2d;
 pub mod beam_debug;
 pub mod complex_parabolic_diffraction;
 pub mod constants;
+pub mod cylindrical_solver;
 pub mod finite_difference_diffraction;
 pub mod harmonic_tracking;
 pub mod nonlinearity;
+pub mod pade11_diffraction;
+pub mod pade22_diffraction;
 pub mod parabolic_diffraction;
 pub mod plane_wave_test;
 pub mod plugin;
@@ -55,13 +58,14 @@ pub mod solver;
 pub mod validation;
 pub mod wide_angle_diffraction;
 
+pub use cylindrical_solver::{CylindricalKZKConfig, CylindricalKZKSolver};
 pub use harmonic_tracking::{HarmonicAnalysis, HarmonicConfig, HarmonicTracker, PredictionModel};
 pub use plugin::KzkPlugin;
 pub use shock_capturing::{ShockCapture, ShockCapturingConfig, ShockDetectionResult};
 pub use solver::KZKSolver;
 
 pub use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::{
-    KZKSolverTrait, WideAngleKZKSolverTrait,
+    CylindricalKZKSolverTrait, KZKSolverTrait, WideAngleKZKSolverTrait,
 };
 
 /// Diffraction propagator used by the KZK spectral sub-step.
@@ -71,6 +75,12 @@ pub enum DiffractionScheme {
     /// Valid for beam half-angles < ~17°. Standard HITU/HIFU simulation.
     #[default]
     Parabolic,
+    /// Padé `[1,1]` wide-angle: H = exp(i φ₁₁), φ₁₁ = k₀Δz·(−s/2)/(1−s/4).
+    /// Valid ~17°–35°. Rational correction to paraxial; no exact sqrt needed.
+    Pade11,
+    /// Padé `[2,2]` wide-angle: H = exp(i φ₂₂), φ₂₂ = k₀Δz·(−s/2+s²/4)/(1−3s/4+s²/16).
+    /// Valid ~35°–55°. Higher-order rational correction.
+    Pade22,
     /// Wide-angle exact Helmholtz propagator H = exp(i(kz−k₀)Δz),
     /// kz = √(k₀²−k_T²). Valid for all propagating angles; evanescent
     /// modes (k_T > k₀) decay as exp(−|k_T²−k₀²|^½ Δz).
@@ -181,19 +191,32 @@ pub fn validate_config(config: &KZKConfig) -> Result<(), String> {
         return Err(format!("CFL number {cfl} exceeds 0.5 for stability"));
     }
 
-    // Check parabolic approximation validity
+    // Check diffraction-angle validity for the selected propagator. The Padé
+    // variants extend the usable cone relative to the classical paraxial KZK.
     let theta_max = (config.nx as f64 * config.dx / (2.0 * config.nz as f64 * config.dz)).atan();
-    if theta_max > 0.3 {
-        if config.diffraction_scheme == DiffractionScheme::Parabolic {
-            return Err(format!(
-                "Maximum angle {:.1}° exceeds parabolic approximation limit",
-                theta_max.to_degrees()
-            ));
-        }
+    let (limit_rad, label) = match config.diffraction_scheme {
+        DiffractionScheme::Parabolic => (17.0_f64.to_radians(), "parabolic"),
+        DiffractionScheme::Pade11 => (35.0_f64.to_radians(), "Padé [1,1]"),
+        DiffractionScheme::Pade22 => (55.0_f64.to_radians(), "Padé [2,2]"),
+        DiffractionScheme::WideAngle => (f64::INFINITY, "wide-angle"),
+    };
+    if theta_max > limit_rad {
+        return Err(format!(
+            "Maximum angle {:.1}° exceeds {label} diffraction limit",
+            theta_max.to_degrees()
+        ));
+    }
+    if theta_max > 17.0_f64.to_radians()
+        && matches!(
+            config.diffraction_scheme,
+            DiffractionScheme::Pade11 | DiffractionScheme::Pade22 | DiffractionScheme::WideAngle
+        )
+    {
         tracing::warn!(
             theta_max_deg = theta_max.to_degrees(),
             theta_max_rad = theta_max,
-            "KZK configuration exceeds the paraxial cone; using wide-angle diffraction"
+            scheme = ?config.diffraction_scheme,
+            "KZK configuration exceeds the paraxial cone; using an extended-angle diffraction propagator"
         );
     }
 

@@ -37,6 +37,8 @@ use leto::{Array2, Array3};
 use super::absorption::KzkAbsorptionOperator;
 use super::complex_parabolic_diffraction::ParabolicDiffractionOperator;
 use super::nonlinearity::KzkNonlinearOperator;
+use super::pade11_diffraction::Pade11DiffractionOperator;
+use super::pade22_diffraction::Pade22DiffractionOperator;
 use super::wide_angle_diffraction::WideAngleDiffractionOperator;
 use super::{DiffractionScheme, KZKConfig};
 use crate::forward::nonlinear::conservation::{
@@ -52,6 +54,8 @@ use kwavers_math::fft::Complex64;
 #[derive(Debug)]
 pub(super) enum DiffractionOperator {
     Parabolic(ParabolicDiffractionOperator),
+    Pade11(Pade11DiffractionOperator),
+    Pade22(Pade22DiffractionOperator),
     WideAngle(WideAngleDiffractionOperator),
 }
 
@@ -64,6 +68,8 @@ impl DiffractionOperator {
     ) {
         match self {
             Self::Parabolic(op) => op.apply_complex(field, step_size),
+            Self::Pade11(op) => op.apply_complex(field, step_size),
+            Self::Pade22(op) => op.apply_complex(field, step_size),
             Self::WideAngle(op) => op.apply_complex(field, step_size),
         }
     }
@@ -136,6 +142,12 @@ impl KZKSolver {
         match config.diffraction_scheme {
             DiffractionScheme::Parabolic => {
                 DiffractionOperator::Parabolic(ParabolicDiffractionOperator::new(config))
+            }
+            DiffractionScheme::Pade11 => {
+                DiffractionOperator::Pade11(Pade11DiffractionOperator::new(config))
+            }
+            DiffractionScheme::Pade22 => {
+                DiffractionOperator::Pade22(Pade22DiffractionOperator::new(config))
             }
             DiffractionScheme::WideAngle => {
                 DiffractionOperator::WideAngle(WideAngleDiffractionOperator::new(config))

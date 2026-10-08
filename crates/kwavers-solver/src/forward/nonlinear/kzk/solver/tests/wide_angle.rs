@@ -1,6 +1,8 @@
 //! Wide-angle diffraction regression tests.
 
 use crate::forward::nonlinear::kzk::complex_parabolic_diffraction::ParabolicDiffractionOperator;
+use crate::forward::nonlinear::kzk::pade11_diffraction::Pade11DiffractionOperator;
+use crate::forward::nonlinear::kzk::pade22_diffraction::Pade22DiffractionOperator;
 use crate::forward::nonlinear::kzk::wide_angle_diffraction::WideAngleDiffractionOperator;
 use crate::forward::nonlinear::kzk::{DiffractionScheme, KZKConfig, KZKSolver};
 use eunomia::assert_relative_eq;
@@ -8,6 +10,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::fft::Complex64;
 use leto::Array2;
+use std::f64::consts::PI;
 
 fn gaussian_field(config: &KZKConfig, beam_waist: f64) -> Array2<Complex64> {
     let mut field = Array2::<Complex64>::zeros((config.nx, config.ny));
@@ -39,6 +42,170 @@ fn plane_wave_field(config: &KZKConfig, mode_x: usize, mode_y: usize) -> Array2<
     }
 
     field
+}
+
+fn beam_waist_for_half_angle(config: &KZKConfig, angle_deg: f64) -> f64 {
+    let wavelength = config.c0 / config.frequency;
+    wavelength / (PI * angle_deg.to_radians().tan())
+}
+
+fn relative_l2_error(reference: &Array2<Complex64>, test: &Array2<Complex64>) -> f64 {
+    let diff_norm_sq: f64 = reference
+        .iter()
+        .zip(test.iter())
+        .map(|(lhs, rhs)| (*lhs - *rhs).norm_sqr())
+        .sum();
+    let reference_norm_sq: f64 = reference.iter().map(|value| value.norm_sqr()).sum();
+    (diff_norm_sq / reference_norm_sq).sqrt()
+}
+
+#[test]
+fn pade11_recovers_paraxial_for_narrow_beam() {
+    let config = KZKConfig {
+        nx: 160,
+        ny: 160,
+        dx: 0.1e-3,
+        frequency: 1.0e6,
+        c0: SOUND_SPEED_WATER_SIM,
+        ..Default::default()
+    };
+    let beam_waist = beam_waist_for_half_angle(&config, 5.0);
+    let step_size = 0.1e-3;
+    let n_steps = 12;
+
+    let mut parabolic = ParabolicDiffractionOperator::new(&config);
+    let mut pade11 = Pade11DiffractionOperator::new(&config);
+    let mut parabolic_field = gaussian_field(&config, beam_waist);
+    let mut pade11_field = parabolic_field.clone();
+
+    for _ in 0..n_steps {
+        let mut parabolic_view = parabolic_field.view_mut();
+        parabolic.apply_complex(&mut parabolic_view, step_size);
+
+        let mut pade11_view = pade11_field.view_mut();
+        pade11.apply_complex(&mut pade11_view, step_size);
+    }
+
+    let relative_l2_error = relative_l2_error(&parabolic_field, &pade11_field);
+    assert_relative_eq!(relative_l2_error, 0.0, epsilon = 0.01);
+}
+
+#[test]
+fn pade11_improves_on_paraxial_for_moderate_angles() {
+    let config = KZKConfig {
+        nx: 128,
+        ny: 128,
+        dx: 0.1e-3,
+        frequency: 1.0e6,
+        c0: SOUND_SPEED_WATER_SIM,
+        ..Default::default()
+    };
+    let beam_waist = beam_waist_for_half_angle(&config, 20.0);
+    let step_size = 0.1e-3;
+    let n_steps = 12;
+
+    let initial_field = gaussian_field(&config, beam_waist);
+    let mut parabolic = ParabolicDiffractionOperator::new(&config);
+    let mut pade11 = Pade11DiffractionOperator::new(&config);
+    let mut wide_angle = WideAngleDiffractionOperator::new(&config);
+    let mut parabolic_field = initial_field.clone();
+    let mut pade11_field = initial_field.clone();
+    let mut wide_angle_field = initial_field;
+
+    for _ in 0..n_steps {
+        let mut parabolic_view = parabolic_field.view_mut();
+        parabolic.apply_complex(&mut parabolic_view, step_size);
+
+        let mut pade11_view = pade11_field.view_mut();
+        pade11.apply_complex(&mut pade11_view, step_size);
+
+        let mut wide_angle_view = wide_angle_field.view_mut();
+        wide_angle.apply_complex(&mut wide_angle_view, step_size);
+    }
+
+    let parabolic_error = relative_l2_error(&wide_angle_field, &parabolic_field);
+    let pade11_error = relative_l2_error(&wide_angle_field, &pade11_field);
+    assert!(pade11_error < parabolic_error);
+}
+
+#[test]
+fn pade22_more_accurate_than_pade11() {
+    let config = KZKConfig {
+        nx: 128,
+        ny: 128,
+        dx: 0.1e-3,
+        frequency: 1.0e6,
+        c0: SOUND_SPEED_WATER_SIM,
+        ..Default::default()
+    };
+    let beam_waist = beam_waist_for_half_angle(&config, 30.0);
+    let step_size = 0.1e-3;
+    let n_steps = 12;
+
+    let initial_field = gaussian_field(&config, beam_waist);
+    let mut pade11 = Pade11DiffractionOperator::new(&config);
+    let mut pade22 = Pade22DiffractionOperator::new(&config);
+    let mut wide_angle = WideAngleDiffractionOperator::new(&config);
+    let mut pade11_field = initial_field.clone();
+    let mut pade22_field = initial_field.clone();
+    let mut wide_angle_field = initial_field;
+
+    for _ in 0..n_steps {
+        let mut pade11_view = pade11_field.view_mut();
+        pade11.apply_complex(&mut pade11_view, step_size);
+
+        let mut pade22_view = pade22_field.view_mut();
+        pade22.apply_complex(&mut pade22_view, step_size);
+
+        let mut wide_angle_view = wide_angle_field.view_mut();
+        wide_angle.apply_complex(&mut wide_angle_view, step_size);
+    }
+
+    let pade11_error = relative_l2_error(&wide_angle_field, &pade11_field);
+    let pade22_error = relative_l2_error(&wide_angle_field, &pade22_field);
+    assert!(pade22_error < pade11_error);
+}
+
+#[test]
+fn pade11_energy_conservation() {
+    let config = KZKConfig {
+        nx: 64,
+        ny: 64,
+        dx: 0.5e-3,
+        frequency: 1.0e6,
+        c0: SOUND_SPEED_WATER_SIM,
+        ..Default::default()
+    };
+    let mut operator = Pade11DiffractionOperator::new(&config);
+    let mut field = plane_wave_field(&config, 1, 2);
+    let initial_energy: f64 = field.iter().map(|value| value.norm_sqr()).sum();
+
+    let mut field_view = field.view_mut();
+    operator.apply_complex(&mut field_view, 5.0e-3);
+
+    let final_energy: f64 = field.iter().map(|value| value.norm_sqr()).sum();
+    assert_relative_eq!(final_energy / initial_energy, 1.0, epsilon = 1.0e-10);
+}
+
+#[test]
+fn pade22_energy_conservation() {
+    let config = KZKConfig {
+        nx: 64,
+        ny: 64,
+        dx: 0.5e-3,
+        frequency: 1.0e6,
+        c0: SOUND_SPEED_WATER_SIM,
+        ..Default::default()
+    };
+    let mut operator = Pade22DiffractionOperator::new(&config);
+    let mut field = plane_wave_field(&config, 1, 2);
+    let initial_energy: f64 = field.iter().map(|value| value.norm_sqr()).sum();
+
+    let mut field_view = field.view_mut();
+    operator.apply_complex(&mut field_view, 5.0e-3);
+
+    let final_energy: f64 = field.iter().map(|value| value.norm_sqr()).sum();
+    assert_relative_eq!(final_energy / initial_energy, 1.0, epsilon = 1.0e-10);
 }
 
 #[test]

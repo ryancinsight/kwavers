@@ -43,6 +43,33 @@
 //! so the paraxial KZK solver becomes the narrow-angle limit of the
 //! wide-angle formulation rather than a separate physical model.
 //!
+//! Between these two extremes, rational Padé approximations replace the exact
+//! square-root dispersion relation with stable low-order quotients in
+//! `s = (k_T / k₀)²`:
+//!
+//! ```text
+//! φ₁₁ = k₀Δz · (−s/2) / (1 − s/4)
+//! φ₂₂ = k₀Δz · (−s/2 + s²/4) / (1 − 3s/4 + s²/16)
+//! ```
+//!
+//! The `[1,1]` form extends useful accuracy to roughly 35° beam half-angle and
+//! the `[2,2]` form to roughly 55°, while preserving the same retarded-time
+//! splitting structure as the Cartesian KZK solver.
+//!
+//! # Cylindrical KZK
+//!
+//! For azimuthally symmetric sources the KZK equation reduces to an
+//! axisymmetric problem in `(r, τ, z)` with radial Laplacian
+//!
+//! ```text
+//! ∇⊥²p = (1/r) ∂/∂r (r ∂p/∂r)
+//! ```
+//!
+//! A cylindrical solver can therefore replace the 2-D transverse FFT-based
+//! diffraction update with a 1-D radial Crank-Nicolson march while leaving the
+//! absorption and nonlinearity operators local in radius. This is exact for
+//! axisymmetric sources and much cheaper than a full Cartesian transverse grid.
+//!
 //! # Operator Splitting
 //!
 //! The three terms — diffraction (D), absorption (A), and nonlinearity (N) —
@@ -193,3 +220,16 @@ pub trait KZKSolverTrait {
 /// transducers, and large steering angles where the standard parabolic
 /// approximation becomes inaccurate.
 pub trait WideAngleKZKSolverTrait: KZKSolverTrait {}
+
+/// Marker trait for cylindrical (axisymmetric) KZK solvers.
+///
+/// This documents that the implementation advances an axisymmetric field
+/// `p(r, τ, z)` and applies diffraction through the cylindrical radial
+/// Laplacian
+///
+/// ```text
+/// (1/r) ∂/∂r (r ∂p/∂r)
+/// ```
+///
+/// rather than a full 2-D Cartesian transverse operator.
+pub trait CylindricalKZKSolverTrait {}
