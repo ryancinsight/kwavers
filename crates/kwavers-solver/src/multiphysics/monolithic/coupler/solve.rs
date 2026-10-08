@@ -3,7 +3,7 @@ use super::super::residual::JacobianOperator;
 use super::super::residual_metric::norm;
 use super::super::state_vector::{flatten_fields, sorted_field_keys, unflatten_fields};
 use super::MonolithicCoupler;
-use crate::krylov::{GmresConvergenceInfo, KrylovWorkspace};
+use crate::krylov::{backend_failure, solve_failure, GmresConvergenceInfo, KrylovWorkspace};
 use crate::workspace::inplace_ops::scale_inplace;
 use athena_core::Identity;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
@@ -159,7 +159,8 @@ impl MonolithicCoupler {
             let dimension = correction.len();
             let mut workspace = match self.krylov_workspace.take() {
                 Some(workspace) if workspace.dimension() == dimension => workspace,
-                _ => KrylovWorkspace::new(self.gmres_config.krylov_dim, dimension)?,
+                _ => KrylovWorkspace::new(self.gmres_config.krylov_dim, dimension)
+                    .map_err(|error| backend_failure("GMRES workspace allocation", &error))?,
             };
             let policy = self.gmres_config.policy()?;
 
@@ -190,7 +191,9 @@ impl MonolithicCoupler {
                 return Err(error);
             }
 
-            let conv_info = GmresConvergenceInfo::from_report(&solve_result?);
+            let conv_info = GmresConvergenceInfo::from_report(
+                &solve_result.map_err(|error| solve_failure(&error))?,
+            );
             total_gmres_iters += conv_info.iterations;
             if !conv_info.converged {
                 warn!(

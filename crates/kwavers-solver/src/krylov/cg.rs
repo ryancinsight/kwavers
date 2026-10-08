@@ -26,7 +26,7 @@ use athena_leto::{LetoBackend, LetoBackendError};
 use kwavers_core::error::KwaversResult;
 use leto::Array1;
 
-use super::restart::{backend_failure, solve_failure};
+use super::failure::{backend_failure, solve_failure};
 
 /// The CPU backend every kwavers Krylov solve runs on.
 pub type CpuBackend = LetoBackend<f64>;
