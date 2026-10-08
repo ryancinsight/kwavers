@@ -21,6 +21,28 @@
 //! - ρ₀: ambient density [kg/m³]
 //! - c₀: small-signal sound speed (m/s)
 //!
+//! # Wide-angle extension
+//!
+//! The classical KZK model advances diffraction with the paraxial propagator
+//!
+//! ```text
+//! H_paraxial(k_T) = exp(-i k_T² Δz / (2k₀))
+//! ```
+//!
+//! which follows from the small-angle expansion
+//! `√(k₀²-k_T²) - k₀ ≈ -k_T²/(2k₀)`. For strongly focused or steered beams,
+//! the same retarded-time splitting can instead use the exact Helmholtz
+//! transfer function
+//!
+//! ```text
+//! H_wide(k_T) = exp(i (kz - k₀) Δz)
+//! kz = √(k₀² - k_T²)                  for k_T ≤ k₀
+//! kz = i √(k_T² - k₀²), |H| = exp(-|Im kz| Δz)  for k_T > k₀
+//! ```
+//!
+//! so the paraxial KZK solver becomes the narrow-angle limit of the
+//! wide-angle formulation rather than a separate physical model.
+//!
 //! # Operator Splitting
 //!
 //! The three terms — diffraction (D), absorption (A), and nonlinearity (N) —
@@ -35,7 +57,10 @@
 //! # Parabolic Approximation Validity
 //!
 //! The KZK equation is valid for beams with half-angle divergence θ < ~17°.
-//! For wider beams, the exact Westervelt equation should be used instead.
+//! For wider beams, the paraxial diffraction sub-step loses accuracy; the
+//! wide-angle Helmholtz propagator extends the same retarded-time marching
+//! framework to large propagating angles while retaining KZK-style operator
+//! splitting.
 //!
 //! # References
 //!
@@ -58,6 +83,8 @@
 /// Implementations advance the acoustic pressure field axially in the
 /// retarded-time frame, one z-plane at a time, using Strang operator
 /// splitting for the diffraction, absorption, and nonlinearity sub-steps.
+/// Implementations may use either the classical paraxial diffraction operator
+/// or the wide-angle exact Helmholtz propagator in the retarded-time frame.
 ///
 /// The trait is intentionally minimal to allow different backends
 /// (spectral, finite-difference, GPU) to satisfy it uniformly.
@@ -151,3 +178,18 @@ pub trait KZKSolverTrait {
         leto::Array2::zeros(rms.shape())
     }
 }
+
+/// Marker trait for KZK solvers whose diffraction sub-step remains accurate
+/// outside the paraxial cone.
+///
+/// This trait adds no new API beyond [`KZKSolverTrait`]; it documents that the
+/// implementation supports the wide-angle retarded-time Helmholtz propagator
+///
+/// ```text
+/// H_wide(k_T) = exp(i (kz - k₀) Δz)
+/// ```
+///
+/// and is therefore suitable for strongly focused apertures, low F-number
+/// transducers, and large steering angles where the standard parabolic
+/// approximation becomes inaccurate.
+pub trait WideAngleKZKSolverTrait: KZKSolverTrait {}

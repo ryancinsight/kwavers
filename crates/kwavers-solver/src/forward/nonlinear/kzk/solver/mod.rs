@@ -37,11 +37,37 @@ use leto::{Array2, Array3};
 use super::absorption::KzkAbsorptionOperator;
 use super::complex_parabolic_diffraction::ParabolicDiffractionOperator;
 use super::nonlinearity::KzkNonlinearOperator;
-use super::KZKConfig;
+use super::wide_angle_diffraction::WideAngleDiffractionOperator;
+use super::{DiffractionScheme, KZKConfig};
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker,
 };
 use kwavers_math::fft::Complex64;
+
+/// Zero-dispatch diffraction operator selection.
+///
+/// Stored in `KZKSolver`; the correct variant is chosen at construction time
+/// from `config.diffraction_scheme` and thereafter dispatched via `match`
+/// with no virtual calls on the hot path.
+#[derive(Debug)]
+pub(super) enum DiffractionOperator {
+    Parabolic(ParabolicDiffractionOperator),
+    WideAngle(WideAngleDiffractionOperator),
+}
+
+impl DiffractionOperator {
+    #[inline]
+    pub(super) fn apply_complex(
+        &mut self,
+        field: &mut leto::ArrayViewMut2<Complex64>,
+        step_size: f64,
+    ) {
+        match self {
+            Self::Parabolic(op) => op.apply_complex(field, step_size),
+            Self::WideAngle(op) => op.apply_complex(field, step_size),
+        }
+    }
+}
 
 /// KZK equation solver.
 ///
@@ -49,8 +75,9 @@ use kwavers_math::fft::Complex64;
 ///
 /// The pressure field is stored as `Array3<Complex64>` with shape `[nx, ny, nt]`.
 /// The real part is the physical acoustic pressure `p(x,y,τ)`.  The imaginary
-/// part carries the accumulated spatial phase from the parabolic diffraction
-/// propagator `H = exp(−i k_T² Δz/(2k₀))`.
+/// part carries the accumulated spatial phase from the configured diffraction
+/// propagator, either parabolic `H = exp(−i k_T² Δz/(2k₀))` or wide-angle
+/// `H = exp(i (kz − k₀) Δz)`.
 ///
 /// Maintaining the full complex field eliminates the ~28% beam-width error that
 /// arose in earlier versions when the imaginary part was discarded after each
@@ -66,8 +93,8 @@ pub struct KZKSolver {
     pub(super) pressure: Array3<Complex64>,
     /// Previous complex pressure (for time derivatives in nonlinear operator)
     pub(super) pressure_prev: Array3<Complex64>,
-    /// Complex-field parabolic diffraction operator H = exp(−ik_T²Δz/(2k₀)).
-    pub(super) complex_diffraction: ParabolicDiffractionOperator,
+    /// Complex-field diffraction operator selected from the configured scheme.
+    pub(super) diffraction: DiffractionOperator,
     /// Absorption operator (spectral, operates on complex waveform)
     pub(super) absorption: KzkAbsorptionOperator,
     /// Nonlinear operator (operates on Re[p] only)
@@ -96,7 +123,7 @@ impl std::fmt::Debug for KZKSolver {
             .field("absorption", &self.absorption)
             .field("nonlinear", &self.nonlinear)
             .field("pressure_prev", &self.pressure_prev.shape())
-            .field("complex_diffraction", &self.complex_diffraction)
+            .field("diffraction", &self.diffraction)
             .field("conservation_tracker", &self.conservation_tracker.is_some())
             .field("current_z_step", &self.current_z_step)
             .field("current_time", &self.current_time)
@@ -105,6 +132,17 @@ impl std::fmt::Debug for KZKSolver {
 }
 
 impl KZKSolver {
+    fn build_diffraction_operator(config: &KZKConfig) -> DiffractionOperator {
+        match config.diffraction_scheme {
+            DiffractionScheme::Parabolic => {
+                DiffractionOperator::Parabolic(ParabolicDiffractionOperator::new(config))
+            }
+            DiffractionScheme::WideAngle => {
+                DiffractionOperator::WideAngle(WideAngleDiffractionOperator::new(config))
+            }
+        }
+    }
+
     /// Create new KZK solver.
     ///
     /// Initialises the complex pressure field to zero and constructs the
@@ -118,7 +156,7 @@ impl KZKSolver {
         let pressure = Array3::<Complex64>::zeros((config.nx, config.ny, config.nt));
         let pressure_prev = Array3::<Complex64>::zeros((config.nx, config.ny, config.nt));
 
-        let complex_diffraction = ParabolicDiffractionOperator::new(&config);
+        let diffraction = Self::build_diffraction_operator(&config);
         let absorption = KzkAbsorptionOperator::new(&config);
         let nonlinear = KzkNonlinearOperator::new(&config);
 
@@ -126,7 +164,7 @@ impl KZKSolver {
             config,
             pressure,
             pressure_prev,
-            complex_diffraction,
+            diffraction,
             absorption,
             nonlinear,
             conservation_tracker: None,
@@ -199,7 +237,7 @@ impl KZKSolver {
         // Store frequency in config for all operators.
         self.config.frequency = frequency;
         // Re-initialize operators with updated frequency.
-        self.complex_diffraction = ParabolicDiffractionOperator::new(&self.config);
+        self.diffraction = Self::build_diffraction_operator(&self.config);
         self.absorption = KzkAbsorptionOperator::new(&self.config);
 
         // Set source as time-harmonic signal (real-valued at z=0).
@@ -245,7 +283,7 @@ impl KZKSolver {
     ///   behaves identically to [`Self::set_source`].
     pub fn set_focused_source(&mut self, source: Array2<f64>, frequency: f64, focal_depth: f64) {
         self.config.frequency = frequency;
-        self.complex_diffraction = ParabolicDiffractionOperator::new(&self.config);
+        self.diffraction = Self::build_diffraction_operator(&self.config);
         self.absorption = KzkAbsorptionOperator::new(&self.config);
 
         let omega = TWO_PI * frequency;

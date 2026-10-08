@@ -25,7 +25,9 @@ use leto::Array2;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::KZKSolver;
-use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
+use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::{
+    KZKSolverTrait, WideAngleKZKSolverTrait,
+};
 
 impl KZKSolverTrait for KZKSolver {
     /// Advance the pressure field by axial increment `dz` (m).
@@ -80,3 +82,5 @@ impl KZKSolverTrait for KZKSolver {
         self.get_peak_pressure()
     }
 }
+
+impl WideAngleKZKSolverTrait for KZKSolver {}

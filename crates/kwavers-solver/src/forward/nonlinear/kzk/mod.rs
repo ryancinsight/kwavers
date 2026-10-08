@@ -53,13 +53,30 @@ pub mod plugin;
 pub mod shock_capturing;
 pub mod solver;
 pub mod validation;
+pub mod wide_angle_diffraction;
 
 pub use harmonic_tracking::{HarmonicAnalysis, HarmonicConfig, HarmonicTracker, PredictionModel};
 pub use plugin::KzkPlugin;
 pub use shock_capturing::{ShockCapture, ShockCapturingConfig, ShockDetectionResult};
 pub use solver::KZKSolver;
 
-pub use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
+pub use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::{
+    KZKSolverTrait, WideAngleKZKSolverTrait,
+};
+
+/// Diffraction propagator used by the KZK spectral sub-step.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DiffractionScheme {
+    /// Paraxial (KZK) approximation H = exp(-i k_T² Δz/(2k₀)).
+    /// Valid for beam half-angles < ~17°. Standard HITU/HIFU simulation.
+    #[default]
+    Parabolic,
+    /// Wide-angle exact Helmholtz propagator H = exp(i(kz−k₀)Δz),
+    /// kz = √(k₀²−k_T²). Valid for all propagating angles; evanescent
+    /// modes (k_T > k₀) decay as exp(−|k_T²−k₀²|^½ Δz).
+    /// Required for F-number < 1 transducers and steered phased arrays.
+    WideAngle,
+}
 
 /// KZK configuration parameters
 #[derive(Debug, Clone)]
@@ -106,6 +123,8 @@ pub struct KZKConfig {
     pub alpha_power: f64,
     /// Enable diffraction effects
     pub include_diffraction: bool,
+    /// Spectral diffraction model used for each axial propagation sub-step.
+    pub diffraction_scheme: DiffractionScheme,
     /// Enable absorption
     pub include_absorption: bool,
     /// Enable nonlinearity
@@ -130,6 +149,7 @@ impl Default for KZKConfig {
             alpha0: ACOUSTIC_ABSORPTION_TISSUE, // dB/cm/MHz
             alpha_power: 1.1,
             include_diffraction: true,
+            diffraction_scheme: DiffractionScheme::Parabolic,
             include_absorption: true,
             include_nonlinearity: true,
             frequency: REFERENCE_FREQUENCY_HZ, // Default 1 MHz
@@ -164,11 +184,17 @@ pub fn validate_config(config: &KZKConfig) -> Result<(), String> {
     // Check parabolic approximation validity
     let theta_max = (config.nx as f64 * config.dx / (2.0 * config.nz as f64 * config.dz)).atan();
     if theta_max > 0.3 {
-        // ~17 degrees
-        return Err(format!(
-            "Maximum angle {:.1}° exceeds parabolic approximation limit",
-            theta_max.to_degrees()
-        ));
+        if config.diffraction_scheme == DiffractionScheme::Parabolic {
+            return Err(format!(
+                "Maximum angle {:.1}° exceeds parabolic approximation limit",
+                theta_max.to_degrees()
+            ));
+        }
+        tracing::warn!(
+            theta_max_deg = theta_max.to_degrees(),
+            theta_max_rad = theta_max,
+            "KZK configuration exceeds the paraxial cone; using wide-angle diffraction"
+        );
     }
 
     Ok(())

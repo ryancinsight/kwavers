@@ -322,7 +322,7 @@ impl KzkNonlinearOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::forward::nonlinear::kzk::KZKConfig;
+    use crate::forward::nonlinear::kzk::{DiffractionScheme, KZKConfig};
     use kwavers_core::constants::fundamental::{
         DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
     };
@@ -348,6 +348,7 @@ mod tests {
             alpha0: 0.0,
             alpha_power: 1.0,
             include_diffraction: false,
+            diffraction_scheme: DiffractionScheme::Parabolic,
             include_absorption: false,
             include_nonlinearity: true,
             frequency,

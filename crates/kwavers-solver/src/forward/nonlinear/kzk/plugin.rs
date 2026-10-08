@@ -144,6 +144,7 @@ impl KzkPlugin {
             alpha0,
             alpha_power,
             include_diffraction: true,
+            diffraction_scheme: super::DiffractionScheme::Parabolic,
             include_absorption: true,
             include_nonlinearity: true,
             frequency,

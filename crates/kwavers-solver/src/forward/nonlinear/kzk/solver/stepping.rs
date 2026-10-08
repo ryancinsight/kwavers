@@ -103,20 +103,19 @@ impl KZKSolver {
         Ok(())
     }
 
-    /// Apply complex-field parabolic diffraction to each retarded-time slice.
+    /// Apply complex-field diffraction to each retarded-time slice.
     ///
     /// For each τ index, extracts the 2D complex spatial slice `p[:,:,t]` and
-    /// applies the spectral propagator H(k_T) = exp(−ik_T²Δz/(2k₀)) in-place.
-    /// The complex field is preserved without discarding the imaginary part,
-    /// ensuring accurate phase accumulation over many axial steps.
+    /// applies the configured spectral propagator in-place. The complex field
+    /// is preserved without discarding the imaginary part, ensuring accurate
+    /// phase accumulation over many axial steps.
     pub(super) fn apply_diffraction(&mut self, step_size: f64) {
         for t in 0..self.config.nt {
             let mut slice = self
                 .pressure
                 .index_axis_mut::<2>(2, t)
                 .expect("invariant: axis-2 index within retarded-time extent");
-            self.complex_diffraction
-                .apply_complex(&mut slice, step_size);
+            self.diffraction.apply_complex(&mut slice, step_size);
         }
     }
 
