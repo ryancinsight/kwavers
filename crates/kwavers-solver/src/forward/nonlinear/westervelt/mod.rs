@@ -222,6 +222,14 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 
+/// Time marching direction for the explicit Westervelt update.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PropagationDirection {
+    #[default]
+    Forward,
+    Backward,
+}
+
 /// Configuration for Westervelt FDTD solver
 #[derive(Debug, Clone)]
 pub struct WesterveltFdtdConfig {
@@ -233,6 +241,8 @@ pub struct WesterveltFdtdConfig {
     pub cfl_safety: f64,
     /// Artificial viscosity coefficient for stability (dimensionless, 0.0-1.0)
     pub artificial_viscosity: f64,
+    /// Marching direction used for time-reversal replay.
+    pub propagation_direction: PropagationDirection,
 }
 
 impl Default for WesterveltFdtdConfig {
@@ -242,6 +252,7 @@ impl Default for WesterveltFdtdConfig {
             enable_absorption: true,
             cfl_safety: 0.95,
             artificial_viscosity: 0.01, // Small artificial viscosity for stability
+            propagation_direction: PropagationDirection::Forward,
         }
     }
 }

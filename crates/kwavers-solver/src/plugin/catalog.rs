@@ -36,8 +36,12 @@
 //! | `BubbleDynamics { KellerHerring }`      | `BubbleDynamicsPlugin` (KM wrapper path) |
 //! | `BubbleDynamics { RayleighPlesset }`   | `BubbleDynamicsPlugin` (KM, compressibility off) |
 //! | `BubbleDynamics { Gilmore }`           | `BubbleDynamicsPlugin` (Gilmore/Tait RK4) |
-//! | `OpticalPropagation`                     | not yet wired                        |
+//! | `OpticalPropagation`                     | [`OpticalDiffusionPlugin`]           |
+//! | `FractionalViscoacoustic`                | [`FractionalViscoacousticPlugin`]    |
 //! | `MechanicalStress { Isotropic }`         | [`MechanicalStressPlugin`] (elastic PSTD, λ/μ) |
+//! | `MechanicalStress { Vti }`               | [`VtiElasticPlugin`]                 |
+//! | `PhotoacousticTimeReversal { KZK }`      | [`KzkPlugin`] (backward mode)        |
+//! | `PhotoacousticTimeReversal { WesterveltFdtd }` | [`WesterveltFdtdPlugin`] (backward mode) |
 //!
 //! [`HybridSpectralDGSolver`]: crate::pstd::dg::HybridSpectralDGSolver
 //! `BubbleDynamicsPlugin`: crate::forward::bubble_dynamics::plugin::BubbleDynamicsPlugin
@@ -48,12 +52,19 @@ use crate::forward::bubble_dynamics::plugin::{BubbleDynamicsConfig, BubbleDynami
 use crate::forward::fdtd::plugin::FdtdPlugin;
 use crate::forward::nonlinear::hybrid_angular_spectrum_plugin::HybridAngularSpectrumPlugin;
 use crate::forward::nonlinear::kuznetsov_solver_plugin::KuznetsovSolverPlugin;
-use crate::forward::nonlinear::kzk::KzkPlugin;
+use crate::forward::nonlinear::kzk::{KzkPlugin, PropagationDirection as KzkPropagationDirection};
+use crate::forward::nonlinear::westervelt::PropagationDirection as WesterveltPropagationDirection;
 use crate::forward::nonlinear::westervelt_fdtd_plugin::WesterveltFdtdPlugin;
 use crate::forward::nonlinear::westervelt_solver_plugin::WesterveltSolverPlugin;
-use crate::forward::pstd::extensions::MechanicalStressPlugin;
+use crate::forward::optical::OpticalDiffusionPlugin;
+use crate::forward::pstd::extensions::{
+    MechanicalStressPlugin, VtiElasticPlugin,
+};
 use crate::forward::pstd::plugin::PSTDPlugin;
 use crate::forward::thermal_diffusion::plugin::ThermalDiffusionPlugin;
+use crate::forward::viscoacoustic::{
+    FractionalViscoacousticConfig, FractionalViscoacousticPlugin,
+};
 use crate::plugin::Plugin;
 use crate::plugin::PluginManager;
 use crate::pstd::PSTDConfig;
@@ -154,6 +165,15 @@ impl PhysicsCatalog {
             PhysicsModelType::ThermalDiffusion { .. } => Ok(Box::new(ThermalDiffusionPlugin::new(
                 ThermalDiffusionConfig::default(),
             ))),
+            PhysicsModelType::FractionalViscoacoustic { alpha0, exponent } => Ok(Box::new(
+                FractionalViscoacousticPlugin::new(
+                    FractionalViscoacousticConfig {
+                        alpha0: *alpha0,
+                        exponent: *exponent,
+                    },
+                    dt,
+                ),
+            )),
             PhysicsModelType::BubbleDynamics { model, nucleation } => {
                 let config = BubbleDynamicsConfig {
                     model: model.clone(),
@@ -162,15 +182,38 @@ impl PhysicsCatalog {
                 };
                 Ok(Box::new(BubbleDynamicsPlugin::new(config)))
             }
-            PhysicsModelType::OpticalPropagation { .. } => Err(unsupported(
-                idx,
-                "OpticalPropagation",
-                "no Plugin adapter yet; use physics::optics models directly.",
-            )),
+            PhysicsModelType::OpticalPropagation { .. } => Ok(Box::new(OpticalDiffusionPlugin::new())),
             PhysicsModelType::MechanicalStress { wave_kind } => match wave_kind {
                 // Isotropic elastic stress–velocity propagation; the orchestrator
                 // reads λ/μ/ρ from the medium in `Plugin::initialize`. ADR 021.
                 ElasticWaveKind::Isotropic => Ok(Box::new(MechanicalStressPlugin::new(dt))),
+                ElasticWaveKind::Vti {
+                    c11,
+                    c13,
+                    c33,
+                    c44,
+                    c66,
+                } => Ok(Box::new(VtiElasticPlugin::new(
+                    dt, *c11, *c13, *c33, *c44, *c66,
+                ))),
+            },
+            PhysicsModelType::PhotoacousticTimeReversal { equation } => match equation {
+                NonlinearEquation::KZK => Ok(Box::new(KzkPlugin::with_propagation_direction(
+                    KzkPropagationDirection::Backward,
+                ))),
+                NonlinearEquation::WesterveltFdtd => Ok(Box::new(
+                    WesterveltFdtdPlugin::with_propagation_direction(
+                        WesterveltPropagationDirection::Backward,
+                    ),
+                )),
+                other => Err(unsupported(
+                    idx,
+                    "PhotoacousticTimeReversal",
+                    &format!(
+                        "equation {:?} has no backward-time plugin path; use KZK or WesterveltFdtd.",
+                        other
+                    ),
+                )),
             },
         }
     }
@@ -274,9 +317,9 @@ mod tests {
         let mut config = PhysicsConfig::new();
         config.models.clear();
         config.models.push(PhysicsModelConfig {
-            model_type: PhysicsModelType::OpticalPropagation {
-                scattering: false,
-                anisotropy: 0.0,
+            model_type: PhysicsModelType::LinearAcoustics {
+                solver_type: AcousticSolver::DG { polynomial_order: 3 },
+                boundary_conditions: PhysicsBoundaryCondition::Periodic,
             },
             enabled: true,
             parameters: std::collections::HashMap::new(),
@@ -289,7 +332,7 @@ mod tests {
 
         let msg = format!("{err}");
         assert!(
-            msg.contains("OpticalPropagation"),
+            msg.contains("DG"),
             "error must name the variant; got: {msg}"
         );
         assert!(

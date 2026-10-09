@@ -322,7 +322,7 @@ impl KzkNonlinearOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::forward::nonlinear::kzk::{DiffractionScheme, KZKConfig};
+    use crate::forward::nonlinear::kzk::{DiffractionScheme, KZKConfig, PropagationDirection};
     use kwavers_core::constants::fundamental::{
         DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
     };
@@ -340,6 +340,7 @@ mod tests {
             nz: 1,
             dx: 1e-3,
             dz: 1e-3,
+            propagation_direction: PropagationDirection::Forward,
             dt: 1e-8,
             nt: 4,
             c0,

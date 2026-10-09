@@ -32,24 +32,53 @@ pub enum PhysicsModelType {
     },
     /// Thermal diffusion and heating
     ThermalDiffusion { bioheat: bool, perfusion: bool },
-    /// Optical propagation and absorption
+    /// Optical propagation and absorption via the diffusion approximation.
     OpticalPropagation { scattering: bool, anisotropy: f64 },
+    /// Linear acoustic wave propagation with exact power-law absorption via
+    /// a fractional-Laplacian spectral filter (Treeby & Cox 2010).
+    ///
+    /// More accurate than relaxation-arm memory variables for broadband
+    /// power-law media such as soft tissue.
+    FractionalViscoacoustic {
+        /// Absorption coefficient α₀ in Np/m/(rad/s)^y.
+        alpha0: f64,
+        /// Power-law exponent y (typical tissue: 1.0–1.5).
+        exponent: f64,
+    },
     /// Elastic (mechanical) stress–velocity propagation in a solid (λ, μ).
     ///
     /// Distinct from [`LinearAcoustics`](Self::LinearAcoustics): the shear
     /// modulus `μ > 0` supports shear waves, which the acoustic-fluid path
     /// cannot represent. See ADR 021.
     MechanicalStress { wave_kind: ElasticWaveKind },
+    /// Photoacoustic time-reversal reconstruction. Re-injects measured
+    /// photoacoustic time series backward to focus at the absorber origin.
+    ///
+    /// Requires the solver-side time-reversal feature wiring for the selected
+    /// equation family.
+    PhotoacousticTimeReversal { equation: NonlinearEquation },
 }
 
 /// Elastic-wave propagation mode for [`PhysicsModelType::MechanicalStress`].
 ///
 /// Additive-by-design: new modes (anisotropic, nonlinear) extend this enum
 /// without a breaking change to the acoustic capability surface.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ElasticWaveKind {
     /// Isotropic linear elastic stress–velocity propagation (Lamé `λ`, `μ`).
     Isotropic,
+    /// Vertical Transverse Isotropic (VTI) elastic propagation with five
+    /// independent stiffness parameters.
+    ///
+    /// Reduces to isotropic when
+    /// `c11 = c33 = λ + 2μ`, `c13 = λ`, and `c44 = c66 = μ`.
+    Vti {
+        c11: f64,
+        c13: f64,
+        c33: f64,
+        c44: f64,
+        c66: f64,
+    },
 }
 
 /// Acoustic solver types

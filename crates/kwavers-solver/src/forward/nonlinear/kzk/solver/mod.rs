@@ -48,6 +48,7 @@ use super::{DiffractionScheme, KZKConfig};
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker,
 };
+use crate::feature::SolverFeatureSet;
 use kwavers_math::fft::Complex64;
 
 /// Zero-dispatch diffraction operator selection.
@@ -270,6 +271,18 @@ impl KZKSolver {
             current_z_step: 0,
             current_time: 0.0,
         })
+    }
+
+    /// Create a solver from a feature set, enabling backward propagation for
+    /// photoacoustic time reversal when requested.
+    pub fn from_feature_set(
+        mut config: KZKConfig,
+        features: SolverFeatureSet,
+    ) -> Result<Self, String> {
+        if features.contains(SolverFeatureSet::TIME_REVERSAL) {
+            config.propagation_direction = super::PropagationDirection::Backward;
+        }
+        Self::new(config)
     }
 
     /// Enable conservation diagnostics with specified tolerances

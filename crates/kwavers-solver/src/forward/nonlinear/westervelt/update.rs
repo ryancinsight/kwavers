@@ -72,6 +72,11 @@ impl WesterveltFdtd {
         t: f64,
         dt: f64,
     ) -> KwaversResult<()> {
+        let dt = match self.config.propagation_direction {
+            super::PropagationDirection::Forward => dt,
+            super::PropagationDirection::Backward => -dt,
+        };
+
         self.calculate_laplacian(grid)?;
         self.calculate_nonlinear_term_into(dt, grid);
 

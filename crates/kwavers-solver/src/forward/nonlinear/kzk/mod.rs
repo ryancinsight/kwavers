@@ -99,6 +99,14 @@ pub enum DiffractionScheme {
     Broadband,
 }
 
+/// Axial propagation direction for KZK marching.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PropagationDirection {
+    #[default]
+    Forward,
+    Backward,
+}
+
 /// KZK configuration parameters
 #[derive(Debug, Clone)]
 pub struct KZKConfig {
@@ -112,6 +120,8 @@ pub struct KZKConfig {
     pub dx: f64,
     /// Grid spacing in z (m)
     pub dz: f64,
+    /// Axial marching direction.
+    pub propagation_direction: PropagationDirection,
     /// Time step (s)
     pub dt: f64,
     /// Number of time steps
@@ -173,6 +183,7 @@ impl Default for KZKConfig {
             nz: 256,
             dx: 0.5e-3, // 0.5 mm
             dz: 0.5e-3, // 0.5 mm
+            propagation_direction: PropagationDirection::Forward,
             dt: 10e-9,  // 10 ns
             nt: 1000,
             c0: kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE, // water/tissue

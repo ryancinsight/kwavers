@@ -194,7 +194,7 @@ pub fn generate_kzk_acoustic_field(
     medium: &dyn Medium,
 ) -> KwaversResult<AcousticField> {
     use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
-    use kwavers_solver::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
+    use kwavers_solver::forward::nonlinear::kzk::{KZKConfig, KZKSolver, PropagationDirection};
 
     let (nx, ny, nz) = grid.dimensions();
     // nx = axial (propagation direction)
@@ -230,6 +230,7 @@ pub fn generate_kzk_acoustic_field(
         nz: nx,      // KZK axial steps (therapy x)
         dx: grid.dy, // transverse spacing
         dz: grid.dx, // axial step
+        propagation_direction: PropagationDirection::Forward,
         dt,
         nt,
         c0,
@@ -312,7 +313,7 @@ fn generate_kzk_collimated(
     medium: &dyn Medium,
 ) -> KwaversResult<AcousticField> {
     use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
-    use kwavers_solver::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
+    use kwavers_solver::forward::nonlinear::kzk::{KZKConfig, KZKSolver, PropagationDirection};
 
     let (nx, ny, nz) = grid.dimensions();
     let beam_width_sq = 0.005_f64 * 0.005;
@@ -337,6 +338,7 @@ fn generate_kzk_collimated(
         nz: nx,
         dx: grid.dy,
         dz: grid.dx,
+        propagation_direction: PropagationDirection::Forward,
         dt,
         nt,
         c0,

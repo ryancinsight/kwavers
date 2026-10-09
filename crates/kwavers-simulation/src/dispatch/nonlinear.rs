@@ -6,7 +6,9 @@ use crate::dispatch::shared::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_solver::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
+use kwavers_solver::forward::nonlinear::westervelt::{
+    PropagationDirection, WesterveltFdtd, WesterveltFdtdConfig,
+};
 use kwavers_source::Source;
 
 /// Run a Westervelt nonlinear FDTD simulation.
@@ -31,6 +33,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         enable_absorption: nl.alpha_coeff > 0.0,
         cfl_safety: 0.3,
         artificial_viscosity: 0.0,
+        propagation_direction: PropagationDirection::Forward,
     };
 
     let mut solver = WesterveltFdtd::new(config, req.grid, req.medium);

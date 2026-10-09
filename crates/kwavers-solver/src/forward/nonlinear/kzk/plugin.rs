@@ -29,7 +29,8 @@ use kwavers_physics::acoustics::wave_propagation::KZKSolverTrait;
 use leto::{Array2, Array3, Array4};
 
 use super::solver::KZKSolver;
-use super::KZKConfig;
+use super::{KZKConfig, PropagationDirection};
+use crate::feature::SolverFeatureSet;
 use crate::plugin::{PluginMetadata, PluginState};
 
 /// Plugin adapter for the correct complex-field KZK solver.
@@ -41,6 +42,7 @@ pub struct KzkPlugin {
     state: PluginState,
     solver: Option<KZKSolver>,
     config: Option<KZKConfig>,
+    features: SolverFeatureSet,
     /// Cached RMS volume from full propagation, shape `(grid.ny, grid.nz, grid.nx)`.
     cached_volume: Option<Array3<f64>>,
     /// Current z-slice index into the cached volume.
@@ -93,9 +95,20 @@ impl KzkPlugin {
             state: PluginState::Created,
             solver: None,
             config: None,
+            features: SolverFeatureSet::new(),
             cached_volume: None,
             current_step: 0,
         }
+    }
+
+    /// Create a KZK plugin with an explicit propagation direction.
+    #[must_use]
+    pub fn with_propagation_direction(direction: PropagationDirection) -> Self {
+        let mut plugin = Self::new();
+        if direction == PropagationDirection::Backward {
+            plugin.features = SolverFeatureSet::TIME_REVERSAL;
+        }
+        plugin
     }
 
     /// Build a [`KZKConfig`] from grid and medium parameters.
@@ -136,6 +149,7 @@ impl KzkPlugin {
             nz: grid.nx,
             dx: grid.dy,
             dz,
+            propagation_direction: PropagationDirection::Forward,
             dt,
             nt,
             c0,
@@ -213,8 +227,9 @@ impl crate::plugin::Plugin for KzkPlugin {
     fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
         let config = Self::build_config(grid, medium);
 
-        let solver = KZKSolver::new(config.clone())
-            .map_err(|msg| KwaversError::InternalError(format!("KZKSolver::new failed: {msg}")))?;
+        let solver = KZKSolver::from_feature_set(config.clone(), self.features).map_err(|msg| {
+            KwaversError::InternalError(format!("KZKSolver::from_feature_set failed: {msg}"))
+        })?;
 
         self.solver = Some(solver);
         self.config = Some(config);

@@ -43,8 +43,13 @@
 //! - Blanch, J.O., Robertsson, J.O.A. & Symes, W.W. (1995). "Modeling of a
 //!   constant Q." *Geophysics* 60(1), 176–184.
 
+pub mod fractional;
+pub mod fractional_plugin;
+
 mod solver;
 #[cfg(test)]
 mod tests;
 
+pub use fractional::FractionalAbsorptionOperator;
+pub use fractional_plugin::{FractionalViscoacousticConfig, FractionalViscoacousticPlugin};
 pub use solver::{ViscoacousticGrid, ViscoacousticMemorySolver};

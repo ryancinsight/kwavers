@@ -11,7 +11,10 @@ impl KZKSolver {
     /// Uses second-order Strang splitting:
     /// `D(dz/2) · A(dz/2) · N(dz) · A(dz/2) · D(dz/2)`.
     pub fn step(&mut self) {
-        let dz = self.config.dz;
+        let dz = match self.config.propagation_direction {
+            super::super::PropagationDirection::Forward => self.config.dz,
+            super::super::PropagationDirection::Backward => -self.config.dz,
+        };
 
         if self.pressure_is_exact_zero() {
             self.pressure_prev.assign(&self.pressure);

@@ -2,7 +2,9 @@
 
 use std::sync::Arc;
 
-use crate::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};
+use crate::forward::nonlinear::westervelt::{
+    PropagationDirection, WesterveltFdtd, WesterveltFdtdConfig,
+};
 use crate::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::mapping::UnifiedFieldType;
@@ -104,6 +106,7 @@ fn copy_field_into_view(mut dst: leto::ArrayViewMut3<'_, f64>, src: &Array3<f64>
 pub struct WesterveltFdtdPlugin {
     metadata: PluginMetadata,
     state: PluginState,
+    config: WesterveltFdtdConfig,
     solver: Option<WesterveltFdtd>,
 }
 
@@ -117,6 +120,19 @@ impl WesterveltFdtdPlugin {
     /// Create a new (uninitialized) FDTD Westervelt plugin.
     #[must_use]
     pub fn new() -> Self {
+        Self::with_config(WesterveltFdtdConfig::default())
+    }
+
+    #[must_use]
+    pub fn with_propagation_direction(direction: PropagationDirection) -> Self {
+        Self::with_config(WesterveltFdtdConfig {
+            propagation_direction: direction,
+            ..WesterveltFdtdConfig::default()
+        })
+    }
+
+    #[must_use]
+    pub fn with_config(config: WesterveltFdtdConfig) -> Self {
         Self {
             metadata: PluginMetadata {
                 id: "westervelt_fdtd_solver".to_owned(),
@@ -129,6 +145,7 @@ impl WesterveltFdtdPlugin {
                 license: "MIT".to_owned(),
             },
             state: PluginState::Created,
+            config,
             solver: None,
         }
     }
@@ -156,11 +173,7 @@ impl Plugin for WesterveltFdtdPlugin {
     }
 
     fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
-        self.solver = Some(WesterveltFdtd::new(
-            WesterveltFdtdConfig::default(),
-            grid,
-            medium,
-        ));
+        self.solver = Some(WesterveltFdtd::new(self.config.clone(), grid, medium));
         self.state = PluginState::Initialized;
         Ok(())
     }
