@@ -184,7 +184,7 @@ impl Default for KZKConfig {
             dx: 0.5e-3, // 0.5 mm
             dz: 0.5e-3, // 0.5 mm
             propagation_direction: PropagationDirection::Forward,
-            dt: 10e-9,  // 10 ns
+            dt: 10e-9, // 10 ns
             nt: 1000,
             c0: kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE, // water/tissue
             rho0: DENSITY_WATER_NOMINAL,

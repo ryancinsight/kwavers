@@ -7,12 +7,9 @@ use leto::Array3;
 use std::sync::Arc;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d, Fft3dInOutExt};
 use kwavers_medium::Medium;
 use leto::ArrayView3;
-use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d, Fft3dInOutExt};
-
-
-
 
 fn k_vector(n: usize, spacing: f64) -> Vec<f64> {
     let dk = TWO_PI / (n as f64 * spacing);
@@ -64,10 +61,8 @@ impl OpticalDiffusionSolver {
         }
 
         let mut mu_eff = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        for ((mu_eff_value, &mu_a_value), &mu_s_prime_value) in mu_eff
-            .iter_mut()
-            .zip(mu_a.iter())
-            .zip(mu_s_prime.iter())
+        for ((mu_eff_value, &mu_a_value), &mu_s_prime_value) in
+            mu_eff.iter_mut().zip(mu_a.iter()).zip(mu_s_prime.iter())
         {
             *mu_eff_value = (3.0 * mu_a_value * (mu_a_value + mu_s_prime_value)).sqrt();
         }

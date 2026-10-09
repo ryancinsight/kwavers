@@ -200,8 +200,8 @@ pub use integration::time_integration;
 
 // Concrete GPU execution lives in `kwavers-gpu`; this crate owns only the
 // solver-facing compute backend trait surface.
+pub use forward::optical;
 pub use inverse::reconstruction;
 pub use inverse::time_reversal;
-pub use forward::optical;
 pub use utilities::amr;
 pub mod validation;

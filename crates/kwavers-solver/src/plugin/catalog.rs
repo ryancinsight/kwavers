@@ -57,14 +57,10 @@ use crate::forward::nonlinear::westervelt::PropagationDirection as WesterveltPro
 use crate::forward::nonlinear::westervelt_fdtd_plugin::WesterveltFdtdPlugin;
 use crate::forward::nonlinear::westervelt_solver_plugin::WesterveltSolverPlugin;
 use crate::forward::optical::OpticalDiffusionPlugin;
-use crate::forward::pstd::extensions::{
-    MechanicalStressPlugin, VtiElasticPlugin,
-};
+use crate::forward::pstd::extensions::{MechanicalStressPlugin, VtiElasticPlugin};
 use crate::forward::pstd::plugin::PSTDPlugin;
 use crate::forward::thermal_diffusion::plugin::ThermalDiffusionPlugin;
-use crate::forward::viscoacoustic::{
-    FractionalViscoacousticConfig, FractionalViscoacousticPlugin,
-};
+use crate::forward::viscoacoustic::{FractionalViscoacousticConfig, FractionalViscoacousticPlugin};
 use crate::plugin::Plugin;
 use crate::plugin::PluginManager;
 use crate::pstd::PSTDConfig;
@@ -318,7 +314,9 @@ mod tests {
         config.models.clear();
         config.models.push(PhysicsModelConfig {
             model_type: PhysicsModelType::LinearAcoustics {
-                solver_type: AcousticSolver::DG { polynomial_order: 3 },
+                solver_type: AcousticSolver::DG {
+                    polynomial_order: 3,
+                },
                 boundary_conditions: PhysicsBoundaryCondition::Periodic,
             },
             enabled: true,

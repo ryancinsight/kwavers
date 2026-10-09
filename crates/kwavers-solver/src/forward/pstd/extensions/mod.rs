@@ -28,17 +28,17 @@
 //! plugin.
 
 pub mod elastic;
-pub mod elastic_vti;
 pub mod elastic_orchestrator;
 pub mod elastic_plugin;
+pub mod elastic_vti;
 
 pub use elastic::{
     PstdElasticPlugin, SpectralElasticConfig, SpectralStressUpdateInputs,
     SpectralVelocityUpdateInputs,
 };
-pub use elastic_vti::{VtiConfig, VtiElasticPlugin, VtiElasticSolver};
 pub use elastic_orchestrator::{
     ElasticPml, ElasticPmlSpec, ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdSensorData,
     ElasticPstdSourceMode, ElasticPstdVelocitySource,
 };
 pub use elastic_plugin::MechanicalStressPlugin;
+pub use elastic_vti::{VtiConfig, VtiElasticPlugin, VtiElasticSolver};

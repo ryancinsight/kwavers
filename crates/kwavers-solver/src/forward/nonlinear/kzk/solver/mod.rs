@@ -45,10 +45,10 @@ use super::phase_screen::PhaseScreenOperator;
 use super::sponge::SpongeLayer;
 use super::wide_angle_diffraction::WideAngleDiffractionOperator;
 use super::{DiffractionScheme, KZKConfig};
+use crate::feature::SolverFeatureSet;
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker,
 };
-use crate::feature::SolverFeatureSet;
 use kwavers_math::fft::Complex64;
 
 /// Zero-dispatch diffraction operator selection.

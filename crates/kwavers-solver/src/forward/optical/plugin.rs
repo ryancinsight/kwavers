@@ -1,6 +1,5 @@
 //! Plugin adapter for the optical diffusion solver.
 
-use std::any::Any;
 use crate::forward::optical::solver::OpticalDiffusionSolver;
 use crate::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -8,6 +7,7 @@ use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::{Array3, Array4};
+use std::any::Any;
 #[derive(Debug)]
 pub struct OpticalDiffusionPlugin {
     metadata: PluginMetadata,
@@ -83,7 +83,9 @@ impl Plugin for OpticalDiffusionPlugin {
         _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         let solver = self.solver.as_mut().ok_or_else(|| {
-            KwaversError::InternalError("OpticalDiffusionPlugin updated before initialize()".to_owned())
+            KwaversError::InternalError(
+                "OpticalDiffusionPlugin updated before initialize()".to_owned(),
+            )
         })?;
 
         let light_index = UnifiedFieldType::LightFluence.index();

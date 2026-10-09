@@ -216,12 +216,9 @@ impl VtiElasticSolver {
             .zip(self.dvz_dz.iter())
             .zip(self.dvx_dz.iter().zip(self.dvz_dx.iter()))
         {
-            *sxx += dt
-                * (self.config.c11 * dvx_dx + c12 * dvy_dy + self.config.c13 * dvz_dz);
-            *syy += dt
-                * (c12 * dvx_dx + self.config.c11 * dvy_dy + self.config.c13 * dvz_dz);
-            *szz += dt
-                * (self.config.c13 * (dvx_dx + dvy_dy) + self.config.c33 * dvz_dz);
+            *sxx += dt * (self.config.c11 * dvx_dx + c12 * dvy_dy + self.config.c13 * dvz_dz);
+            *syy += dt * (c12 * dvx_dx + self.config.c11 * dvy_dy + self.config.c13 * dvz_dz);
+            *szz += dt * (self.config.c13 * (dvx_dx + dvy_dy) + self.config.c33 * dvz_dz);
             *sxz += dt * self.config.c44 * (dvx_dz + dvz_dx);
         }
 
@@ -275,16 +272,16 @@ impl VtiElasticSolver {
             &mut self.dsxz_dz,
         );
 
-        for (((((((vx, vy), vz), &rho), &dsxx_dx), &dsyy_dy), &dszz_dz), (&dsxz_dx, &dsxz_dz)) in self
-            .vx
-            .iter_mut()
-            .zip(self.vy.iter_mut())
-            .zip(self.vz.iter_mut())
-            .zip(self.config.density.iter())
-            .zip(self.dsxx_dx.iter())
-            .zip(self.dsyy_dy.iter())
-            .zip(self.dszz_dz.iter())
-            .zip(self.dsxz_dx.iter().zip(self.dsxz_dz.iter()))
+        for (((((((vx, vy), vz), &rho), &dsxx_dx), &dsyy_dy), &dszz_dz), (&dsxz_dx, &dsxz_dz)) in
+            self.vx
+                .iter_mut()
+                .zip(self.vy.iter_mut())
+                .zip(self.vz.iter_mut())
+                .zip(self.config.density.iter())
+                .zip(self.dsxx_dx.iter())
+                .zip(self.dsyy_dy.iter())
+                .zip(self.dszz_dz.iter())
+                .zip(self.dsxz_dx.iter().zip(self.dsxz_dz.iter()))
         {
             if rho <= 0.0 {
                 continue;

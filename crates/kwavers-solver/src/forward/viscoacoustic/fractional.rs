@@ -119,7 +119,9 @@ impl FractionalAbsorptionOperator {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    let k_mag = kx[i].mul_add(kx[i], ky[j].mul_add(ky[j], kz[k] * kz[k])).sqrt();
+                    let k_mag = kx[i]
+                        .mul_add(kx[i], ky[j].mul_add(ky[j], kz[k] * kz[k]))
+                        .sqrt();
                     if k_mag == 0.0 {
                         h_abs[[i, j, k]] = 1.0;
                         h_disp[[i, j, k]] = 0.0;
