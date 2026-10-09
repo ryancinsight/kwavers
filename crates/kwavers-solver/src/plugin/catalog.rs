@@ -28,6 +28,8 @@
 //! |                                          | [`HybridSpectralDGSolver`] directly  |
 //! | `NonlinearAcoustics { KZK }`             | [`KzkPlugin`]                        |
 //! | `NonlinearAcoustics { Westervelt }`      | [`WesterveltSolverPlugin`]          |
+//! | `NonlinearAcoustics { WesterveltFdtd }`  | [`WesterveltFdtdPlugin`]            |
+//! | `NonlinearAcoustics { HybridAngularSpectrum }` | [`HybridAngularSpectrumPlugin`] |
 //! | `NonlinearAcoustics { Kuznetsov }`       | [`KuznetsovSolverPlugin`]           |
 //! | `ThermalDiffusion`                       | [`ThermalDiffusionPlugin`]           |
 //! | `BubbleDynamics { KellerMiksis }`       | `BubbleDynamicsPlugin` (adaptive KM ODE) |
@@ -44,8 +46,10 @@
 use crate::fdtd::FdtdConfig;
 use crate::forward::bubble_dynamics::plugin::{BubbleDynamicsConfig, BubbleDynamicsPlugin};
 use crate::forward::fdtd::plugin::FdtdPlugin;
+use crate::forward::nonlinear::hybrid_angular_spectrum_plugin::HybridAngularSpectrumPlugin;
 use crate::forward::nonlinear::kuznetsov_solver_plugin::KuznetsovSolverPlugin;
 use crate::forward::nonlinear::kzk::KzkPlugin;
+use crate::forward::nonlinear::westervelt_fdtd_plugin::WesterveltFdtdPlugin;
 use crate::forward::nonlinear::westervelt_solver_plugin::WesterveltSolverPlugin;
 use crate::forward::pstd::extensions::MechanicalStressPlugin;
 use crate::forward::pstd::plugin::PSTDPlugin;
@@ -117,22 +121,34 @@ impl PhysicsCatalog {
     ) -> KwaversResult<Box<dyn Plugin>> {
         match kind {
             PhysicsModelType::LinearAcoustics { solver_type, .. } => match solver_type {
-                AcousticSolver::FDTD { .. } => {
-                    Ok(Box::new(FdtdPlugin::new(FdtdConfig::default(), grid)?))
-                }
+                AcousticSolver::FDTD { order } => Ok(Box::new(FdtdPlugin::new(
+                    FdtdConfig {
+                        spatial_order: usize::from(*order),
+                        ..FdtdConfig::default()
+                    },
+                    grid,
+                )?)),
                 AcousticSolver::PSTD { .. } => {
                     Ok(Box::new(PSTDPlugin::new(PSTDConfig::default(), grid)?))
                 }
-                AcousticSolver::DG { .. } => Err(unsupported(
+                AcousticSolver::DG { polynomial_order } => Err(unsupported(
                     idx,
                     "LinearAcoustics{DG}",
-                    "DG is not exposed via the plugin path; \
-                     instantiate HybridSpectralDGSolver directly.",
+                    &format!(
+                        "DG is not exposed via the plugin path; instantiate \
+                         crate::forward::pstd::dg::HybridSpectralDGSolver directly \
+                         (for example with HybridSpectralDGConfig {{ dg_polynomial_order: {}, ..Default::default() }}).",
+                        polynomial_order
+                    ),
                 )),
             },
             PhysicsModelType::NonlinearAcoustics { equation_type, .. } => match equation_type {
                 NonlinearEquation::KZK => Ok(Box::new(KzkPlugin::new())),
                 NonlinearEquation::Westervelt => Ok(Box::new(WesterveltSolverPlugin::new())),
+                NonlinearEquation::WesterveltFdtd => Ok(Box::new(WesterveltFdtdPlugin::new())),
+                NonlinearEquation::HybridAngularSpectrum => {
+                    Ok(Box::new(HybridAngularSpectrumPlugin::new()))
+                }
                 NonlinearEquation::Kuznetsov => Ok(Box::new(KuznetsovSolverPlugin::new())),
             },
             PhysicsModelType::ThermalDiffusion { .. } => Ok(Box::new(ThermalDiffusionPlugin::new(
@@ -502,6 +518,38 @@ mod tests {
         )
         .expect("Kuznetsov capability should build (plugin path now wired)");
         assert_eq!(manager.plugin_count(), 1, "one Kuznetsov plugin expected");
+    }
+
+    #[test]
+    fn westervelt_fdtd_variant_builds_one_plugin() {
+        let grid = small_grid();
+        let medium = water(&grid);
+        let manager = PhysicsCatalog::build(
+            &nonlinear_config(NonlinearEquation::WesterveltFdtd),
+            &grid,
+            &medium,
+            1e-7,
+        )
+        .expect("WesterveltFdtd capability should build (plugin path now wired)");
+        assert_eq!(
+            manager.plugin_count(),
+            1,
+            "one Westervelt FDTD plugin expected"
+        );
+    }
+
+    #[test]
+    fn hybrid_angular_spectrum_variant_builds_one_plugin() {
+        let grid = small_grid();
+        let medium = water(&grid);
+        let manager = PhysicsCatalog::build(
+            &nonlinear_config(NonlinearEquation::HybridAngularSpectrum),
+            &grid,
+            &medium,
+            1e-7,
+        )
+        .expect("HybridAngularSpectrum capability should build (plugin path now wired)");
+        assert_eq!(manager.plugin_count(), 1, "one HAS plugin expected");
     }
 
     /// The wired plugins must drive the REAL solver step: from a centred pressure

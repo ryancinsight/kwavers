@@ -366,6 +366,18 @@ impl WesterveltFdtd {
         &self.pressure
     }
 
+    /// Synchronize the solver's current pressure state from an external field.
+    ///
+    /// On the first step, this also seeds `p^{n-1}` from the same field so the
+    /// explicit leapfrog update starts from zero initial velocity rather than a
+    /// spurious kick from an all-zero history.
+    pub fn set_pressure_field(&mut self, pressure: leto::ArrayView3<'_, f64>) {
+        self.pressure.assign(&pressure);
+        if self.current_step == 0 {
+            self.pressure_prev.assign(&pressure);
+        }
+    }
+
     /// Calculate the CFL-limited time step
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

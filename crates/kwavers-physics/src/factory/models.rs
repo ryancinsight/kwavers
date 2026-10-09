@@ -72,8 +72,22 @@ pub enum PhysicsBoundaryCondition {
 /// Nonlinear equation types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NonlinearEquation {
+    /// Spectral (k-space) Westervelt equation solver. Default Westervelt path.
     Westervelt,
+    /// Explicit FDTD Westervelt solver. Supports 2nd/4th/6th order stencils,
+    /// artificial viscosity, and pointwise heterogeneous media (c₀, ρ₀, β).
+    /// Prefer over `Westervelt` when heterogeneous media or explicit time-stepping
+    /// is required; prefer `Westervelt` for high accuracy in homogeneous media.
+    WesterveltFdtd,
+    /// Hybrid Angular Spectrum (HAS) nonlinear propagation.
+    ///
+    /// Operator-splitting with FFT-based angular-spectrum diffraction and
+    /// time-domain nonlinearity (Christopher & Parker 1991, JASA 90, 507–521).
+    /// Efficient for moderately nonlinear focused beams at moderate angles.
+    HybridAngularSpectrum,
+    /// Full Kuznetsov equation.
     Kuznetsov,
+    /// KZK (parabolic beam equation, multiple diffraction schemes).
     KZK,
 }
 

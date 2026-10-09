@@ -241,7 +241,9 @@ pub fn generate_kzk_acoustic_field(
         include_absorption: true,
         include_nonlinearity: true,
         diffraction_scheme: kwavers_solver::forward::nonlinear::kzk::DiffractionScheme::Parabolic,
+        sponge_fraction: None,
         frequency,
+        speed_map: None,
     };
 
     // Attempt to create the complex KZK solver.  If validation fails (e.g.,
@@ -346,7 +348,9 @@ fn generate_kzk_collimated(
         include_absorption: true,
         include_nonlinearity: true,
         diffraction_scheme: kwavers_solver::forward::nonlinear::kzk::DiffractionScheme::Parabolic,
+        sponge_fraction: None,
         frequency,
+        speed_map: None,
     };
 
     let mut solver = KZKSolver::new(config).map_err(|e| {
