@@ -33,12 +33,16 @@ mod traits;
 mod tests;
 
 use leto::{Array2, Array3};
+use std::sync::Arc;
 
 use super::absorption::KzkAbsorptionOperator;
+use super::broadband_diffraction::BroadbandDiffractionOperator;
 use super::complex_parabolic_diffraction::ParabolicDiffractionOperator;
 use super::nonlinearity::KzkNonlinearOperator;
 use super::pade11_diffraction::Pade11DiffractionOperator;
 use super::pade22_diffraction::Pade22DiffractionOperator;
+use super::phase_screen::PhaseScreenOperator;
+use super::sponge::SpongeLayer;
 use super::wide_angle_diffraction::WideAngleDiffractionOperator;
 use super::{DiffractionScheme, KZKConfig};
 use crate::forward::nonlinear::conservation::{
@@ -57,6 +61,7 @@ pub(super) enum DiffractionOperator {
     Pade11(Pade11DiffractionOperator),
     Pade22(Pade22DiffractionOperator),
     WideAngle(WideAngleDiffractionOperator),
+    Broadband(BroadbandDiffractionOperator),
 }
 
 impl DiffractionOperator {
@@ -71,6 +76,54 @@ impl DiffractionOperator {
             Self::Pade11(op) => op.apply_complex(field, step_size),
             Self::Pade22(op) => op.apply_complex(field, step_size),
             Self::WideAngle(op) => op.apply_complex(field, step_size),
+            Self::Broadband(_) => {
+                unreachable!("broadband diffraction must be applied through apply_full_field")
+            }
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    pub(super) fn needs_full_field(&self) -> bool {
+        matches!(self, Self::Broadband(_))
+    }
+
+    #[inline]
+    pub(super) fn apply_full_field(&mut self, field: &mut Array3<Complex64>, step_size: f64) {
+        match self {
+            Self::Broadband(op) => op.apply_complex_full(field, step_size),
+            Self::Parabolic(op) => {
+                for t in 0..field.shape()[2] {
+                    let mut slice = field
+                        .index_axis_mut::<2>(2, t)
+                        .expect("invariant: axis-2 index within retarded-time extent");
+                    op.apply_complex(&mut slice, step_size);
+                }
+            }
+            Self::Pade11(op) => {
+                for t in 0..field.shape()[2] {
+                    let mut slice = field
+                        .index_axis_mut::<2>(2, t)
+                        .expect("invariant: axis-2 index within retarded-time extent");
+                    op.apply_complex(&mut slice, step_size);
+                }
+            }
+            Self::Pade22(op) => {
+                for t in 0..field.shape()[2] {
+                    let mut slice = field
+                        .index_axis_mut::<2>(2, t)
+                        .expect("invariant: axis-2 index within retarded-time extent");
+                    op.apply_complex(&mut slice, step_size);
+                }
+            }
+            Self::WideAngle(op) => {
+                for t in 0..field.shape()[2] {
+                    let mut slice = field
+                        .index_axis_mut::<2>(2, t)
+                        .expect("invariant: axis-2 index within retarded-time extent");
+                    op.apply_complex(&mut slice, step_size);
+                }
+            }
         }
     }
 }
@@ -105,6 +158,12 @@ pub struct KZKSolver {
     pub(super) absorption: KzkAbsorptionOperator,
     /// Nonlinear operator (operates on Re[p] only)
     pub(super) nonlinear: KzkNonlinearOperator,
+    /// Optional raised-cosine sponge layer for transverse FFT boundaries.
+    pub(super) sponge: Option<SpongeLayer>,
+    /// Optional inhomogeneous-medium phase-screen correction.
+    pub(super) phase_screen: Option<PhaseScreenOperator>,
+    /// Optional speed-perturbation map δ(x,y,z) = c₀/c − 1.
+    pub(super) speed_map: Option<Arc<Array3<f64>>>,
     /// Conservation diagnostics tracker
     pub(super) conservation_tracker: Option<ConservationTracker>,
     /// Current z-step (for tracking propagation)
@@ -130,6 +189,9 @@ impl std::fmt::Debug for KZKSolver {
             .field("nonlinear", &self.nonlinear)
             .field("pressure_prev", &self.pressure_prev.shape())
             .field("diffraction", &self.diffraction)
+            .field("sponge", &self.sponge.is_some())
+            .field("phase_screen", &self.phase_screen.is_some())
+            .field("speed_map", &self.speed_map.is_some())
             .field("conservation_tracker", &self.conservation_tracker.is_some())
             .field("current_z_step", &self.current_z_step)
             .field("current_time", &self.current_time)
@@ -152,7 +214,24 @@ impl KZKSolver {
             DiffractionScheme::WideAngle => {
                 DiffractionOperator::WideAngle(WideAngleDiffractionOperator::new(config))
             }
+            DiffractionScheme::Broadband => {
+                DiffractionOperator::Broadband(BroadbandDiffractionOperator::new(config))
+            }
         }
+    }
+
+    fn build_phase_screen(
+        config: &KZKConfig,
+        speed_map: Option<&Arc<Array3<f64>>>,
+    ) -> Option<PhaseScreenOperator> {
+        speed_map.map(|_| {
+            PhaseScreenOperator::new(
+                TWO_PI * config.frequency / config.c0,
+                config.dz,
+                config.nx,
+                config.ny,
+            )
+        })
     }
 
     /// Create new KZK solver.
@@ -171,6 +250,11 @@ impl KZKSolver {
         let diffraction = Self::build_diffraction_operator(&config);
         let absorption = KzkAbsorptionOperator::new(&config);
         let nonlinear = KzkNonlinearOperator::new(&config);
+        let sponge = config
+            .sponge_fraction
+            .map(|fraction| SpongeLayer::new(config.nx, config.ny, fraction));
+        let speed_map = config.speed_map.clone();
+        let phase_screen = Self::build_phase_screen(&config, speed_map.as_ref());
 
         Ok(Self {
             config,
@@ -179,6 +263,9 @@ impl KZKSolver {
             diffraction,
             absorption,
             nonlinear,
+            sponge,
+            phase_screen,
+            speed_map,
             conservation_tracker: None,
             current_z_step: 0,
             current_time: 0.0,
@@ -251,6 +338,7 @@ impl KZKSolver {
         // Re-initialize operators with updated frequency.
         self.diffraction = Self::build_diffraction_operator(&self.config);
         self.absorption = KzkAbsorptionOperator::new(&self.config);
+        self.phase_screen = Self::build_phase_screen(&self.config, self.speed_map.as_ref());
 
         // Set source as time-harmonic signal (real-valued at z=0).
         let omega = TWO_PI * frequency;
@@ -297,6 +385,7 @@ impl KZKSolver {
         self.config.frequency = frequency;
         self.diffraction = Self::build_diffraction_operator(&self.config);
         self.absorption = KzkAbsorptionOperator::new(&self.config);
+        self.phase_screen = Self::build_phase_screen(&self.config, self.speed_map.as_ref());
 
         let omega = TWO_PI * frequency;
         let dt = self.config.dt;

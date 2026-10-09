@@ -38,10 +38,12 @@
 use kwavers_core::constants::{
     ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, REFERENCE_FREQUENCY_HZ,
 };
+use std::sync::Arc;
 
 pub mod absorption;
 pub mod angular_spectrum_2d;
 pub mod beam_debug;
+pub mod broadband_diffraction;
 pub mod complex_parabolic_diffraction;
 pub mod constants;
 pub mod cylindrical_solver;
@@ -51,10 +53,12 @@ pub mod nonlinearity;
 pub mod pade11_diffraction;
 pub mod pade22_diffraction;
 pub mod parabolic_diffraction;
+pub mod phase_screen;
 pub mod plane_wave_test;
 pub mod plugin;
 pub mod shock_capturing;
 pub mod solver;
+pub mod sponge;
 pub mod validation;
 pub mod wide_angle_diffraction;
 
@@ -65,7 +69,7 @@ pub use shock_capturing::{ShockCapture, ShockCapturingConfig, ShockDetectionResu
 pub use solver::KZKSolver;
 
 pub use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::{
-    CylindricalKZKSolverTrait, KZKSolverTrait, WideAngleKZKSolverTrait,
+    BroadbandKZKSolverTrait, CylindricalKZKSolverTrait, KZKSolverTrait, WideAngleKZKSolverTrait,
 };
 
 /// Diffraction propagator used by the KZK spectral sub-step.
@@ -86,6 +90,13 @@ pub enum DiffractionScheme {
     /// modes (k_T > k₀) decay as exp(−|k_T²−k₀²|^½ Δz).
     /// Required for F-number < 1 transducers and steered phased arrays.
     WideAngle,
+    /// Exact dispersive diffraction using per-harmonic angular spectrum.
+    /// Applies H(k_T, ω_k) = exp(i(kz(ω_k)−k(ω_k))Δz) for each temporal
+    /// Fourier mode independently. Eliminates harmonic phase-velocity errors
+    /// at the cost of O(nt/2) extra 2-D FFTs per diffraction step.
+    /// Required for broadband pulses (bandwidth > ~20% of centre frequency)
+    /// or when 3rd-harmonic accuracy matters.
+    Broadband,
 }
 
 /// KZK configuration parameters
@@ -135,12 +146,23 @@ pub struct KZKConfig {
     pub include_diffraction: bool,
     /// Spectral diffraction model used for each axial propagation sub-step.
     pub diffraction_scheme: DiffractionScheme,
+    /// Absorbing sponge layer at transverse grid boundaries.
+    ///
+    /// `None` = periodic (FFT) boundaries. `Some(f)` = raised-cosine taper
+    /// over the outer fraction `f ∈ (0, 0.5]` of each transverse dimension.
+    /// A value of 0.15–0.25 (15–25%) is typical.
+    pub sponge_fraction: Option<f64>,
     /// Enable absorption
     pub include_absorption: bool,
     /// Enable nonlinearity
     pub include_nonlinearity: bool,
     /// Operating frequency (Hz)
     pub frequency: f64,
+    /// Optionally supply a 3-D map of relative sound-speed perturbations
+    /// δ(x,y,z) = c₀/c(x,y,z) − 1 with shape `[nx, ny, nz]`. When `Some`,
+    /// a phase-screen correction exp(i k₀ δ(x,y,z_n) Δz) is applied at each
+    /// axial step n. `None` = homogeneous medium.
+    pub speed_map: Option<Arc<leto::Array3<f64>>>,
 }
 
 impl Default for KZKConfig {
@@ -160,9 +182,11 @@ impl Default for KZKConfig {
             alpha_power: 1.1,
             include_diffraction: true,
             diffraction_scheme: DiffractionScheme::Parabolic,
+            sponge_fraction: None,
             include_absorption: true,
             include_nonlinearity: true,
             frequency: REFERENCE_FREQUENCY_HZ, // Default 1 MHz
+            speed_map: None,
         }
     }
 }
@@ -184,6 +208,24 @@ pub fn validate_config(config: &KZKConfig) -> Result<(), String> {
     if config.rho0 <= 0.0 {
         return Err("Density must be positive".to_owned());
     }
+    if let Some(fraction) = config.sponge_fraction {
+        if !(0.0..=0.5).contains(&fraction) || fraction == 0.0 {
+            return Err(format!(
+                "Sponge fraction must lie in (0, 0.5], got {fraction}"
+            ));
+        }
+    }
+    if let Some(speed_map) = &config.speed_map {
+        if speed_map.shape() != [config.nx, config.ny, config.nz] {
+            return Err(format!(
+                "Speed map shape {:?} must match [nx={}, ny={}, nz={}]",
+                speed_map.shape(),
+                config.nx,
+                config.ny,
+                config.nz
+            ));
+        }
+    }
 
     // Check CFL condition for parabolic approximation
     let cfl = config.c0 * config.dt / config.dz;
@@ -198,7 +240,9 @@ pub fn validate_config(config: &KZKConfig) -> Result<(), String> {
         DiffractionScheme::Parabolic => (17.0_f64.to_radians(), "parabolic"),
         DiffractionScheme::Pade11 => (35.0_f64.to_radians(), "Padé [1,1]"),
         DiffractionScheme::Pade22 => (55.0_f64.to_radians(), "Padé [2,2]"),
-        DiffractionScheme::WideAngle => (f64::INFINITY, "wide-angle"),
+        DiffractionScheme::WideAngle | DiffractionScheme::Broadband => {
+            (f64::INFINITY, "wide-angle")
+        }
     };
     if theta_max > limit_rad {
         return Err(format!(
@@ -209,7 +253,10 @@ pub fn validate_config(config: &KZKConfig) -> Result<(), String> {
     if theta_max > 17.0_f64.to_radians()
         && matches!(
             config.diffraction_scheme,
-            DiffractionScheme::Pade11 | DiffractionScheme::Pade22 | DiffractionScheme::WideAngle
+            DiffractionScheme::Pade11
+                | DiffractionScheme::Pade22
+                | DiffractionScheme::WideAngle
+                | DiffractionScheme::Broadband
         )
     {
         tracing::warn!(

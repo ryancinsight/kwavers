@@ -120,7 +120,9 @@ impl CylindricalKZKSolver {
         }
         match config.diffraction_scheme {
             DiffractionScheme::Parabolic | DiffractionScheme::WideAngle => {}
-            DiffractionScheme::Pade11 | DiffractionScheme::Pade22 => {
+            DiffractionScheme::Pade11
+            | DiffractionScheme::Pade22
+            | DiffractionScheme::Broadband => {
                 return Err(
                     "CylindricalKZKSolver supports only Parabolic or WideAngle diffraction schemes"
                         .to_owned(),

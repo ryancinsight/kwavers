@@ -6,7 +6,9 @@
 //! - [`conservation`] — energy/momentum conservation diagnostics
 //! - [`solve_api`]    — `solve(n)` API invariants (zero steps, counter, bounds, parity)
 //! - [`wide_angle`]   — exact Helmholtz diffraction selection and behavior
+//! - [`advanced`]     — sponge, broadband, and inhomogeneous-medium variants
 
+mod advanced;
 mod beam;
 mod conservation;
 mod creation;

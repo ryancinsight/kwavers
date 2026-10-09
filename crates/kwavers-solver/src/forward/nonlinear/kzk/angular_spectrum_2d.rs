@@ -6,7 +6,17 @@ use moirai_parallel::{enumerate_mut_with, Adaptive};
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 
-/// Correct 2D angular spectrum operator
+/// Diffraction operator using angular spectrum method.
+///
+/// **Note** — this operator applies the **lab-frame** propagator
+/// `H = exp(i kz Δz)` which accumulates the full axial phase `k₀ Δz`.
+/// Inside the KZK **retarded-time** framework the axial plane-wave phase
+/// is already factored out; the correct spectral operator there is the
+/// **retarded-time form** `H = exp(i (kz − k₀) Δz)`, which is exactly
+/// what [`crate::forward::nonlinear::kzk::wide_angle_diffraction::WideAngleDiffractionOperator`]
+/// implements.  Use `DiffractionScheme::WideAngle` inside the KZK solver;
+/// reserve this struct only for free-space (non-KZK) angular-spectrum
+/// propagation in the lab frame.
 pub struct AngularSpectrum2D {
     config: KZKConfig,
     kx: Array2<f64>,

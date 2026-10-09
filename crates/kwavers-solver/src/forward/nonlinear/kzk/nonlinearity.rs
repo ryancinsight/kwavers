@@ -349,9 +349,11 @@ mod tests {
             alpha_power: 1.0,
             include_diffraction: false,
             diffraction_scheme: DiffractionScheme::Parabolic,
+            sponge_fraction: None,
             include_absorption: false,
             include_nonlinearity: true,
             frequency,
+            speed_map: None,
         }
     }
 

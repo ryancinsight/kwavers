@@ -36,6 +36,17 @@ impl KZKSolver {
         if self.config.include_diffraction {
             self.apply_diffraction(dz / 2.0);
         }
+        if let (Some(speed_map), Some(phase_screen)) =
+            (self.speed_map.as_ref(), self.phase_screen.as_mut())
+        {
+            let z_index = self.current_z_step.min(self.config.nz.saturating_sub(1));
+            let delta_slice = speed_map
+                .index_axis::<2>(2, z_index)
+                .expect("invariant: speed-map z index within axial extent");
+            phase_screen.set_step_size(dz);
+            phase_screen.update(delta_slice);
+            phase_screen.apply(&mut self.pressure);
+        }
 
         self.pressure_prev.assign(&self.pressure);
 
@@ -110,12 +121,27 @@ impl KZKSolver {
     /// is preserved without discarding the imaginary part, ensuring accurate
     /// phase accumulation over many axial steps.
     pub(super) fn apply_diffraction(&mut self, step_size: f64) {
-        for t in 0..self.config.nt {
-            let mut slice = self
-                .pressure
-                .index_axis_mut::<2>(2, t)
-                .expect("invariant: axis-2 index within retarded-time extent");
-            self.diffraction.apply_complex(&mut slice, step_size);
+        if self.diffraction.needs_full_field() {
+            self.diffraction
+                .apply_full_field(&mut self.pressure, step_size);
+        } else {
+            for t in 0..self.config.nt {
+                let mut slice = self
+                    .pressure
+                    .index_axis_mut::<2>(2, t)
+                    .expect("invariant: axis-2 index within retarded-time extent");
+                self.diffraction.apply_complex(&mut slice, step_size);
+            }
+        }
+
+        if let Some(sponge) = self.sponge.as_ref() {
+            for t in 0..self.config.nt {
+                let mut slice = self
+                    .pressure
+                    .index_axis_mut::<2>(2, t)
+                    .expect("invariant: axis-2 index within retarded-time extent");
+                sponge.apply(&mut slice);
+            }
         }
     }
 

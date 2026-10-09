@@ -26,7 +26,7 @@ use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::KZKSolver;
 use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::{
-    KZKSolverTrait, WideAngleKZKSolverTrait,
+    BroadbandKZKSolverTrait, KZKSolverTrait, WideAngleKZKSolverTrait,
 };
 
 impl KZKSolverTrait for KZKSolver {
@@ -84,3 +84,4 @@ impl KZKSolverTrait for KZKSolver {
 }
 
 impl WideAngleKZKSolverTrait for KZKSolver {}
+impl BroadbandKZKSolverTrait for KZKSolver {}

@@ -56,6 +56,22 @@
 //! the `[2,2]` form to roughly 55°, while preserving the same retarded-time
 //! splitting structure as the Cartesian KZK solver.
 //!
+//! ## Additional Cartesian KZK capabilities
+//!
+//! Practical medical-ultrasound solvers often need three extensions beyond
+//! the homogeneous single-frequency paraxial model:
+//!
+//! 1. **Absorbing transverse boundaries** via a sponge layer
+//!    `W(x)·W(y)` applied after diffraction half-steps, suppressing the
+//!    wrap-around artifacts introduced by FFT-periodic transverse boundaries.
+//! 2. **Broadband dispersive diffraction** by Fourier transforming the
+//!    retarded-time waveform and applying the exact Helmholtz propagator
+//!    independently to each temporal harmonic `ω_k`, eliminating the
+//!    single-`k₀` phase-velocity error on nonlinear harmonics.
+//! 3. **Inhomogeneous-medium phase screens** of the form
+//!    `exp(i k₀ δ(x,y,z_n) Δz)`, where `δ = c₀/c − 1`, to account for
+//!    spatially varying sound speed while retaining operator-split marching.
+//!
 //! # Cylindrical KZK
 //!
 //! For azimuthally symmetric sources the KZK equation reduces to an
@@ -220,6 +236,20 @@ pub trait KZKSolverTrait {
 /// transducers, and large steering angles where the standard parabolic
 /// approximation becomes inaccurate.
 pub trait WideAngleKZKSolverTrait: KZKSolverTrait {}
+
+/// Marker trait for KZK solvers that support broadband dispersive diffraction.
+///
+/// This documents that the implementation applies the exact Helmholtz
+/// propagator independently to each temporal Fourier component
+///
+/// ```text
+/// H(k_T, ω_k) = exp(i (kz(ω_k) - k(ω_k)) Δz)
+/// ```
+///
+/// rather than reusing a single centre-frequency wavenumber for all harmonics.
+/// Such solvers are appropriate for broadband pulses, harmonic imaging, and
+/// nonlinear propagation regimes where third-harmonic phase accuracy matters.
+pub trait BroadbandKZKSolverTrait: KZKSolverTrait {}
 
 /// Marker trait for cylindrical (axisymmetric) KZK solvers.
 ///

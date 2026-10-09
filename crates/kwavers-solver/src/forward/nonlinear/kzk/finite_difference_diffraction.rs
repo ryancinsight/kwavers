@@ -1,6 +1,14 @@
 //! Diffraction operator for KZK equation
 //!
-//! Implements the angular spectrum method for beam diffraction.
+//! **Deprecated** — this implementation applies a 1-D FFT of the flattened
+//! `(nx × ny)` field instead of a proper 2-D FFT. The resulting k-space
+//! does not correspond to the `kx²+ky²` transverse-wavenumber grid that the
+//! propagator uses, producing incorrect phases.
+//!
+//! **Replacement:** use `DiffractionScheme::Parabolic`, which applies the
+//! same spectral paraxial propagator via a correct 2-D FFT, or any of the
+//! wider-angle schemes (`Pade11`, `Pade22`, `WideAngle`, `Broadband`).
+//!
 //! Reference: Vecchio & Lewin (1994) "Finite amplitude acoustic propagation"
 
 use apollo::{fft_1d_complex, ifft_1d_complex, Complex64};
