@@ -110,17 +110,21 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           echo "code=$code" >> "$GITHUB_OUTPUT"
 
-  # Public-surface compatibility, informational on pull requests: the
-  # detected change class is visible while the change is still in
-  # review. The blocking comparison runs on release.
-  # Atlas ATLAS-SEMVER-GATE-FLEETWIDE-2026-08-28.
+  # Public-surface compatibility. The blocking comparison runs on release and
+  # on pushes to main; it no longer runs on pull requests: a semver run builds
+  # a baseline as well as a head across 23 packages (measured ~11m), which alone
+  # exceeds the pull-request wall budget, while its pull-request signal was
+  # informational only. Atlas ATLAS-SEMVER-GATE-FLEETWIDE-2026-08-28.
   semver:
     name: SemVer gate
     # The one job in this workflow with no `needs: lockfile` to inherit
     # the draft guard from, so it carries its own; a semver run builds a
     # baseline as well as a head, across 23 packages.
     needs: changes
-    if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
+    if: ${{ github.event_name != 'pull_request' && needs.changes.outputs.code == 'true' }}
+    # No timeout-minutes here: a job that calls a reusable workflow
+    # (uses:) accepts only name/uses/with/secrets/needs/if/permissions;
+    # the bound lives inside semver-gate.yml itself.
     uses: ryancinsight/atlas/.github/workflows/semver-gate.yml@50802ef4c975bdb1e668b94a700d8310f0348e9c
     with:
       package: kwavers-alloc-probe,kwavers-analysis,kwavers-boundary,kwavers-core,kwavers-diagnostics,kwavers-driver,kwavers-field,kwavers-gpu,kwavers-grid,kwavers-imaging,kwavers-math,kwavers-medium,kwavers-mesh,kwavers-phantom,kwavers-physics,kwavers-receiver,kwavers-signal,kwavers-simulation,kwavers-solver,kwavers-source,kwavers-therapy,kwavers-transducer,kwavers
@@ -178,32 +182,28 @@ jobs:
     - name: Verify Windows process-tree termination
       run: python -m unittest discover -s scripts/tests -p test_integration_tests.py
 
-  # Every job below that compiles the workspace used to be its own job:
-  # `architecture-validation` (fmt/clippy/audit), `layer-boundary-checks`
-  # (no compile, but ran alongside them), `build-matrix` (five parallel
-  # feature-combination legs), `test-coverage`, `integration-suite`, and
-  # `documentation`. Each restored the same `kwavers-dev` cache and cold- or
-  # near-cold-built the same dependency graph independently. The account's
-  # repos share one runner concurrency pool, so job count per event -- not
-  # any single job's wall time -- is what drives queue time fleet-wide; a
-  # 14-job pull-request event from this file alone crowds out every other
-  # repo's queued work. Running the same checks as sequential steps over one
-  # warm target dir pays the dependency compile once instead of six times and
-  # collapses six job slots into one. See ADR/backlog entry for the measured
-  # before/after job counts. Restricted to push/pull_request (never schedule
-  # or workflow_dispatch, which this workflow now also triggers on) so the
-  # fold does not add runs beyond what the standalone workflow performed.
+  # Every job below that compiles the workspace used to be its own job.
+  # The account's repos share one runner concurrency pool, so job count per
+  # event -- not any single job's wall time -- is what drives queue time
+  # fleet-wide. The clippy pair and the workspace library suite have since
+  # moved back out into the `clippy` and `lib-tests` jobs below: measured
+  # together they are ~18m sequential (strict 3.3m + ratchet 2.0m + lib suite
+  # 12.8m, run 37653456632), which no single pull-request job can carry under
+  # the 5-minute budget. What remains here is the script-fast preflight
+  # (layering, fmt, xtask audits), the rustdoc build, and the full-feature
+  # doctests; the feature-combination builds and the integration script run on
+  # pushes to main only, where the budget does not apply.
   architecture-checks:
     needs: changes
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
     name: Architecture checks
     runs-on: ubuntu-latest
-    # Sum of the six merged jobs' worst-observed durations (fmt/clippy/audit
-    # ~6m, five feature builds ~35m before cache warmth from the earlier
-    # clippy compile, lib suite ~15m, integration suite ~12m, doc build
-    # ~12m); generous margin over the sequential total since these jobs no
-    # longer overlap in wall time the way they did as parallel legs.
-    timeout-minutes: 90
+    # Pull requests carry only the fast preflight; pushes to main additionally
+    # run the five feature-combination builds and the integration script.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 90 }}
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
 
     steps:
     - name: Checkout repository
@@ -269,15 +269,23 @@ jobs:
       with:
         tool: nextest
 
+    # sccache (GHA backend, content-keyed) carries workspace-crate artifacts
+    # across jobs and runs; rust-cache deliberately excludes workspace crates,
+    # so without this every job recompiles them from scratch (the CFDrs
+    # ATLAS-CFDRS-TEST-PROFILE-CACHE-MISS finding). Each compile job keeps its
+    # own rust-cache key so main-branch saves cannot evict each other.
+    - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+
     # `Swatinem/rust-cache` rather than hand-rolled `actions/cache`:
     # it carries restore-keys, so a lockfile change degrades to a
     # partial restore instead of a total miss, and it prunes `target/`
     # so the repository stays inside the 10 GB cache budget instead of
-    # evicting its own entries. This job is the sole writer for future
-    # dev-profile runs; every job in this workflow shares this one restore.
+    # evicting its own entries. This job is the sole writer of its own key;
+    # every key saves from main only, so branches cannot evict each other or
+    # race to publish an immutable key.
     - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
       with:
-        shared-key: kwavers-dev
+        shared-key: kwavers-arch
         # Pull requests restore only, so branches cannot evict each other or
         # race to publish an immutable key.
         save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -293,6 +301,167 @@ jobs:
     # functions rises above its baseline.
     - name: Audit `# Errors` sections against their signatures
       run: cargo run --locked -p xtask -- audit-errors-docs
+
+    # Clippy lives in the dedicated `clippy` job below: strict (3.3m) plus
+    # ratchet (2.0m) sequential here left no room for the audits and rustdoc
+    # under the pull-request budget, and in parallel they share the sccache
+    # workspace artifacts instead of recompiling the graph twice.
+
+    # cargo-audit is informational only (both steps below are
+    # continue-on-error) -- it has never gated a pull request. Paying its
+    # advisory-database fetch and scan on every pull request bought no
+    # additional gate, only wall time, so it now runs on pushes to main only.
+    - name: Install cargo-audit
+      if: github.event_name == 'push'
+      uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
+      with:
+        tool: cargo-audit
+      continue-on-error: true
+
+    - name: Check for security vulnerabilities
+      if: github.event_name == 'push'
+      run: cargo audit
+      continue-on-error: true
+
+    # Formerly the five-leg `build-matrix` matrix. On pushes to main it runs
+    # sequentially against the one target dir this job already warmed, instead
+    # of five parallel jobs each restoring and rebuilding the same dependency
+    # graph from a shared cache independently. It does not run on pull
+    # requests: ~20m of feature-combination compiles (minimal 6.4m, gpu 6.0m,
+    # full 5.6m measured) cannot fit the pull-request budget, and the default
+    # graph is proved per pull request by the `clippy` and `lib-tests` jobs.
+    - name: Build with minimal features
+      if: ${{ github.event_name != 'pull_request' }}
+      run: cargo build --locked -p kwavers --no-default-features --features minimal
+
+    - name: Build with gpu features
+      if: ${{ github.event_name != 'pull_request' }}
+      run: cargo build --locked -p kwavers --no-default-features --features gpu
+
+    - name: Build with plotting features
+      if: ${{ github.event_name != 'pull_request' }}
+      run: cargo build --locked -p kwavers --no-default-features --features plotting
+
+    - name: Build with pinn features
+      if: ${{ github.event_name != 'pull_request' }}
+      run: cargo build --locked -p kwavers --no-default-features --features pinn
+
+    - name: Build with full features
+      if: ${{ github.event_name != 'pull_request' }}
+      run: cargo build --locked -p kwavers --no-default-features --features full
+
+    # Mainline keeps the dev-profile smoke as a selection-drift backstop.
+    # Pull requests execute the complete optimized smoke once in the dedicated
+    # benchmark-regression workflow instead of compiling both profiles.
+    - name: Build every plotting-eligible Criterion target once
+      if: github.event_name == 'push'
+      run: >-
+        timeout --foreground --kill-after=30s 12m
+        cargo bench --locked -p kwavers --no-default-features
+        --features plotting --benches
+        --profile dev --no-run
+
+    - name: Execute every plotting-eligible Criterion target once
+      if: github.event_name == 'push'
+      run: >-
+        timeout --foreground --kill-after=30s 8m
+        cargo bench --locked -p kwavers --no-default-features
+        --features plotting --benches --no-fail-fast
+        --profile dev -- --test
+
+    # The workspace library suite lives in the sharded `lib-tests` job below:
+    # measured 12.8m sequential (run 37653456632), which no single
+    # pull-request job can carry. The PINN backstop beside it stays
+    # push-only, unchanged.
+    # CI's PINN Feature Validation job is the canonical owner of PINN
+    # coverage on its scheduled backstop. Retain this unchanged selection as
+    # a main/develop backstop without recompiling and rerunning the same
+    # library graph on every pull request.
+    - name: Run PINN library tests on mainline pushes
+      if: github.event_name == 'push'
+      env:
+        RAYON_NUM_THREADS: 2
+      run: >-
+        cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn --test-threads=2
+
+    - name: Record debug artifact footprint
+      run: |
+        debug_bytes=$(du --bytes --summarize target/debug | cut -f1)
+        debug_files=$(find target/debug -type f | wc -l)
+        {
+          echo "### Debug artifact footprint"
+          echo ""
+          echo "- Bytes: ${debug_bytes}"
+          echo "- Files: ${debug_files}"
+        } | tee -a "$GITHUB_STEP_SUMMARY"
+
+    # Formerly `integration-suite`. This replaces a four-name list of
+    # integration tests. The strict clippy step compiles all of them via
+    # --all-targets, but only those four ever ran. Multiple failures
+    # therefore went unnoticed, including two whose timestep exceeded the
+    # solver's own CFL limit. The script runs every integration test and
+    # enforces a committed baseline of known failures: a failure outside the
+    # list is a regression, and an entry that passes is stale and must be
+    # removed. The list may shrink, never grow. See ADR 124. Push-only:
+    # measured 5.8m, over the pull-request budget on its own.
+    - name: Verify integration runner process bounds
+      run: python -m unittest discover -s scripts/tests -p 'test_integration_tests.py'
+
+    - name: Run integration tests against the failure baseline
+      if: ${{ github.event_name != 'pull_request' }}
+      run: python scripts/integration_tests.py
+
+    # Formerly `documentation`.
+    - name: Build documentation
+      run: |
+        cargo doc --locked --workspace --exclude kwavers-python --no-deps
+        RUSTDOCFLAGS="-D warnings" cargo doc --locked -p kwavers --no-default-features --features full --no-deps
+
+    # Default-feature doctests already run in CI's stable Build & Test job.
+    # Keeping the full-feature variant beside the full-feature rustdoc build
+    # avoids rebuilding that disjoint feature graph after the 5,759-test
+    # coverage suite while preserving both doctest configurations.
+    - name: Run full-feature doc tests
+      run: cargo test --locked -p kwavers --doc --no-default-features --features full
+
+    - name: sccache stats
+      if: always()
+      run: sccache --show-stats
+
+  # The clippy pair extracted from `architecture-checks` above: strict (3.3m)
+  # plus ratchet (2.0m) sequential left that job no room for its audits and
+  # rustdoc under the pull-request budget. In parallel they share the sccache
+  # workspace artifacts instead of recompiling the graph twice.
+  clippy:
+    needs: changes
+    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
+    name: Clippy (strict + ratchet)
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Install system dependencies
+      uses: ./.github/actions/install-system-dependencies
+      with:
+        packages: libfontconfig1-dev
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+      with:
+        toolchain: 1.97.0
+        components: clippy
+
+    - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers-clippy
+        save-if: ${{ github.ref == 'refs/heads/main' }}
 
     - name: Run clippy (strict mode)
       # Library targets hold the full deny floor. Program targets
@@ -324,130 +493,81 @@ jobs:
         cargo clippy --locked --workspace --all-targets
         cargo clippy --locked -p kwavers --all-targets --features full,pinn
 
-    # cargo-audit is informational only (both steps below are
-    # continue-on-error) -- it has never gated a pull request. Paying its
-    # advisory-database fetch and scan on every pull request bought no
-    # additional gate, only wall time, so it now runs on pushes to main only.
-    - name: Install cargo-audit
-      if: github.event_name == 'push'
+    - name: sccache stats
+      if: always()
+      run: sccache --show-stats
+
+  # The workspace library suite extracted from `architecture-checks`: measured
+  # 12.8m sequential (run 37653456632), which no single pull-request job can
+  # carry. Three nextest partitions split the execution; sccache supplies the
+  # workspace-crate artifacts so no serial archive compile is needed ahead of
+  # the split (the CFDrs perf/cfdrs-ci-sub-five-minutes pattern).
+  lib-tests:
+    needs: changes
+    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
+    name: Library tests (shard ${{ matrix.shard }} of 3)
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
+      # Two test processes keep the four-core hosted runner occupied while
+      # bounding Rayon-backed kernels to four worker threads in aggregate.
+      RAYON_NUM_THREADS: 2
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Install system dependencies
+      uses: ./.github/actions/install-system-dependencies
+      with:
+        packages: libfontconfig1-dev
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+      with:
+        toolchain: 1.97.0
+
+    - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers-test
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+
+    - name: Install nextest
       uses: taiki-e/install-action@ea4c0b50b0d394ee91c5bb68a6a295b0556feb8e
       with:
-        tool: cargo-audit
-      continue-on-error: true
+        tool: nextest
 
-    - name: Check for security vulnerabilities
-      if: github.event_name == 'push'
-      run: cargo audit
-      continue-on-error: true
-
-    # Formerly the five-leg `build-matrix` matrix. Run sequentially against
-    # the one target dir this job already warmed with the clippy compile
-    # above, instead of five parallel jobs each restoring and rebuilding the
-    # same dependency graph from a shared cache independently.
-    - name: Build with minimal features
-      run: cargo build --locked -p kwavers --no-default-features --features minimal
-
-    - name: Build with gpu features
-      run: cargo build --locked -p kwavers --no-default-features --features gpu
-
-    - name: Build with plotting features
-      run: cargo build --locked -p kwavers --no-default-features --features plotting
-
-    - name: Build with pinn features
-      run: cargo build --locked -p kwavers --no-default-features --features pinn
-
-    - name: Build with full features
-      run: cargo build --locked -p kwavers --no-default-features --features full
-
-    # Mainline keeps the dev-profile smoke as a selection-drift backstop.
-    # Pull requests execute the complete optimized smoke once in the dedicated
-    # benchmark-regression workflow instead of compiling both profiles.
-    - name: Build every plotting-eligible Criterion target once
-      if: github.event_name == 'push'
-      run: >-
-        timeout --foreground --kill-after=30s 12m
-        cargo bench --locked -p kwavers --no-default-features
-        --features plotting --benches
-        --profile dev --no-run
-
-    - name: Execute every plotting-eligible Criterion target once
-      if: github.event_name == 'push'
-      run: >-
-        timeout --foreground --kill-after=30s 8m
-        cargo bench --locked -p kwavers --no-default-features
-        --features plotting --benches --no-fail-fast
-        --profile dev -- --test
-
-    # Formerly `test-coverage`, run in parallel with `integration-suite`
-    # below so their ~20-minute executions overlapped; the prior single job
-    # ran them serially and took 38m40s, which is why they were split. They
-    # are sequential again here because both need the same compiled
-    # dependency graph this job already warmed, and the fleet-wide job-count
-    # reduction from sharing one target dir outweighs the wall-time overlap
-    # a second parallel job bought.
-    - name: Run workspace library tests
-      env:
-        # Two test processes keep the four-core hosted runner occupied while
-        # bounding Rayon-backed kernels to four worker threads in aggregate.
-        RAYON_NUM_THREADS: 2
+    - name: Run sharded workspace library tests
       run: |
-        # Full-wave solver tests share compute-heavy kernels. Two concurrent
-        # test binaries with two Rayon workers each fill the hosted runner
-        # without oversubscription or unbounded concurrent simulation state.
-        # Keep the dev profile so the shared cache can reuse the feature matrix.
-        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=2
+        # Full-wave solver tests share compute-heavy kernels. Keep the dev
+        # profile so the shared cache can reuse the feature matrix.
+        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=2 --partition "count:${{ matrix.shard }}/3"
 
-    # CI's PINN Feature Validation job is the canonical pull-request owner.
-    # Retain this unchanged selection as a main/develop backstop without
-    # recompiling and rerunning the same library graph on every pull request.
-    - name: Run PINN library tests on mainline pushes
-      if: github.event_name == 'push'
-      env:
-        RAYON_NUM_THREADS: 2
-      run: >-
-        cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn --test-threads=2
+    # Default-feature doctests ride shard 1 only, beside the full-feature
+    # variant in `architecture-checks`, so both doctest configurations stay
+    # proved on every pull request without a second full compile.
+    - name: Run default-feature doc tests (shard 1 only)
+      if: ${{ matrix.shard == 1 }}
+      run: cargo test --locked --doc -p kwavers --features plotting
 
-    - name: Record debug artifact footprint
-      run: |
-        debug_bytes=$(du --bytes --summarize target/debug | cut -f1)
-        debug_files=$(find target/debug -type f | wc -l)
-        {
-          echo "### Debug artifact footprint"
-          echo ""
-          echo "- Bytes: ${debug_bytes}"
-          echo "- Files: ${debug_files}"
-        } | tee -a "$GITHUB_STEP_SUMMARY"
-
-    # Formerly `integration-suite`. This replaces a four-name list of
-    # integration tests. The strict clippy step compiles all of them via
-    # --all-targets, but only those four ever ran. Multiple failures
-    # therefore went unnoticed, including two whose timestep exceeded the
-    # solver's own CFL limit. The script runs every integration test and
-    # enforces a committed baseline of known failures: a failure outside the
-    # list is a regression, and an entry that passes is stale and must be
-    # removed. The list may shrink, never grow. See ADR 124.
-    - name: Verify integration runner process bounds
-      run: python -m unittest discover -s scripts/tests -p 'test_integration_tests.py'
-
-    - name: Run integration tests against the failure baseline
-      run: python scripts/integration_tests.py
-
-    # Formerly `documentation`.
-    - name: Build documentation
-      run: |
-        cargo doc --locked --workspace --exclude kwavers-python --no-deps
-        RUSTDOCFLAGS="-D warnings" cargo doc --locked -p kwavers --no-default-features --features full --no-deps
-
-    # Default-feature doctests already run in CI's stable Build & Test job.
-    # Keeping the full-feature variant beside the full-feature rustdoc build
-    # avoids rebuilding that disjoint feature graph after the 5,759-test
-    # coverage suite while preserving both doctest configurations.
-    - name: Run full-feature doc tests
-      run: cargo test --locked -p kwavers --doc --no-default-features --features full
+    - name: sccache stats
+      if: always()
+      run: sccache --show-stats
 
   cuda-runtime-build:
     needs: changes
-    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
+    # Pushes to main, the schedule, and manual dispatch only: the container
+    # pull plus apt plus provider compile measured 8.1m (run 37653456632),
+    # which alone exceeds the pull-request budget. The default graph is proved
+    # per pull request by the `clippy` and `lib-tests` jobs.
+    if: ${{ github.event_name != 'pull_request' && needs.changes.outputs.code == 'true' }}
     name: CUDA Runtime Build
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -491,7 +611,13 @@ jobs:
     name: PINN Feature Validation
     needs: lockfile
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Pull requests carry the compile gates only (feature check plus clippy,
+    # ~3m); the test executions measured 5.4m together (run 37653456632) and
+    # run on pushes, the schedule, and manual dispatch.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -506,6 +632,8 @@ jobs:
           toolchain: 1.97.0
           components: clippy, rustfmt
 
+      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+
       # `Swatinem/rust-cache` rather than a hand-rolled `actions/cache`:
       # it carries restore-keys, so a lockfile change degrades to a partial
       # restore instead of a total miss, and it prunes `target/` so the
@@ -515,7 +643,7 @@ jobs:
       # once per job.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers-dev
+          shared-key: kwavers-pinn
           # The architecture preflight is the sole dev-profile writer.
           # Consumers restore only, so an immutable partial hit cannot block
           # the broader writer from publishing useful dependency artifacts.
@@ -530,15 +658,19 @@ jobs:
           tool: nextest
 
       - name: Run PINN tests
+        if: ${{ github.event_name != 'pull_request' }}
         run: cargo nextest run --locked -p kwavers --features pinn --lib
 
       - name: Run PINN validation framework tests
+        if: ${{ github.event_name != 'pull_request' }}
         run: cargo nextest run --locked -p kwavers --test validation_integration_test
 
       - name: Run default-feature convergence studies
+        if: ${{ github.event_name != 'pull_request' }}
         run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies
 
       - name: Run PINN-feature convergence studies
+        if: ${{ github.event_name != 'pull_request' }}
         run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies --features pinn
 
       # This step used to lint `-p kwavers --lib` only, and carried
@@ -564,9 +696,19 @@ jobs:
           cargo clippy --locked -p kwavers --features pinn --lib --no-deps -- -D warnings
           cargo clippy --locked -p kwavers-solver --features pinn --all-targets -- -D unused
 
+      - name: sccache stats
+        if: always()
+        run: sccache --show-stats
+
   quality:
     name: Code Quality
     needs: lockfile
+    # Pushes, the schedule, and manual dispatch only. Its pull-request signal
+    # was a duplicate fmt check (also in `architecture-checks`), an
+    # informational clippy explicitly allowed to fail (`|| true`, measured
+    # 2.9m of compile for zero gate), and xtask metrics; none of it gated a
+    # merge, and together they measured 4.1m.
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -612,7 +754,7 @@ jobs:
     name: Python Typed Surface
     needs: lockfile
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
     permissions:
       contents: read
     steps:
@@ -658,11 +800,18 @@ jobs:
     name: Build & Test (stable)
     needs: lockfile
     runs-on: ubuntu-latest
+    # Pull requests carry a release-profile compile check only; the release
+    # test executions measured 7.0m together (run 37653456632) and run on
+    # pushes, the schedule, and manual dispatch. Dev-profile test coverage on
+    # pull requests comes from the `lib-tests` shards.
     # Keep the existing finite bound. Stable owns the full release gate, and
     # its doctests reuse that release/plotting graph instead of triggering a
     # second test-profile build. A slow leg remains a performance defect, not
     # timeout headroom.
-    timeout-minutes: 30
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -676,10 +825,12 @@ jobs:
         with:
           toolchain: stable
 
+      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+
       # Shared cache; rationale at the first use in this file.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers-release
+          shared-key: kwavers-build
           # The architecture preflight is the sole dev-profile writer.
           # This narrower consumer restores only.
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -689,11 +840,24 @@ jobs:
         with:
           tool: nextest
 
+      # The release-profile compile oracle for pull requests: proves the
+      # shipped configuration type-checks without paying the release test
+      # executions, which stay on pushes and the schedule.
+      - name: Release compile check (pull request only)
+        if: ${{ github.event_name == 'pull_request' }}
+        run: cargo check --locked -p kwavers --release --features plotting --all-targets
+
       - name: Run tests
+        if: ${{ github.event_name != 'pull_request' }}
         run: cargo nextest run --locked -p kwavers --profile ci --lib --release --verbose --features="plotting"
 
       - name: Run doc tests
+        if: ${{ github.event_name != 'pull_request' }}
         run: cargo test --locked --doc -p kwavers --release --features plotting --verbose
+
+      - name: sccache stats
+        if: always()
+        run: sccache --show-stats
 
   toolchain-roll:
     # Beta and nightly catch toolchain breakage ahead of the 6-week roll. A
@@ -738,7 +902,7 @@ jobs:
     name: Security Audit
     needs: lockfile
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -754,7 +918,7 @@ jobs:
     name: Memory Safety (Miri)
     needs: lockfile
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -880,7 +1044,13 @@ jobs:
     name: Solver Validation Suite
     needs: lockfile
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Measured 5.7m with a cold dependency graph (run 37653456632: 4.1m
+    # solver-test compile plus 0.6m GPU check); warm plus sccache this is a
+    # delta compile and a short suite, inside the pull-request budget.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -900,10 +1070,12 @@ jobs:
         with:
           tool: nextest
 
+      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+
       # Shared cache; rationale at the first use in this file.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
-          shared-key: kwavers-dev
+          shared-key: kwavers-validation
           # The architecture preflight is the sole dev-profile writer.
           # This narrower consumer restores only.
           save-if: false
@@ -923,15 +1095,21 @@ jobs:
       - name: GPU/CPU equivalence build check
         run: cargo check --locked -p kwavers-gpu --features gpu --lib
 
+      - name: sccache stats
+        if: always()
+        run: sccache --show-stats
+
   # Folded from the former standalone "Legacy Migration Audit (kwavers)"
   # workflow (KW-CI-SINGLE-PIPELINE): same two xtask scans, same non-required
   # status, now sharing this pipeline's checkout, toolchain, and cache instead
   # of paying for a second workflow's setup on every push and pull request.
   # Deliberately excluded from `ci-gate`'s `needs:` list, preserving the prior
-  # behavior where neither audit blocked branch protection.
+  # behavior where neither audit blocked branch protection. Pushes, the
+  # schedule, and manual dispatch only: measured ~2m each, and neither gates.
   legacy-migration-audit:
     name: Audit legacy migration (xtask legacy-migration-audit)
     needs: lockfile
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -967,6 +1145,7 @@ jobs:
   burn-migration-audit:
     name: Audit Burn migration (xtask burn-migration-audit)
     needs: lockfile
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -1101,6 +1280,7 @@ jobs:
       - memory-safety
       - coverage
       - validation
+      - lib-tests
       - heavy-validation-kuznetsov
       - heavy-validation-absorption-decay
     runs-on: ubuntu-latest
@@ -1132,6 +1312,7 @@ jobs:
       - changes
       - integration-runner-windows
       - architecture-checks
+      - clippy
       - cuda-runtime-build
     runs-on: ubuntu-latest
     timeout-minutes: 5
