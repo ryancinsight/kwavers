@@ -275,6 +275,11 @@ impl KZKSolver {
 
     /// Create a solver from a feature set, enabling backward propagation for
     /// photoacoustic time reversal when requested.
+    ///
+    /// # Errors
+    ///
+    /// Returns the [`KZKSolver::new`] error when the grid, spacing, or
+    /// scheme constraints are violated.
     pub fn from_feature_set(
         mut config: KZKConfig,
         features: SolverFeatureSet,

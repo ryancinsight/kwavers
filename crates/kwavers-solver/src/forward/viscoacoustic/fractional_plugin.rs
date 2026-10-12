@@ -1,7 +1,5 @@
 //! Plugin adapter for exact k-space fractional viscoacoustic absorption.
 
-use std::any::Any;
-
 use leto::Array4;
 
 use super::fractional::FractionalAbsorptionOperator;

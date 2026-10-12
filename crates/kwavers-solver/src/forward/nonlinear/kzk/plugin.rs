@@ -56,6 +56,7 @@ impl std::fmt::Debug for KzkPlugin {
             .field("state", &self.state)
             .field("solver", &self.solver.as_ref().map(|_| "<solver>"))
             .field("config", &self.config)
+            .field("features", &self.features)
             .field(
                 "cached_volume",
                 &self.cached_volume.as_ref().map(|volume| volume.shape()),

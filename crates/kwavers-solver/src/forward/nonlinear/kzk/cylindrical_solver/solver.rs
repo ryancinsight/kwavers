@@ -83,8 +83,8 @@ pub struct CylindricalKZKSolver {
     pub(crate) pressure: Array2<Complex64>,
     pub(crate) pressure_prev: Array2<Complex64>,
     pub(crate) r: Vec<f64>,
-    pub(crate) absorption: CylindricalAbsorption,
-    pub(crate) nonlinear: CylindricalNonlinear,
+    absorption: CylindricalAbsorption,
+    nonlinear: CylindricalNonlinear,
     current_z_step: usize,
     current_time: f64,
 }
@@ -107,7 +107,6 @@ impl CylindricalKZKSolver {
     ///
     /// Returns an error when grid sizes, spacings, or supported diffraction
     /// scheme constraints are violated.
-    #[must_use]
     pub fn new(config: CylindricalKZKConfig) -> Result<Self, String> {
         if config.nr < 2 || config.nz < 2 || config.nt < 2 {
             return Err("Cylindrical KZK grid dimensions must be at least 2".to_owned());
@@ -228,6 +227,11 @@ impl CylindricalKZKSolver {
     }
 
     /// Return the RMS pressure profile versus radius.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the pressure field or RMS output is not standard-layout,
+    /// which violates the solver's construction invariant.
     #[must_use]
     pub fn current_field(&self) -> Array1<f64> {
         let nt = self.config.nt;

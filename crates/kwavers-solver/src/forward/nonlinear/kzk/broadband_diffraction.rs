@@ -115,6 +115,12 @@ impl BroadbandDiffractionOperator {
     /// all time waveforms are FFT'd in place, each temporal bin is propagated
     /// through a shared 2-D spatial scratch buffer, then all waveforms are
     /// inverse transformed back to retarded time.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the field, transverse-wavenumber table, or scratch
+    /// buffer is not standard-layout, which violates the operator's
+    /// construction invariant.
     pub fn apply_complex_full(&mut self, field: &mut Array3<Complex64>, step_size: f64) {
         let nt = self.config.nt;
         let ny = self.config.ny;

@@ -61,6 +61,11 @@ impl PhaseScreenOperator {
     }
 
     /// Precompute the phase screen for the supplied z-plane.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the stored correction or the input slice is not
+    /// standard-layout, which violates the operator's layout invariant.
     pub fn update(&mut self, delta_slice: ArrayView2<f64>) {
         debug_assert_eq!(delta_slice.shape(), [self.nx, self.ny]);
         let screen = self
@@ -77,6 +82,11 @@ impl PhaseScreenOperator {
     }
 
     /// Apply the current phase screen to every retarded-time sample.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the stored correction or the field is not
+    /// standard-layout, which violates the operator's layout invariant.
     pub fn apply(&self, field: &mut Array3<Complex64>) {
         let nt = field.shape()[2];
         let screen = self

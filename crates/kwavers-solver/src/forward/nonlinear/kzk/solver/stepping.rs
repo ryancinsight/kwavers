@@ -10,6 +10,11 @@ impl KZKSolver {
     /// Step forward one z-plane using operator splitting.
     /// Uses second-order Strang splitting:
     /// `D(dz/2) · A(dz/2) · N(dz) · A(dz/2) · D(dz/2)`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the clamped z index falls outside the speed map's
+    /// axial extent, which violates the solver's grid invariant.
     pub fn step(&mut self) {
         let dz = match self.config.propagation_direction {
             super::super::PropagationDirection::Forward => self.config.dz,

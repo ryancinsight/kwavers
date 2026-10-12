@@ -63,7 +63,6 @@ impl FractionalAbsorptionOperator {
     /// # Errors
     /// Returns [`Err`] when a grid spacing, material parameter, or timestep is
     /// non-finite or physically invalid.
-    #[must_use]
     pub fn new(
         nx: usize,
         ny: usize,
