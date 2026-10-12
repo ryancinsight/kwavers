@@ -2,9 +2,9 @@
 //!
 //! This module defines metadata structures and configuration traits for plugins.
 
+use crate::interface::factory::SolverComponent;
 use kwavers_core::error::KwaversResult;
 use std::any::Any;
-use std::fmt::Debug;
 
 /// Metadata about a physics plugin
 #[derive(Debug, Clone)]
@@ -24,7 +24,7 @@ pub struct PluginMetadata {
 }
 
 /// Configuration for a physics plugin
-pub trait PluginConfig: Debug + Send + Sync {
+pub trait PluginConfig: SolverComponent {
     /// Validate the configuration
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

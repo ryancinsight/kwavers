@@ -23,7 +23,7 @@
 //! dispatch, removing the enum.
 
 use super::acquisition::TransmissionAcquisition;
-use std::fmt::Debug;
+use crate::interface::factory::SolverComponent;
 
 use kwavers_math::fft::Complex64;
 use leto::{Array2, Array3};
@@ -40,7 +40,7 @@ use super::Config;
 ///
 /// Implementations are stateless value types stored on [`Config`] (eventually
 /// boxed); they hold only configuration, not workspace.
-pub trait HelmholtzForwardOperator: Debug + Send + Sync {
+pub trait HelmholtzForwardOperator: SolverComponent {
     /// Predict complex receiver pressure for `transmissions` cylindrical-wave
     /// transmits at `frequency_hz`.
     ///

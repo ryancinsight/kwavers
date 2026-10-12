@@ -60,11 +60,11 @@ pub fn compute_pressure_field(
     let min_distance = 0.5 * grid.dx.min(grid.dy).min(grid.dz);
 
     for k in 0..nz {
-        let z = k as f64 * grid.dz;
         for j in 0..ny {
             let y = lateral_coordinate(j, ny, grid.dy);
             for i in 0..nx {
                 let x = lateral_coordinate(i, nx, grid.dx);
+                let (_, _, z) = grid.coords(i, j, k);
                 pressure[[i, j, k]] = pressure_at_point(x, y, z, min_distance, &aperture, scale);
             }
         }

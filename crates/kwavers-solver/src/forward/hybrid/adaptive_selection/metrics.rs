@@ -1,7 +1,7 @@
 // adaptive_selection/metrics.rs - Metrics for method selection
 
+use crate::forward::nonlinear::kzk::spectral_helpers::wavenumber_vec;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use leto::Array3 as LetoArray3;
 use leto::ArrayView3;
@@ -86,28 +86,16 @@ impl SpectralMetrics {
             .mul_add(kz_max, ky_max.mul_add(ky_max, kx_max.powi(2)))
             .sqrt();
         let k_high_cutoff = k_max_norm * 0.5;
+        let kx_vec = wavenumber_vec(nx, grid.dx);
+        let ky_vec = wavenumber_vec(ny, grid.dy);
+        let kz_vec = wavenumber_vec(nz, grid.dz);
 
         for k_idx in 0..nz {
-            let kz = if k_idx <= nz / 2 {
-                TWO_PI * k_idx as f64 / (nz as f64 * grid.dz)
-            } else {
-                TWO_PI * (k_idx as f64 - nz as f64) / (nz as f64 * grid.dz)
-            };
-
             for j in 0..ny {
-                let ky = if j <= ny / 2 {
-                    TWO_PI * j as f64 / (ny as f64 * grid.dy)
-                } else {
-                    TWO_PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
-                };
-
                 for i in 0..nx {
-                    let kx = if i <= nx / 2 {
-                        TWO_PI * i as f64 / (nx as f64 * grid.dx)
-                    } else {
-                        TWO_PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
-                    };
-
+                    let kz = kz_vec[k_idx];
+                    let ky = ky_vec[j];
+                    let kx = kx_vec[i];
                     let k_mag = kz.mul_add(kz, ky.mul_add(ky, kx.powi(2))).sqrt();
 
                     // Use squared magnitude (energy)

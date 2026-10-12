@@ -7,6 +7,17 @@ use kwavers_math::fft::{fft_3d_array, ifft_3d_array, Complex64, Normalization};
 use leto::Array3 as LetoArray3;
 use leto::{Array2, Array3};
 
+/// Base bound for solver-infrastructure component traits.
+///
+/// [`FourierBackend`], [`MeshProvider`], and [`RegistrationEngine`] are all
+/// singleton-style backends that must be sharable across threads and
+/// diagnosable via `Debug`.  Declaring the shared bound here prevents the
+/// `Debug + Send + Sync` triple from being copy-pasted into each trait.
+pub trait SolverComponent: std::fmt::Debug + Send + Sync {}
+
+/// Blanket implementation: any `Debug + Send + Sync` type is a `SolverComponent`.
+impl<T: std::fmt::Debug + Send + Sync> SolverComponent for T {}
+
 /// Abstract factory for creating solver instances
 pub trait SolverFactoryTrait {
     /// Error type for factory operations
@@ -84,7 +95,7 @@ pub trait FactorySourceParameters {
 ///
 /// `kwavers` depends on this trait instead of directly depending on a specific
 /// FFT cache or planner implementation.
-pub trait FourierBackend: std::fmt::Debug + Send + Sync {
+pub trait FourierBackend: SolverComponent {
     fn backend_name(&self) -> &'static str;
     fn normalization(&self) -> Normalization;
     fn is_available(&self) -> bool;
@@ -124,7 +135,7 @@ impl FourierBackend for ApolloFourierBackend {
 }
 
 /// Canonical mesh-provider contract for geometry ownership inversion.
-pub trait MeshProvider: std::fmt::Debug + Send + Sync {
+pub trait MeshProvider: SolverComponent {
     fn line_sensor_positions(
         &self,
         origin_m: [f64; 3],
@@ -159,7 +170,7 @@ pub trait MeshProvider: std::fmt::Debug + Send + Sync {
 /// Given a fixed image $F: \Omega \to \mathbb{R}$ and a moving image $M: \Omega \to \mathbb{R}$,
 /// registration finds a spatial transformation $\phi: \Omega \to \Omega$ such that
 /// $M \circ \phi^{-1} \approx F$ under a chosen similarity metric $\mathcal{S}$.
-pub trait RegistrationEngine: std::fmt::Debug + Send + Sync {
+pub trait RegistrationEngine: SolverComponent {
     /// Rigid-body (6-DOF) registration via mutual information maximisation.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

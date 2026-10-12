@@ -4,13 +4,13 @@
 //! solver implementations must implement.
 
 use crate::feature::SolverFeature;
+use crate::interface::factory::SolverComponent;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::GridSensorSet;
 use kwavers_source::Source;
 use leto::Array3;
-use std::fmt::Debug;
 
 /// Fundamental solver trait
 // dyn: used as `Box<dyn Solver>` (open, plugin-extensible implementor set --
@@ -20,7 +20,7 @@ use std::fmt::Debug;
 // coarse methods (initialize, add_sensor, enable_feature, run) against a
 // step whose work is the full field update -- the dispatch is never
 // per-cell.
-pub trait Solver: Debug + Send + Sync {
+pub trait Solver: SolverComponent {
     /// Get the solver name
     fn name(&self) -> &str;
 
