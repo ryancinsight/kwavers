@@ -48,58 +48,28 @@ pub mod frequency_filter;
 
 pub use frequency_filter::FrequencyFilter;
 
+use crate::SignalPrimitive;
 use kwavers_core::error::KwaversResult;
-use std::fmt::Debug;
 
-/// Trait for signal filtering operations
+/// Trait for signal filtering operations.
 ///
-/// This trait defines the interface for applying filters to time-domain signals.
-/// Implementations should transform the input signal according to their specific
-/// filtering characteristics (bandpass, lowpass, highpass, etc.).
+/// Uses [`SignalPrimitive`] as its base bound (`Debug + Send + Sync`) so the
+/// triple does not need to be repeated here.
 ///
-/// # Design Principles
-///
-/// - **Stateless**: Filters should be reusable and thread-safe
-/// - **Pure Functions**: Same input → same output (no hidden state)
-/// - **Error Handling**: Return `KwaversResult` for graceful error handling
-///
-/// # Thread Safety
-///
-/// Implementations should be `Send + Sync` to enable parallel processing.
-///
-/// # Examples
+/// # Example
 ///
 /// ```rust,no_run
-/// use kwavers_signal::Filter;
+/// use kwavers_signal::{Filter, FrequencyFilter};
 /// use kwavers_core::error::KwaversResult;
 ///
-/// #[derive(Debug)]
-/// struct IdentityFilter;
-///
-/// impl Filter for IdentityFilter {
-///     fn apply(&self, signal: &[f64], _dt: f64) -> KwaversResult<Vec<f64>> {
-///         Ok(signal.to_vec())
-///     }
+/// fn process(filter: &dyn Filter, signal: &[f64], dt: f64) -> KwaversResult<Vec<f64>> {
+///     filter.apply(signal, dt)
 /// }
 /// ```
-pub trait Filter: Debug + Send + Sync {
-    /// Apply the filter to a time-domain signal
-    ///
-    /// # Arguments
-    ///
-    /// * `signal` - Input time-domain signal samples
-    /// * `dt` - Time step (sampling interval in seconds)
-    ///
-    /// # Returns
-    ///
-    /// Filtered signal with same or different length depending on implementation
-    ///
+pub trait Filter: SignalPrimitive {
+    /// Apply the filter to a time-domain signal.
     /// # Errors
-    ///
-    /// Returns `KwaversError` if filtering fails due to:
-    /// - Invalid input parameters
-    /// - Numerical issues
-    /// - Memory allocation failures
+    /// Returns `KwaversError` if filtering fails.
     fn apply(&self, signal: &[f64], dt: f64) -> KwaversResult<Vec<f64>>;
 }
 

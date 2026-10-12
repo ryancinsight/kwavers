@@ -31,11 +31,11 @@ pub mod linear;
 #[cfg(test)]
 mod tests;
 
+use crate::acoustics::traits::PhysicsModel;
 use eunomia::Complex64;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::{Array3, Array4};
-use std::fmt::Debug;
 
 // Re-exports for backward compatibility
 pub use jones_matrix::JonesMatrix;
@@ -43,7 +43,7 @@ pub use jones_model::JonesPolarizationModel;
 pub use jones_vector::JonesVector;
 pub use linear::LinearPolarization;
 
-pub trait PolarizationModel: Debug + Send + Sync {
+pub trait PolarizationModel: PhysicsModel {
     /// Apply polarization transformation to light field
     fn apply_polarization(
         &mut self,
