@@ -68,9 +68,7 @@ impl PennesBioheat {
             source.view_mut(),
             temperature.view(),
             |[i, j, k], q, &t| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+                let (x, y, z) = grid.coords(i, j, k);
 
                 let rho = kwavers_medium::density_at(medium, x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);
@@ -113,9 +111,7 @@ impl PennesBioheat {
             temperature.view_mut(),
             laplacian.view(),
             |[i, j, k], t, &lap| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+                let (x, y, z) = grid.coords(i, j, k);
 
                 let rho = kwavers_medium::density_at(medium, x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);

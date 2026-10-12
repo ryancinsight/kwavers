@@ -59,9 +59,7 @@ impl PlaneWaveSolution {
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k_idx in 0..grid.nz {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k_idx as f64 * grid.dz;
+                    let (x, y, z) = grid.coords(i, j, k_idx);
 
                     let phase =
                         k_dispersed * dir.2.mul_add(z, dir.0.mul_add(x, dir.1 * y)) - omega * time;

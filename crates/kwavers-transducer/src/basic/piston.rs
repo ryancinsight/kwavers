@@ -164,9 +164,7 @@ impl Source for PistonSource {
         debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
 
         for ([i, j, k], val) in mask.indexed_iter_mut().expect("valid") {
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let z = k as f64 * grid.dz;
+            let (x, y, z) = grid.coords(i, j, k);
 
             *val = self.apodization_weight(x, y, z);
         }
@@ -176,9 +174,7 @@ impl Source for PistonSource {
         debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
 
         for ([i, j, k], val) in mask.indexed_iter_mut().expect("valid") {
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let z = k as f64 * grid.dz;
+            let (x, y, z) = grid.coords(i, j, k);
 
             *val += self.apodization_weight(x, y, z);
         }

@@ -73,9 +73,7 @@ pub(super) fn compute_nonlinear_term_into(
                     let c = c_arr[[i, j, k]].max(1e-9);
 
                     // Get spatially-varying nonlinearity coefficient
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
+                    let (x, y, z) = grid.coords(i, j, k);
                     let beta = kwavers_medium::AcousticProperties::nonlinearity_coefficient(
                         medium, x, y, z, grid,
                     );
@@ -167,9 +165,7 @@ pub(super) fn compute_viscoelastic_term_into(
             for i in 0..nx {
                 let ip = (i + 1) % nx;
                 let im = (i + nx - 1) % nx;
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+                let (x, y, z) = grid.coords(i, j, k);
                 let center = (pressure[[i, j, k]] - prev_pressure[[i, j, k]]) * inv_dt;
                 let z_plus = (pressure[[i, j, kp]] - prev_pressure[[i, j, kp]]) * inv_dt;
                 let z_minus = (pressure[[i, j, km]] - prev_pressure[[i, j, km]]) * inv_dt;

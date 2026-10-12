@@ -133,9 +133,9 @@ fn find_peak_pressure_unchecked(pressure_field: ArrayView3<f64>, grid: &Grid) ->
     }
 
     let location = [
-        max_location[0] as f64 * grid.dx,
-        max_location[1] as f64 * grid.dy,
-        max_location[2] as f64 * grid.dz,
+        grid.x(max_location[0]),
+        grid.y(max_location[1]),
+        grid.z(max_location[2]),
     ];
 
     (location, max_pressure)
@@ -167,7 +167,7 @@ fn calculate_beam_width_at_location(
         right += 1;
     }
 
-    let width_x = (right - left) as f64 * grid.dx;
+    let width_x = grid.x(right) - grid.x(left);
 
     // Y direction
     let mut bottom = iy;
@@ -181,7 +181,7 @@ fn calculate_beam_width_at_location(
         top += 1;
     }
 
-    let width_y = (top - bottom) as f64 * grid.dy;
+    let width_y = grid.y(top) - grid.y(bottom);
 
     // Return average width
     (width_x + width_y) / 2.0

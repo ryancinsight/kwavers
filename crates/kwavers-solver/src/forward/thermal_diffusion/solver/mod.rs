@@ -326,9 +326,7 @@ impl ThermalDiffusionSolver {
             .and_then(|source| source.as_slice());
 
         let update_cell = |i: usize, j: usize, k: usize, temp: &mut f64, lap: f64, source: f64| {
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let z = k as f64 * grid.dz;
+            let (x, y, z) = grid.coords(i, j, k);
 
             let alpha = medium.thermal_diffusivity(x, y, z, grid);
 

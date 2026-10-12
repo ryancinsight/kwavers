@@ -58,8 +58,8 @@ mod plotting_impl {
             .expect("z_slice in range");
         let [nx, ny] = slice.shape();
 
-        let x: Vec<f64> = (0..nx).map(|i| i as f64 * grid.dx).collect();
-        let y: Vec<f64> = (0..ny).map(|j| j as f64 * grid.dy).collect();
+        let x: Vec<f64> = (0..nx).map(|i| grid.x(i)).collect();
+        let y: Vec<f64> = (0..ny).map(|j| grid.y(j)).collect();
         let z: Vec<Vec<f64>> = (0..ny)
             .map(|j| (0..nx).map(|i| slice[[i, j]]).collect())
             .collect();
@@ -98,9 +98,10 @@ mod plotting_impl {
         for i in (0..nx).step_by(step) {
             for j in (0..ny).step_by(step) {
                 for k in (0..nz).step_by(step) {
-                    x.push(i as f64 * grid.dx);
-                    y.push(j as f64 * grid.dy);
-                    z.push(k as f64 * grid.dz);
+                    let (x_coord, y_coord, z_coord) = grid.coords(i, j, k);
+                    x.push(x_coord);
+                    y.push(y_coord);
+                    z.push(z_coord);
                     values.push(pressure[[i, j, k]]);
                 }
             }
@@ -176,8 +177,8 @@ mod plotting_impl {
         let nx = s1_shape[0];
         let ny = s1_shape[1];
 
-        let x: Vec<f64> = (0..nx).map(|i| i as f64 * grid.dx).collect();
-        let y: Vec<f64> = (0..ny).map(|j| j as f64 * grid.dy).collect();
+        let x: Vec<f64> = (0..nx).map(|i| grid.x(i)).collect();
+        let y: Vec<f64> = (0..ny).map(|j| grid.y(j)).collect();
         let z: Vec<Vec<f64>> = (0..ny)
             .map(|j| (0..nx).map(|i| diff[[i, j]]).collect())
             .collect();

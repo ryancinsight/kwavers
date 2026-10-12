@@ -268,12 +268,12 @@ impl UtilConservativeInterpolator {
 
     fn cell_bounds(grid: &Grid, ix: usize, iy: usize, iz: usize) -> (f64, f64, f64, f64, f64, f64) {
         (
-            ix as f64 * grid.dx,
-            (ix + 1) as f64 * grid.dx,
-            iy as f64 * grid.dy,
-            (iy + 1) as f64 * grid.dy,
-            iz as f64 * grid.dz,
-            (iz + 1) as f64 * grid.dz,
+            grid.x(ix),
+            grid.x(ix + 1),
+            grid.y(iy),
+            grid.y(iy + 1),
+            grid.z(iz),
+            grid.z(iz + 1),
         )
     }
 

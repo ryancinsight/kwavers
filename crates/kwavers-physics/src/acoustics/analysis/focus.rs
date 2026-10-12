@@ -28,9 +28,9 @@ pub fn find_focus(pressure_field: ArrayView3<f64>, grid: &Grid) -> KwaversResult
     }
 
     Ok([
-        focus_indices[0] as f64 * grid.dx,
-        focus_indices[1] as f64 * grid.dy,
-        focus_indices[2] as f64 * grid.dz,
+        grid.x(focus_indices[0]),
+        grid.y(focus_indices[1]),
+        grid.z(focus_indices[2]),
     ])
 }
 
@@ -146,7 +146,7 @@ pub fn calculate_beam_width(
                         right += 1;
                     }
 
-                    widths[slice] = (right - left) as f64 * grid.dx;
+                    widths[slice] = grid.x(right) - grid.x(left);
                 }
             }
             _ => {

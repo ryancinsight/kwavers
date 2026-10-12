@@ -156,9 +156,7 @@ impl CattaneoVernotte {
             temperature.view_mut(),
             self.divergence.view(),
             |[i, j, k], t, &div| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+                let (x, y, z) = grid.coords(i, j, k);
 
                 let rho = kwavers_medium::density_at(medium, x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);
@@ -188,9 +186,7 @@ impl CattaneoVernotte {
                 return;
             }
 
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let z = k as f64 * grid.dz;
+            let (x, y, z) = grid.coords(i, j, k);
             let k_thermal = medium.thermal_conductivity(x, y, z, grid);
             let grad_t = Self::centered_gradient::<AXIS>(temperature, i, j, k, grid);
             let q_previous = *q;

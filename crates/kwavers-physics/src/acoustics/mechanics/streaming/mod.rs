@@ -93,9 +93,7 @@ impl StreamingModel {
             self.velocity.view_mut(),
             pressure.view(),
             |[i, j, k], v, &p| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+                let (x, y, z) = grid.coords(i, j, k);
                 let rho = kwavers_medium::density_at(medium, x, y, z, grid);
                 let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
                 let alpha = medium.absorption_coefficient(x, y, z, grid, REFERENCE_FREQUENCY_HZ);

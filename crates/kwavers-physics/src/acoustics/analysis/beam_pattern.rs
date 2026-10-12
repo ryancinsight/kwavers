@@ -95,9 +95,7 @@ pub fn calculate_beam_pattern(
             for ix in 0..grid.nx {
                 for iy in 0..grid.ny {
                     for iz in 0..grid.nz {
-                        let x = ix as f64 * grid.dx;
-                        let y = iy as f64 * grid.dy;
-                        let z = iz as f64 * grid.dz;
+                        let (x, y, z) = grid.coords(ix, iy, iz);
 
                         // Phase from this point to far-field
                         let phase = k * z.mul_add(dir_z, x.mul_add(dir_x, y * dir_y));
@@ -189,7 +187,7 @@ fn validate_positive_finite(parameter: &str, value: f64) -> KwaversResult<()> {
 
 /// Calculate far-field distance
 fn calculate_far_field_distance(grid: &Grid, wavelength: f64, method: &FarFieldMethod) -> f64 {
-    let aperture = (grid.nx as f64 * grid.dx).hypot(grid.ny as f64 * grid.dy);
+    let aperture = grid.x(grid.nx).hypot(grid.y(grid.ny));
 
     match method {
         FarFieldMethod::Fresnel => aperture.powi(2) / wavelength,

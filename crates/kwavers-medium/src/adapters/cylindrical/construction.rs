@@ -66,9 +66,9 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
                         ),
                         constraint: format!(
                             "Coordinates must be within grid bounds: ({}, {}, {})",
-                            grid.nx as f64 * grid.dx,
-                            grid.ny as f64 * grid.dy,
-                            grid.nz as f64 * grid.dz
+                            grid.x(grid.nx),
+                            grid.y(grid.ny),
+                            grid.z(grid.nz)
                         ),
                     })
                 })?;
