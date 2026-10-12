@@ -3,108 +3,61 @@
 use super::domain::{Domain, TimeIntegration};
 use leto::Array3;
 
-/// Abstract wave equation trait for traditional numerical solvers
+/// Common wave equation methods, independent of thread-safety bounds.
 ///
-/// This trait defines the mathematical structure common to all wave equations
-/// implemented with traditional numerical methods (finite difference, finite element,
-/// spectral methods, etc.).
+/// All wave equation solvers — traditional (finite-difference, spectral) and
+/// autodiff-based (PINN, neural operators) — must satisfy this contract.
+/// The `Send`/`Sync` refinements are layered on top via [`WaveEquation`] and
+/// [`AutodiffWaveEquation`].
+pub trait WaveEquationOps {
+    /// Get spatial domain specification.
+    fn domain(&self) -> &Domain;
+
+    /// Get time integration scheme.
+    fn time_integration(&self) -> TimeIntegration;
+
+    /// Compute the CFL stability limit (timestep in seconds).
+    ///
+    /// For explicit schemes: Δt ≤ CFL_factor · min(Δx, Δy, Δz) / c_max
+    /// where c_max is the maximum wave speed in the domain.
+    fn cfl_timestep(&self) -> f64;
+
+    /// Evaluate the spatial differential operator `L[u]` at the current state.
+    ///
+    /// Returns the right-hand side of the wave equation:
+    /// ∂²u/∂t² = spatial_operator(u) + source
+    fn spatial_operator(&self, field: &Array3<f64>) -> Array3<f64>;
+
+    /// Apply boundary conditions to the field.
+    fn apply_boundary_conditions(&mut self, field: &mut Array3<f64>);
+
+    /// Check whether the current state satisfies physics constraints.
+    ///
+    /// # Errors
+    /// Returns `Err` with a description when a constraint is violated.
+    fn check_constraints(&self, field: &Array3<f64>) -> Result<(), String>;
+}
+
+/// Thread-safe wave equation solver for traditional numerical methods.
 ///
-/// # Thread Safety
-///
-/// This trait requires `Send + Sync` to enable parallel validation and testing.
-/// Traditional solvers using ndarray and standard Rust data structures satisfy this.
+/// Extends [`WaveEquationOps`] with `Send + Sync` to enable parallel
+/// validation, testing, and multi-threaded time-stepping.
 ///
 /// # See Also
 ///
-/// For neural network and autodiff-based solvers that cannot satisfy `Sync` due to
-/// internal framework constraints, see [`AutodiffWaveEquation`].
-pub trait WaveEquation: Send + Sync {
-    /// Get spatial domain specification
-    fn domain(&self) -> &Domain;
+/// For autodiff/PINN solvers whose internal framework types are `!Sync`,
+/// implement [`AutodiffWaveEquation`] instead.
+pub trait WaveEquation: WaveEquationOps + Send + Sync {}
 
-    /// Get time integration scheme
-    fn time_integration(&self) -> TimeIntegration;
-
-    /// Compute the CFL stability limit (timestep in seconds)
-    ///
-    /// For explicit schemes: Δt ≤ CFL_factor * min(Δx, Δy, Δz) / c_max
-    /// where c_max is the maximum wave speed in the domain.
-    fn cfl_timestep(&self) -> f64;
-
-    /// Evaluate the spatial differential operator `L[u]` at current state
-    ///
-    /// Returns the right-hand side of the wave equation:
-    /// ∂²u/∂t² = spatial_operator(u) + source
-    fn spatial_operator(&self, field: &Array3<f64>) -> Array3<f64>;
-
-    /// Apply boundary conditions to field
-    fn apply_boundary_conditions(&mut self, field: &mut Array3<f64>);
-
-    /// Check if the current state satisfies physics constraints
-    ///
-    /// Returns Ok(()) if constraints are satisfied, Err with violation description otherwise.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    fn check_constraints(&self, field: &Array3<f64>) -> Result<(), String>;
-}
-
-/// Abstract wave equation trait for autodiff-based solvers
+/// Wave equation solver for autodiff-based solvers (PINN, neural operators).
 ///
-/// This trait mirrors [`WaveEquation`] but relaxes the `Sync` constraint to accommodate
-/// neural network frameworks (e.g., Burn) that use internal cell types for lazy
-/// initialization and gradient tracking.
-///
-/// # Design Rationale
-///
-/// Automatic differentiation frameworks like Burn use `std::cell::OnceCell` and similar
-/// constructs internally for:
-/// - Lazy tensor initialization
-/// - Gradient accumulation
-/// - Computation graph construction
-///
-/// These types are `!Sync` by design, preventing implementations from satisfying the
-/// `Sync` bound required by traditional numerical solvers.
-///
-/// Rather than compromising either API, we maintain separate trait hierarchies:
-/// - `WaveEquation` (with `Sync`) for traditional methods
-/// - `AutodiffWaveEquation` (without `Sync`) for neural networks
-///
-/// This preserves thread safety guarantees where possible while enabling autodiff
-/// integration where necessary.
+/// Extends [`WaveEquationOps`] with only `Send`, relaxing the `Sync`
+/// constraint required by [`WaveEquation`].  Autodiff frameworks
+/// (e.g., Burn, coeus-autograd) use `!Sync` cell types internally for
+/// lazy tensor initialisation and gradient accumulation.
 ///
 /// # Thread Safety
 ///
-/// This trait requires only `Send`, allowing solvers to be moved between threads but
-/// not shared. Most PINN training is single-threaded per model instance, making this
-/// sufficient.
-pub trait AutodiffWaveEquation: Send {
-    /// Get spatial domain specification
-    fn domain(&self) -> &Domain;
-
-    /// Get time integration scheme
-    fn time_integration(&self) -> TimeIntegration;
-
-    /// Compute the CFL stability limit (timestep in seconds)
-    ///
-    /// For explicit schemes: Δt ≤ CFL_factor * min(Δx, Δy, Δz) / c_max
-    /// where c_max is the maximum wave speed in the domain.
-    fn cfl_timestep(&self) -> f64;
-
-    /// Evaluate the spatial differential operator `L[u]` at current state
-    ///
-    /// Returns the right-hand side of the wave equation:
-    /// ∂²u/∂t² = spatial_operator(u) + source
-    fn spatial_operator(&self, field: &Array3<f64>) -> Array3<f64>;
-
-    /// Apply boundary conditions to field
-    fn apply_boundary_conditions(&mut self, field: &mut Array3<f64>);
-
-    /// Check if the current state satisfies physics constraints
-    ///
-    /// Returns Ok(()) if constraints are satisfied, Err with violation description otherwise.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    fn check_constraints(&self, field: &Array3<f64>) -> Result<(), String>;
-}
+/// Requires `Send` so solvers can be moved across threads, but not shared.
+/// PINN training is typically single-threaded per model instance.
+pub trait AutodiffWaveEquation: WaveEquationOps + Send {}

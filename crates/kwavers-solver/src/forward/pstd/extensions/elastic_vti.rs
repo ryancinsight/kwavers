@@ -346,17 +346,7 @@ impl VtiElasticPlugin {
 }
 
 impl Plugin for VtiElasticPlugin {
-    fn metadata(&self) -> &PluginMetadata {
-        &self.metadata
-    }
-
-    fn state(&self) -> PluginState {
-        self.state
-    }
-
-    fn set_state(&mut self, state: PluginState) {
-        self.state = state;
-    }
+    crate::plugin_accessors!();
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
         Vec::new()
@@ -446,13 +436,5 @@ impl Plugin for VtiElasticPlugin {
     fn finalize(&mut self) -> KwaversResult<()> {
         self.state = PluginState::Finalized;
         Ok(())
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 }
