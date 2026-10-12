@@ -1,10 +1,11 @@
 //! Spectral operations for Westervelt solver
 
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_math::fft::{fft_3d_array, fft_3d_array_into, ifft_3d_array, Complex64};
 use leto::Array3 as LetoArray3;
 use leto::Array3;
+
+use crate::forward::nonlinear::kzk::spectral_helpers::wavenumber_vec;
 
 /// Initialize k-space grids for spectral operations
 pub fn initialize_kspace_grids(
@@ -12,50 +13,20 @@ pub fn initialize_kspace_grids(
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>) {
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
 
-    // The k-space wavenumbers are separable: kx depends only on i, ky on j,
-    // kz on k. Precompute each 1-D axis once (O(N) FFT-shifted divisions in
-    // total) instead of recomputing the branch and division per cell, which
-    // costs O(N³) divisions. The per-cell values are formed from the same
-    // expressions, so the result is identical to the dense triple loop.
-    let kx_axis: Vec<f64> = (0..nx)
-        .map(|i| {
-            if i <= nx / 2 {
-                TWO_PI * i as f64 / (nx as f64 * grid.dx)
-            } else {
-                TWO_PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
-            }
-        })
-        .collect();
-    let ky_axis: Vec<f64> = (0..ny)
-        .map(|j| {
-            if j <= ny / 2 {
-                TWO_PI * j as f64 / (ny as f64 * grid.dy)
-            } else {
-                TWO_PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
-            }
-        })
-        .collect();
-    let kz_axis: Vec<f64> = (0..nz)
-        .map(|k| {
-            if k <= nz / 2 {
-                TWO_PI * k as f64 / (nz as f64 * grid.dz)
-            } else {
-                TWO_PI * (k as f64 - nz as f64) / (nz as f64 * grid.dz)
-            }
-        })
-        .collect();
+    // Use shared spectral_helpers which maintains the positive-at-Nyquist
+    // sign convention (i <= n/2 → positive, i > n/2 → negative).
+    // Note: grid.compute_kx() delegates to Apollo fftfreq which uses the
+    // negative-Nyquist convention and would break solvers expecting the
+    // physics convention used here.
+    let kx_axis = wavenumber_vec(nx, grid.dx);
+    let ky_axis = wavenumber_vec(ny, grid.dy);
+    let kz_axis = wavenumber_vec(nz, grid.dz);
 
     let mut kx = Array3::<f64>::zeros((nx, ny, nz));
     let mut ky = Array3::<f64>::zeros((nx, ny, nz));
     let mut kz = Array3::<f64>::zeros((nx, ny, nz));
     let mut k_squared = Array3::<f64>::zeros((nx, ny, nz));
 
-    // Separable wavenumber fill: each cell reads its precomputed per-axis value
-    // and writes the four output grids at the collocated index. Each iteration is
-    // independent, so the loop order is immaterial to the result.
-    debug_assert_eq!(kx_axis.len(), nx, "kx_axis length must equal nx");
-    debug_assert_eq!(ky_axis.len(), ny, "ky_axis length must equal ny");
-    debug_assert_eq!(kz_axis.len(), nz, "kz_axis length must equal nz");
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {

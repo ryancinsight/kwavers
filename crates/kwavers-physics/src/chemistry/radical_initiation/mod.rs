@@ -37,9 +37,7 @@ impl RadicalInitiation {
             self.radical_concentration.view_mut(),
             (p.view(), light.view(), bubble_radius.view()),
             |[i, j, k], conc, (&p_val, &light_val, &r_val)| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+                let (x, y, z) = grid.coords(i, j, k);
                 let alpha = kwavers_medium::AcousticProperties::absorption_coefficient(
                     medium, x, y, z, grid, frequency,
                 );

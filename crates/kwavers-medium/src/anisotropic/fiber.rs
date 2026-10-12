@@ -82,9 +82,7 @@ impl MuscleFiberModel {
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
+                    let (x, y, z) = grid.coords(i, j, k);
 
                     // Helical angle varies with radius
                     let r = (x.hypot(y) / radius).min(1.0);

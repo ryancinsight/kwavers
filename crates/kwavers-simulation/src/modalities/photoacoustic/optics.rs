@@ -82,9 +82,7 @@ pub fn initialize_optical_properties(
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+                let (x, y, z) = grid.coords(i, j, k);
 
                 // Add cylindrical blood vessel aligned with z-axis
                 let vessel_dist = (x - 0.025).hypot(y - 0.025);

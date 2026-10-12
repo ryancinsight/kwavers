@@ -5,6 +5,15 @@
 //! frequencies first, then negative frequencies in wrap-around order).
 //! This module provides a single zero-cast implementation used across every
 //! diffraction variant to avoid repeating the same pattern.
+//!
+//! # Sign convention
+//!
+//! This module uses the **physics convention**: the Nyquist bin at index `n/2`
+//! maps to the **positive** Nyquist frequency `+π/Δx`. This differs from
+//! `apollo::fftfreq` (and NumPy's `fftfreq`) which map `n/2` to the negative
+//! Nyquist frequency `−π/Δx` for even-length arrays. Use this module
+//! (not `Grid::compute_kx/ky/kz`) wherever the positive-Nyquist convention
+//! is required by the solver's mathematical derivation.
 
 use kwavers_core::constants::numerical::TWO_PI;
 

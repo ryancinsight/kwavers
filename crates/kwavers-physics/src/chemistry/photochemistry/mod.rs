@@ -41,9 +41,7 @@ impl PhotochemicalEffects {
                 temperature.view(),
             ),
             |[i, j, k], ros, (&light_val, &spec_val, &r_val, &t)| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+                let (x, y, z) = grid.coords(i, j, k);
 
                 // Photosensitizer-like activation (e.g., ROS production in sonodynamic therapy)
                 let mu_a = medium.optical_absorption_coefficient(x, y, z, grid);

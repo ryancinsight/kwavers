@@ -81,9 +81,7 @@ impl ShockWaveGenerator {
             .indexed_iter_mut()
             .expect("invariant: dense layout iterable")
         {
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let z = k as f64 * grid.dz;
+            let (x, y, z) = grid.coords(i, j, k);
 
             let r2 = (z - cz).mul_add(z - cz, (y - cy).mul_add(y - cy, (x - cx).powi(2)));
             let pos = self.parameters.peak_positive_pressure

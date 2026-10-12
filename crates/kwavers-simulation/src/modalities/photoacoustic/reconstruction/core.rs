@@ -103,9 +103,7 @@ pub fn time_reversal_reconstruction(
                 let k = idx % nz;
                 let j = (idx / nz) % ny;
                 let i = idx / nxy;
-                let px = i as f64 * grid.dx;
-                let py = j as f64 * grid.dy;
-                let pz = k as f64 * grid.dz;
+                let (px, py, pz) = grid.coords(i, j, k);
                 let mut sum = 0.0;
 
                 for (d_idx, &(dx, dy, dz)) in detector_positions_m.iter().enumerate() {
