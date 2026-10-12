@@ -5,12 +5,13 @@
 
 use super::solver::ElasticPINN2DSolver;
 use kwavers_physics::foundations::{
-    AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain, TimeIntegration,
+    AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain, ElasticOps, TimeIntegration,
+    WaveEquationOps,
 };
 
 use leto::Array3;
 
-impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> AutodiffWaveEquation
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> WaveEquationOps
     for ElasticPINN2DSolver<B>
 where
     B::DeviceBuffer<f32>:
@@ -92,7 +93,15 @@ where
     }
 }
 
-impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> AutodiffElasticWaveEquation
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> AutodiffWaveEquation
+    for ElasticPINN2DSolver<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ElasticOps
     for ElasticPINN2DSolver<B>
 where
     B::DeviceBuffer<f32>:
@@ -242,4 +251,12 @@ where
 
         kinetic_energy + strain_energy
     }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> AutodiffElasticWaveEquation
+    for ElasticPINN2DSolver<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
 }

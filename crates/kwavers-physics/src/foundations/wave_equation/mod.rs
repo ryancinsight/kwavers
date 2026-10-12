@@ -28,8 +28,8 @@ pub mod source;
 #[cfg(test)]
 mod tests;
 
-pub use self::core::{AutodiffWaveEquation, WaveEquation};
+pub use self::core::{AutodiffWaveEquation, WaveEquation, WaveEquationOps};
 pub use acoustic::AcousticWaveEquation;
 pub use domain::{Domain, SpatialDimension, TimeIntegration, WaveEquationBoundary};
-pub use elastic::{AutodiffElasticWaveEquation, ElasticWaveEquation};
+pub use elastic::{AutodiffElasticWaveEquation, ElasticOps, ElasticWaveEquation};
 pub use source::SourceTerm;

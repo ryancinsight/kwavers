@@ -88,9 +88,9 @@ pub mod wave_equation;
 
 // Re-export commonly used wave equation types for convenience
 pub use wave_equation::{
-    AcousticWaveEquation, AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain,
+    AcousticWaveEquation, AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain, ElasticOps,
     ElasticWaveEquation, SourceTerm, SpatialDimension, TimeIntegration, WaveEquation,
-    WaveEquationBoundary,
+    WaveEquationBoundary, WaveEquationOps,
 };
 
 // Re-export coupling traits and types
@@ -118,7 +118,7 @@ pub mod prelude {
     };
     pub use super::wave_equation::{
         AcousticWaveEquation, AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain,
-        ElasticWaveEquation, SourceTerm, SpatialDimension, TimeIntegration, WaveEquation,
-        WaveEquationBoundary,
+        ElasticOps, ElasticWaveEquation, SourceTerm, SpatialDimension, TimeIntegration,
+        WaveEquation, WaveEquationBoundary, WaveEquationOps,
     };
 }

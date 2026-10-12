@@ -152,17 +152,7 @@ impl WesterveltFdtdPlugin {
 }
 
 impl Plugin for WesterveltFdtdPlugin {
-    fn metadata(&self) -> &PluginMetadata {
-        &self.metadata
-    }
-
-    fn state(&self) -> PluginState {
-        self.state
-    }
-
-    fn set_state(&mut self, state: PluginState) {
-        self.state = state;
-    }
+    crate::plugin_accessors!();
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
         vec![UnifiedFieldType::Pressure]
@@ -227,13 +217,5 @@ impl Plugin for WesterveltFdtdPlugin {
         self.solver = None;
         self.state = PluginState::Created;
         Ok(())
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
     }
 }

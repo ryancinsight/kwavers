@@ -155,6 +155,46 @@ pub trait Plugin: Debug + Send + Sync {
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
+/// Expand the five boilerplate [`Plugin`] methods that every concrete plugin
+/// must provide but whose implementations are always identical.
+///
+/// # Requirements
+///
+/// The struct must have fields named `metadata: PluginMetadata` and
+/// `state: PluginState`.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// impl Plugin for MyPlugin {
+///     plugin_accessors!();
+///
+///     fn required_fields(&self) -> Vec<UnifiedFieldType> { /* ... */ }
+///     fn provided_fields(&self) -> Vec<UnifiedFieldType> { /* ... */ }
+///     fn update(&mut self, ..) -> KwaversResult<()> { /* ... */ }
+/// }
+/// ```
+#[macro_export]
+macro_rules! plugin_accessors {
+    () => {
+        fn metadata(&self) -> &$crate::plugin::PluginMetadata {
+            &self.metadata
+        }
+        fn state(&self) -> $crate::plugin::PluginState {
+            self.state
+        }
+        fn set_state(&mut self, state: $crate::plugin::PluginState) {
+            self.state = state;
+        }
+        fn as_any(&self) -> &dyn ::std::any::Any {
+            self
+        }
+        fn as_any_mut(&mut self) -> &mut dyn ::std::any::Any {
+            self
+        }
+    };
+}
+
 // ── Shared test support ───────────────────────────────────────────────────────
 
 /// Test infrastructure for plugin unit tests.
