@@ -142,9 +142,7 @@ impl Source for PlaneWaveSource {
             InjectionMode::FullGrid => {
                 // Apply spatial phase variation based on wave propagation
                 for ([i, j, k], val) in mask.indexed_iter_mut().expect("valid array layout") {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
+                    let (x, y, z) = grid.coords(i, j, k);
 
                     // Spatial phase: k • r = kx*x + ky*y + kz*z
                     let spatial_phase = self.wave_number

@@ -216,4 +216,31 @@ impl Grid {
     pub fn k_max(&self) -> f64 {
         self.k_max
     }
+
+    /// Physical x-coordinate of grid index `i` (metres).
+    ///
+    /// Equivalent to `i as f64 * self.dx`.  Prefer this over the inline cast
+    /// so the coordinate convention is a single source of truth.
+    #[inline(always)]
+    pub fn x(&self, i: usize) -> f64 {
+        i as f64 * self.dx
+    }
+
+    /// Physical y-coordinate of grid index `j` (metres).
+    #[inline(always)]
+    pub fn y(&self, j: usize) -> f64 {
+        j as f64 * self.dy
+    }
+
+    /// Physical z-coordinate of grid index `k` (metres).
+    #[inline(always)]
+    pub fn z(&self, k: usize) -> f64 {
+        k as f64 * self.dz
+    }
+
+    /// Physical (x, y, z) coordinates of grid point `(i, j, k)` (metres).
+    #[inline(always)]
+    pub fn coords(&self, i: usize, j: usize, k: usize) -> (f64, f64, f64) {
+        (self.x(i), self.y(j), self.z(k))
+    }
 }

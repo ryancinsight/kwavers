@@ -15,6 +15,7 @@ use apollo::{fft_1d_complex, ifft_1d_complex, Complex64};
 use leto::Array1 as LetoArray1;
 use leto::{Array2, ArrayViewMut2};
 
+use super::spectral_helpers::wavenumber_vec;
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 
@@ -60,26 +61,13 @@ impl KzkDiffractionOperator {
         let mut kx2 = Array2::zeros((config.nx, config.ny));
         let mut ky2 = Array2::zeros((config.nx, config.ny));
 
-        // Compute wavenumber arrays
-        let dkx = TWO_PI / (config.nx as f64 * config.dx);
-        let dky = TWO_PI / (config.ny as f64 * config.dx);
+        let kxs = wavenumber_vec(config.nx, config.dx);
+        let kys = wavenumber_vec(config.ny, config.dx);
 
         for j in 0..config.ny {
             for i in 0..config.nx {
-                let kx = if i <= config.nx / 2 {
-                    i as f64 * dkx
-                } else {
-                    (i as f64 - config.nx as f64) * dkx
-                };
-
-                let ky = if j <= config.ny / 2 {
-                    j as f64 * dky
-                } else {
-                    (j as f64 - config.ny as f64) * dky
-                };
-
-                kx2[[i, j]] = kx * kx;
-                ky2[[i, j]] = ky * ky;
+                kx2[[i, j]] = kxs[i] * kxs[i];
+                ky2[[i, j]] = kys[j] * kys[j];
             }
         }
 

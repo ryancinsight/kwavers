@@ -3,6 +3,7 @@ use leto::Array2 as LetoArray2;
 use leto::{Array2, ArrayViewMut2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
+use super::spectral_helpers::wavenumber_vec;
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 
@@ -46,30 +47,18 @@ impl AngularSpectrum2D {
         let mut kx = Array2::zeros((nx, ny));
         let mut ky = Array2::zeros((nx, ny));
 
-        let dkx = TWO_PI / (nx as f64 * config.dx);
-        let dky = TWO_PI / (ny as f64 * config.dx);
+        let kx_vals = wavenumber_vec(nx, config.dx);
+        let ky_vals = wavenumber_vec(ny, config.dx);
 
         for i in 0..nx {
-            let kx_val = if i <= nx / 2 {
-                i as f64 * dkx
-            } else {
-                (i as i32 - nx as i32) as f64 * dkx
-            };
-
             for j in 0..ny {
-                kx[[i, j]] = kx_val;
+                kx[[i, j]] = kx_vals[i];
             }
         }
 
         for j in 0..ny {
-            let ky_val = if j <= ny / 2 {
-                j as f64 * dky
-            } else {
-                (j as i32 - ny as i32) as f64 * dky
-            };
-
             for i in 0..nx {
-                ky[[i, j]] = ky_val;
+                ky[[i, j]] = ky_vals[j];
             }
         }
 

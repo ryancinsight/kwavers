@@ -153,9 +153,7 @@ impl Source for GaussianSource {
         debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
 
         for ([i, j, k], val) in mask.indexed_iter_mut().expect("valid array layout") {
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let z = k as f64 * grid.dz;
+            let (x, y, z) = grid.coords(i, j, k);
 
             *val = self.gaussian_amplitude(x, y, z);
         }
@@ -165,9 +163,7 @@ impl Source for GaussianSource {
         debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
 
         for ([i, j, k], val) in mask.indexed_iter_mut().expect("valid array layout") {
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let z = k as f64 * grid.dz;
+            let (x, y, z) = grid.coords(i, j, k);
 
             *val += self.gaussian_amplitude(x, y, z);
         }
