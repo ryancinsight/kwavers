@@ -1,13 +1,13 @@
+use crate::acoustics::traits::PhysicsModel;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::Array3;
-use std::fmt::Debug;
 
 /// Trait for acoustic scattering models.
 ///
 /// Implementors of this trait simulate the scattering of acoustic waves from
 /// particles, bubbles, or other inhomogeneities in the medium.
-pub trait AcousticScatteringModelTrait: Debug + Send + Sync {
+pub trait AcousticScatteringModelTrait: PhysicsModel {
     /// Computes the acoustic scattering effects.
     ///
     /// # Arguments

@@ -32,6 +32,7 @@ use leto::Array2 as LetoArray2;
 use leto::{Array2, ArrayViewMut2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
+use super::spectral_helpers::wavenumber_vec;
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 
@@ -72,8 +73,8 @@ impl WideAngleDiffractionOperator {
     pub fn new(config: &KZKConfig) -> Self {
         let nx = config.nx;
         let ny = config.ny;
-        let dkx = TWO_PI / (nx as f64 * config.dx);
-        let dky = TWO_PI / (ny as f64 * config.dx);
+        let kxs = wavenumber_vec(nx, config.dx);
+        let kys = wavenumber_vec(ny, config.dx);
         let k0 = TWO_PI * config.frequency / config.c0;
         let k02 = k0 * k0;
 
@@ -81,20 +82,9 @@ impl WideAngleDiffractionOperator {
         let mut propagating_mask = Array2::from_elem((nx, ny), false);
 
         for i in 0..nx {
-            let kx = if i <= nx / 2 {
-                i as f64 * dkx
-            } else {
-                (i as f64 - nx as f64) * dkx
-            };
-            let kx2 = kx * kx;
-
+            let kx2 = kxs[i] * kxs[i];
             for j in 0..ny {
-                let ky = if j <= ny / 2 {
-                    j as f64 * dky
-                } else {
-                    (j as f64 - ny as f64) * dky
-                };
-                let mode_kt2 = kx2 + ky * ky;
+                let mode_kt2 = kx2 + kys[j] * kys[j];
                 kt2[[i, j]] = mode_kt2;
                 propagating_mask[[i, j]] = mode_kt2 <= k02;
             }

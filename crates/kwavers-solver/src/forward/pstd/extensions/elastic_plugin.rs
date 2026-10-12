@@ -28,7 +28,6 @@
 //! conflating them would misrepresent the excitation.
 
 use leto::Array4;
-use std::any::Any;
 use std::fmt::Debug;
 
 use super::elastic_orchestrator::{ElasticPstdMedium, ElasticPstdOrchestrator};
@@ -93,17 +92,7 @@ impl MechanicalStressPlugin {
 }
 
 impl Plugin for MechanicalStressPlugin {
-    fn metadata(&self) -> &PluginMetadata {
-        &self.metadata
-    }
-
-    fn state(&self) -> PluginState {
-        self.state
-    }
-
-    fn set_state(&mut self, state: PluginState) {
-        self.state = state;
-    }
+    crate::plugin_accessors!();
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
         // Self-contained: elastic state is internal; nothing read from the cube.
@@ -158,14 +147,6 @@ impl Plugin for MechanicalStressPlugin {
         }
 
         Ok(())
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 }
 

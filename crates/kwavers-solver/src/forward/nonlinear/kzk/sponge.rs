@@ -69,6 +69,12 @@ impl SpongeLayer {
     }
 
     /// Apply the sponge layer in place with no hot-path allocation.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the sponge window is not standard-layout, the field
+    /// view yields no indexed iterator, or the field outruns the window,
+    /// which violates the operator's layout invariant.
     pub fn apply(&self, field: &mut ArrayViewMut2<Complex64>) {
         let window = self
             .window

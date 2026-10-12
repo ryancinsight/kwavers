@@ -1,13 +1,13 @@
+use crate::acoustics::traits::PhysicsModel;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::{Array3, Array4};
-use std::fmt::Debug;
 
 /// Trait for thermal models.
 ///
 /// Implementors of this trait simulate heat transfer and temperature changes within the medium,
 /// considering heat sources (e.g., acoustic, optical) and thermal diffusion.
-pub trait ThermalModelTrait: Debug + Send + Sync {
+pub trait ThermalModelTrait: PhysicsModel {
     /// Advances the thermal simulation by a single time step `dt`.
     ///
     /// # Arguments

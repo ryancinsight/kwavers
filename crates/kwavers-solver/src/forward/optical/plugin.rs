@@ -7,7 +7,6 @@ use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::{Array3, Array4};
-use std::any::Any;
 #[derive(Debug)]
 pub struct OpticalDiffusionPlugin {
     metadata: PluginMetadata,

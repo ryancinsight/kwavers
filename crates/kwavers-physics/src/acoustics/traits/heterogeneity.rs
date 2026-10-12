@@ -1,12 +1,12 @@
+use crate::acoustics::traits::PhysicsModel;
 use kwavers_grid::Grid;
 use leto::Array3;
-use std::fmt::Debug;
 
 /// Trait for models dealing with medium heterogeneity.
 ///
 /// Implementors of this trait provide ways to represent and apply spatial variations
 /// in medium properties, such as sound speed.
-pub trait HeterogeneityModelTrait: Debug + Send + Sync {
+pub trait HeterogeneityModelTrait: PhysicsModel {
     /// Calculates or returns the adjusted sound speed field considering heterogeneity.
     ///
     /// # Arguments

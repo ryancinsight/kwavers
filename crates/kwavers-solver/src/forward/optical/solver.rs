@@ -50,7 +50,6 @@ impl OpticalDiffusionSolver {
     ///
     /// # Errors
     /// Returns [`Err`] when the input shapes do not match the grid.
-    #[must_use]
     pub fn new(grid: Grid, mu_a: Array3<f64>, mu_s_prime: Array3<f64>) -> KwaversResult<Self> {
         if mu_a.shape() != [grid.nx, grid.ny, grid.nz]
             || mu_s_prime.shape() != [grid.nx, grid.ny, grid.nz]
@@ -99,7 +98,6 @@ impl OpticalDiffusionSolver {
     ///
     /// # Errors
     /// Returns [`Err`] when a medium-supplied optical coefficient is invalid.
-    #[must_use]
     pub fn from_medium(grid: Grid, medium: &dyn Medium) -> KwaversResult<Self> {
         let mut mu_a = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let mut mu_s_prime = Array3::zeros((grid.nx, grid.ny, grid.nz));

@@ -36,6 +36,7 @@ use leto::Array2 as LetoArray2;
 use leto::{Array2, ArrayViewMut2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
+use super::spectral_helpers::wavenumber_vec;
 use super::KZKConfig;
 
 /// Padé `[1,1]` diffraction operator in the transverse spectral domain.
@@ -71,25 +72,14 @@ impl Pade11DiffractionOperator {
     pub fn new(config: &KZKConfig) -> Self {
         let nx = config.nx;
         let ny = config.ny;
-        let dkx = TWO_PI / (nx as f64 * config.dx);
-        let dky = TWO_PI / (ny as f64 * config.dx);
+        let kxs = wavenumber_vec(nx, config.dx);
+        let kys = wavenumber_vec(ny, config.dx);
 
         let mut kt2 = Array2::zeros((nx, ny));
         for i in 0..nx {
-            let kx = if i <= nx / 2 {
-                i as f64 * dkx
-            } else {
-                (i as f64 - nx as f64) * dkx
-            };
-            let kx2 = kx * kx;
-
+            let kx2 = kxs[i] * kxs[i];
             for j in 0..ny {
-                let ky = if j <= ny / 2 {
-                    j as f64 * dky
-                } else {
-                    (j as f64 - ny as f64) * dky
-                };
-                kt2[[i, j]] = kx2 + ky * ky;
+                kt2[[i, j]] = kx2 + kys[j] * kys[j];
             }
         }
 

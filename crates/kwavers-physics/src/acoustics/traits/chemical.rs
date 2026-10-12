@@ -1,13 +1,13 @@
+use crate::acoustics::traits::PhysicsModel;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::Array3;
-use std::fmt::Debug;
 
 /// Trait for chemical models.
 ///
 /// Implementors of this trait simulate chemical reactions, radical formation,
 /// and other chemical processes occurring within the medium.
-pub trait ChemicalModelTrait: Debug + Send + Sync {
+pub trait ChemicalModelTrait: PhysicsModel {
     /// Advances the chemical simulation by a single time step `dt`.
     ///
     /// # Arguments

@@ -35,13 +35,13 @@
 //! - Huijssen J, Verweij MD (2010). J. Acoust. Soc. Am. 127(1), 33–44.
 
 use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::fft::{fft_1d_complex_slice_inplace, ifft_1d_complex_slice_inplace, Complex64};
 use leto::Array2;
 use leto::Array2 as LetoArray2;
 use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, for_each_chunk_mut_enumerated_with, Adaptive};
 
+use super::spectral_helpers::{folded_omega, wavenumber_vec};
 use super::KZKConfig;
 
 /// Broadband exact Helmholtz diffraction operator applied per temporal bin.
@@ -73,33 +73,18 @@ impl BroadbandDiffractionOperator {
         let nx = config.nx;
         let ny = config.ny;
         let nt = config.nt;
-        let dkx = TWO_PI / (nx as f64 * config.dx);
-        let dky = TWO_PI / (ny as f64 * config.dx);
+        let kxs = wavenumber_vec(nx, config.dx);
+        let kys = wavenumber_vec(ny, config.dx);
 
         let mut kt2 = Array2::<f64>::zeros((nx, ny));
         for i in 0..nx {
-            let kx = if i <= nx / 2 {
-                i as f64 * dkx
-            } else {
-                (i as f64 - nx as f64) * dkx
-            };
-            let kx2 = kx * kx;
+            let kx2 = kxs[i] * kxs[i];
             for j in 0..ny {
-                let ky = if j <= ny / 2 {
-                    j as f64 * dky
-                } else {
-                    (j as f64 - ny as f64) * dky
-                };
-                kt2[[i, j]] = kx2 + ky * ky;
+                kt2[[i, j]] = kx2 + kys[j] * kys[j];
             }
         }
 
-        let mut omega = vec![0.0_f64; nt];
-        let domega = TWO_PI / (nt as f64 * config.dt);
-        for (k, value) in omega.iter_mut().enumerate() {
-            let folded_k = if k <= nt / 2 { k } else { nt - k };
-            *value = folded_k as f64 * domega;
-        }
+        let omega: Vec<f64> = (0..nt).map(|k| folded_omega(k, nt, config.dt)).collect();
 
         Self {
             config: config.clone(),
@@ -115,6 +100,12 @@ impl BroadbandDiffractionOperator {
     /// all time waveforms are FFT'd in place, each temporal bin is propagated
     /// through a shared 2-D spatial scratch buffer, then all waveforms are
     /// inverse transformed back to retarded time.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the field, transverse-wavenumber table, or scratch
+    /// buffer is not standard-layout, which violates the operator's
+    /// construction invariant.
     pub fn apply_complex_full(&mut self, field: &mut Array3<Complex64>, step_size: f64) {
         let nt = self.config.nt;
         let ny = self.config.ny;

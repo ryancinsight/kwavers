@@ -42,13 +42,7 @@ impl HybridPlugin {
 }
 
 impl crate::plugin::Plugin for HybridPlugin {
-    fn metadata(&self) -> &PluginMetadata {
-        &self.metadata
-    }
-
-    fn state(&self) -> PluginState {
-        self.state
-    }
+    crate::plugin_accessors!();
 
     fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
         let solver = HybridSolver::new(self.config.clone(), grid, medium)?;
@@ -118,17 +112,5 @@ impl crate::plugin::Plugin for HybridPlugin {
         } else {
             "Hybrid Plugin - Not initialized".to_owned()
         }
-    }
-
-    fn set_state(&mut self, state: PluginState) {
-        self.state = state;
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
     }
 }

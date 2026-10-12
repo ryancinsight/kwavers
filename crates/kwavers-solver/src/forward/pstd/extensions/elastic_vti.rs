@@ -4,7 +4,6 @@
 //! constant stiffness coefficients and pointwise density, advanced via
 //! pseudospectral derivatives.
 
-use std::any::Any;
 use std::sync::Arc;
 
 use leto::{Array3, Array4};

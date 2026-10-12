@@ -58,6 +58,7 @@ pub mod plane_wave_test;
 pub mod plugin;
 pub mod shock_capturing;
 pub mod solver;
+pub mod spectral_helpers;
 pub mod sponge;
 pub mod validation;
 pub mod wide_angle_diffraction;
