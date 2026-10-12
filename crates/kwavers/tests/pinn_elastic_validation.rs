@@ -27,7 +27,7 @@
 #![cfg(feature = "pinn")]
 
 use kwavers_physics::foundations::wave_equation::{
-    AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain, WaveEquationBoundary,
+    Domain, ElasticOps, WaveEquationBoundary, WaveEquationOps,
 };
 use kwavers_solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D, ElasticPINN2DSolver};
 // Import validation framework
