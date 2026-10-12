@@ -1,8 +1,13 @@
-//! Signal domain primitive
-//!
-//! Defines the core Signal trait used for time-varying amplitudes in sources and boundary conditions.
+/// Base bound shared by the atomic signal component traits.
+///
+/// `Amplitude`, `Frequency`, and `Phase` each represent a single aspect of a
+/// time-varying signal.  All three require thread safety and debug formatting;
+/// declaring the common bounds here once prevents the `Debug + Send + Sync`
+/// triple from being copy-pasted into each component trait.
+pub trait SignalPrimitive: std::fmt::Debug + Send + Sync {}
 
-use std::fmt::Debug;
+/// Blanket implementation: any `Debug + Send + Sync` type satisfies `SignalPrimitive`.
+impl<T: std::fmt::Debug + Send + Sync> SignalPrimitive for T {}
 
 /// Core Signal trait representing time-varying amplitude.
 ///
@@ -12,7 +17,7 @@ use std::fmt::Debug;
 // dynamic-dispatch boundary; a closed `SignalKind` enum is infeasible without
 // circular crate dependencies. Dispatch is O(num_sources)/step (sampled once per
 // source per step), never per-cell, so it is not throughput-critical.
-pub trait Signal: Debug + Send + Sync {
+pub trait Signal: std::fmt::Debug + Send + Sync {
     /// Get the signal amplitude at time t
     fn amplitude(&self, t: f64) -> f64;
 

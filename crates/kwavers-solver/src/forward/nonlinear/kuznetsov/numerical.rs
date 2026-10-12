@@ -37,7 +37,8 @@ use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{get_fft_for_grid, Fft3dInOutExt};
 use leto::Array3 as LetoArray3;
 use leto::Array3;
-use std::f64::consts::PI;
+
+use crate::forward::nonlinear::kzk::spectral_helpers::wavenumber_vec;
 
 /// Compute Laplacian using spectral methods
 #[must_use]
@@ -54,31 +55,16 @@ pub fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
     let mut field_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
     fft.forward_into(&field_leto, &mut field_hat);
 
-    // Compute k-space operators
-    let kx_max = PI / grid.dx;
-    let ky_max = PI / grid.dy;
-    let kz_max = PI / grid.dz;
-
     // Apply Laplacian in k-space: ∇²f = -(kx² + ky² + kz²) * f_hat
+    let kxs = wavenumber_vec(nx, grid.dx);
+    let kys = wavenumber_vec(ny, grid.dy);
+    let kzs = wavenumber_vec(nz, grid.dz);
     for i in 0..nx {
-        let kx = if i <= nx / 2 {
-            i as f64 * 2.0 * kx_max / nx as f64
-        } else {
-            (i as f64 - nx as f64) * 2.0 * kx_max / nx as f64
-        };
+        let kx2 = kxs[i] * kxs[i];
         for j in 0..ny {
-            let ky = if j <= ny / 2 {
-                j as f64 * 2.0 * ky_max / ny as f64
-            } else {
-                (j as f64 - ny as f64) * 2.0 * ky_max / ny as f64
-            };
+            let kyz2 = kx2 + kys[j] * kys[j];
             for k in 0..nz {
-                let kz = if k <= nz / 2 {
-                    k as f64 * 2.0 * kz_max / nz as f64
-                } else {
-                    (k as f64 - nz as f64) * 2.0 * kz_max / nz as f64
-                };
-                let k_squared = kx * kx + ky * ky + kz * kz;
+                let k_squared = kyz2 + kzs[k] * kzs[k];
                 field_hat[[i, j, k]] *= -k_squared;
             }
         }
@@ -104,9 +90,9 @@ pub fn compute_gradient(
         .expect("Kuznetsov field shape must match its Leto FFT shape");
     let field_hat = fft.forward(&field_leto);
 
-    let kx_max = PI / grid.dx;
-    let ky_max = PI / grid.dy;
-    let kz_max = PI / grid.dz;
+    let kxs = wavenumber_vec(nx, grid.dx);
+    let kys = wavenumber_vec(ny, grid.dy);
+    let kzs = wavenumber_vec(nz, grid.dz);
 
     let mut grad_x_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
     let mut grad_y_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
@@ -114,23 +100,11 @@ pub fn compute_gradient(
 
     // Apply gradient operators in k-space
     for i in 0..nx {
-        let kx = if i <= nx / 2 {
-            i as f64 * 2.0 * kx_max / nx as f64
-        } else {
-            (i as f64 - nx as f64) * 2.0 * kx_max / nx as f64
-        };
+        let kx = kxs[i];
         for j in 0..ny {
-            let ky = if j <= ny / 2 {
-                j as f64 * 2.0 * ky_max / ny as f64
-            } else {
-                (j as f64 - ny as f64) * 2.0 * ky_max / ny as f64
-            };
+            let ky = kys[j];
             for k in 0..nz {
-                let kz = if k <= nz / 2 {
-                    k as f64 * 2.0 * kz_max / nz as f64
-                } else {
-                    (k as f64 - nz as f64) * 2.0 * kz_max / nz as f64
-                };
+                let kz = kzs[k];
                 let f = field_hat[[i, j, k]];
                 grad_x_hat[[i, j, k]] = Complex64::new(0.0, kx) * f;
                 grad_y_hat[[i, j, k]] = Complex64::new(0.0, ky) * f;

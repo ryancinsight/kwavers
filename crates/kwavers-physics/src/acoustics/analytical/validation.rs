@@ -46,7 +46,7 @@ impl PhysicsTestUtils {
             k * (DISPERSION_CORRECTION_SECOND_ORDER * k * k * grid.dx).mul_add(grid.dx, 1.0);
 
         for i in 0..grid.nx {
-            let x = i as f64 * grid.dx;
+            let (x, _, _) = grid.coords(i, 0, 0);
             let phase = k_dispersed * x - omega * time;
             let value = amplitude * phase.sin();
 

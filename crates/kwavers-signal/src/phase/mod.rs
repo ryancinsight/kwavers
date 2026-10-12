@@ -1,6 +1,6 @@
 // signal/phase/mod.rs
+use crate::SignalPrimitive;
 use rand::Rng;
-use std::fmt::Debug;
 
 pub mod goldstein;
 pub mod unwrap;
@@ -10,7 +10,7 @@ pub use goldstein::{
 };
 pub use unwrap::{unwrap_1d, unwrap_2d};
 
-pub trait Phase: Debug + Send + Sync {
+pub trait Phase: SignalPrimitive {
     fn phase(&self, t: f64) -> f64;
     fn clone_box(&self) -> Box<dyn Phase>;
 }

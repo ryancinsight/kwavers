@@ -110,7 +110,7 @@ impl FrequencySweep for ExponentialSweep {
         self.stop_frequency
     }
 
-    fn duration(&self) -> f64 {
+    fn sweep_duration(&self) -> f64 {
         self.duration
     }
 }

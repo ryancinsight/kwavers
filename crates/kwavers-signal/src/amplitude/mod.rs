@@ -1,9 +1,9 @@
 // signal/amplitude/mod.rs
 
+use crate::SignalPrimitive;
 use kwavers_core::constants::numerical::TWO_PI;
-use std::fmt::Debug;
 
-pub trait Amplitude: Debug + Send + Sync {
+pub trait Amplitude: SignalPrimitive {
     fn amplitude(&self, t: f64) -> f64;
     fn clone_box(&self) -> Box<dyn Amplitude>;
 }

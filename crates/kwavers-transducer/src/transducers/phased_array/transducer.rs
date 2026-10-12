@@ -176,9 +176,7 @@ impl PhasedArrayTransducer {
             let k = idx % grid.nz;
             let j = (idx / grid.nz) % grid.ny;
             let i = idx / (grid.ny * grid.nz);
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let z = k as f64 * grid.dz;
+            let (x, y, z) = grid.coords(i, j, k);
 
             for (element, &signal) in self.elements.iter().zip(element_signals.iter()) {
                 let distance = Self::distance_to_element(element, x, y, z);

@@ -17,12 +17,25 @@ pub use hyperbolic::HyperbolicSweep;
 pub use logarithmic::LogarithmicSweep;
 pub use stepped::SteppedSweep;
 
-/// Base trait for frequency sweep signals
-pub trait FrequencySweep: Signal + Debug {
+/// Base trait for frequency sweep signals.
+///
+/// Extends [`Signal`] with sweep-specific queries.  `Signal` already requires
+/// `Debug` via its `Debug + Send + Sync` bound, so no additional `+ Debug`
+/// bound is needed here.
+///
+/// Implementations typically provide the canonical phase computation in
+/// [`FrequencySweep::phase`] and then delegate [`Signal::phase`] to it.
+/// [`sweep_duration`](FrequencySweep::sweep_duration) returns `f64` (not
+/// `Option<f64>`) because frequency sweeps always have a finite, well-defined
+/// duration.
+pub trait FrequencySweep: Signal {
     /// Get instantaneous frequency at time t
     fn instantaneous_frequency(&self, t: f64) -> f64;
 
-    /// Get phase at time t
+    /// Get the sweep phase at time t.
+    ///
+    /// This is the canonical phase expression for the sweep waveform.
+    /// [`Signal::phase`] implementations should delegate here.
     fn phase(&self, t: f64) -> f64;
 
     /// Get sweep rate at time t
@@ -34,8 +47,11 @@ pub trait FrequencySweep: Signal + Debug {
     /// Get stop frequency
     fn stop_frequency(&self) -> f64;
 
-    /// Get sweep duration
-    fn duration(&self) -> f64;
+    /// Get the sweep duration (always finite for sweep signals).
+    ///
+    /// Note: unlike [`Signal::duration`] which returns `Option<f64>`, all
+    /// frequency sweeps have a finite duration and return it as `f64`.
+    fn sweep_duration(&self) -> f64;
 }
 
 /// Sweep direction

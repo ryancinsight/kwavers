@@ -1,8 +1,8 @@
 // signal/frequency/mod.rs
 
-use std::fmt::Debug;
+use crate::SignalPrimitive;
 
-pub trait Frequency: Debug + Send + Sync {
+pub trait Frequency: SignalPrimitive {
     fn frequency(&self, t: f64) -> f64;
     fn clone_box(&self) -> Box<dyn Frequency>;
 }

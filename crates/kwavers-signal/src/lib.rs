@@ -22,7 +22,7 @@ pub use functions::{
     tone_burst_series, ToneBurstSpec,
 };
 pub use special::{NullSignal, TimeVaryingSignal};
-pub use traits::Signal;
+pub use traits::{Signal, SignalPrimitive};
 pub use waveform::{SineWave, SquareWave, TriangleWave};
 pub use window::{window_value, SignalWindowType};
 

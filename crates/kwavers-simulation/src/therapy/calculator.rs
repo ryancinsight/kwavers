@@ -132,9 +132,7 @@ impl TherapyCalculator {
             heat_source.view_mut(),
             pressure.view(),
             |[i, j, k], q, &p| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+                let (x, y, z) = grid.coords(i, j, k);
 
                 let rho = kwavers_medium::density_at(medium.as_ref(), x, y, z, grid);
                 let c = kwavers_medium::sound_speed_at(medium.as_ref(), x, y, z, grid);
