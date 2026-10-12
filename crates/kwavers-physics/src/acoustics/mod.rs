@@ -52,5 +52,6 @@ pub use state::{FieldView, FieldViewMut, HasPhysicsState, PhysicsState};
 // Acoustic model traits and interfaces
 pub use traits::{
     AcousticScatteringModelTrait, AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait,
-    HeterogeneityModelTrait, LightDiffusionModelTrait, StreamingModelTrait, ThermalModelTrait,
+    HeterogeneityModelTrait, LightDiffusionModelTrait, PhysicsModel, StreamingModelTrait,
+    ThermalModelTrait,
 };

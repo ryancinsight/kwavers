@@ -1,13 +1,13 @@
+use crate::acoustics::traits::PhysicsModel;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::{Array3, Array4};
-use std::fmt::Debug;
 
 /// Trait for light diffusion models.
 ///
 /// Implementors of this trait simulate the diffusion of light through a medium,
 /// considering sources, absorption, scattering, and potentially other optical effects.
-pub trait LightDiffusionModelTrait: Debug + Send + Sync {
+pub trait LightDiffusionModelTrait: PhysicsModel {
     /// Advances the light diffusion simulation by a single time step `dt`.
     ///
     /// # Arguments

@@ -1,13 +1,13 @@
+use crate::acoustics::traits::PhysicsModel;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::Array3;
-use std::fmt::Debug;
 
 /// Trait for cavitation models.
 ///
 /// Implementors of this trait simulate bubble dynamics, considering the nonlinear
 /// effects on the acoustic field and other physical phenomena (e.g., sonoluminescence).
-pub trait CavitationModelBehavior: Debug + Send + Sync {
+pub trait CavitationModelBehavior: PhysicsModel {
     /// Advances the cavitation simulation by a single time step `dt`.
     ///
     /// # Arguments

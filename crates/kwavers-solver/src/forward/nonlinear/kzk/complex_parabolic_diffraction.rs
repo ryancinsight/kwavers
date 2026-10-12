@@ -15,13 +15,14 @@
 //! half-step saves 3000 allocations (~786 MB total clones + FFT temporaries).
 
 use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::fft::Complex64;
 use leto::Array2 as LetoArray2;
 use leto::{Array2, ArrayViewMut2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 
+use super::spectral_helpers::wavenumber_vec;
 use super::KZKConfig;
-use kwavers_core::constants::numerical::TWO_PI;
 
 /// Parabolic diffraction operator using complex-valued computations for energy preservation.
 ///
@@ -65,31 +66,20 @@ impl ParabolicDiffractionOperator {
         let mut kx2 = Array2::zeros((nx, ny));
         let mut ky2 = Array2::zeros((nx, ny));
 
-        let dkx = TWO_PI / (nx as f64 * config.dx);
-        let dky = TWO_PI / (ny as f64 * config.dx);
+        let kxs = wavenumber_vec(nx, config.dx);
+        let kys = wavenumber_vec(ny, config.dx);
 
-        // Standard FFT k-space ordering
         for i in 0..nx {
-            let kx = if i <= nx / 2 {
-                i as f64 * dkx
-            } else {
-                (i as f64 - nx as f64) * dkx
-            };
-
+            let kx2_i = kxs[i] * kxs[i];
             for j in 0..ny {
-                kx2[[i, j]] = kx * kx;
+                kx2[[i, j]] = kx2_i;
             }
         }
 
         for j in 0..ny {
-            let ky = if j <= ny / 2 {
-                j as f64 * dky
-            } else {
-                (j as f64 - ny as f64) * dky
-            };
-
+            let ky2_j = kys[j] * kys[j];
             for i in 0..nx {
-                ky2[[i, j]] = ky * ky;
+                ky2[[i, j]] = ky2_j;
             }
         }
 

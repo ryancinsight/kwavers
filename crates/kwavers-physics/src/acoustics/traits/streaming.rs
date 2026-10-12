@@ -1,12 +1,12 @@
+use crate::acoustics::traits::PhysicsModel;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::Array3;
-use std::fmt::Debug;
 
 /// Trait for acoustic streaming models.
 ///
 /// Implementors of this trait simulate the fluid motion induced by acoustic waves.
-pub trait StreamingModelTrait: Debug + Send + Sync {
+pub trait StreamingModelTrait: PhysicsModel {
     /// Advances the streaming velocity field by a single time step `dt`.
     ///
     /// # Arguments

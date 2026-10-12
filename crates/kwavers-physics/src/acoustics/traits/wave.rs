@@ -1,15 +1,15 @@
+use crate::acoustics::traits::PhysicsModel;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::Source;
 use leto::{Array3, Array4};
-use std::fmt::Debug;
 
 /// Trait for acoustic wave propagation models.
 ///
 /// Implementors of this trait are responsible for updating the acoustic wave field
 /// over a time step `dt`, considering nonlinear effects, source terms, and medium properties.
-pub trait AcousticWaveModel: Debug + Send + Sync {
+pub trait AcousticWaveModel: PhysicsModel {
     /// Advances the acoustic wave simulation by a single time step `dt`.
     ///
     /// # Arguments
