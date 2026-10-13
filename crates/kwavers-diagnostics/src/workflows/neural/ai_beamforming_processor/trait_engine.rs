@@ -2,7 +2,7 @@
 
 use kwavers_core::error::KwaversResult;
 
-pub trait PinnInferenceEngine: Send + Sync {
+pub trait PinnInferenceEngine: kwavers_core::ComponentBase {
     /// Run real-time PINN inference at the given spatial-temporal coordinates.
     ///
     /// # Errors

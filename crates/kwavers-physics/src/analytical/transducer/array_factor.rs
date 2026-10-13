@@ -149,7 +149,7 @@ pub fn grating_lobe_angles(k: f64, d_m: f64, steer_rad: f64) -> Vec<f64> {
     let mut angles = Vec::new();
     for m in 1_i32..=10 {
         for sign in [-1_i32, 1_i32] {
-            let sin_g = sin_steer + sign as f64 * m as f64 * lambda_over_d;
+            let sin_g = sin_steer + (sign * m) as f64 * lambda_over_d;
             if sin_g.abs() <= 1.0 {
                 angles.push(sin_g.asin());
             }

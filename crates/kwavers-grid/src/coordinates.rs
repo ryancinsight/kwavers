@@ -45,12 +45,23 @@ impl CoordinateSystem {
         let mut y_coords = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         let mut z_coords = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 
+        // Pre-compute 1-D coordinate vectors to avoid recomputing per-cell.
+        let xs: Vec<f64> = (0..grid.nx)
+            .map(|i| (i as f64).mul_add(grid.dx, grid.origin[0]))
+            .collect();
+        let ys: Vec<f64> = (0..grid.ny)
+            .map(|j| (j as f64).mul_add(grid.dy, grid.origin[1]))
+            .collect();
+        let zs: Vec<f64> = (0..grid.nz)
+            .map(|k| (k as f64).mul_add(grid.dz, grid.origin[2]))
+            .collect();
+
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
-                    x_coords[[i, j, k]] = (i as f64).mul_add(grid.dx, grid.origin[0]);
-                    y_coords[[i, j, k]] = (j as f64).mul_add(grid.dy, grid.origin[1]);
-                    z_coords[[i, j, k]] = (k as f64).mul_add(grid.dz, grid.origin[2]);
+                    x_coords[[i, j, k]] = xs[i];
+                    y_coords[[i, j, k]] = ys[j];
+                    z_coords[[i, j, k]] = zs[k];
                 }
             }
         }
@@ -164,12 +175,21 @@ impl CoordinateSystem {
         let mut y_coords = Array3::zeros([nx, ny, nz]);
         let mut z_coords = Array3::zeros([nx, ny, nz]);
 
+        // Pre-compute 1-D centered coordinate vectors (O(n)) so the triple
+        // loop only does array indexing, not repeated arithmetic.
+        let x_off = -lx / 2.0 + dx / 2.0 + origin[0];
+        let y_off = -ly / 2.0 + dy / 2.0 + origin[1];
+        let z_off = -lz / 2.0 + dz / 2.0 + origin[2];
+        let xs: Vec<f64> = (0..nx).map(|i| i as f64 * dx + x_off).collect();
+        let ys: Vec<f64> = (0..ny).map(|j| j as f64 * dy + y_off).collect();
+        let zs: Vec<f64> = (0..nz).map(|k| k as f64 * dz + z_off).collect();
+
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    x_coords[[i, j, k]] = (i as f64).mul_add(dx, origin[0]) - lx / 2.0 + dx / 2.0;
-                    y_coords[[i, j, k]] = (j as f64).mul_add(dy, origin[1]) - ly / 2.0 + dy / 2.0;
-                    z_coords[[i, j, k]] = (k as f64).mul_add(dz, origin[2]) - lz / 2.0 + dz / 2.0;
+                    x_coords[[i, j, k]] = xs[i];
+                    y_coords[[i, j, k]] = ys[j];
+                    z_coords[[i, j, k]] = zs[k];
                 }
             }
         }
