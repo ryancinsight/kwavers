@@ -47,7 +47,7 @@
 //!   absorbing acoustic media using combined photoacoustic and ultrasound
 //!   imaging." New J. Phys. 12, 055008. DOI:10.1088/1367-2630/12/5/055008
 
-use kwavers_core::constants::numerical::TWO_PI;
+use crate::forward::nonlinear::kzk::spectral_helpers::wavenumber_vec;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64;
@@ -127,9 +127,9 @@ impl PhotoacousticTimeReversal {
         // ── k-vectors (rad/m) ─────────────────────────────────────────────
         // Standard DFT frequency ordering: k_n = n·(2π)/(N·dx) for n ≤ N/2,
         // k_n = (n − N)·(2π)/(N·dx) for n > N/2.
-        let kx = Self::k_vector(nx, grid.dx);
-        let ky = Self::k_vector(ny, grid.dy);
-        let kz = Self::k_vector(nz, grid.dz);
+        let kx = wavenumber_vec(nx, grid.dx);
+        let ky = wavenumber_vec(ny, grid.dy);
+        let kz = wavenumber_vec(nz, grid.dz);
 
         // ── Real cosine propagator cos(c₀·|k|·dt) ─────────────────────────
         // Tabei et al. 2002, Eq. 2: p̂(t+dt) = 2·cos(c₀·|k|·dt)·p̂(t) − p̂(t−dt).
@@ -197,22 +197,6 @@ impl PhotoacousticTimeReversal {
 
         // At the end of `n_time` steps the field equals p₀(r).
         Ok(pressure)
-    }
-
-    /// Construct the standard DFT k-vector for `n` points and spacing `dx`.
-    ///
-    /// `k`i` = i·(2π/(n·dx))` for `i ≤ n/2`, and `(i−n)·(2π/(n·dx))` otherwise.
-    fn k_vector(n: usize, dx: f64) -> Vec<f64> {
-        let dk = TWO_PI / (n as f64 * dx);
-        (0..n)
-            .map(|i| {
-                if i <= n / 2 {
-                    i as f64 * dk
-                } else {
-                    f64::from(i as i32 - n as i32) * dk
-                }
-            })
-            .collect()
     }
 
     /// One k-space leapfrog time step.
