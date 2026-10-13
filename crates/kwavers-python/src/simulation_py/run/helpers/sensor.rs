@@ -65,11 +65,8 @@ impl Simulation {
             return mask;
         }
 
-        let pos = sensor.position.unwrap_or([
-            (nx as f64 * grid.dx) * 0.5,
-            (ny as f64 * grid.dy) * 0.5,
-            (nz as f64 * grid.dz) * 0.5,
-        ]);
+        let (lx, ly, lz) = grid.physical_size();
+        let pos = sensor.position.unwrap_or([lx * 0.5, ly * 0.5, lz * 0.5]);
 
         let ix = (pos[0] / grid.dx).round() as isize;
         let iy = (pos[1] / grid.dy).round() as isize;

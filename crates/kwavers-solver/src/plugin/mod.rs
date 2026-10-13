@@ -22,13 +22,13 @@ use std::sync::Arc;
 use kwavers_boundary::Boundary;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::time::StabilityConstraints;
+use kwavers_core::ComponentBase;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::Source;
 use leto::Array4;
 use std::any::Any;
-use std::fmt::Debug;
 
 /// State of a plugin
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,7 +74,7 @@ pub struct PluginContext<'a> {
 }
 
 /// Core trait that all plugins must implement
-pub trait Plugin: Debug + Send + Sync {
+pub trait Plugin: ComponentBase {
     /// Get plugin metadata
     fn metadata(&self) -> &PluginMetadata;
 

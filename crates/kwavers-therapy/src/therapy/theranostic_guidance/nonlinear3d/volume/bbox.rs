@@ -67,15 +67,16 @@ fn brain_cube_bbox(
 
 fn body_cube_bbox(body: &Array3<bool>, spacing_mm: [f64; 3]) -> KwaversResult<IndexBounds3> {
     let bounds = mask_bounds(body)?;
+    let [sx, sy, sz] = spacing_mm.map(|v| v * 1.0e-3);
     let center = [
         0.5 * (bounds.x0 + bounds.x1) as f64,
         0.5 * (bounds.y0 + bounds.y1) as f64,
         0.5 * (bounds.z0 + bounds.z1) as f64,
     ];
     let radius_m = [
-        0.5 * (bounds.x1 - bounds.x0 + 1) as f64 * spacing_mm[0] * 1.0e-3,
-        0.5 * (bounds.y1 - bounds.y0 + 1) as f64 * spacing_mm[1] * 1.0e-3,
-        0.5 * (bounds.z1 - bounds.z0 + 1) as f64 * spacing_mm[2] * 1.0e-3,
+        0.5 * (bounds.x1 - bounds.x0 + 1) as f64 * sx,
+        0.5 * (bounds.y1 - bounds.y0 + 1) as f64 * sy,
+        0.5 * (bounds.z1 - bounds.z0 + 1) as f64 * sz,
     ]
     .into_iter()
     .fold(0.0, f64::max)
@@ -235,9 +236,10 @@ fn cube_from_center_radius(
     radius_m: f64,
     spacing_mm: [f64; 3],
 ) -> IndexBounds3 {
-    let rx = (radius_m / (spacing_mm[0] * 1.0e-3)).ceil() as usize;
-    let ry = (radius_m / (spacing_mm[1] * 1.0e-3)).ceil() as usize;
-    let rz = (radius_m / (spacing_mm[2] * 1.0e-3)).ceil() as usize;
+    let [sx, sy, sz] = spacing_mm.map(|v| v * 1.0e-3);
+    let rx = (radius_m / sx).ceil() as usize;
+    let ry = (radius_m / sy).ceil() as usize;
+    let rz = (radius_m / sz).ceil() as usize;
     IndexBounds3 {
         x0: (center[0].round() as isize - rx as isize).max(0) as usize,
         x1: (center[0].round() as usize + rx).min(dims[0] - 1),
@@ -290,9 +292,10 @@ fn max_distance_to_bbox(center: [f64; 3], bbox: IndexBounds3, spacing_mm: [f64; 
 }
 
 pub(super) fn physical_distance(a: [f64; 3], b: [f64; 3], spacing_mm: [f64; 3]) -> f64 {
-    let dx = (a[0] - b[0]) * spacing_mm[0] * 1.0e-3;
-    let dy = (a[1] - b[1]) * spacing_mm[1] * 1.0e-3;
-    let dz = (a[2] - b[2]) * spacing_mm[2] * 1.0e-3;
+    let [sx, sy, sz] = spacing_mm.map(|v| v * 1.0e-3);
+    let dx = (a[0] - b[0]) * sx;
+    let dy = (a[1] - b[1]) * sy;
+    let dz = (a[2] - b[2]) * sz;
     dx.hypot(dy).hypot(dz)
 }
 

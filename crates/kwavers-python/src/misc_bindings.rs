@@ -290,9 +290,9 @@ pub(crate) fn time_reversal_reconstruction_impl(
         .rows()
         .expect("sensor_positions is a dense 2-D array")
     {
-        let x = row[[0]] + expand_x as f64 * grid.dx;
-        let y = row[[1]] + expand_y as f64 * grid.dy;
-        let z = row[[2]] + expand_z as f64 * grid.dz;
+        let x = row[[0]] + grid.x(expand_x);
+        let y = row[[1]] + grid.y(expand_y);
+        let z = row[[2]] + grid.z(expand_z);
         let i = (x / grid.dx).round() as isize;
         let j = (y / grid.dy).round() as isize;
         let k = (z / grid.dz).round() as isize;

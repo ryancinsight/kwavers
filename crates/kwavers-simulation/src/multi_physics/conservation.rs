@@ -45,9 +45,9 @@ impl MultiPhysicsConservationEnforcer {
         source_grid: &Grid,
     ) -> Vec<(usize, usize, usize, f64)> {
         // Target cell bounds (cell-centred)
-        let xt = target_i as f64 * target_grid.dx;
-        let yt = target_j as f64 * target_grid.dy;
-        let zt = target_k as f64 * target_grid.dz;
+        let xt = target_grid.x(target_i);
+        let yt = target_grid.y(target_j);
+        let zt = target_grid.z(target_k);
         let xt_lo = 0.5f64.mul_add(-target_grid.dx, xt);
         let xt_hi = 0.5f64.mul_add(target_grid.dx, xt);
         let yt_lo = 0.5f64.mul_add(-target_grid.dy, yt);
@@ -70,7 +70,7 @@ impl MultiPhysicsConservationEnforcer {
         let mut weights = Vec::new();
 
         for si in si_min..=si_max {
-            let xs = si as f64 * source_grid.dx;
+            let xs = source_grid.x(si);
             let xs_lo = 0.5f64.mul_add(-source_grid.dx, xs);
             let xs_hi = 0.5f64.mul_add(source_grid.dx, xs);
             let ov_x = (xt_hi.min(xs_hi) - xt_lo.max(xs_lo)).max(0.0);
@@ -79,7 +79,7 @@ impl MultiPhysicsConservationEnforcer {
             }
 
             for sj in sj_min..=sj_max {
-                let ys = sj as f64 * source_grid.dy;
+                let ys = source_grid.y(sj);
                 let ys_lo = 0.5f64.mul_add(-source_grid.dy, ys);
                 let ys_hi = 0.5f64.mul_add(source_grid.dy, ys);
                 let ov_y = (yt_hi.min(ys_hi) - yt_lo.max(ys_lo)).max(0.0);
@@ -88,7 +88,7 @@ impl MultiPhysicsConservationEnforcer {
                 }
 
                 for sk in sk_min..=sk_max {
-                    let zs = sk as f64 * source_grid.dz;
+                    let zs = source_grid.z(sk);
                     let zs_lo = 0.5f64.mul_add(-source_grid.dz, zs);
                     let zs_hi = 0.5f64.mul_add(source_grid.dz, zs);
                     let ov_z = (zt_hi.min(zs_hi) - zt_lo.max(zs_lo)).max(0.0);
