@@ -20,9 +20,7 @@ impl ClinicalPhantoms {
     pub fn standard_blood_oxygenation(
         dims: GridDimensions,
     ) -> Result<OpticalPropertyMap, PhantomError> {
-        let cx = dims.dx * (dims.nx as f64) / 2.0;
-        let cy = dims.dy * (dims.ny as f64) / 2.0;
-        let cz = dims.dz * (dims.nz as f64) / 2.0;
+        let (cx, cy, cz) = dims.center();
 
         PhantomBuilder::blood_oxygenation()
             .dimensions(dims)
@@ -42,7 +40,7 @@ impl ClinicalPhantoms {
             .add_skin_layer(0.0, 0.001) // 1 mm epidermis
             .add_dermis_layer(0.001, 0.003) // 2 mm dermis
             .add_fat_layer(0.003, 0.010) // 7 mm fat
-            .add_muscle_layer(0.010, dims.dz * dims.nz as f64) // Muscle below
+            .add_muscle_layer(0.010, dims.physical_size().2) // Muscle below
             .build()
     }
 
@@ -69,10 +67,9 @@ impl ClinicalPhantoms {
     ///
     /// Propagates Hyperion wavelength and optical-property validation errors.
     pub fn vascular_network(dims: GridDimensions) -> Result<OpticalPropertyMap, PhantomError> {
-        let cx = dims.dx * (dims.nx as f64) / 2.0;
-        let cy = dims.dy * (dims.ny as f64) / 2.0;
+        let (cx, cy, _) = dims.center();
         let z_min = 0.0;
-        let z_max = dims.dz * dims.nz as f64;
+        let z_max = dims.physical_size().2;
 
         PhantomBuilder::vascular()
             .dimensions(dims)

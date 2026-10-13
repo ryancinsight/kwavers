@@ -100,10 +100,11 @@ impl InterfaceGeometry {
         normal_direction: usize,
     ) -> KwaversResult<(f64, f64)> {
         // Calculate extent in tangential directions
+        let (lx, ly, lz) = source.physical_size();
         match normal_direction {
-            0 => Ok((source.dy * source.ny as f64, source.dz * source.nz as f64)),
-            1 => Ok((source.dx * source.nx as f64, source.dz * source.nz as f64)),
-            2 => Ok((source.dx * source.nx as f64, source.dy * source.ny as f64)),
+            0 => Ok((ly, lz)),
+            1 => Ok((lx, lz)),
+            2 => Ok((lx, ly)),
             _ => Err(ValidationError::FieldValidation {
                 field: "normal_direction".to_owned(),
                 value: format!("{normal_direction}"),

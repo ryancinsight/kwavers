@@ -63,12 +63,13 @@ impl MonteCarloSolver {
 
     /// Convert position to voxel indices.
     pub(crate) fn position_to_voxel(&self, pos: [f64; 3]) -> Option<(usize, usize, usize)> {
+        let (lx, ly, lz) = self.grid.physical_size();
         if pos[0] < 0.0
             || pos[1] < 0.0
             || pos[2] < 0.0
-            || pos[0] >= self.grid.dx * self.grid.nx as f64
-            || pos[1] >= self.grid.dy * self.grid.ny as f64
-            || pos[2] >= self.grid.dz * self.grid.nz as f64
+            || pos[0] >= lx
+            || pos[1] >= ly
+            || pos[2] >= lz
         {
             return None;
         }
@@ -86,11 +87,8 @@ impl MonteCarloSolver {
 
     /// Specular reflection at simulation bounds.
     pub(super) fn handle_boundary(&self, photon: &mut Photon) {
-        let bounds = [
-            self.grid.dx * self.grid.nx as f64,
-            self.grid.dy * self.grid.ny as f64,
-            self.grid.dz * self.grid.nz as f64,
-        ];
+        let (lx, ly, lz) = self.grid.physical_size();
+        let bounds = [lx, ly, lz];
 
         for (axis, bound) in bounds.iter().enumerate() {
             if photon.position[axis] <= 0.0 {

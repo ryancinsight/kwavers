@@ -96,6 +96,25 @@ impl GridDimensions {
             dz: grid.dz,
         }
     }
+
+    /// Physical extents `(nx·dx, ny·dy, nz·dz)` in metres.
+    #[inline]
+    #[must_use]
+    pub fn physical_size(&self) -> (f64, f64, f64) {
+        (
+            self.nx as f64 * self.dx,
+            self.ny as f64 * self.dy,
+            self.nz as f64 * self.dz,
+        )
+    }
+
+    /// Physical centre of the grid `(lx/2, ly/2, lz/2)` in metres.
+    #[inline]
+    #[must_use]
+    pub fn center(&self) -> (f64, f64, f64) {
+        let (lx, ly, lz) = self.physical_size();
+        (lx / 2.0, ly / 2.0, lz / 2.0)
+    }
 }
 
 // Extension methods for Grid
