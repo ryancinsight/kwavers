@@ -97,7 +97,5 @@ impl Signal for GaussianPulse {
         Some(6.0 * self.pulse_width / self.q_factor)
     }
 
-    fn clone_box(&self) -> Box<dyn Signal> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Signal);
 }

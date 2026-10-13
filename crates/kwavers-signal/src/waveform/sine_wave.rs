@@ -72,7 +72,5 @@ impl Signal for SineWave {
     fn phase(&self, t: f64) -> f64 {
         self.phase.phase(t)
     }
-    fn clone_box(&self) -> Box<dyn Signal> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Signal);
 }

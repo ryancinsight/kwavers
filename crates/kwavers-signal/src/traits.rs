@@ -11,6 +11,30 @@ pub trait SignalPrimitive: kwavers_core::ComponentBase {}
 /// Blanket implementation: any `ComponentBase` type satisfies `SignalPrimitive`.
 impl<T: kwavers_core::ComponentBase> SignalPrimitive for T {}
 
+/// Expand the one-line `clone_box` implementation shared by every
+/// concrete signal type.
+///
+/// Every `clone_box` body is `Box::new(self.clone())` but the return type
+/// differs per trait (`Box<dyn Signal>`, `Box<dyn Amplitude>`, etc.), so
+/// the trait name must be passed as an argument.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// impl Signal for MySig {
+///     signal_clone_box!(Signal);
+///     // … other required methods …
+/// }
+/// ```
+#[macro_export]
+macro_rules! signal_clone_box {
+    ($trait:ident) => {
+        fn clone_box(&self) -> ::std::boxed::Box<dyn $trait> {
+            ::std::boxed::Box::new(self.clone())
+        }
+    };
+}
+
 /// Core Signal trait representing time-varying amplitude.
 ///
 // dyn: used as `dyn Signal`/`Arc<dyn Signal>` (open, cross-crate-extensible

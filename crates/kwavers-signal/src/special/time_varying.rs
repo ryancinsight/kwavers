@@ -109,9 +109,7 @@ impl Signal for TimeVaryingSignal {
         }
     }
 
-    fn clone_box(&self) -> Box<dyn Signal> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Signal);
 }
 
 #[cfg(test)]

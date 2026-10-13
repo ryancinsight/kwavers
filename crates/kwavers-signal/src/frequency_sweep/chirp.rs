@@ -83,9 +83,7 @@ impl Signal for LinearChirp {
         FrequencySweep::phase(self, t)
     }
 
-    fn clone_box(&self) -> Box<dyn Signal> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Signal);
 }
 
 impl FrequencySweep for LinearChirp {

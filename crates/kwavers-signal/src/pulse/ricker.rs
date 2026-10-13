@@ -168,9 +168,7 @@ impl Signal for DomainRickerWavelet {
         Some(4.0 / *self.peak_frequency.as_base())
     }
 
-    fn clone_box(&self) -> Box<dyn Signal> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Signal);
 }
 
 fn validate_parameter(

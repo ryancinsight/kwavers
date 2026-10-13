@@ -35,9 +35,7 @@ impl Amplitude for ConstantAmplitude {
     fn amplitude(&self, _t: f64) -> f64 {
         self.value
     }
-    fn clone_box(&self) -> Box<dyn Amplitude> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Amplitude);
 }
 
 #[derive(Debug, Clone)]
@@ -74,7 +72,5 @@ impl Amplitude for PowerModulation {
                 .modulation_depth
                 .mul_add((TWO_PI * self.modulation_freq * t).sin(), 1.0)
     }
-    fn clone_box(&self) -> Box<dyn Amplitude> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Amplitude);
 }

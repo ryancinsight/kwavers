@@ -34,7 +34,5 @@ impl Frequency for ConstantFrequency {
     fn frequency(&self, _t: f64) -> f64 {
         self.value
     }
-    fn clone_box(&self) -> Box<dyn Frequency> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Frequency);
 }

@@ -44,10 +44,15 @@ jobs:
     # platform-specific wheel regression that only a non-Ubuntu leg would
     # catch is rare enough to belong on the drift backstop rather than on
     # every pull request's critical path (KW-CI-SINGLE-PIPELINE).
+    # Pull requests additionally build a debug wheel: the release maturin
+    # build measured 11.9m (run 37653455660), which alone exceeds the
+    # pull-request budget, while the smoke's contract is build-plus-import,
+    # not ship-ready optimization. Pushes, the schedule, and the release
+    # pipeline keep the release build.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: Base wheel (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 45 }}
     strategy:
       fail-fast: false
       matrix:
@@ -74,7 +79,7 @@ jobs:
           manylinux: ${{ matrix.os == 'ubuntu-latest' && '2_17' || 'off' }}
           sccache: true
           args: >-
-            --release
+            ${{ github.event_name != 'pull_request' && '--release' || '' }}
             --locked
             --compatibility pypi
             --manifest-path source/crates/kwavers-python/Cargo.toml
@@ -99,7 +104,11 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: k-Wave comparison (Ubuntu)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Same debug-on-pull-request split as `base-wheel` above: the release
+    # wheel build measured 11.9m here as well (run 37653455660), while the
+    # parity suites themselves run in under half a minute. The per-test
+    # `--timeout=60` (thread method) still bounds a debug-slowed case.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
     steps:
       - name: Checkout candidate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -152,7 +161,7 @@ jobs:
           manylinux: "2_17"
           sccache: true
           args: >-
-            --release
+            ${{ github.event_name != 'pull_request' && '--release' || '' }}
             --locked
             --compatibility pypi
             --manifest-path source/crates/kwavers-python/Cargo.toml

@@ -74,7 +74,5 @@ impl Signal for SquareWave {
         self.phase.phase(t)
     }
 
-    fn clone_box(&self) -> Box<dyn Signal> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Signal);
 }

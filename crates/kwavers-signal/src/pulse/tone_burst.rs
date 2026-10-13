@@ -142,7 +142,5 @@ impl Signal for ToneBurst {
         Some(self.duration_seconds())
     }
 
-    fn clone_box(&self) -> Box<dyn Signal> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Signal);
 }

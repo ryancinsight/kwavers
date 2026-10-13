@@ -28,47 +28,35 @@ pub fn find_focal_plane(
     let n_slices = axis_slice_count(grid, axis)?;
     validate_pressure_field_domain(pressure_field, grid)?;
 
-    let mut max_energy = 0.0;
-    let mut focal_slice = 0;
-
-    for slice in 0..n_slices {
-        let mut slice_energy = 0.0;
-
-        match axis {
-            0 => {
-                for iy in 0..grid.ny {
-                    for iz in 0..grid.nz {
-                        slice_energy += pressure_field[[slice, iy, iz]].powi(2);
-                    }
-                }
-            }
-            1 => {
-                for ix in 0..grid.nx {
-                    for iz in 0..grid.nz {
-                        slice_energy += pressure_field[[ix, slice, iz]].powi(2);
-                    }
-                }
-            }
-            2 => {
-                for ix in 0..grid.nx {
-                    for iy in 0..grid.ny {
-                        slice_energy += pressure_field[[ix, iy, slice]].powi(2);
-                    }
-                }
-            }
-            _ => {
-                // Invalid axis - return error
-                return Err(KwaversError::InvalidInput(format!(
-                    "Invalid axis {axis} for focus finding, expected 0, 1, or 2"
-                )));
+    // Compute energy for a single slice along `axis` at `slice_idx`.
+    // A single closure with an index-construction match avoids triplicating the nested loops.
+    let (n0, n1) = match axis {
+        0 => (grid.ny, grid.nz),
+        1 => (grid.nx, grid.nz),
+        _ => (grid.nx, grid.ny),
+    };
+    let slice_energy = |slice_idx: usize| -> f64 {
+        let mut energy = 0.0;
+        for i0 in 0..n0 {
+            for i1 in 0..n1 {
+                let val = match axis {
+                    0 => pressure_field[[slice_idx, i0, i1]],
+                    1 => pressure_field[[i0, slice_idx, i1]],
+                    _ => pressure_field[[i0, i1, slice_idx]],
+                };
+                energy += val * val;
             }
         }
+        energy
+    };
 
-        if slice_energy > max_energy {
-            max_energy = slice_energy;
-            focal_slice = slice;
-        }
-    }
+    let focal_slice = (0..n_slices)
+        .max_by(|&a, &b| {
+            slice_energy(a)
+                .partial_cmp(&slice_energy(b))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .unwrap_or(0);
 
     Ok(focal_slice)
 }

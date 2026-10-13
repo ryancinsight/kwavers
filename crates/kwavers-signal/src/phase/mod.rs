@@ -37,9 +37,7 @@ impl Phase for ConstantPhase {
     fn phase(&self, _t: f64) -> f64 {
         self.phase
     }
-    fn clone_box(&self) -> Box<dyn Phase> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Phase);
 }
 
 #[derive(Debug, Clone)]
@@ -64,9 +62,7 @@ impl Phase for RandomPhase {
         let mut rng = rand::rngs::ThreadRng::default();
         rng.gen_range(-self.amplitude..=self.amplitude)
     }
-    fn clone_box(&self) -> Box<dyn Phase> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Phase);
 }
 
 #[derive(Debug, Clone)]
@@ -89,7 +85,5 @@ impl Phase for LinearPhaseShift {
     fn phase(&self, t: f64) -> f64 {
         self.rate.mul_add(t, self.initial_phase)
     }
-    fn clone_box(&self) -> Box<dyn Phase> {
-        Box::new(self.clone())
-    }
+    crate::signal_clone_box!(Phase);
 }

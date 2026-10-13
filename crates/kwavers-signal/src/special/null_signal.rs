@@ -35,9 +35,7 @@ impl Signal for NullSignal {
         Some(0.0)
     }
 
-    fn clone_box(&self) -> Box<dyn Signal> {
-        Box::new(*self)
-    }
+    crate::signal_clone_box!(Signal);
 }
 
 #[cfg(test)]

@@ -32,6 +32,11 @@ jobs:
   index:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: ADR index is current
+    # No toolchain, no cache, no build: a checkout and a script, well inside
+    # the pull-request budget on every event. No timeout-minutes here: a job
+    # that calls a reusable workflow (uses:) accepts only
+    # name/uses/with/secrets/needs/if/permissions; the bound lives inside
+    # adr-index-guard.yml itself.
     # atlas owns the one generator (ATLAS-ADR-FORM-NORMALIZATION-2026-09-02); strict: the ADRs carry the canonical heading form and numbering.
     uses: ryancinsight/atlas/.github/workflows/adr-index-guard.yml@191617bffed5f78de9d840fee8755963fccaaa67
     permissions:

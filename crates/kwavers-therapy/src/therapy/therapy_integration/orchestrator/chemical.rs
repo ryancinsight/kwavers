@@ -188,9 +188,8 @@ fn calculate_temperature_field(
 
         // Apply distance-based spreading from focal point
         let [i, j, k] = index;
-        let x = i as f64 * grid.dx - acoustic_params.focal_depth;
-        let y = j as f64 * grid.dy;
-        let z = k as f64 * grid.dz;
+        let (xi, y, z) = grid.coords(i, j, k);
+        let x = xi - acoustic_params.focal_depth;
         let r = (x * x + y * y + z * z).sqrt();
 
         // Temperature rise decreases with distance from focus
