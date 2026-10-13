@@ -1,11 +1,11 @@
 #![doc = include_str!("../README.md")]
 
 use kwavers_core::error::KwaversResult;
+use kwavers_core::ComponentBase;
 use kwavers_grid::Grid;
 use leto::Array1;
 use leto::{Array3, ArrayViewMut3};
 use std::any::Any;
-use std::fmt::Debug;
 
 pub mod bem;
 pub mod coupling;
@@ -68,7 +68,7 @@ pub struct PmlExpFactors {
 // the plugin-based solver supplies its own). Per the zero-cost policy
 // (ADR 012) this is a sanctioned dynamic-dispatch boundary: boundary
 // application runs once per timestep per boundary, never per-cell.
-pub trait Boundary: Debug + Send + Sync {
+pub trait Boundary: ComponentBase {
     /// Downcast support for boundary-specific logic in solver internals.
     fn as_any_mut(&mut self) -> &mut dyn Any;
 

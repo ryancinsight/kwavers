@@ -5,9 +5,9 @@
 
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::ComponentBase;
 use kwavers_grid::Grid;
 use leto::{Array3, ArrayView3, ArrayViewMut3};
-use std::fmt::Debug;
 
 /// Minimum physical density to prevent numerical instabilities (kg/m³)
 pub const MIN_PHYSICAL_DENSITY: f64 = 1.0;
@@ -22,9 +22,9 @@ pub const MIN_PHYSICAL_SOUND_SPEED: f64 = 100.0;
 /// Core trait that all medium types must implement
 ///
 /// Provides the fundamental interface for accessing acoustic properties
-/// in a spatially-varying medium. Follows SOLID principles by defining
-/// a focused interface for medium property access.
-pub trait CoreMedium: Debug + Send + Sync {
+/// in a spatially-varying medium. Extends [`kwavers_core::ComponentBase`]
+/// so all implementations are `Debug + Send + Sync`.
+pub trait CoreMedium: ComponentBase {
     /// Get sound speed at a specific grid point
     fn sound_speed(&self, i: usize, j: usize, k: usize) -> f64;
 

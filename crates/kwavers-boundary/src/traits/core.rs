@@ -3,23 +3,18 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::ComponentBase;
 use kwavers_grid::GridTopology;
 use leto::{Array3, ArrayViewMut3};
-use std::fmt::Debug;
 
 use super::types::{BoundaryDirections, BoundaryFieldType};
 
 /// Core boundary condition trait.
 ///
 /// Defines the interface that all boundary conditions must implement.
-///
-/// # Invariants
-///
-/// All implementations must preserve:
-/// 1. **Energy Conservation**: Total energy cannot increase at boundaries.
-/// 2. **Stability**: Boundary updates must be numerically stable.
-/// 3. **Causality**: No dependence on future field values.
-pub trait BoundaryCondition: Debug + Send + Sync {
+/// Extends [`kwavers_core::ComponentBase`] so all implementations are
+/// `Debug + Send + Sync` without repeating the triple in this declaration.
+pub trait BoundaryCondition: ComponentBase {
     /// Return the boundary type name for logging/debugging.
     fn name(&self) -> &str;
 

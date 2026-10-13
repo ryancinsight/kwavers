@@ -137,14 +137,17 @@ pub fn mvdr_cpu(
 
     // Element (ex, ey, ez) → flat channel index and physical position.
     // Channel index: ch = ex * nel_y * nel_z + ey * nel_z + ez
+    let nel_x_half = (nel_x as f32 - 1.0) * -0.5;
+    let nel_y_half = (nel_y as f32 - 1.0) * -0.5;
+    let nel_z_half = (nel_z as f32 - 1.0) * -0.5;
     let elem_pos: Vec<[f32; 3]> = (0..nel_x)
         .flat_map(|ex| {
             (0..nel_y).flat_map(move |ey| {
                 (0..nel_z).map(move |ez| {
                     [
-                        (nel_x as f32 - 1.0).mul_add(-0.5, ex as f32) * sx,
-                        (nel_y as f32 - 1.0).mul_add(-0.5, ey as f32) * sy,
-                        (nel_z as f32 - 1.0).mul_add(-0.5, ez as f32) * sz,
+                        nel_x_half.mul_add(1.0, ex as f32) * sx,
+                        nel_y_half.mul_add(1.0, ey as f32) * sy,
+                        nel_z_half.mul_add(1.0, ez as f32) * sz,
                     ]
                 })
             })
@@ -174,15 +177,18 @@ pub fn mvdr_cpu(
     let n_subarrays = n_sub_x * n_sub_y * n_sub_z;
 
     let n_voxels = vol_x * vol_y * vol_z;
+    let vol_x_half = (vol_x as f32 - 1.0) * -0.5;
+    let vol_y_half = (vol_y as f32 - 1.0) * -0.5;
+    let vol_z_half = (vol_z as f32 - 1.0) * -0.5;
     let flat: Vec<f32> = map_collect_index_with::<Adaptive, _, _>(n_voxels, |v_idx| {
         let vx = v_idx / (vol_y * vol_z);
         let vy = (v_idx / vol_z) % vol_y;
         let vz = v_idx % vol_z;
 
         let pv = [
-            (vol_x as f32 - 1.0).mul_add(-0.5, vx as f32) * dx,
-            (vol_y as f32 - 1.0).mul_add(-0.5, vy as f32) * dy,
-            (vol_z as f32 - 1.0).mul_add(-0.5, vz as f32) * dz,
+            vol_x_half.mul_add(1.0, vx as f32) * dx,
+            vol_y_half.mul_add(1.0, vy as f32) * dy,
+            vol_z_half.mul_add(1.0, vz as f32) * dz,
         ];
 
         // Pre-compute receive delays (in samples) for every element.
@@ -221,13 +227,14 @@ pub fn mvdr_cpu(
 
                     // Build L×N delay-aligned data matrix X (averaged over frames).
                     // X[i][n] = (1/N_f) Σ_f x_i^f[n + τ_i]
+                    let inv_frames = 1.0 / frames.max(1) as f64;
                     for (i, &ch) in sub_channels.iter().enumerate() {
                         let tau = delays_s[ch];
                         for n in 0..samples {
                             let sample_sum: f64 = (0..frames)
                                 .map(|f| rf_get(f, ch, tau + n as f32) as f64)
                                 .sum();
-                            x_mat[i * samples + n] = sample_sum / frames.max(1) as f64;
+                            x_mat[i * samples + n] = sample_sum * inv_frames;
                         }
                     }
 
@@ -253,8 +260,9 @@ pub fn mvdr_cpu(
         }
 
         // Diagonal loading: R_δ = R + δ · (tr(R)/L) · I
+        let l_f64 = l as f64;
         let trace: f64 = (0..l).map(|i| r_accum_flat[i * l + i]).sum();
-        let loading = diagonal_loading as f64 * trace / l as f64;
+        let loading = diagonal_loading as f64 * trace / l_f64;
         for i in 0..l {
             r_accum_flat[i * l + i] += loading;
         }

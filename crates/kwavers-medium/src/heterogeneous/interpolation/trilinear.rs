@@ -148,8 +148,8 @@ mod tests {
 
         // Sample at every integer x with y = z = 0; expected value = ix.
         for ix in 0..grid.nx {
-            let v =
-                HetTrilinearInterpolator::interpolate(&field, ix as f64 * grid.dx, 0.0, 0.0, &grid);
+            let (x, _, _) = grid.coords(ix, 0, 0);
+            let v = HetTrilinearInterpolator::interpolate(&field, x, 0.0, 0.0, &grid);
             assert!(
                 (v - ix as f64).abs() < 1e-12,
                 "interpolate at ix={} returned {} (expected {})",
