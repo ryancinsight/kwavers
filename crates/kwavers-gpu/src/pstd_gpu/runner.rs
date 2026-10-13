@@ -348,12 +348,9 @@ where
 
     let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
         if let Some(absorption) = &medium.absorption {
-            let nx_f = nx as f64;
-            let ny_f = ny as f64;
-            let nz_f = nz as f64;
-            let dk_x = TWO_PI / (nx_f * grid.dx);
-            let dk_y = TWO_PI / (ny_f * grid.dy);
-            let dk_z = TWO_PI / (nz_f * grid.dz);
+            let dk_x = TWO_PI / (nx as f64 * grid.dx);
+            let dk_y = TWO_PI / (ny as f64 * grid.dy);
+            let dk_z = TWO_PI / (nz as f64 * grid.dz);
             let singularity_thresh: f64 = 1e-8;
             let y = absorption.exponent;
 
