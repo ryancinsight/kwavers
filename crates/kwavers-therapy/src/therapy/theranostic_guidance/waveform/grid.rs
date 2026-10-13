@@ -485,12 +485,21 @@ fn build_padded_alpha_field_refined(
     out
 }
 
+/// Half-cell offset for a centred grid of `n` cells: `(n − 1) / 2` in f64.
+///
+/// Used by the coordinate-to-index helpers to shift from a centre-origin
+/// physical frame to a zero-based index frame.
+#[inline]
+fn grid_center(n: usize) -> f64 {
+    0.5 * (n as f64 - 1.0)
+}
+
 /// Convert a physical point `p` (metres, padded-grid coordinates) into the
 /// nearest padded-grid cell index, clamped to the interior so the Eikonal
 /// solver can place its source there without index-out-of-bounds.
 fn focus_padded_cell(p: Point2, nx: usize, ny: usize, dx: f64) -> (usize, usize) {
-    let cx = 0.5 * (nx as f64 - 1.0);
-    let cy = 0.5 * (ny as f64 - 1.0);
+    let cx = grid_center(nx);
+    let cy = grid_center(ny);
     let ix = (p.x_m / dx + cx).round().clamp(0.0, (nx - 1) as f64) as usize;
     let iy = (p.y_m / dx + cy).round().clamp(0.0, (ny - 1) as f64) as usize;
     (ix, iy)
@@ -501,8 +510,8 @@ fn focus_padded_cell(p: Point2, nx: usize, ny: usize, dx: f64) -> (usize, usize)
 /// grid (the aperture margin is sized to contain every clinical element,
 /// so this fallback is conservative rather than expected).
 fn sample_travel_time(p: Point2, t_field: &Array2<f64>, nx: usize, ny: usize, dx: f64) -> f64 {
-    let cx = 0.5 * (nx as f64 - 1.0);
-    let cy = 0.5 * (ny as f64 - 1.0);
+    let cx = grid_center(nx);
+    let cy = grid_center(ny);
     let ix_f = p.x_m / dx + cx;
     let iy_f = p.y_m / dx + cy;
     if !ix_f.is_finite() || !iy_f.is_finite() {
@@ -546,8 +555,8 @@ pub(super) fn point_to_padded_cell_2d(
     ny: usize,
     spacing_m: f64,
 ) -> (usize, usize) {
-    let cx = 0.5 * (nx - 1) as f64;
-    let cy = 0.5 * (ny - 1) as f64;
+    let cx = grid_center(nx);
+    let cy = grid_center(ny);
     let ix = (point.x_m / spacing_m + cx)
         .round()
         .clamp(2.0, (nx - 3) as f64) as usize;

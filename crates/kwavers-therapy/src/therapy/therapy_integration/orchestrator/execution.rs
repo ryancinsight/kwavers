@@ -38,6 +38,35 @@ use leto::Array3;
 use super::super::config::AcousticTherapyParams;
 use super::super::state::AcousticField;
 
+/// Minimum sample count for the KZK time axis: 10 fundamental periods, ≥ 128,
+/// rounded to the next power of two.
+fn kzk_time_steps(frequency: f64, dt: f64) -> usize {
+    ((10.0 / (frequency * dt)).ceil() as usize)
+        .max(128)
+        .next_power_of_two()
+}
+
+/// Build a centred 2-D Gaussian source plane of shape `(ny, nz)`.
+///
+/// Each cell `(i, j)` holds `pnp · exp(−r² / beam_width_sq)` where
+/// `r² = x² + y²` and `x`, `y` are the physical offsets from the
+/// plane centre computed with spacing `dx`.
+fn gaussian_source_plane(
+    ny: usize,
+    nz: usize,
+    dx: f64,
+    beam_width_sq: f64,
+    pnp: f64,
+) -> Array2<f64> {
+    let cy = ny as f64 / 2.0;
+    let cz = nz as f64 / 2.0;
+    Array2::from_shape_fn((ny, nz), |[i, j]| {
+        let x = (i as f64 - cy) * dx;
+        let y = (j as f64 - cz) * dx;
+        pnp * (-(x * x + y * y) / beam_width_sq).exp()
+    })
+}
+
 /// Generate acoustic field for therapy.
 ///
 /// Creates a focused acoustic field using Gaussian beam approximation.
@@ -217,11 +246,7 @@ pub fn generate_kzk_acoustic_field(
     let dt_nyquist = 1.0 / (2.0 * 10.0 * frequency);
     let dt = dt_cfl.min(dt_nyquist);
     // nt: at least 10 periods of the fundamental, rounded up to a power-of-two.
-    let nt = ((10.0 / (frequency * dt)).ceil() as usize)
-        .max(128)
-        .next_power_of_two();
-
-    // Build KZK config, mapping therapy coordinates → KZK coordinates.
+    let nt = kzk_time_steps(frequency, dt);
     //   Therapy:  axial = x (nx),  transverse = (y, z)  = (ny, nz)
     //   KZK:      axial = z (nz),  transverse = (x, y)  = (nx, ny)
     let config = KZKConfig {
@@ -263,16 +288,8 @@ pub fn generate_kzk_acoustic_field(
 
     // Build the focused source plane (transverse amplitude map).
     let dx_kzk = grid.dy;
-    let mut source = Array2::<f64>::zeros((ny, nz));
     let pnp = acoustic_params.pnp;
-    for j in 0..nz {
-        for i in 0..ny {
-            let x = (i as f64 - ny as f64 / 2.0) * dx_kzk;
-            let y = (j as f64 - nz as f64 / 2.0) * dx_kzk;
-            let r2 = x * x + y * y;
-            source[[i, j]] = pnp * (-r2 / beam_width_sq).exp();
-        }
-    }
+    let source = gaussian_source_plane(ny, nz, dx_kzk, beam_width_sq, pnp);
     solver.set_focused_source(source, frequency, acoustic_params.focal_depth);
 
     // Propagate step-by-step, capturing RMS pressure at each axial plane.
@@ -328,9 +345,7 @@ fn generate_kzk_collimated(
     let dt_cfl = 0.3 * grid.dx / c0;
     let dt_nyquist = 1.0 / (2.0 * 10.0 * frequency);
     let dt = dt_cfl.min(dt_nyquist);
-    let nt = ((10.0 / (frequency * dt)).ceil() as usize)
-        .max(128)
-        .next_power_of_two();
+    let nt = kzk_time_steps(frequency, dt);
 
     let config = KZKConfig {
         nx: ny,
@@ -367,16 +382,8 @@ fn generate_kzk_collimated(
 
     // Build collimated (unfocused) Gaussian source.
     let dx_kzk = grid.dy;
-    let mut source = Array2::<f64>::zeros((ny, nz));
     let pnp = acoustic_params.pnp;
-    for j in 0..nz {
-        for i in 0..ny {
-            let x = (i as f64 - ny as f64 / 2.0) * dx_kzk;
-            let y = (j as f64 - nz as f64 / 2.0) * dx_kzk;
-            let r2 = x * x + y * y;
-            source[[i, j]] = pnp * (-r2 / beam_width_sq).exp();
-        }
-    }
+    let source = gaussian_source_plane(ny, nz, dx_kzk, beam_width_sq, pnp);
     // Collimated: no focusing phase — use set_source (no focal_depth).
     solver.set_source(source, frequency);
 

@@ -322,18 +322,13 @@ impl Source for FlexibleTransducerArray {
 
         // Add mask for each element position
         for element_idx in 0..self.geometry_state.element_positions.shape()[0] {
+            let (hx, hy, hz) = grid.physical_size();
             // Find nearest grid point
-            let i = ((self.geometry_state.element_positions[[element_idx, 0]]
-                + grid.nx as f64 * grid.dx / 2.0)
-                / grid.dx)
+            let i = ((self.geometry_state.element_positions[[element_idx, 0]] + hx / 2.0) / grid.dx)
                 .round() as usize;
-            let j = ((self.geometry_state.element_positions[[element_idx, 1]]
-                + grid.ny as f64 * grid.dy / 2.0)
-                / grid.dy)
+            let j = ((self.geometry_state.element_positions[[element_idx, 1]] + hy / 2.0) / grid.dy)
                 .round() as usize;
-            let k = ((self.geometry_state.element_positions[[element_idx, 2]]
-                + grid.nz as f64 * grid.dz / 2.0)
-                / grid.dz)
+            let k = ((self.geometry_state.element_positions[[element_idx, 2]] + hz / 2.0) / grid.dz)
                 .round() as usize;
 
             // Check bounds and set mask
