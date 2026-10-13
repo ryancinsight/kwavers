@@ -42,7 +42,7 @@ hephaestus-wgpu = { version = "0.20.2", git = "https://github.com/ryancinsight/h
 hephaestus-cuda = { version = "0.20.2", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
 hermes-simd = { version = "0.8.1", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
 themis = { package = "themis-topology", version = "0.11.1", git = "https://github.com/ryancinsight/themis", default-features = false, features = ["std"] }
-moirai-parallel = { version = "0.7.1", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
+moirai-parallel = { version = "0.7.1", git = "https://github.com/ryancinsight/Moirai.git", rev = "6c769e71b0ddaafa73db615e78983f0d7473a841", default-features = false, features = ["parallel"] }
 leto = { version = "0.45.2", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { version = "0.45.2", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 # Mnemosyne: Allocation / arenas / staging memory (Atlas first-party).
