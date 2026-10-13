@@ -19,18 +19,18 @@ horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae", pack
 # These repos carry their own [workspace], so Cargo resolves their internal
 # inheritance against THEIR roots â€” no path scaffolding needed here. SSOT: members
 # inherit via `{ workspace = true }`.
-ritk-core = { version = "0.11.0", git = "https://github.com/ryancinsight/ritk.git", rev = "f3e81c6fd67b1ecae8021c8afa6bc2a80be16b61" }
-ritk-io = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "f3e81c6fd67b1ecae8021c8afa6bc2a80be16b61" }
-ritk-image = { version = "0.5.0", git = "https://github.com/ryancinsight/ritk.git", rev = "f3e81c6fd67b1ecae8021c8afa6bc2a80be16b61" }
-ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "f3e81c6fd67b1ecae8021c8afa6bc2a80be16b61" }
-ritk-spatial = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "f3e81c6fd67b1ecae8021c8afa6bc2a80be16b61" }
-ritk-registration = { version = "0.55.0", git = "https://github.com/ryancinsight/ritk.git", rev = "f3e81c6fd67b1ecae8021c8afa6bc2a80be16b61" }
-coeus-core = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git", rev = "393a464d16b8a401baade9df127e740fb24d65f9" }
-coeus-tensor = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git", rev = "393a464d16b8a401baade9df127e740fb24d65f9" }
-coeus-autograd = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git", rev = "393a464d16b8a401baade9df127e740fb24d65f9" }
-coeus-nn = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git", rev = "393a464d16b8a401baade9df127e740fb24d65f9" }
-coeus-optim = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git", rev = "393a464d16b8a401baade9df127e740fb24d65f9" }
-coeus-ops = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git", rev = "393a464d16b8a401baade9df127e740fb24d65f9" }
+ritk-core = { version = "0.11.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
+ritk-io = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
+ritk-image = { version = "0.5.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
+ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
+ritk-spatial = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
+ritk-registration = { version = "0.55.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
+coeus-core = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-tensor = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-autograd = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-nn = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-optim = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
+coeus-ops = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
 apollo = { package = "apollo-fft", version = "0.28.0", git = "https://github.com/ryancinsight/apollo.git" }
 # athena: Atlas SSOT for Krylov recurrences, the linear-operator and
 # preconditioner seams, and convergence policy (Atlas ADR 0033).
