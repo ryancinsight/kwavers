@@ -11,7 +11,10 @@
 //! - Coordinate transformations must be bijective within grid bounds
 //! - Wavenumber computations must respect Nyquist limits
 
-use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
+use kwavers_core::{
+    error::{ConfigError, KwaversError, KwaversResult},
+    ComponentBase,
+};
 use leto::Array3;
 
 mod cartesian;
@@ -45,7 +48,7 @@ pub enum TopologyDimension {
 /// - Provide wavenumber grids for spectral methods
 /// - Compute metric coefficients (e.g., volume elements)
 /// - Support coordinate bounds checking
-pub trait GridTopology: Send + Sync {
+pub trait GridTopology: ComponentBase {
     /// Get the dimensionality of this topology
     fn dimensionality(&self) -> TopologyDimension;
 

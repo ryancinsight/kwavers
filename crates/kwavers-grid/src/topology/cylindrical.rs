@@ -52,6 +52,9 @@ impl CylindricalTopology {
     /// Create a cylindrical topology with custom origin
     /// # Errors
     /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
+    /// # Panics
+    /// - Panics if the internally constructed kz vector's length does not match nz;
+    ///   the construction invariant guarantees it does (the vector is built from nz itself).
     ///
     pub fn with_origin(
         nz: usize,
