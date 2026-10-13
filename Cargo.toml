@@ -3,13 +3,13 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-aequitas = { version = "0.2.1", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std", "serde"] }
+aequitas = { version = "0.2.2", git = "https://github.com/ryancinsight/aequitas", default-features = false, features = ["std", "serde"] }
 # The binding-side half of the same repository. It owns the quantity protocol
 # reader and `Dimensioned<D>`, so the extraction lives once upstream rather
 # than being reimplemented here. Unpublished by design: the wheel is its
 # deliverable, and this crate consumes it as a library.
 aequitas_python = { package = "aequitas-python", version = "0.1.0", git = "https://github.com/ryancinsight/aequitas" }
-asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
+asclepius = { version = "0.2.0", git = "https://github.com/ryancinsight/asclepius", default-features = false, features = ["std"] }
 hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
 proteus = { package = "proteus-mat", version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
 tyche-core = { version = "0.3.0", git = "https://github.com/ryancinsight/tyche" }
@@ -19,32 +19,32 @@ horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae", pack
 # These repos carry their own [workspace], so Cargo resolves their internal
 # inheritance against THEIR roots â€” no path scaffolding needed here. SSOT: members
 # inherit via `{ workspace = true }`.
-ritk-core = { version = "0.10.0", git = "https://github.com/ryancinsight/ritk.git", rev = "e0316a43a2f73ddfe5b525d82b7360071fcfa519" }
-ritk-io = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git", rev = "e0316a43a2f73ddfe5b525d82b7360071fcfa519" }
-ritk-image = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "e0316a43a2f73ddfe5b525d82b7360071fcfa519" }
+ritk-core = { version = "0.11.0", git = "https://github.com/ryancinsight/ritk.git", rev = "e0316a43a2f73ddfe5b525d82b7360071fcfa519" }
+ritk-io = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "e0316a43a2f73ddfe5b525d82b7360071fcfa519" }
+ritk-image = { version = "0.5.0", git = "https://github.com/ryancinsight/ritk.git", rev = "e0316a43a2f73ddfe5b525d82b7360071fcfa519" }
 ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "e0316a43a2f73ddfe5b525d82b7360071fcfa519" }
-ritk-spatial = { version = "0.3.0", git = "https://github.com/ryancinsight/ritk.git", rev = "e0316a43a2f73ddfe5b525d82b7360071fcfa519" }
-ritk-registration = { version = "0.54.0", git = "https://github.com/ryancinsight/ritk.git", rev = "e0316a43a2f73ddfe5b525d82b7360071fcfa519" }
+ritk-spatial = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "e0316a43a2f73ddfe5b525d82b7360071fcfa519" }
+ritk-registration = { version = "0.55.0", git = "https://github.com/ryancinsight/ritk.git", rev = "e0316a43a2f73ddfe5b525d82b7360071fcfa519" }
 coeus-core = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-tensor = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-autograd = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-nn = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-optim = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-ops = { version = "0.10.0", git = "https://github.com/ryancinsight/Coeus.git" }
-apollo = { package = "apollo-fft", version = "0.27.0", git = "https://github.com/ryancinsight/apollo.git" }
+apollo = { package = "apollo-fft", version = "0.28.0", git = "https://github.com/ryancinsight/apollo.git" }
 # athena: Atlas SSOT for Krylov recurrences, the linear-operator and
 # preconditioner seams, and convergence policy (Atlas ADR 0033).
 # athena-core = backend-neutral contracts, athena-leto = Leto CPU backend.
-athena-core = { version = "0.2.0", git = "https://github.com/ryancinsight/athena" }
-athena-leto = { version = "0.2.0", git = "https://github.com/ryancinsight/athena" }
-hephaestus-core = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
-hephaestus-wgpu = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false, features = ["decomposition"] }
-hephaestus-cuda = { version = "0.19.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
-hermes-simd = { version = "0.8.0", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
+athena-core = { version = "0.3.0", git = "https://github.com/ryancinsight/athena" }
+athena-leto = { version = "0.3.0", git = "https://github.com/ryancinsight/athena" }
+hephaestus-core = { version = "0.20.2", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
+hephaestus-wgpu = { version = "0.20.2", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false, features = ["decomposition"] }
+hephaestus-cuda = { version = "0.20.2", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
+hermes-simd = { version = "0.8.1", git = "https://github.com/ryancinsight/hermes.git", default-features = false, features = ["std"] }
 themis = { package = "themis-topology", version = "0.11.1", git = "https://github.com/ryancinsight/themis", default-features = false, features = ["std"] }
-moirai-parallel = { version = "0.7.0", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
-leto = { version = "0.45.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
-leto-ops = { version = "0.45.0", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
+moirai-parallel = { version = "0.7.1", git = "https://github.com/ryancinsight/Moirai.git", default-features = false, features = ["parallel"] }
+leto = { version = "0.45.2", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
+leto-ops = { version = "0.45.2", git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 # Mnemosyne: Allocation / arenas / staging memory (Atlas first-party).
 # `kwavers-core` consumes the arena, backend, and memory-core seam directly
 # (`crates/kwavers-core/src/arena/**`) â€” see ADR 0006 Â§Failure modes for the
@@ -60,7 +60,7 @@ mnemosyne-heap = { version = "0.6.0", git = "https://github.com/ryancinsight/Mne
 # with the crates above and with every first-party provider that pulls
 # Mnemosyne in, so the lock carries one Mnemosyne source identity.
 mnemosyne = { version = "0.9.0", git = "https://github.com/ryancinsight/Mnemosyne.git", package = "mnemosyne-memory" }
-eunomia = { version = "0.9.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
+eunomia = { version = "0.9.1", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
 numpy = "0.29"
 
 anyhow = "1.0"
@@ -70,7 +70,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 bytemuck = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-gaia = { package = "gaia-mesh", version = "0.5.0", git = "https://github.com/ryancinsight/gaia.git", default-features = false }
+gaia = { package = "gaia-mesh", version = "0.5.2", git = "https://github.com/ryancinsight/gaia.git", default-features = false }
 tempfile = "3.10"
 proptest = "1.0"
 walkdir = "2.4"
@@ -89,11 +89,11 @@ tiff = "0.9"
 openjpeg-sys = "1.0"
 openjp2 = { version = "0.6.1", default-features = false, features = ["std"] }
 jpeg2k = { version = "0.10.1", default-features = false, features = ["openjp2"] }
-consus-hdf5 = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
-consus-core = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
-consus-compression = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std", "deflate"] }
-consus-io = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
-consus-npy = { version = "0.1.0", git = "https://github.com/ryancinsight/consus.git" }
+consus-hdf5 = { version = "0.2.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-core = { version = "0.2.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-compression = { version = "0.2.0", git = "https://github.com/ryancinsight/consus.git", features = ["std", "deflate"] }
+consus-io = { version = "0.2.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-npy = { version = "0.2.0", git = "https://github.com/ryancinsight/consus.git" }
 rand = "0.9"
 criterion = "0.5"
 
