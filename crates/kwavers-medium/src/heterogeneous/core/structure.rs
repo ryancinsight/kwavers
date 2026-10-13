@@ -143,6 +143,30 @@ impl HeterogeneousMedium {
         Self::new(nx, ny, nz, use_trilinear_interpolation)
     }
 
+    /// Sample a spatially-varying field at continuous coordinates `(x, y, z)`.
+    ///
+    /// Dispatches to trilinear interpolation or nearest-neighbour lookup based
+    /// on `self.use_trilinear_interpolation`. All property trait impls funnel
+    /// through this single call, keeping the dispatch flag at one site.
+    #[inline]
+    pub(crate) fn lookup_field(
+        &self,
+        field: &leto::Array3<f64>,
+        x: f64,
+        y: f64,
+        z: f64,
+        grid: &Grid,
+    ) -> f64 {
+        crate::heterogeneous::interpolation::HetTrilinearInterpolator::get_field_value(
+            field,
+            x,
+            y,
+            z,
+            grid,
+            self.use_trilinear_interpolation,
+        )
+    }
+
     /// Construct a heterogeneous medium by expanding a homogeneous medium
     /// across the provided grid. Scalar properties are broadcast; cached
     /// arrays are copied directly when available.

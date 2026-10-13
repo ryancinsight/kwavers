@@ -4,7 +4,7 @@
 //! Evidence-based thermal modeling per Hamilton & Blackstock Ch.8
 
 use crate::{
-    heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator},
+    heterogeneous::core::HeterogeneousMedium,
     thermal::{ThermalField, ThermalProperties},
 };
 use kwavers_core::constants::tissue_thermal::THERMAL_EXPANSION_SOFT_TISSUE;
@@ -15,40 +15,19 @@ impl ThermalProperties for HeterogeneousMedium {
     /// Thermal conductivity at continuous coordinates (W/(m·K))
     #[inline]
     fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        HetTrilinearInterpolator::get_field_value(
-            &self.thermal_conductivity,
-            x,
-            y,
-            z,
-            grid,
-            self.use_trilinear_interpolation,
-        )
+        self.lookup_field(&self.thermal_conductivity, x, y, z, grid)
     }
 
     /// Specific heat at constant volume (J/(kg·K)) at continuous coordinates
     #[inline]
     fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        HetTrilinearInterpolator::get_field_value(
-            &self.specific_heat,
-            x,
-            y,
-            z,
-            grid,
-            self.use_trilinear_interpolation,
-        )
+        self.lookup_field(&self.specific_heat, x, y, z, grid)
     }
 
     /// Thermal diffusivity at continuous coordinates (m²/s)
     #[inline]
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        HetTrilinearInterpolator::get_field_value(
-            &self.thermal_diffusivity,
-            x,
-            y,
-            z,
-            grid,
-            self.use_trilinear_interpolation,
-        )
+        self.lookup_field(&self.thermal_diffusivity, x, y, z, grid)
     }
 
     /// Thermal expansion coefficient (1/K) at continuous coordinates

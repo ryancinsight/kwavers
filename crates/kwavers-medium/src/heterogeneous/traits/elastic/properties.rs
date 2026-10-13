@@ -4,7 +4,7 @@
 //! Following TSE 2025 "Domain-Specific Module Organization"
 
 use crate::elastic::{ElasticArrayAccess, ElasticProperties};
-use crate::heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator};
+use crate::heterogeneous::core::HeterogeneousMedium;
 use kwavers_grid::Grid;
 use leto::Array3;
 
@@ -12,27 +12,13 @@ impl ElasticProperties for HeterogeneousMedium {
     /// Lamé's first parameter λ at continuous coordinates (Pa)
     #[inline]
     fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        HetTrilinearInterpolator::get_field_value(
-            &self.lame_lambda,
-            x,
-            y,
-            z,
-            grid,
-            self.use_trilinear_interpolation,
-        )
+        self.lookup_field(&self.lame_lambda, x, y, z, grid)
     }
 
     /// Lamé's second parameter μ (shear modulus) at continuous coordinates (Pa)
     #[inline]
     fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        HetTrilinearInterpolator::get_field_value(
-            &self.lame_mu,
-            x,
-            y,
-            z,
-            grid,
-            self.use_trilinear_interpolation,
-        )
+        self.lookup_field(&self.lame_mu, x, y, z, grid)
     }
 }
 

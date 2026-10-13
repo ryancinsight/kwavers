@@ -3,7 +3,7 @@
 //! **Single Responsibility**: Pure acoustic property access per SOLID principles
 //! **Evidence-Based**: Following Hamilton & Blackstock (1998) acoustic theory
 
-use crate::heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator};
+use crate::heterogeneous::core::HeterogeneousMedium;
 use crate::{
     acoustic::AcousticProperties,
     core::{ArrayAccess, CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
@@ -112,23 +112,8 @@ impl AcousticProperties for HeterogeneousMedium {
     /// and y are trilinearly interpolated when `use_trilinear_interpolation`
     /// is set.
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
-        let base_absorption = HetTrilinearInterpolator::get_field_value(
-            &self.absorption,
-            x,
-            y,
-            z,
-            grid,
-            self.use_trilinear_interpolation,
-        );
-        let exponent = HetTrilinearInterpolator::get_field_value(
-            &self.alpha_power,
-            x,
-            y,
-            z,
-            grid,
-            self.use_trilinear_interpolation,
-        );
-
+        let base_absorption = self.lookup_field(&self.absorption, x, y, z, grid);
+        let exponent = self.lookup_field(&self.alpha_power, x, y, z, grid);
         let freq_ratio = frequency / self.reference_frequency;
         base_absorption * freq_ratio.powf(exponent)
     }
@@ -139,14 +124,7 @@ impl AcousticProperties for HeterogeneousMedium {
     /// The default trait implementation returns 0.0 (lossless), so this override is
     /// required for `effective_alpha_db` in the solver to pick up the medium's field.
     fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        HetTrilinearInterpolator::get_field_value(
-            &self.absorption,
-            x,
-            y,
-            z,
-            grid,
-            self.use_trilinear_interpolation,
-        )
+        self.lookup_field(&self.absorption, x, y, z, grid)
     }
 
     /// Per-voxel power-law exponent y at the given continuous coordinates.
@@ -154,35 +132,13 @@ impl AcousticProperties for HeterogeneousMedium {
     /// Used by solvers that need the exponent separately from the absorption
     /// coefficient (e.g. fractional-Laplacian PSTD absorber).
     fn alpha_power(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        HetTrilinearInterpolator::get_field_value(
-            &self.alpha_power,
-            x,
-            y,
-            z,
-            grid,
-            self.use_trilinear_interpolation,
-        )
+        self.lookup_field(&self.alpha_power, x, y, z, grid)
     }
 
     /// Get acoustic diffusivity at continuous coordinates
     fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let sound_speed = HetTrilinearInterpolator::get_field_value(
-            &self.sound_speed,
-            x,
-            y,
-            z,
-            grid,
-            self.use_trilinear_interpolation,
-        );
-        let density = HetTrilinearInterpolator::get_field_value(
-            &self.density,
-            x,
-            y,
-            z,
-            grid,
-            self.use_trilinear_interpolation,
-        );
-
+        let sound_speed = self.lookup_field(&self.sound_speed, x, y, z, grid);
+        let density = self.lookup_field(&self.density, x, y, z, grid);
         // Acoustic diffusivity: D = c²/ρ (classical fluid mechanics formula)
         // Exact for homogeneous fluids, per Morse & Ingard (1968) "Theoretical Acoustics"
         sound_speed * sound_speed / density
