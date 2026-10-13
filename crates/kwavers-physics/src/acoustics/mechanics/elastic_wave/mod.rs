@@ -140,7 +140,7 @@ impl ElasticWave {
     /// Detect interfaces based on material property jumps
     pub fn detect_interfaces(&mut self, medium: &dyn Medium, grid: &Grid, threshold: f64) {
         let (nx, ny, nz) = grid.dimensions();
-        let mut mask = Array3::from_elem([nx, ny, nz], false);
+        let mut mask = grid.array_fill(false);
 
         // Detect interfaces based on density jumps
         for k in 1..nz - 1 {

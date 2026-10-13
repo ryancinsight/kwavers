@@ -5,7 +5,6 @@ use crate::heterogeneous::core::HeterogeneousMedium;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 use kwavers_grid::Grid;
-use leto::Array3;
 
 impl HeterogeneousFactory {
     /// Create a heterogeneous medium representing a layered structure
@@ -33,10 +32,10 @@ impl HeterogeneousFactory {
     ) -> HeterogeneousMedium {
         let (nx, ny, nz) = grid.dimensions();
 
-        let mut sound_speed = Array3::zeros([nx, ny, nz]);
-        let mut density = Array3::zeros([nx, ny, nz]);
-        let mut absorption = Array3::zeros([nx, ny, nz]);
-        let mut nonlinearity = Array3::zeros([nx, ny, nz]);
+        let mut sound_speed = grid.array_zeros();
+        let mut density = grid.array_zeros();
+        let mut absorption = grid.array_zeros();
+        let mut nonlinearity = grid.array_zeros();
 
         for i in 0..nx {
             for j in 0..ny {
@@ -60,32 +59,32 @@ impl HeterogeneousFactory {
             use_trilinear_interpolation: true,
             density,
             sound_speed,
-            viscosity: Array3::zeros([nx, ny, nz]),
-            surface_tension: Array3::zeros([nx, ny, nz]),
+            viscosity: grid.array_zeros(),
+            surface_tension: grid.array_zeros(),
             ambient_pressure: ATMOSPHERIC_PRESSURE,
-            vapor_pressure: Array3::zeros([nx, ny, nz]),
-            polytropic_index: Array3::zeros([nx, ny, nz]),
-            specific_heat: Array3::zeros([nx, ny, nz]),
-            thermal_conductivity: Array3::zeros([nx, ny, nz]),
-            thermal_expansion: Array3::zeros([nx, ny, nz]),
-            gas_diffusion_coeff: Array3::zeros([nx, ny, nz]),
-            thermal_diffusivity: Array3::zeros([nx, ny, nz]),
-            mu_a: Array3::zeros([nx, ny, nz]),
-            mu_s_prime: Array3::zeros([nx, ny, nz]),
-            temperature: Array3::from_elem([nx, ny, nz], ROOM_TEMPERATURE_K),
-            bubble_radius: Array3::zeros([nx, ny, nz]),
-            bubble_velocity: Array3::zeros([nx, ny, nz]),
-            alpha0: Array3::zeros([nx, ny, nz]),
-            delta: Array3::zeros([nx, ny, nz]),
+            vapor_pressure: grid.array_zeros(),
+            polytropic_index: grid.array_zeros(),
+            specific_heat: grid.array_zeros(),
+            thermal_conductivity: grid.array_zeros(),
+            thermal_expansion: grid.array_zeros(),
+            gas_diffusion_coeff: grid.array_zeros(),
+            thermal_diffusivity: grid.array_zeros(),
+            mu_a: grid.array_zeros(),
+            mu_s_prime: grid.array_zeros(),
+            temperature: grid.array_fill(ROOM_TEMPERATURE_K),
+            bubble_radius: grid.array_zeros(),
+            bubble_velocity: grid.array_zeros(),
+            alpha0: grid.array_zeros(),
+            delta: grid.array_zeros(),
             b_a: nonlinearity.clone(),
             absorption,
-            alpha_power: Array3::from_elem([nx, ny, nz], 1.0),
+            alpha_power: grid.array_fill(1.0),
             nonlinearity,
-            shear_sound_speed: Array3::zeros([nx, ny, nz]),
-            shear_viscosity_coeff: Array3::zeros([nx, ny, nz]),
-            bulk_viscosity_coeff: Array3::zeros([nx, ny, nz]),
-            lame_lambda: Array3::zeros([nx, ny, nz]),
-            lame_mu: Array3::zeros([nx, ny, nz]),
+            shear_sound_speed: grid.array_zeros(),
+            shear_viscosity_coeff: grid.array_zeros(),
+            bulk_viscosity_coeff: grid.array_zeros(),
+            lame_lambda: grid.array_zeros(),
+            lame_mu: grid.array_zeros(),
             reference_frequency,
         }
     }
