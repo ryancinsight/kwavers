@@ -42,7 +42,7 @@ impl DomainAnalyzer {
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 fn compute_homogeneity(grid: &Grid, medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
-    let mut homogeneity = Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.0);
+    let mut homogeneity = grid.array_fill(1.0);
 
     // Check density variations relative to mean
     {
@@ -71,7 +71,7 @@ fn compute_homogeneity(grid: &Grid, medium: &dyn Medium) -> KwaversResult<Array3
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 fn compute_smoothness(grid: &Grid, _medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
-    Ok(Array3::from_elem([grid.nx, grid.ny, grid.nz], 0.5))
+    Ok(grid.array_fill(0.5))
 }
 
 /// Estimate spectral content.
@@ -82,7 +82,7 @@ fn compute_smoothness(grid: &Grid, _medium: &dyn Medium) -> KwaversResult<Array3
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 fn estimate_spectral_content(grid: &Grid) -> KwaversResult<Array3<f64>> {
-    Ok(Array3::from_elem([grid.nx, grid.ny, grid.nz], 0.5))
+    Ok(grid.array_fill(0.5))
 }
 
 impl Default for DomainAnalyzer {

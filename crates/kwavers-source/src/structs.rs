@@ -19,7 +19,7 @@ impl PointSource {
 
 impl Source for PointSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
-        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut mask = grid.array_zeros();
         if let Some((ix, iy, iz)) =
             grid.position_to_indices(self.position.0, self.position.1, self.position.2)
         {
@@ -95,7 +95,7 @@ impl TimeVaryingSource {
 
 impl Source for TimeVaryingSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
-        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut mask = grid.array_zeros();
         let (ix, iy, iz) = self.position;
         if ix < grid.nx && iy < grid.ny && iz < grid.nz {
             mask[[ix, iy, iz]] = 1.0;
@@ -155,7 +155,7 @@ impl CompositeSource {
 
 impl Source for CompositeSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
-        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut mask = grid.array_zeros();
         self.create_mask_into(grid, &mut mask);
         mask
     }
@@ -229,7 +229,7 @@ impl Default for NullSource {
 
 impl Source for NullSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
-        Array3::zeros([grid.nx, grid.ny, grid.nz])
+        grid.array_zeros()
     }
 
     fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
@@ -292,7 +292,7 @@ mod tests {
         let signal = Arc::new(NullSignal::new());
         let source = PointSource::new((1.0, 2.0, 3.0), signal);
         let owned = source.create_mask(&grid);
-        let mut reused = Array3::from_elem([grid.nx, grid.ny, grid.nz], 9.0);
+        let mut reused = grid.array_fill(9.0);
         let ptr = reused.as_ptr();
 
         source.create_mask_into(&grid, &mut reused);
@@ -311,7 +311,7 @@ mod tests {
             Box::new(NullSource::new()),
         ]);
         let owned = source.create_mask(&grid);
-        let mut reused = Array3::from_elem([grid.nx, grid.ny, grid.nz], -1.0);
+        let mut reused = grid.array_fill(-1.0);
         let ptr = reused.as_ptr();
 
         source.create_mask_into(&grid, &mut reused);

@@ -114,7 +114,7 @@ impl CattaneoVernotte {
     /// result to avoid one full-volume allocation per step.
     #[must_use]
     pub fn heat_flux_divergence(&self, grid: &Grid) -> Array3<f64> {
-        let mut div = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut div = grid.array_zeros();
         Self::fill_heat_flux_divergence(
             &self.heat_flux_x,
             &self.heat_flux_y,

@@ -324,7 +324,7 @@ mod tests {
             )
             .unwrap(),
         );
-        let mut target = Array3::from_elem([grid.nx, grid.ny, grid.nz], 10.0);
+        let mut target = grid.array_fill(10.0);
         let expected = source.create_mask(&grid).mapv(|value| value + 10.0);
 
         source.add_mask_into(&grid, &mut target);

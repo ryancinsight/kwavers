@@ -211,7 +211,7 @@ impl ArcSource {
             [grid.dx, grid.dy],
             time.in_unit::<Second>(),
         );
-        let mut source_3d = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut source_3d = grid.array_zeros();
 
         // Copy 2D pattern to all z-slices
         for iz in 0..grid.nz {

@@ -8,7 +8,7 @@ impl KWaveArray {
     /// Returns a 3D boolean array where `true` indicates grid points that are
     /// part of the transducer array.
     pub fn get_array_binary_mask(&self, grid: &kwavers_grid::Grid) -> Array3<bool> {
-        let mut mask = Array3::from_elem([grid.nx, grid.ny, grid.nz], false);
+        let mut mask = grid.array_fill(false);
         for element in &self.elements {
             if let KWaveElement::PlanarAperture(geometry) = element {
                 Self::rasterize_planar_aperture(&mut mask, grid, *geometry);
@@ -93,7 +93,7 @@ impl KWaveArray {
     /// produce per-cell weights that sum to each element's geometric measure
     /// expressed in grid cells.
     pub fn get_array_weighted_mask(&self, grid: &kwavers_grid::Grid) -> Array3<f64> {
-        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut mask = grid.array_zeros();
         for element in &self.elements {
             if let KWaveElement::PlanarAperture(geometry) = element {
                 Self::rasterize_planar_aperture_weighted(&mut mask, grid, *geometry);

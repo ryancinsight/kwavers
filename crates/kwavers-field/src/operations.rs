@@ -15,7 +15,7 @@ impl FieldOperations {
     #[must_use]
     #[inline]
     pub fn create_field(grid: &Grid) -> Array3<f64> {
-        Array3::zeros([grid.nx, grid.ny, grid.nz])
+        grid.array_zeros()
     }
 
     /// Create a zero-initialized complex 3D field array
@@ -36,7 +36,7 @@ impl FieldOperations {
     #[must_use]
     #[inline]
     pub fn create_constant_field(grid: &Grid, value: f64) -> Array3<f64> {
-        Array3::from_elem([grid.nx, grid.ny, grid.nz], value)
+        grid.array_fill(value)
     }
 
     /// Apply periodic boundary conditions to a field

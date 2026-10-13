@@ -255,10 +255,12 @@ impl Grid {
 
     /// Create a 3-D array shaped `[nx, ny, nz]` filled with `value`.
     ///
-    /// Replaces the repeated `Array3::from_elem([grid.nx, grid.ny, grid.nz], v)` idiom.
+    /// Generic over any `Clone` element type — works for `f64`, `bool`,
+    /// complex numbers, etc. Replaces the repeated
+    /// `Array3::from_elem([grid.nx, grid.ny, grid.nz], v)` idiom.
     #[inline]
     #[must_use]
-    pub fn array_fill(&self, value: f64) -> leto::Array3<f64> {
+    pub fn array_fill<T: Clone>(&self, value: T) -> leto::Array3<T> {
         leto::Array3::from_elem([self.nx, self.ny, self.nz], value)
     }
 }

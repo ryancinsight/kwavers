@@ -41,9 +41,9 @@ impl CoordinateSystem {
     /// Generate 3D coordinate arrays
     #[must_use]
     pub fn generate_coordinate_arrays(grid: &Grid) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-        let mut x_coords = Array3::zeros([grid.nx, grid.ny, grid.nz]);
-        let mut y_coords = Array3::zeros([grid.nx, grid.ny, grid.nz]);
-        let mut z_coords = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut x_coords = grid.array_zeros();
+        let mut y_coords = grid.array_zeros();
+        let mut z_coords = grid.array_zeros();
 
         // Pre-compute 1-D coordinate vectors to avoid recomputing per-cell.
         let xs: Vec<f64> = (0..grid.nx)

@@ -121,7 +121,7 @@ impl WesterveltWave {
             laplacian_scratch,
             nonlinear_scratch: Array3::zeros(shape),
             damping_scratch: Array3::zeros(shape),
-            source_mask_scratch: LetoArray3::zeros([grid.nx, grid.ny, grid.nz]),
+            source_mask_scratch: grid.array_zeros(),
             metrics: Arc::new(Mutex::new(WesterveltStepMetrics::new())),
             conservation_tracker: None,
             current_step: 0,

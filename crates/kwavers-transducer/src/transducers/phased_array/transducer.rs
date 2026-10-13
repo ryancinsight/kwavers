@@ -153,7 +153,7 @@ impl PhasedArrayTransducer {
     /// Panics only if the freshly allocated field is not contiguous, violating
     /// the storage invariant required by the zero-copy fill.
     pub fn calculate_field(&self, grid: &Grid, time: f64) -> Array3<f64> {
-        let mut field = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut field = grid.array_zeros();
 
         // Generate element signals
         let mut element_signals = Array1::zeros([self.config.num_elements]);
@@ -233,7 +233,7 @@ impl PhasedArrayTransducer {
 impl Source for PhasedArrayTransducer {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
         // Create mask with source at element positions
-        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut mask = grid.array_zeros();
         self.create_mask_into(grid, &mut mask);
         mask
     }

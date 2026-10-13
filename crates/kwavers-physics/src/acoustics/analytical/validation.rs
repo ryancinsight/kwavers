@@ -36,7 +36,7 @@ impl PhysicsTestUtils {
         sound_speed: f64,
         time: f64,
     ) -> Array3<f64> {
-        let mut field = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut field = grid.array_zeros();
         let wavelength = sound_speed / frequency;
         let k = TWO_PI / wavelength;
         let omega = TWO_PI * frequency;

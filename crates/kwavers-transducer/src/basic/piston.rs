@@ -155,7 +155,7 @@ impl PistonSource {
 
 impl Source for PistonSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
-        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut mask = grid.array_zeros();
         self.create_mask_into(grid, &mut mask);
         mask
     }

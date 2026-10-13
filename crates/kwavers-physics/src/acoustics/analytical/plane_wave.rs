@@ -19,7 +19,7 @@ impl PlaneWaveSolution {
         time: f64,
         direction: (f64, f64, f64),
     ) -> Array3<f64> {
-        let mut field = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut field = grid.array_zeros();
         if !positive_finite(frequency)
             || !amplitude.is_finite()
             || !positive_finite(sound_speed)

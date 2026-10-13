@@ -80,7 +80,7 @@ impl MultiBowlArray {
     /// source is not contiguous, violating the zero-copy slice invariant.
     ///
     pub fn generate_source(&self, grid: &Grid, time: Time<f64>) -> KwaversResult<Array3<f64>> {
-        let mut combined_source = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut combined_source = grid.array_zeros();
 
         // Add contributions from each bowl
         for (i, bowl) in self.bowls.iter().enumerate() {

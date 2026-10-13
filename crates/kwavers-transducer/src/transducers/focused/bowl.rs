@@ -322,7 +322,7 @@ impl BowlTransducer {
     /// violating the storage invariant required by the zero-copy fill.
     ///
     pub fn generate_source(&self, grid: &Grid, time: Time<f64>) -> KwaversResult<Array3<f64>> {
-        let mut source = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut source = grid.array_zeros();
         let omega = TWO_PI * self.config.frequency.in_unit::<Hertz>();
         let time_s = time.in_unit::<Second>();
         let focus_delays = self.calculate_focus_delays();
