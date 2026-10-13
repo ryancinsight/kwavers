@@ -43,7 +43,7 @@ macro_rules! signal_clone_box {
 // dynamic-dispatch boundary; a closed `SignalKind` enum is infeasible without
 // circular crate dependencies. Dispatch is O(num_sources)/step (sampled once per
 // source per step), never per-cell, so it is not throughput-critical.
-pub trait Signal: std::fmt::Debug + Send + Sync {
+pub trait Signal: kwavers_core::ComponentBase {
     /// Get the signal amplitude at time t
     fn amplitude(&self, t: f64) -> f64;
 

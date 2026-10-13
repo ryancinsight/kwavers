@@ -4,10 +4,10 @@
 
 // GridSource moved to parent module
 
+use kwavers_core::ComponentBase;
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use leto::Array3;
-use std::fmt::Debug;
 
 // GridSource re-exported by parent mod
 
@@ -92,7 +92,7 @@ pub struct SourceFocalProperties {
 // (ADR 012) this is a sanctioned dynamic-dispatch boundary: the concrete type is
 // genuinely unknown at the storage site and dispatch is O(num_sources)/step
 // (the scalar `amplitude(t)`), never per-cell. Trait methods stay object-safe.
-pub trait Source: Debug + Sync + Send {
+pub trait Source: ComponentBase {
     /// Create a source mask on the grid (1.0 at source locations, 0.0 elsewhere)
     /// This is called once during initialization for optimal performance
     fn create_mask(&self, grid: &Grid) -> Array3<f64>;

@@ -1,9 +1,9 @@
 // source/apodization/mod.rs
 
+use kwavers_core::ComponentBase;
 use kwavers_signal::{window_value, SignalWindowType};
-use std::fmt::Debug;
 
-pub trait Apodization: Debug + Sync + Send {
+pub trait Apodization: ComponentBase {
     /// Returns the apodization weight for a given position index and total elements.
     fn weight(&self, position_idx: usize, total_elements: usize) -> f64;
 }

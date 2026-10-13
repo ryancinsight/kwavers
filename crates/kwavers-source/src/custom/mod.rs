@@ -4,15 +4,15 @@
 //! that can be defined by users for specialized applications.
 
 use crate::{Source, SourceField};
+use kwavers_core::ComponentBase;
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use leto::Array3;
-use std::fmt::Debug;
 use std::sync::Arc;
 
 /// Custom source builder trait
 /// Allows users to create custom sources by implementing this trait
-pub trait CustomSourceBuilder: Debug + Sync + Send {
+pub trait CustomSourceBuilder: ComponentBase {
     /// Build the custom source
     fn build(&self, signal: Arc<dyn Signal>) -> Box<dyn Source>;
 }
