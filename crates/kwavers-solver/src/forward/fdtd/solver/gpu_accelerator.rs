@@ -3,12 +3,12 @@
 //! Implementors are responsible for one fused velocity+pressure update
 //! per call and return a fresh pressure volume as `leto::Array3<f64>`.
 
+use crate::interface::factory::SolverComponent;
+use kwavers_core::error::KwaversResult;
 use leto::Array3 as LetoArray3;
 use leto::Array3 as NdArray3;
 
-use kwavers_core::error::KwaversResult;
-
-pub trait FdtdGpuAccelerator: Send + Sync + std::fmt::Debug {
+pub trait FdtdGpuAccelerator: SolverComponent {
     /// Propagate one acoustic time step on the GPU device.
     ///
     /// # Errors

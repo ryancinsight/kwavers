@@ -28,7 +28,9 @@ pub use wave::AcousticWaveModel;
 /// threads).  This supertrait is declared once here so the individual domain
 /// traits (`ThermalModelTrait`, `LightDiffusionModelTrait`, etc.) do not
 /// each repeat the same three bounds.
-pub trait PhysicsModel: std::fmt::Debug + Send + Sync {}
+///
+/// See [`kwavers_core::ComponentBase`] for the cross-crate root of this hierarchy.
+pub trait PhysicsModel: kwavers_core::ComponentBase {}
 
 /// Blanket implementation: any `Debug + Send + Sync` type satisfies `PhysicsModel`.
-impl<T: std::fmt::Debug + Send + Sync> PhysicsModel for T {}
+impl<T: kwavers_core::ComponentBase> PhysicsModel for T {}

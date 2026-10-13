@@ -3,13 +3,13 @@
 //! This module defines the common interfaces for time integration methods,
 //! following the Interface Segregation Principle (ISP).
 
+use crate::interface::factory::SolverComponent;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use leto::Array3;
-use std::fmt::Debug;
 
 /// Configuration trait for time steppers
-pub trait TimeStepperConfig: Clone + Send + Sync + Debug {
+pub trait TimeStepperConfig: Clone + SolverComponent {
     /// Get the order of accuracy
     fn order(&self) -> usize;
 
@@ -27,7 +27,7 @@ pub trait TimeStepperConfig: Clone + Send + Sync + Debug {
 }
 
 /// Base trait for time stepping methods
-pub trait TimeStepper: Send + Sync + Debug {
+pub trait TimeStepper: SolverComponent {
     /// Configuration type for this time stepper
     type Config: TimeStepperConfig;
 
@@ -161,7 +161,7 @@ impl TimeStepperType {
 }
 
 /// Trait for error estimation in time integration
-pub trait ErrorEstimatorTrait: Send + Sync + Debug {
+pub trait ErrorEstimatorTrait: SolverComponent {
     /// Estimate the local truncation error
     fn estimate_local_error(
         &self,

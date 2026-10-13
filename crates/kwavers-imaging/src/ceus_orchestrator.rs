@@ -4,6 +4,7 @@
 //! This allows clinical layer to depend on domain abstractions rather than simulation internals.
 
 use kwavers_core::error::KwaversResult;
+use kwavers_core::ComponentBase;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use leto::Array3;
@@ -12,7 +13,7 @@ use leto::Array3;
 ///
 /// Provides a consistent interface for CEUS simulation regardless of implementation details.
 /// This is what the clinical therapy layer should depend on.
-pub trait CEUSOrchestrator: Send + Sync + std::fmt::Debug {
+pub trait CEUSOrchestrator: ComponentBase {
     /// Update CEUS simulation with new acoustic field
     ///
     /// # Arguments

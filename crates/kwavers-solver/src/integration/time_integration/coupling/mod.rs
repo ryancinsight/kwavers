@@ -3,11 +3,11 @@
 //! This module provides different strategies for coupling physics
 //! components that evolve at different time scales.
 
+use crate::interface::factory::SolverComponent;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use leto::Array3;
 use std::collections::HashMap;
-use std::fmt::Debug;
 
 mod averaging;
 mod predictor_corrector;
@@ -18,7 +18,7 @@ pub use predictor_corrector::PredictorCorrectorStrategy;
 pub use subcycling::SubcyclingStrategy;
 
 /// Trait for time coupling strategies
-pub trait TimeCoupling: Send + Sync + Debug {
+pub trait TimeCoupling: SolverComponent {
     /// Advance the coupled system
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

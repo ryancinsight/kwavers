@@ -26,7 +26,7 @@
 //! default. Geometries with stronger symmetry (e.g. a transcranial bowl that
 //! supports azimuthal rotation about the cap axis) override this method.
 
-use std::fmt::Debug;
+use kwavers_core::ComponentBase;
 
 use aequitas::systems::si::quantities::Length;
 
@@ -47,7 +47,7 @@ pub struct ElementPosition {
 /// Implementations are stateless value types (or `Arc`-shared `Vec`-of-
 /// positions wrappers); they expose the Cartesian element layout and the
 /// source-to-receiver offset semantics specific to the array topology.
-pub trait TransducerGeometry: Debug + Send + Sync {
+pub trait TransducerGeometry: ComponentBase {
     /// Cartesian element positions \[m\]. Indexing convention is implementor-
     /// defined; all sensitivity / Born kernels iterate over this slice
     /// directly.

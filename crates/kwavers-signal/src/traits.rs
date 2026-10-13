@@ -4,10 +4,12 @@
 /// time-varying signal.  All three require thread safety and debug formatting;
 /// declaring the common bounds here once prevents the `Debug + Send + Sync`
 /// triple from being copy-pasted into each component trait.
-pub trait SignalPrimitive: std::fmt::Debug + Send + Sync {}
+///
+/// See [`kwavers_core::ComponentBase`] for the cross-crate root of this hierarchy.
+pub trait SignalPrimitive: kwavers_core::ComponentBase {}
 
-/// Blanket implementation: any `Debug + Send + Sync` type satisfies `SignalPrimitive`.
-impl<T: std::fmt::Debug + Send + Sync> SignalPrimitive for T {}
+/// Blanket implementation: any `ComponentBase` type satisfies `SignalPrimitive`.
+impl<T: kwavers_core::ComponentBase> SignalPrimitive for T {}
 
 /// Core Signal trait representing time-varying amplitude.
 ///

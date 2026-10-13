@@ -13,10 +13,12 @@ use leto::{Array2, Array3};
 /// singleton-style backends that must be sharable across threads and
 /// diagnosable via `Debug`.  Declaring the shared bound here prevents the
 /// `Debug + Send + Sync` triple from being copy-pasted into each trait.
-pub trait SolverComponent: std::fmt::Debug + Send + Sync {}
+///
+/// See [`kwavers_core::ComponentBase`] for the cross-crate root of this hierarchy.
+pub trait SolverComponent: kwavers_core::ComponentBase {}
 
-/// Blanket implementation: any `Debug + Send + Sync` type is a `SolverComponent`.
-impl<T: std::fmt::Debug + Send + Sync> SolverComponent for T {}
+/// Blanket implementation: any `ComponentBase` type is a `SolverComponent`.
+impl<T: kwavers_core::ComponentBase> SolverComponent for T {}
 
 /// Abstract factory for creating solver instances
 pub trait SolverFactoryTrait {
