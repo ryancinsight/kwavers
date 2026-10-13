@@ -382,30 +382,7 @@ impl KellerHerringModel {
     }
 }
 
-impl AdaptiveBubbleModel for KellerHerringModel {
-    fn params(&self) -> &BubbleParameters {
-        self.inner.params()
-    }
-
-    fn calculate_acceleration(
-        &self,
-        state: &mut BubbleState,
-        p_acoustic: f64,
-        dp_dt: f64,
-        t: f64,
-    ) -> KwaversResult<f64> {
-        self.inner
-            .calculate_acceleration(state, p_acoustic, dp_dt, t)
-    }
-
-    fn update_temperature(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
-        self.inner.update_temperature(state, dt)
-    }
-
-    fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) -> KwaversResult<()> {
-        self.inner.update_mass_transfer(state, dt)
-    }
-}
+crate::delegate_adaptive_bubble_model!(KellerHerringModel, inner);
 
 impl AdaptiveBubbleModel for KellerMiksisModel {
     fn params(&self) -> &BubbleParameters {

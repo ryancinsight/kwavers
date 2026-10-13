@@ -29,6 +29,57 @@ pub use statistics::IntegrationStatistics;
 use super::{bubble_state::BubbleParameters, BubbleState};
 use kwavers_core::error::KwaversResult;
 
+/// Implement [`AdaptiveBubbleModel`] for a wrapper type that holds an inner
+/// field implementing the trait, by forwarding all four methods.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// delegate_adaptive_bubble_model!(KellerHerringModel, inner);
+/// ```
+///
+/// This expands to a full `impl AdaptiveBubbleModel for KellerHerringModel`
+/// that delegates every method call to `self.inner`.
+#[macro_export]
+macro_rules! delegate_adaptive_bubble_model {
+    ($ty:ty, $field:ident) => {
+        impl $crate::acoustics::bubble_dynamics::adaptive_integration::AdaptiveBubbleModel for $ty {
+            fn params(
+                &self,
+            ) -> &$crate::acoustics::bubble_dynamics::bubble_state::BubbleParameters {
+                self.$field.params()
+            }
+
+            fn calculate_acceleration(
+                &self,
+                state: &mut $crate::acoustics::bubble_dynamics::BubbleState,
+                p_acoustic: f64,
+                dp_dt: f64,
+                t: f64,
+            ) -> kwavers_core::error::KwaversResult<f64> {
+                self.$field
+                    .calculate_acceleration(state, p_acoustic, dp_dt, t)
+            }
+
+            fn update_temperature(
+                &self,
+                state: &mut $crate::acoustics::bubble_dynamics::BubbleState,
+                dt: f64,
+            ) -> kwavers_core::error::KwaversResult<()> {
+                self.$field.update_temperature(state, dt)
+            }
+
+            fn update_mass_transfer(
+                &self,
+                state: &mut $crate::acoustics::bubble_dynamics::BubbleState,
+                dt: f64,
+            ) -> kwavers_core::error::KwaversResult<()> {
+                self.$field.update_mass_transfer(state, dt)
+            }
+        }
+    };
+}
+
 /// Contract implemented by bubble-equation models used by the adaptive RK4
 /// engine in this module.
 pub trait AdaptiveBubbleModel {
