@@ -39,8 +39,9 @@ fn signed_spectral_index(i: usize, n: usize) -> isize {
 /// Compute the signed wavenumber (rad/m) for FFT-ordered index `i` in a grid
 /// of size `n` with physical spacing `d` (m).
 ///
-/// `dk = 2π / (n * d)` and the signed index is computed via
-/// [`signed_spectral_index`] to avoid double `as f64` casts in hot loops.
+/// `dk = 2π / (n * d)` and the signed index is computed via the
+/// crate-private `signed_spectral_index` helper to avoid double `as f64`
+/// casts in hot loops.
 ///
 /// # Example
 ///
