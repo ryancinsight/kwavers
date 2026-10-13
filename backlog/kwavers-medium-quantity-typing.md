@@ -1,0 +1,8 @@
+<a id="kwavers-medium-quantity-typing"></a>
+## KW-MEDIUM-QUANTITY-TYPING — Type the medium physics traits with aequitas quantities [tightening][minor] — todo
+- outcome: `CoreMedium::sound_speed`/`density`/`absorption`/`nonlinearity`/`max_sound_speed`, `AcousticProperties::absorption_coefficient`/`attenuation`, `ThermalProperties::specific_heat_capacity`, and `ViscousProperties::viscosity` return aequitas quantity types (`Velocity<f64>`, `MassDensity<f64>`, `ReciprocalLength<f64>`, `SpecificHeatCapacity<f64>`, `DynamicViscosity<f64>`), matching the typed sibling seams (ElasticProperties already carries `MassDensity`/`Pressure`; the bubble-energy and skull modules already type theirs).
+- evidence (surveyed 2026-10-13, the aequitas-typing directive): every physics repo's lock resolves aequitas 0.2.2; CFDrs types its fluid traits; helios 45 files; kwavers' elastic/optical/skull/bubble surfaces carry quantities. The gap is these raw-f64 trait getters whose doc comments already carry the SI units the types would encode. Ripple: 97 files reference the trait surface across kwavers' crates.
+- acceptance: trait signatures typed; every implementor and caller migrated in the same change; the array-access fast paths (`sound_speed_array` etc.) stay raw `ArrayView3<f64>` — the per-cell hot path is dimension-agnostic by measurement; the differential suite green at f32/f64.
+- priority: tightening; needs: none; scope: `crates/kwavers-medium/src/{core,acoustic,thermal,viscous}.rs` + implementors + callers.
+- next: type `CoreMedium::sound_speed` first (the widest ripple), then the siblings.
+- basis: kwavers main 2f591b85, aequitas main d57e4c4 (2026-10-13).
