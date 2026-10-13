@@ -57,17 +57,28 @@ use leto::{Array1, Array3};
 /// Wavenumbers are laid out in FFT order:
 /// `k[idx] = (idx  ) · dk`  for `idx ≤ n/2`
 /// `k[idx] = (idx−n) · dk`  for `idx >  n/2`
-/// where `dk = 2π / (n · ds)`.
+/// Generate the 1-D staggered-shift operator for one axis.
+///
+/// Returns `(shift_pos, shift_neg)` where for each wavenumber bin `idx`:
+/// ```text
+///   shift_pos[idx] = i·k · exp(+i·k·ds/2)   (pressure → velocity direction)
+///   shift_neg[idx] = i·k · exp(−i·k·ds/2)   (velocity → density direction)
+/// ```
+///
+/// Wavenumbers are laid out in FFT order:
+/// `k[idx] = (idx  ) · dk`  for `idx ≤ n/2`
+/// `k[idx] = (idx−n) · dk`  for `idx >  n/2`
+/// where `dk = 2π / (n · ds)` is computed internally.
 ///
 /// # Arguments
 /// * `n`  — number of grid points in this dimension
-/// * `dk` — wavenumber spacing = 2π / (n · ds)
 /// * `ds` — grid spacing (Δx, Δy, or Δz)
 ///
 /// # Panics
 /// Never panics; all arithmetic is well-defined for all `n ≥ 1`.
 #[must_use]
-pub fn generate_shift_1d(n: usize, dk: f64, ds: f64) -> (Array1<Complex64>, Array1<Complex64>) {
+pub fn generate_shift_1d(n: usize, ds: f64) -> (Array1<Complex64>, Array1<Complex64>) {
+    let dk = TWO_PI / (n as f64 * ds);
     let i_unit = Complex64::new(0.0, 1.0);
     let mut shift_pos = Array1::from_elem([n], Complex64::default());
     let mut shift_neg = Array1::from_elem([n], Complex64::default());

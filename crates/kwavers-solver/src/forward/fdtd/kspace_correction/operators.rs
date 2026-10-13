@@ -1,6 +1,5 @@
 use crate::forward::acoustic_ivp::spectral_velocity_scale_from_source_kappa;
 use crate::forward::lanes::{axis_index, for_each_z_lane, LaneAxis};
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::shift_operators::{
     generate_kappa, generate_shift_1d, generate_source_kappa,
@@ -210,13 +209,9 @@ impl KSpaceFdtdOperators {
     ) -> Self {
         let fft = get_fft_for_grid(nx, ny, nz);
 
-        let dk_x = TWO_PI / (nx as f64 * dx);
-        let dk_y = TWO_PI / (ny as f64 * dy);
-        let dk_z = TWO_PI / (nz as f64 * dz);
-
-        let (ddx_k_shift_pos, ddx_k_shift_neg) = generate_shift_1d(nx, dk_x, dx);
-        let (ddy_k_shift_pos, ddy_k_shift_neg) = generate_shift_1d(ny, dk_y, dy);
-        let (ddz_k_shift_pos, ddz_k_shift_neg) = generate_shift_1d(nz, dk_z, dz);
+        let (ddx_k_shift_pos, ddx_k_shift_neg) = generate_shift_1d(nx, dx);
+        let (ddy_k_shift_pos, ddy_k_shift_neg) = generate_shift_1d(ny, dy);
+        let (ddz_k_shift_pos, ddz_k_shift_neg) = generate_shift_1d(nz, dz);
 
         let kappa = generate_kappa(nx, ny, nz, dx, dy, dz, c_ref, dt);
         // Real fields transform through the half-spectrum pair; the z shifts stay

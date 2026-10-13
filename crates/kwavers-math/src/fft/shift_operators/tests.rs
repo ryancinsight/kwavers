@@ -12,8 +12,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 #[test]
 fn test_shift_dc_bin_is_zero() {
     let n = 16;
-    let dk = TWO_PI / (n as f64 * 1e-3);
-    let (pos, neg) = generate_shift_1d(n, dk, 1e-3);
+    let (pos, neg) = generate_shift_1d(n, 1e-3);
     let eps = 1e-15;
     assert!(
         pos[0].norm() < eps,
@@ -42,8 +41,7 @@ fn test_shift_dc_bin_is_zero() {
 fn test_shift_neg_is_neg_conjugate_of_pos() {
     let n = 32;
     let dx = 5e-4;
-    let dk = TWO_PI / (n as f64 * dx);
-    let (pos, neg) = generate_shift_1d(n, dk, dx);
+    let (pos, neg) = generate_shift_1d(n, dx);
     for idx in 0..n {
         let diff = (neg[idx] - (-pos[idx].conj())).norm();
         assert!(
@@ -64,8 +62,7 @@ fn test_shift_neg_is_neg_conjugate_of_pos() {
 fn test_nyquist_bin_not_zeroed() {
     let n = 16;
     let dx = 1e-3;
-    let dk = TWO_PI / (n as f64 * dx);
-    let (pos, neg) = generate_shift_1d(n, dk, dx);
+    let (pos, neg) = generate_shift_1d(n, dx);
     let nyq = n / 2;
     assert!(
         pos[nyq].norm() > 1e-3,
@@ -184,7 +181,7 @@ fn test_shift_matches_orchestrator_formula() {
     let dx = 1e-3_f64;
     let dk = TWO_PI / (n as f64 * dx);
 
-    let (pos_fn, neg_fn) = generate_shift_1d(n, dk, dx);
+    let (pos_fn, neg_fn) = generate_shift_1d(n, dx);
 
     // Inline reference (same formula as orchestrator.rs generate_shift_1d closure)
     let i_unit = Complex64::new(0.0, 1.0);

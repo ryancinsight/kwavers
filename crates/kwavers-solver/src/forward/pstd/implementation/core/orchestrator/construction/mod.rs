@@ -1,4 +1,3 @@
-use kwavers_core::constants::numerical::TWO_PI;
 mod ivp_velocity;
 
 use super::{pstd_source_gain, pstd_source_time_shift_samples, PSTDSolver};
@@ -213,16 +212,12 @@ impl PSTDSolver {
         }
         let field_arrays = crate::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
 
-        let (lx, ly, lz) = grid.physical_size();
-        let dk_x = TWO_PI / lx;
-        let dk_y = TWO_PI / ly;
-        let dk_z = TWO_PI / lz;
-        let (ddx_k_shift_pos, ddx_k_shift_neg) = generate_shift_1d(grid.nx, dk_x, grid.dx);
-        let (ddy_k_shift_pos, ddy_k_shift_neg) = generate_shift_1d(grid.ny, dk_y, grid.dy);
+        let (ddx_k_shift_pos, ddx_k_shift_neg) = generate_shift_1d(grid.nx, grid.dx);
+        let (ddy_k_shift_pos, ddy_k_shift_neg) = generate_shift_1d(grid.ny, grid.dy);
         // Z-axis: generate full-length shifts, then truncate to nz_c = nz/2+1.
         // generate_shift_1d produces i·k·exp(±i·k·ds/2) for k in rfftfreq order
         // (indices [0, nz_c) cover non-negative kz exactly), so prefix truncation is exact.
-        let (ddz_full_pos, ddz_full_neg) = generate_shift_1d(grid.nz, dk_z, grid.dz);
+        let (ddz_full_pos, ddz_full_neg) = generate_shift_1d(grid.nz, grid.dz);
         let ddz_k_shift_pos = ddz_full_pos
             .slice_with(&s![..nz_c])
             .unwrap()
