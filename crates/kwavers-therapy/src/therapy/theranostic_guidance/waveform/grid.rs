@@ -596,21 +596,22 @@ fn build_cpml_coeffs(nx: usize, ny: usize, dx_m: f64, dt_s: f64, c_max: f64) -> 
     const PML_ORDER: f64 = 2.0;
     const R_TARGET: f64 = 1.0e-4;
 
-    let l_pml = PML_CELLS as f64 * dx_m;
+    let pml_cells_f = PML_CELLS as f64;
+    let l_pml = pml_cells_f * dx_m;
     let sigma_max = -(PML_ORDER + 1.0) * R_TARGET.ln() * c_max / (2.0 * l_pml);
 
     let build_1d = |len: usize| -> (Vec<f32>, Vec<f32>) {
         let mut b = vec![1.0_f32; len];
         let mut a = vec![0.0_f32; len];
         for i in 0..len.min(PML_CELLS) {
-            let d_norm = (PML_CELLS - i) as f64 / PML_CELLS as f64;
+            let d_norm = (PML_CELLS - i) as f64 / pml_cells_f;
             let sigma = sigma_max * d_norm.powf(PML_ORDER);
             let b_val = (-sigma * dt_s).exp();
             b[i] = b_val as f32;
             a[i] = (b_val - 1.0) as f32;
         }
         for i in len.saturating_sub(PML_CELLS)..len {
-            let d_norm = (i - (len - PML_CELLS)) as f64 / PML_CELLS as f64;
+            let d_norm = (i - (len - PML_CELLS)) as f64 / pml_cells_f;
             let sigma = sigma_max * d_norm.powf(PML_ORDER);
             let b_val = (-sigma * dt_s).exp();
             b[i] = b_val as f32;

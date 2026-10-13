@@ -108,12 +108,13 @@ impl CylindricalTopology {
     /// k`i` = 2π * freq`i` following FFT convention:
     /// [0, 1, 2, ..., N/2, -N/2+1, ..., -1] / (N * d)
     fn compute_fft_wavenumbers(n: usize, d: f64) -> Array1<f64> {
-        let dk = TWO_PI / (n as f64 * d);
+        let n_f = n as f64;
+        let dk = TWO_PI / (n_f * d);
         Array1::from_shape_fn([n], |[i]| {
             if i <= n / 2 {
                 i as f64 * dk
             } else {
-                (i as f64 - n as f64) * dk
+                (i as f64 - n_f) * dk
             }
         })
     }
@@ -283,15 +284,17 @@ impl GridTopology for CylindricalTopology {
         let z_rel = z - self.z0;
         let r_rel = r - self.r0;
 
-        let z_max = (self.nz - 1) as f64 * self.dz;
-        let r_max = (self.nr - 1) as f64 * self.dr;
+        let nz_last_f = (self.nz - 1) as f64;
+        let nr_last_f = (self.nr - 1) as f64;
+        let z_max = nz_last_f * self.dz;
+        let r_max = nr_last_f * self.dr;
 
         if z_rel > z_max || r_rel > r_max {
             return None;
         }
 
-        let i = (z_rel / self.dz).round().min((self.nz - 1) as f64) as usize;
-        let j = (r_rel / self.dr).round().min((self.nr - 1) as f64) as usize;
+        let i = (z_rel / self.dz).round().min(nz_last_f) as usize;
+        let j = (r_rel / self.dr).round().min(nr_last_f) as usize;
 
         Some([i, j, 0])
     }
