@@ -10,6 +10,7 @@ use kwavers_grid::topology::{GridTopology, TopologyDimension};
 use super::{PeriodicBoundaryCondition, PeriodicConfig};
 use kwavers_core::constants::numerical::TWO_PI;
 
+#[derive(Debug)]
 struct MockGrid;
 impl GridTopology for MockGrid {
     fn dimensionality(&self) -> TopologyDimension {
