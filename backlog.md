@@ -1,5 +1,7 @@
 # Backlog / Strategy
 
+<a id="kwavers-medium-quantity-typing"></a>- [KW-MEDIUM-QUANTITY-TYPING](backlog/kwavers-medium-quantity-typing.md) — Type the medium physics traits with aequitas quantities [tightening][minor] — todo
+
 <a id="atlas-kwavers-hephaestus-vis-104"></a>- [ATLAS-KWAVERS-HEPHAESTUS-VIS-104](backlog/atlas-kwavers-hephaestus-vis-104.md) — Reject uninitialized GPU visualization [patch] — review
 <a id="kw-aperture-001"></a>- [KW-APERTURE-001](backlog/kw-aperture-001.md) — Own finite circular-piston propagation [minor] — review
 <a id="kw-aperture-002"></a>- [KW-APERTURE-002](backlog/kw-aperture-002.md) — General planar aperture propagation [major] — review
