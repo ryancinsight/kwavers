@@ -141,22 +141,17 @@ pub fn calculate_ispta(
     if !duty_cycle.is_finite() || !(0.0..=1.0).contains(&duty_cycle) {
         return 0.0;
     }
-
-    let Some(impedance) = acoustic_impedance(density, sound_speed) else {
-        return 0.0;
-    };
-
-    peak_pulse_average_intensity(pressure_field, impedance) * duty_cycle
+    acoustic_impedance(density, sound_speed)
+        .map(|z| peak_pulse_average_intensity(pressure_field, z) * duty_cycle)
+        .unwrap_or(0.0)
 }
 
 /// Calculate spatial peak pulse average intensity (I_SPPA)
 #[must_use]
 pub fn calculate_isppa(pressure_field: &Array3<f64>, density: f64, sound_speed: f64) -> f64 {
-    let Some(impedance) = acoustic_impedance(density, sound_speed) else {
-        return 0.0;
-    };
-
-    peak_pulse_average_intensity(pressure_field, impedance)
+    acoustic_impedance(density, sound_speed)
+        .map(|z| peak_pulse_average_intensity(pressure_field, z))
+        .unwrap_or(0.0)
 }
 
 #[cfg(test)]
