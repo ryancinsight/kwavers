@@ -130,32 +130,33 @@ pub fn compute_wavenumbers(grid: &Grid) -> (Array3<f64>, Array3<f64>, Array3<f64
 pub fn compute_anti_aliasing_filter(grid: &Grid, cutoff: f64, order: u32) -> Array3<f64> {
     let mut filter = Array3::<f64>::zeros([grid.nx, grid.ny, grid.nz]);
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+    // Pre-compute half-widths to avoid repeated casts inside the triple loop.
+    let nx_half = nx as f64 * 0.5;
+    let ny_half = ny as f64 * 0.5;
+    let nz_half = nz as f64 * 0.5;
+    let order_i32 = 2 * order as i32;
 
     for i in 0..nx {
+        let ik = (if i <= nx / 2 {
+            i as f64
+        } else {
+            (nx - i) as f64
+        }) / nx_half;
         for j in 0..ny {
+            let jk = (if j <= ny / 2 {
+                j as f64
+            } else {
+                (ny - j) as f64
+            }) / ny_half;
             for k in 0..nz {
-                let ik = if i <= nx / 2 {
-                    i as f64
-                } else {
-                    (nx as i64 - i as i64).abs() as f64
-                };
-                let jk = if j <= ny / 2 {
-                    j as f64
-                } else {
-                    (ny as i64 - j as i64).abs() as f64
-                };
-                let kk = if k <= nz / 2 {
+                let kk = (if k <= nz / 2 {
                     k as f64
                 } else {
-                    (nz as i64 - k as i64).abs() as f64
-                };
+                    (nz - k) as f64
+                }) / nz_half;
 
-                let r_x = ik / (nx as f64 / 2.0);
-                let r_y = jk / (ny as f64 / 2.0);
-                let r_z = kk / (nz as f64 / 2.0);
-
-                let r = (r_x * r_x + r_y * r_y + r_z * r_z).sqrt();
-                filter[[i, j, k]] = 1.0 / (1.0 + (r / cutoff).powi(2 * order as i32));
+                let r = (ik * ik + jk * jk + kk * kk).sqrt();
+                filter[[i, j, k]] = 1.0 / (1.0 + (r / cutoff).powi(order_i32));
             }
         }
     }

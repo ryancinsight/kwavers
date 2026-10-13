@@ -44,10 +44,6 @@ impl OpticalDiffusionPlugin {
 impl Plugin for OpticalDiffusionPlugin {
     crate::plugin_accessors!();
 
-    fn required_fields(&self) -> Vec<UnifiedFieldType> {
-        Vec::new()
-    }
-
     fn provided_fields(&self) -> Vec<UnifiedFieldType> {
         vec![UnifiedFieldType::LightFluence]
     }

@@ -61,10 +61,6 @@ impl Plugin for FractionalViscoacousticPlugin {
         vec![UnifiedFieldType::Pressure]
     }
 
-    fn provided_fields(&self) -> Vec<UnifiedFieldType> {
-        Vec::new()
-    }
-
     fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
         let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
         self.operator = Some(FractionalAbsorptionOperator::new(

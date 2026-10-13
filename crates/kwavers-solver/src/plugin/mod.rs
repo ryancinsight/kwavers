@@ -84,11 +84,21 @@ pub trait Plugin: Debug + Send + Sync {
     /// Set plugin state
     fn set_state(&mut self, state: PluginState);
 
-    /// Get required fields for this plugin
-    fn required_fields(&self) -> Vec<UnifiedFieldType>;
+    /// Get required fields for this plugin.
+    ///
+    /// Returns field types that must be populated before [`Plugin::update`] is called.
+    /// The default is an empty list — override when the plugin reads from shared fields.
+    fn required_fields(&self) -> Vec<UnifiedFieldType> {
+        Vec::new()
+    }
 
-    /// Get fields provided by this plugin
-    fn provided_fields(&self) -> Vec<UnifiedFieldType>;
+    /// Get fields provided/updated by this plugin.
+    ///
+    /// Returns field types that this plugin writes after [`Plugin::update`].
+    /// The default is an empty list — override when the plugin populates shared fields.
+    fn provided_fields(&self) -> Vec<UnifiedFieldType> {
+        Vec::new()
+    }
 
     /// Update the plugin with current fields
     /// # Errors

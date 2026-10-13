@@ -41,10 +41,6 @@ impl ThermalDiffusionPlugin {
 impl crate::plugin::Plugin for ThermalDiffusionPlugin {
     crate::plugin_accessors!();
 
-    fn required_fields(&self) -> Vec<UnifiedFieldType> {
-        vec![]
-    }
-
     fn provided_fields(&self) -> Vec<UnifiedFieldType> {
         vec![UnifiedFieldType::Temperature]
     }
