@@ -21,7 +21,7 @@ pub use apollo::{
 };
 pub use eunomia::{Complex32, Complex64};
 pub use in_out::{Fft2dInOutExt, Fft3dInOutExt};
-pub use kspace::KSpaceCalculator;
+pub use kspace::{wavenumber_vec_positive_nyquist, KSpaceCalculator};
 pub use plan::{
     get_fft_for_grid, Fft1d, Fft2d, Fft3d, FftCache1d, FftCache2d, FftCache3d, FFT_CACHE_1D,
     FFT_CACHE_2D, FFT_CACHE_3D,

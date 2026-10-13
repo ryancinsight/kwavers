@@ -61,14 +61,12 @@ pub fn fft_wavenumber(i: usize, n: usize, d: f64) -> f64 {
 /// Build a 1-D vector of signed wavenumbers for a grid of size `n` and
 /// physical spacing `d`.
 ///
-/// Equivalent to `(0..n).map(|i| fft_wavenumber(i, n, d)).collect()` but
-/// avoids recomputing `dk` on every iteration.
+/// Delegates to [`kwavers_math::fft::wavenumber_vec_positive_nyquist`]
+/// which is the cross-crate SSOT for the positive-at-Nyquist convention.
+#[inline]
 #[must_use]
 pub fn wavenumber_vec(n: usize, d: f64) -> Vec<f64> {
-    let dk = TWO_PI / (n as f64 * d);
-    (0..n)
-        .map(|i| signed_spectral_index(i, n) as f64 * dk)
-        .collect()
+    kwavers_math::fft::wavenumber_vec_positive_nyquist(n, d)
 }
 
 /// Folded non-negative angular frequency for temporal FFT-ordered index `k`

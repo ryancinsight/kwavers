@@ -1,6 +1,7 @@
 use super::{GridTopology, TopologyDimension};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
+use kwavers_math::fft::wavenumber_vec_positive_nyquist;
 use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
@@ -86,7 +87,8 @@ impl CylindricalTopology {
 
         let z_coords = Array1::from_shape_fn([nz], |[i]| (i as f64).mul_add(dz, z0));
         let r_coords = Array1::from_shape_fn([nr], |[j]| (j as f64).mul_add(dr, r0));
-        let kz = Self::compute_fft_wavenumbers(nz, dz);
+        let kz_vec = wavenumber_vec_positive_nyquist(nz, dz);
+        let kz = Array1::from_vec([kz_vec.len()], kz_vec).expect("kz length matches nz");
         let kr = Self::compute_hankel_wavenumbers(nr, dr, r0);
 
         Ok(Self {
@@ -100,22 +102,6 @@ impl CylindricalTopology {
             r_coords,
             kz,
             kr,
-        })
-    }
-
-    /// Compute standard FFT wavenumbers
-    ///
-    /// k`i` = 2π * freq`i` following FFT convention:
-    /// [0, 1, 2, ..., N/2, -N/2+1, ..., -1] / (N * d)
-    fn compute_fft_wavenumbers(n: usize, d: f64) -> Array1<f64> {
-        let n_f = n as f64;
-        let dk = TWO_PI / (n_f * d);
-        Array1::from_shape_fn([n], |[i]| {
-            if i <= n / 2 {
-                i as f64 * dk
-            } else {
-                (i as f64 - n_f) * dk
-            }
         })
     }
 

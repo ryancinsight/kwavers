@@ -263,4 +263,16 @@ impl Grid {
     pub fn array_fill<T: Clone>(&self, value: T) -> leto::Array3<T> {
         leto::Array3::from_elem([self.nx, self.ny, self.nz], value)
     }
+
+    /// Physical centre of the grid `(x, y, z)` in metres.
+    ///
+    /// Returns `physical_size() / 2`, i.e., `(nx·dx/2, ny·dy/2, nz·dz/2)`.
+    /// Use this instead of the repeated `grid.dx * (grid.nx as f64) / 2.0` idiom
+    /// when sampling medium properties or sources at the grid centre.
+    #[inline]
+    #[must_use]
+    pub fn center(&self) -> (f64, f64, f64) {
+        let (lx, ly, lz) = self.physical_size();
+        (lx / 2.0, ly / 2.0, lz / 2.0)
+    }
 }

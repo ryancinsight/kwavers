@@ -134,6 +134,15 @@ impl SaftProcessor {
         );
         let n_rf_samples = rf_data_f64.shape()[2];
 
+        // Precompute element positions once outside the O(nx·ny·nz) voxel loop,
+        // avoiding repeated `tx_idx as f64 * tx_spacing` casts per voxel.
+        let tx_positions: Vec<[f64; 3]> = (0..num_tx)
+            .map(|i| [i as f64 * tx_spacing, 0.0, 0.0])
+            .collect();
+        let rx_positions: Vec<[f64; 3]> = (0..num_rx)
+            .map(|i| [i as f64 * rx_spacing, 0.0, 0.0])
+            .collect();
+
         for i in 0..nx {
             let x = i as f64 * dx;
             for j in 0..ny {
@@ -151,14 +160,8 @@ impl SaftProcessor {
                     let mut sum_of_squares = 0.0_f64;
                     let mut num_contributions = 0usize;
 
-                    for tx_idx in 0..num_tx {
-                        let tx_x = tx_idx as f64 * tx_spacing;
-                        let tx_position = [tx_x, 0.0, 0.0];
-
-                        for rx_idx in 0..num_rx {
-                            let rx_x = rx_idx as f64 * rx_spacing;
-                            let rx_position = [rx_x, 0.0, 0.0];
-
+                    for (tx_idx, &tx_position) in tx_positions.iter().enumerate() {
+                        for (rx_idx, &rx_position) in rx_positions.iter().enumerate() {
                             let tof = Self::compute_time_of_flight(
                                 tx_position,
                                 rx_position,

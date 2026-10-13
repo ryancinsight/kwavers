@@ -298,9 +298,7 @@ impl WesterveltFdtd {
         let shape = (grid.nx, grid.ny, grid.nz);
 
         // Get representative medium properties (center point)
-        let center_x = grid.dx * (grid.nx as f64) / 2.0;
-        let center_y = grid.dy * (grid.ny as f64) / 2.0;
-        let center_z = grid.dz * (grid.nz as f64) / 2.0;
+        let (center_x, center_y, center_z) = grid.center();
         let rho0 = kwavers_medium::density_at(medium, center_x, center_y, center_z, grid);
         let c0 = kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, grid);
 

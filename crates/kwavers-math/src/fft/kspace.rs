@@ -27,7 +27,41 @@ impl KSpaceCalculator {
             .expect("k-space length")
             .mapv(|cycles_per_unit| TWO_PI * cycles_per_unit)
     }
+}
 
+/// Build a 1-D vector of signed wavenumbers using the **positive-Nyquist**
+/// convention.
+///
+/// For each index `i` in `0..n`:
+/// - `i ≤ n/2`: wavenumber = `+i · dk`  (zero and positive frequencies)
+/// - `i > n/2`: wavenumber = `(i − n) · dk`  (negative frequencies)
+///
+/// where `dk = 2π / (n · d)`.
+///
+/// This convention maps the Nyquist bin `n/2` to the **positive** Nyquist
+/// frequency `+π/d`, matching the physics convention used throughout the
+/// kwavers spectral solvers.  It differs from `Apollo::fftfreq` (and NumPy
+/// `fftfreq`) which map `n/2` to the negative Nyquist for even-length arrays.
+///
+/// # Note
+///
+/// `KSpaceCalculator::generate_k_vector` uses the Apollo / NumPy (negative-
+/// at-Nyquist) convention and is **not** the same as this function.
+#[inline]
+#[must_use]
+pub fn wavenumber_vec_positive_nyquist(n: usize, d: f64) -> Vec<f64> {
+    let dk = TWO_PI / (n as f64 * d);
+    let signed = |i: usize| {
+        if i <= n / 2 {
+            i as isize
+        } else {
+            i as isize - n as isize
+        }
+    };
+    (0..n).map(|i| signed(i) as f64 * dk).collect()
+}
+
+impl KSpaceCalculator {
     /// Generate 3D k-squared array for Laplacian operations
     ///
     /// # Panics

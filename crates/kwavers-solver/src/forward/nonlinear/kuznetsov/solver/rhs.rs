@@ -44,9 +44,7 @@ impl KuznetsovWave {
 
         let (uniform_density, uniform_sound_speed, _uniform_nonlinearity, uniform_diffusivity) =
             if !is_heterogeneous {
-                let center_x = self.grid.dx * (self.grid.nx as f64) / 2.0;
-                let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
-                let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
+                let (center_x, center_y, center_z) = self.grid.center();
                 (
                     kwavers_medium::density_at(medium, center_x, center_y, center_z, &self.grid),
                     kwavers_medium::sound_speed_at(

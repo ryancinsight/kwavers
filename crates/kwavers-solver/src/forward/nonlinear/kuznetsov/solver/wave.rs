@@ -75,9 +75,7 @@ impl KuznetsovWave {
         tolerances: ConservationTolerances,
         medium: &dyn Medium,
     ) {
-        let center_x = self.grid.dx * (self.grid.nx as f64) / 2.0;
-        let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
-        let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
+        let (center_x, center_y, center_z) = self.grid.center();
         self.medium_properties.rho0 =
             kwavers_medium::density_at(medium, center_x, center_y, center_z, &self.grid);
         self.medium_properties.c0 =
