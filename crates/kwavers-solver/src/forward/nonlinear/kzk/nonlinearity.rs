@@ -39,6 +39,7 @@
 //! - Hamilton MF, Blackstock DT (1998). Nonlinear Acoustics. Academic Press.
 //!   §4.2.1, eq. (4.2.3).
 
+use super::spectral_helpers::wavenumber_vec;
 use super::KZKConfig;
 use apollo::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
@@ -178,8 +179,13 @@ impl KzkNonlinearOperator {
         let nt = self.config.nt;
         let ny = self.config.ny;
         let slab_len = ny * nt;
-        // Angular-frequency multiplier per FFT bin:  ω[k] = 2πk/(N·Δτ)
-        let two_pi_over_n_dt = TWO_PI / (nt as f64 * dt);
+        // Pre-compute the per-bin angular-frequency multiplier ω[k] = 2πk/(N·Δτ).
+        // Using spectral_helpers::wavenumber_vec gives the positive-Nyquist convention;
+        // the Nyquist bin is explicitly zeroed below to guarantee a real derivative.
+        let mut omega_k_vec = wavenumber_vec(nt, dt);
+        if nt.is_multiple_of(2) {
+            omega_k_vec[nt / 2] = 0.0;
+        }
 
         // Zero the pre-allocated delta buffer (replaces a 131 MB allocation per step).
         self.delta.fill(0.0);
@@ -221,21 +227,12 @@ impl KzkNonlinearOperator {
                     // Step 2: forward FFT (no normalisation).
                     fft_1d_complex_inplace(&mut w);
 
-                    // Step 3: multiply each bin by iω[k]
-                    for k in 0..nt {
-                        let freq_k = if k <= nt / 2 {
-                            k as f64
-                        } else {
-                            k as f64 - nt as f64
-                        };
-                        let omega_k = freq_k * two_pi_over_n_dt;
-                        let re = w[k].re;
-                        let im = w[k].im;
-                        w[k] = ApolloComplex64::new(-im * omega_k, re * omega_k);
-                    }
-                    // Zero Nyquist to guarantee real-valued derivative.
-                    if nt.is_multiple_of(2) {
-                        w[nt / 2] = ApolloComplex64::new(0.0, 0.0);
+                    // Step 3: multiply each bin by iω[k]; omega_k_vec is precomputed
+                    // outside all loops, with Nyquist already zeroed.
+                    for (k, w_k) in w.iter_mut().enumerate() {
+                        let omega_k = omega_k_vec[k];
+                        let (re, im) = (w_k.re, w_k.im);
+                        *w_k = ApolloComplex64::new(-im * omega_k, re * omega_k);
                     }
 
                     // Step 4: inverse FFT (includes 1/N normalisation).

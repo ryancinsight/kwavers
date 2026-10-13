@@ -9,12 +9,13 @@
 //!   Treeby et al. (2012). k-Wave axisymmetric documentation.
 
 use apollo::{fft_2d_array_into, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use leto::Array2 as LetoArray2;
 use leto::{Array1, Array2, ArrayView2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
+
+use crate::forward::nonlinear::kzk::spectral_helpers::wavenumber_vec;
 
 #[inline]
 fn dense_indices(index: usize, ncols: usize) -> (usize, usize) {
@@ -332,23 +333,13 @@ impl AsContext {
             ));
         }
         let nr_exp = 4 * nr;
-        let dk_z = TWO_PI / (nr_exp as f64 * dr);
-        let dk_x = TWO_PI / (nx as f64 * dx);
+        let kz_vec = wavenumber_vec(nr_exp, dr);
+        let kx_vec = wavenumber_vec(nx, dx);
 
         let r_sg: Array1<f64> = (0..nr).map(|m| (m as f64 + 0.5) * dr).collect();
 
-        let kz: Array1<f64> = (0..nr_exp)
-            .map(|k| {
-                let ki = k as i64;
-                let n = nr_exp as i64;
-                if ki <= n / 2 {
-                    ki as f64 * dk_z
-                } else {
-                    (ki - n) as f64 * dk_z
-                }
-            })
-            .collect();
-
+        let kz: Array1<f64> = kz_vec.into_iter().collect();
+        let kx: Array1<f64> = kx_vec.into_iter().collect();
         let ddy_k_shift_pos = kz
             .iter()
             .map(|&v| Complex64::new(0.0, v) * Complex64::from_polar(1.0, v * dr / 2.0))
@@ -357,18 +348,6 @@ impl AsContext {
         let y_shift_neg = kz
             .iter()
             .map(|&v| Complex64::from_polar(1.0, -v * dr / 2.0))
-            .collect();
-
-        let kx: Array1<f64> = (0..nx)
-            .map(|i| {
-                let ii = i as i64;
-                let n = nx as i64;
-                if ii <= n / 2 {
-                    ii as f64 * dk_x
-                } else {
-                    (ii - n) as f64 * dk_x
-                }
-            })
             .collect();
 
         let kappa_2d = Array2::from_shape_fn((nx, nr_exp), |[i, k]| {

@@ -80,6 +80,16 @@ impl TimeVaryingSource {
             signal_wrapper,
         }
     }
+
+    /// Returns the index position as physical (float) coordinates.
+    /// Used as the single SSOT for the index-to-float cast in positions()/for_each_position().
+    fn position_f64(&self) -> (f64, f64, f64) {
+        (
+            self.position.0 as f64,
+            self.position.1 as f64,
+            self.position.2 as f64,
+        )
+    }
 }
 
 impl Source for TimeVaryingSource {
@@ -105,18 +115,11 @@ impl Source for TimeVaryingSource {
     }
 
     fn positions(&self) -> Vec<(f64, f64, f64)> {
-        let x = self.position.0 as f64;
-        let y = self.position.1 as f64;
-        let z = self.position.2 as f64;
-        vec![(x, y, z)]
+        vec![self.position_f64()]
     }
 
     fn for_each_position(&self, visitor: &mut dyn FnMut((f64, f64, f64))) {
-        visitor((
-            self.position.0 as f64,
-            self.position.1 as f64,
-            self.position.2 as f64,
-        ));
+        visitor(self.position_f64());
     }
 
     fn signal(&self) -> &dyn Signal {
