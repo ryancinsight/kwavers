@@ -19,12 +19,12 @@ horae = { version = "0.1.0", git = "https://github.com/ryancinsight/horae", pack
 # These repos carry their own [workspace], so Cargo resolves their internal
 # inheritance against THEIR roots â€” no path scaffolding needed here. SSOT: members
 # inherit via `{ workspace = true }`.
-ritk-core = { version = "0.11.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
-ritk-io = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
-ritk-image = { version = "0.5.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
-ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
-ritk-spatial = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
-ritk-registration = { version = "0.55.0", git = "https://github.com/ryancinsight/ritk.git", rev = "2c5103e8a41bfc0f1377d30e89e6021d0d66ea86" }
+ritk-core = { version = "0.11.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7e45ee8289734cfaf32d0683bbfc7f70bebc22c2" }
+ritk-io = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7e45ee8289734cfaf32d0683bbfc7f70bebc22c2" }
+ritk-image = { version = "0.5.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7e45ee8289734cfaf32d0683bbfc7f70bebc22c2" }
+ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7e45ee8289734cfaf32d0683bbfc7f70bebc22c2" }
+ritk-spatial = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7e45ee8289734cfaf32d0683bbfc7f70bebc22c2" }
+ritk-registration = { version = "0.55.0", git = "https://github.com/ryancinsight/ritk.git", rev = "7e45ee8289734cfaf32d0683bbfc7f70bebc22c2" }
 coeus-core = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-tensor = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-autograd = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
