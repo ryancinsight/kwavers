@@ -1,5 +1,6 @@
 //! Field metrics calculation
 
+use super::peak_pressure_unchecked;
 use super::pressure::{acoustic_impedance, harmonic_peak_intensity};
 use super::validation::{validate_pressure_field_domain, validation_error};
 use kwavers_core::error::KwaversResult;
@@ -48,7 +49,7 @@ pub fn calculate_field_metrics(
     };
 
     // Find peak pressure
-    let (peak_location, peak_pressure) = find_peak_pressure_unchecked(pressure_field, grid);
+    let (peak_location, peak_pressure) = peak_pressure_unchecked(pressure_field, grid);
 
     // Calculate focal distance
     let focal_distance = peak_location[2]
@@ -113,32 +114,7 @@ pub fn find_peak_pressure(
     grid: &Grid,
 ) -> KwaversResult<([f64; 3], f64)> {
     validate_pressure_field_domain(pressure_field, grid)?;
-    Ok(find_peak_pressure_unchecked(pressure_field, grid))
-}
-
-fn find_peak_pressure_unchecked(pressure_field: ArrayView3<f64>, grid: &Grid) -> ([f64; 3], f64) {
-    let mut max_pressure = 0.0;
-    let mut max_location = [0, 0, 0];
-
-    for ix in 0..grid.nx {
-        for iy in 0..grid.ny {
-            for iz in 0..grid.nz {
-                let p = pressure_field[[ix, iy, iz]].abs();
-                if p > max_pressure {
-                    max_pressure = p;
-                    max_location = [ix, iy, iz];
-                }
-            }
-        }
-    }
-
-    let location = [
-        grid.x(max_location[0]),
-        grid.y(max_location[1]),
-        grid.z(max_location[2]),
-    ];
-
-    (location, max_pressure)
+    Ok(peak_pressure_unchecked(pressure_field, grid))
 }
 
 /// Calculate beam width at a specific location

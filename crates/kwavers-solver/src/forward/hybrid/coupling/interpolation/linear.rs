@@ -41,13 +41,17 @@ impl InterpolationManager {
         let dx = (max_x - min_x) / (shape[0] as f64 - 1.0);
         let dy = (max_y - min_y) / (shape[1] as f64 - 1.0);
         let dz = (max_z - min_z) / (shape[2] as f64 - 1.0);
+        // Upper-bound clamps for fractional indices (precomputed to avoid repeated cast in loop).
+        let clamp_i = (shape[0] - 2) as f64;
+        let clamp_j = (shape[1] - 2) as f64;
+        let clamp_k = (shape[2] - 2) as f64;
 
         // For simplicity, assume uniform grid spacing and map target coords to source indices
         for (idx, &(tx, ty, tz)) in target_coords.iter().enumerate().take(result.len()) {
             // Find fractional indices in source grid
-            let fi = ((tx - min_x) / dx).max(0.0).min((shape[0] - 2) as f64);
-            let fj = ((ty - min_y) / dy).max(0.0).min((shape[1] - 2) as f64);
-            let fk = ((tz - min_z) / dz).max(0.0).min((shape[2] - 2) as f64);
+            let fi = ((tx - min_x) / dx).max(0.0).min(clamp_i);
+            let fj = ((ty - min_y) / dy).max(0.0).min(clamp_j);
+            let fk = ((tz - min_z) / dz).max(0.0).min(clamp_k);
 
             let i0 = fi.floor() as usize;
             let j0 = fj.floor() as usize;
@@ -56,10 +60,10 @@ impl InterpolationManager {
             let j1 = (j0 + 1).min(shape[1] - 1);
             let k1 = (k0 + 1).min(shape[2] - 1);
 
-            // Interpolation weights
-            let wx = fi - (i0 as f64);
-            let wy = fj - (j0 as f64);
-            let wz = fk - (k0 as f64);
+            // Interpolation weights — fract() avoids a cast back through usize.
+            let wx = fi.fract();
+            let wy = fj.fract();
+            let wz = fk.fract();
 
             // Trilinear interpolation: c000*(1-wx)*(1-wy)*(1-wz) + c100*wx*(1-wy)*(1-wz) + ...
             let c000 = source_field[[i0, j0, k0]];

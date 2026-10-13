@@ -1,5 +1,6 @@
 //! Focus finding and beam width calculations
 
+use super::peak_pressure_unchecked;
 use super::validation::{invalid_parameter, validate_pressure_field_domain};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
@@ -11,27 +12,8 @@ use leto::{Array1, ArrayView3};
 ///
 pub fn find_focus(pressure_field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<[f64; 3]> {
     validate_pressure_field_domain(pressure_field, grid)?;
-
-    let mut max_pressure = 0.0;
-    let mut focus_indices = [0, 0, 0];
-
-    for ix in 0..grid.nx {
-        for iy in 0..grid.ny {
-            for iz in 0..grid.nz {
-                let p = pressure_field[[ix, iy, iz]].abs();
-                if p > max_pressure {
-                    max_pressure = p;
-                    focus_indices = [ix, iy, iz];
-                }
-            }
-        }
-    }
-
-    Ok([
-        grid.x(focus_indices[0]),
-        grid.y(focus_indices[1]),
-        grid.z(focus_indices[2]),
-    ])
+    let (location, _) = peak_pressure_unchecked(pressure_field, grid);
+    Ok(location)
 }
 
 /// Find focal plane (axial slice with maximum energy)

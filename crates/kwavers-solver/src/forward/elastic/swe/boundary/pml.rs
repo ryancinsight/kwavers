@@ -98,6 +98,7 @@ impl ElasticSwePMLBoundary {
         let sigma_max = self.config.sigma_max;
         let order = self.config.profile_order as i32;
 
+        let thickness_f = thickness as f64;
         let compute_axis = |n: usize, active: bool| {
             let mut sigma = Array1::<f64>::zeros(n);
             if !active || thickness == 0 || n < 2 {
@@ -106,13 +107,13 @@ impl ElasticSwePMLBoundary {
             for i in 0..thickness {
                 if i < n {
                     let dist = (thickness - i) as f64;
-                    sigma[i] = sigma_max * (dist / thickness as f64).powi(order);
+                    sigma[i] = sigma_max * (dist / thickness_f).powi(order);
                 }
             }
             if n > thickness {
                 for i in (n - thickness)..n {
                     let dist = (i - (n - thickness) + 1) as f64;
-                    sigma[i] = sigma_max * (dist / thickness as f64).powi(order);
+                    sigma[i] = sigma_max * (dist / thickness_f).powi(order);
                 }
             }
             sigma
@@ -199,6 +200,7 @@ impl ElasticSwePMLBoundary {
         let pml_x = nx > 1;
         let pml_y = ny > 1;
         let pml_z = nz > 1;
+        let thickness_f = thickness as f64;
 
         zip_mut_indexed(sigma.view_mut(), (), |[i, j, k], s, ()| {
             let mut max_sigma = 0.0_f64;
@@ -207,10 +209,10 @@ impl ElasticSwePMLBoundary {
             if pml_x {
                 if i < thickness {
                     let dist = (thickness - i) as f64;
-                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness_f).powi(order));
                 } else if nx > thickness && i >= nx - thickness {
                     let dist = (i - (nx - thickness) + 1) as f64;
-                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness_f).powi(order));
                 }
             }
 
@@ -218,10 +220,10 @@ impl ElasticSwePMLBoundary {
             if pml_y {
                 if j < thickness {
                     let dist = (thickness - j) as f64;
-                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness_f).powi(order));
                 } else if ny > thickness && j >= ny - thickness {
                     let dist = (j - (ny - thickness) + 1) as f64;
-                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness_f).powi(order));
                 }
             }
 
@@ -229,10 +231,10 @@ impl ElasticSwePMLBoundary {
             if pml_z {
                 if k < thickness {
                     let dist = (thickness - k) as f64;
-                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness_f).powi(order));
                 } else if nz > thickness && k >= nz - thickness {
                     let dist = (k - (nz - thickness) + 1) as f64;
-                    max_sigma = max_sigma.max(sigma_max * (dist / thickness as f64).powi(order));
+                    max_sigma = max_sigma.max(sigma_max * (dist / thickness_f).powi(order));
                 }
             }
 

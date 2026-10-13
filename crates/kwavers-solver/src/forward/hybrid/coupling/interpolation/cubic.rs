@@ -55,18 +55,22 @@ impl InterpolationManager {
             )
         };
 
+        let clamp_i = (shape[0] - 3) as f64;
+        let clamp_j = (shape[1] - 3) as f64;
+        let clamp_k = (shape[2] - 3) as f64;
+
         for (idx, &(tx, ty, tz)) in target_coords.iter().enumerate().take(result.len()) {
-            let fi = ((tx - min_x) / dx).max(1.0).min((shape[0] - 3) as f64);
-            let fj = ((ty - min_y) / dy).max(1.0).min((shape[1] - 3) as f64);
-            let fk = ((tz - min_z) / dz).max(1.0).min((shape[2] - 3) as f64);
+            let fi = ((tx - min_x) / dx).max(1.0).min(clamp_i);
+            let fj = ((ty - min_y) / dy).max(1.0).min(clamp_j);
+            let fk = ((tz - min_z) / dz).max(1.0).min(clamp_k);
 
             let i = fi.floor() as usize;
             let j = fj.floor() as usize;
             let k = fk.floor() as usize;
 
-            let wx = fi - (i as f64);
-            let wy = fj - (j as f64);
-            let wz = fk - (k as f64);
+            let wx = fi.fract();
+            let wy = fj.fract();
+            let wz = fk.fract();
 
             // Sample 4x4x4 neighborhood for cubic interpolation
             // Interpolate along z for each x,y position
