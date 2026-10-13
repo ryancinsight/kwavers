@@ -42,48 +42,36 @@ impl TissueFactory {
     #[must_use]
     pub fn create_tissue_medium(grid: &Grid) -> HeterogeneousMedium {
         // Core acoustic properties (Hamilton & Blackstock Table 8.1)
-        let density = Array3::from_elem([grid.nx, grid.ny, grid.nz], DENSITY_TISSUE);
-        let sound_speed = Array3::from_elem([grid.nx, grid.ny, grid.nz], SOUND_SPEED_TISSUE);
-        let viscosity = Array3::from_elem([grid.nx, grid.ny, grid.nz], VISCOSITY_SOFT_TISSUE);
+        let density = grid.array_fill(DENSITY_TISSUE);
+        let sound_speed = grid.array_fill(SOUND_SPEED_TISSUE);
+        let viscosity = grid.array_fill(VISCOSITY_SOFT_TISSUE);
 
         // Bubble dynamics parameters
-        let surface_tension =
-            Array3::from_elem([grid.nx, grid.ny, grid.nz], SURFACE_TENSION_TISSUE);
+        let surface_tension = grid.array_fill(SURFACE_TENSION_TISSUE);
         let ambient_pressure = ATMOSPHERIC_PRESSURE;
-        let vapor_pressure = Array3::from_elem([grid.nx, grid.ny, grid.nz], VAPOR_PRESSURE_WATER);
-        let polytropic_index =
-            Array3::from_elem([grid.nx, grid.ny, grid.nz], POLYTROPIC_EXPONENT_AIR);
+        let vapor_pressure = grid.array_fill(VAPOR_PRESSURE_WATER);
+        let polytropic_index = grid.array_fill(POLYTROPIC_EXPONENT_AIR);
 
         // Thermal properties
-        let specific_heat = Array3::from_elem([grid.nx, grid.ny, grid.nz], SPECIFIC_HEAT_BRAIN);
-        let thermal_conductivity =
-            Array3::from_elem([grid.nx, grid.ny, grid.nz], THERMAL_CONDUCTIVITY_BLOOD);
-        let thermal_expansion =
-            Array3::from_elem([grid.nx, grid.ny, grid.nz], THERMAL_EXPANSION_SOFT_TISSUE);
-        let gas_diffusion_coeff = Array3::from_elem(
-            [grid.nx, grid.ny, grid.nz],
-            GAS_DIFFUSION_COEFFICIENT_TISSUE,
-        );
-        let thermal_diffusivity =
-            Array3::from_elem([grid.nx, grid.ny, grid.nz], THERMAL_DIFFUSIVITY_TISSUE);
-        let temperature = Array3::from_elem([grid.nx, grid.ny, grid.nz], BODY_TEMPERATURE_K); // 37°C
+        let specific_heat = grid.array_fill(SPECIFIC_HEAT_BRAIN);
+        let thermal_conductivity = grid.array_fill(THERMAL_CONDUCTIVITY_BLOOD);
+        let thermal_expansion = grid.array_fill(THERMAL_EXPANSION_SOFT_TISSUE);
+        let gas_diffusion_coeff = grid.array_fill(GAS_DIFFUSION_COEFFICIENT_TISSUE);
+        let thermal_diffusivity = grid.array_fill(THERMAL_DIFFUSIVITY_TISSUE);
+        let temperature = grid.array_fill(BODY_TEMPERATURE_K); // 37°C
 
         // Optical properties [m⁻¹] — broadband NIR soft tissue initialization
-        let mu_a = Array3::from_elem([grid.nx, grid.ny, grid.nz], OPTICAL_ABSORPTION_TISSUE_NIR_M);
-        let mu_s_prime = Array3::from_elem(
-            [grid.nx, grid.ny, grid.nz],
-            OPTICAL_SCATTERING_REDUCED_TISSUE_NIR_M,
-        );
+        let mu_a = grid.array_fill(OPTICAL_ABSORPTION_TISSUE_NIR_M);
+        let mu_s_prime = grid.array_fill(OPTICAL_SCATTERING_REDUCED_TISSUE_NIR_M);
 
         // Bubble state
-        let bubble_radius =
-            Array3::from_elem([grid.nx, grid.ny, grid.nz], TISSUE_NUCLEATION_RADIUS);
-        let bubble_velocity = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let bubble_radius = grid.array_fill(TISSUE_NUCLEATION_RADIUS);
+        let bubble_velocity = grid.array_zeros();
 
         // Acoustic parameters
-        let alpha0 = Array3::from_elem([grid.nx, grid.ny, grid.nz], ACOUSTIC_ABSORPTION_TISSUE);
-        let delta = Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.1);
-        let b_a = Array3::from_elem([grid.nx, grid.ny, grid.nz], TISSUE_NONLINEARITY_B_A);
+        let alpha0 = grid.array_fill(ACOUSTIC_ABSORPTION_TISSUE);
+        let delta = grid.array_fill(1.1);
+        let b_a = grid.array_fill(TISSUE_NONLINEARITY_B_A);
         let reference_frequency = REFERENCE_FREQUENCY_TISSUE_HZ; // 180 kHz LIFU reference
 
         // Initialize viscoelastic fields with tissue-appropriate spatial variation
@@ -162,7 +150,7 @@ impl TissueFactory {
             b_a,
             absorption,
             // Tissue default: y = 1.5 per Szabo (1994) Table I.
-            alpha_power: Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.5_f64),
+            alpha_power: grid.array_fill(1.5_f64),
             nonlinearity,
             shear_sound_speed,
             shear_viscosity_coeff,

@@ -6,6 +6,7 @@
 
 use std::sync::Arc;
 
+use crate::forward::nonlinear::kzk::spectral_helpers::wavenumber_vec;
 use leto::{Array3, Array4};
 
 use crate::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
@@ -51,19 +52,6 @@ pub struct VtiElasticSolver {
     dszz_dz: Array3<f64>,
     dsxz_dx: Array3<f64>,
     dsxz_dz: Array3<f64>,
-}
-
-fn k_vector(n: usize, spacing: f64) -> Vec<f64> {
-    let dk = kwavers_core::constants::numerical::TWO_PI / (n as f64 * spacing);
-    (0..n)
-        .map(|i| {
-            if i <= n / 2 {
-                i as f64 * dk
-            } else {
-                (i as f64 - n as f64) * dk
-            }
-        })
-        .collect()
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -134,9 +122,9 @@ impl VtiElasticSolver {
             szz: Array3::zeros(shape),
             sxz: Array3::zeros(shape),
             fft: get_fft_for_grid(grid.nx, grid.ny, grid.nz),
-            kx: k_vector(grid.nx, grid.dx),
-            ky: k_vector(grid.ny, grid.dy),
-            kz: k_vector(grid.nz, grid.dz),
+            kx: wavenumber_vec(grid.nx, grid.dx),
+            ky: wavenumber_vec(grid.ny, grid.dy),
+            kz: wavenumber_vec(grid.nz, grid.dz),
             spectral_field: Array3::zeros(shape),
             spectral_scratch: Array3::zeros(shape),
             dvx_dx: Array3::zeros(shape),

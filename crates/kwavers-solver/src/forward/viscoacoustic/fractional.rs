@@ -21,7 +21,7 @@
 use std::f64::consts::PI;
 use std::sync::Arc;
 
-use kwavers_core::constants::numerical::TWO_PI;
+use crate::forward::nonlinear::kzk::spectral_helpers::wavenumber_vec;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d};
 use leto::Array3;
@@ -29,19 +29,6 @@ use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 fn is_positive_finite(value: f64) -> bool {
     value.is_finite() && value > 0.0
-}
-
-fn k_vector(n: usize, spacing: f64) -> Vec<f64> {
-    let dk = TWO_PI / (n as f64 * spacing);
-    (0..n)
-        .map(|i| {
-            if i <= n / 2 {
-                i as f64 * dk
-            } else {
-                (i as f64 - n as f64) * dk
-            }
-        })
-        .collect()
 }
 
 /// Exact power-law absorption/dispersion filter for a homogeneous medium.
@@ -109,9 +96,9 @@ impl FractionalAbsorptionOperator {
             )));
         }
 
-        let kx = k_vector(nx, dx);
-        let ky = k_vector(ny, dy);
-        let kz = k_vector(nz, dz);
+        let kx = wavenumber_vec(nx, dx);
+        let ky = wavenumber_vec(ny, dy);
+        let kz = wavenumber_vec(nz, dz);
         let mut h_abs = Array3::<f64>::zeros((nx, ny, nz));
         let mut h_disp = Array3::<f64>::zeros((nx, ny, nz));
 

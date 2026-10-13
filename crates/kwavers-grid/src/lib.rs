@@ -243,4 +243,22 @@ impl Grid {
     pub fn coords(&self, i: usize, j: usize, k: usize) -> (f64, f64, f64) {
         (self.x(i), self.y(j), self.z(k))
     }
+
+    /// Create a zero-filled 3-D array shaped `[nx, ny, nz]` for this grid.
+    ///
+    /// Replaces the repeated `Array3::zeros([grid.nx, grid.ny, grid.nz])` idiom.
+    #[inline]
+    #[must_use]
+    pub fn array_zeros(&self) -> leto::Array3<f64> {
+        leto::Array3::zeros([self.nx, self.ny, self.nz])
+    }
+
+    /// Create a 3-D array shaped `[nx, ny, nz]` filled with `value`.
+    ///
+    /// Replaces the repeated `Array3::from_elem([grid.nx, grid.ny, grid.nz], v)` idiom.
+    #[inline]
+    #[must_use]
+    pub fn array_fill(&self, value: f64) -> leto::Array3<f64> {
+        leto::Array3::from_elem([self.nx, self.ny, self.nz], value)
+    }
 }

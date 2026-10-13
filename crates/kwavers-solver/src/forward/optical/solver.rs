@@ -1,6 +1,6 @@
 //! Optical diffusion solver implementation.
 
-use kwavers_core::constants::numerical::TWO_PI;
+use crate::forward::nonlinear::kzk::spectral_helpers::wavenumber_vec;
 use kwavers_grid::Grid;
 use leto::Array3;
 
@@ -10,19 +10,6 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d, Fft3dInOutExt};
 use kwavers_medium::Medium;
 use leto::ArrayView3;
-
-fn k_vector(n: usize, spacing: f64) -> Vec<f64> {
-    let dk = TWO_PI / (n as f64 * spacing);
-    (0..n)
-        .map(|i| {
-            if i <= n / 2 {
-                i as f64 * dk
-            } else {
-                (i as f64 - n as f64) * dk
-            }
-        })
-        .collect()
-}
 
 /// FFT-based optical diffusion solver for absorbed-energy generation.
 #[derive(Debug)]
@@ -66,9 +53,9 @@ impl OpticalDiffusionSolver {
             *mu_eff_value = (3.0 * mu_a_value * (mu_a_value + mu_s_prime_value)).sqrt();
         }
 
-        let kx = k_vector(grid.nx, grid.dx);
-        let ky = k_vector(grid.ny, grid.dy);
-        let kz = k_vector(grid.nz, grid.dz);
+        let kx = wavenumber_vec(grid.nx, grid.dx);
+        let ky = wavenumber_vec(grid.ny, grid.dy);
+        let kz = wavenumber_vec(grid.nz, grid.dz);
         let mut k_squared = Array3::zeros((grid.nx, grid.ny, grid.nz));
         for i in 0..grid.nx {
             for j in 0..grid.ny {
