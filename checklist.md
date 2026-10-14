@@ -14,4 +14,5 @@
 - [x] [patch] Per-call FD receiver reuse preserves source-scaling and objective/gradient order; 58 focused, 41 facade and 1,104 full solver tests pass. Homogeneous full-size Miri passes locally in 358.44 wall seconds.
 - [x] [patch] Replace Born adjoint coordinate projection with one checked dense gradient borrow. The exact dyadic coordinate oracle and all 58 existing focused FD regressions pass; preserve arithmetic, accumulation order, stateless operators and O(voxels) scratch.
 - [x] [patch] Recheck the complete native solver and facade suites: 1,105 solver tests pass with six existing ignores, and all 41 facade cases pass.
+- [x] [patch] The exact adjoint oracle passes isolated Linux x86-64 Miri; timestamp-free tracing retains phase/span context without host-clock access. Formatting, strict solver Clippy, lock provenance and five wheel-artifact regressions pass.
 - [ ] [patch] Complete the authorized Miri performance increment and final-head verification under unchanged 15-minute limits, full scenarios, numerical tolerances and safety checks. Merge, publication and deployment remain excluded.

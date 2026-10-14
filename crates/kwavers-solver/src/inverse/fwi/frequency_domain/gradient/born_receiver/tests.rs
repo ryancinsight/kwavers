@@ -11,6 +11,10 @@ use super::*;
 fn dense_adjoint_matches_coordinate_oracle() {
     let subscriber = tracing_subscriber::fmt()
         .with_test_writer()
+        // Phase and span context are deterministic; wall-clock timestamps
+        // would require host access during isolated Miri execution.
+        .without_time()
+        .with_ansi(false)
         .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
         .finish();
     let _subscriber = tracing::subscriber::set_default(subscriber);
