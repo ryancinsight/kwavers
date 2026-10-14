@@ -44,6 +44,17 @@
   eliminating repeated coordinate projection without changing arithmetic,
   update order, numerical tolerances or linear scratch-space requirements.
   An exact dyadic coordinate oracle covers asymmetric shapes and source gains.
+- [patch] Each inversion prepares model-independent Born geometry once and
+  reevaluates every model/Hessian probe through a shared native-precision
+  weighted field kernel. Ring/rotating geometry and scalar arithmetic have
+  bitwise differential coverage; source fitting, finite-difference steps,
+  convergence criteria and complete reconstruction fixtures remain unchanged.
+  The immutable geometry workspace has documented acquisition-dependent size;
+  model-dependent scratch remains linear in the voxel count.
+- [patch] FWI consumers share the explicit two-product cubic voxel volume,
+  replacing an unspecified-precision general power call. A repeatability
+  regression reproduces the original four-ULP discrepancy under isolated Miri;
+  the mathematical volume and numerical tolerances remain unchanged.
 
 - CI shares checksum-verified locked crate sources within a workflow run;
   compile jobs retain their five-minute pull-request bounds and full selections.

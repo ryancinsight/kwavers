@@ -20,7 +20,9 @@
 //! Steihaug); Métivier et al. (2013) truncated-Newton FWI.
 
 use super::acquisition::TransmissionAcquisition;
-use super::gradient::{hessian_vector, max_abs, objective_and_gradient};
+use super::gradient::hessian::hessian_vector;
+use super::gradient::objective::Objective;
+use super::gradient::vector::max_abs;
 use super::inversion::clamp_slowness;
 use super::types::{
     Config, FrequencyObservation, InversionResult, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL,
@@ -82,7 +84,7 @@ const CG_RELATIVE_TOLERANCE: f64 = 1.0e-6;
 /// `config.iterations` bounds the outer Newton steps.
 ///
 /// # Errors
-/// Propagates forward/adjoint evaluation errors from `objective_and_gradient`.
+/// Propagates forward/adjoint evaluation errors.
 pub fn invert_gauss_newton(
     observations: &[FrequencyObservation],
     acquisition: &dyn TransmissionAcquisition,
@@ -91,8 +93,8 @@ pub fn invert_gauss_newton(
     gn: &GaussNewtonConfig,
 ) -> KwaversResult<InversionResult> {
     let mut slowness = sound_speed_to_slowness(initial_sound_speed_m_s)?;
-    let (mut objective, mut gradient) =
-        objective_and_gradient(&slowness, observations, acquisition, config)?;
+    let experiment = Objective::new(&slowness, observations, acquisition, config)?;
+    let (mut objective, mut gradient) = experiment.evaluate(&slowness)?;
     let mut history = vec![objective];
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let mut lambda = gn.lm_damping.max(LM_MIN);
@@ -112,9 +114,7 @@ pub fn invert_gauss_newton(
             let step = newton_cg(
                 &slowness,
                 &gradient,
-                observations,
-                acquisition,
-                config,
+                &experiment,
                 gn,
                 reference_slowness,
                 lambda,
@@ -128,8 +128,7 @@ pub fn invert_gauss_newton(
                 *s += p;
             }
             clamp_slowness(&mut candidate, config);
-            let (candidate_objective, candidate_gradient) =
-                objective_and_gradient(&candidate, observations, acquisition, config)?;
+            let (candidate_objective, candidate_gradient) = experiment.evaluate(&candidate)?;
             if candidate_objective < objective {
                 accepted = Some((candidate, candidate_objective, candidate_gradient));
                 lambda = (lambda * LM_DECREASE).max(LM_MIN);
@@ -170,9 +169,7 @@ pub fn invert_gauss_newton(
 struct HessianAction<'a> {
     slowness: &'a Array3<f64>,
     gradient: &'a Array3<f64>,
-    observations: &'a [FrequencyObservation],
-    acquisition: &'a dyn TransmissionAcquisition,
-    config: &'a Config,
+    experiment: &'a Objective<'a>,
     reference_slowness: f64,
     fd_epsilon: f64,
     lambda: f64,
@@ -217,9 +214,7 @@ impl LinearOperator<CpuBackend> for HessianAction<'_> {
             self.slowness,
             self.gradient,
             &direction,
-            self.observations,
-            self.acquisition,
-            self.config,
+            self.experiment,
             self.reference_slowness,
             self.fd_epsilon,
         ) {
@@ -259,15 +254,10 @@ impl LinearOperator<CpuBackend> for HessianAction<'_> {
 /// reports at iteration `k − 1` with the solution buffer holding the iterate
 /// before the step that broke the curvature test, which is exactly the early
 /// `return Ok(p)` this loop used to perform.
-// allow(too_many_arguments): distinct Newton-CG inputs (model, gradient, the
-// forward-problem triple, GN/regularisation parameters) — see hessian_vector.
-#[allow(clippy::too_many_arguments)]
 fn newton_cg(
     slowness: &Array3<f64>,
     gradient: &Array3<f64>,
-    observations: &[FrequencyObservation],
-    acquisition: &dyn TransmissionAcquisition,
-    config: &Config,
+    experiment: &Objective<'_>,
     gn: &GaussNewtonConfig,
     reference_slowness: f64,
     lambda: f64,
@@ -295,9 +285,7 @@ fn newton_cg(
     let action = HessianAction {
         slowness,
         gradient,
-        observations,
-        acquisition,
-        config,
+        experiment,
         reference_slowness,
         fd_epsilon: gn.fd_epsilon,
         lambda,
@@ -400,12 +388,13 @@ mod tests {
 
         // Objective at the exact background start.
         let start_slowness = sound_speed_to_slowness(&background).unwrap();
-        let (obj_start, _) = objective_and_gradient(
+        let (obj_start, _) = Objective::new(
             &start_slowness,
             &observations,
             &RingAcquisition::new(&array),
             &config,
         )
+        .and_then(|objective| objective.evaluate(&start_slowness))
         .unwrap();
 
         let gn = GaussNewtonConfig::default();

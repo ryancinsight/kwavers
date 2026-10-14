@@ -18,7 +18,7 @@
 //! exactly that stall).
 //!
 //! `⟨d, H d⟩` reuses the matrix-free
-//! [`super::gradient::hessian_vector`] action, so the curvature costs one extra
+//! [`super::gradient::hessian::hessian_vector`] action, so the curvature costs one extra
 //! gradient evaluation per iteration and no Jacobian is assembled. Where the
 //! quadratic model does not bound the step — non-positive curvature `⟨d,Hd⟩ ≤ 0`,
 //! or a non-finite α — there is no model minimizer along `d`, and the step falls
@@ -30,7 +30,9 @@
 
 use super::acquisition::TransmissionAcquisition;
 use super::gauss_newton::GaussNewtonConfig;
-use super::gradient::{dot, hessian_vector, max_abs, objective_and_gradient};
+use super::gradient::hessian::hessian_vector;
+use super::gradient::objective::Objective;
+use super::gradient::vector::{dot, max_abs};
 use super::types::{
     Config, FrequencyObservation, InversionResult, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL,
 };
@@ -52,8 +54,8 @@ pub fn invert(
     config: &Config,
 ) -> KwaversResult<InversionResult> {
     let mut slowness = sound_speed_to_slowness(initial_sound_speed_m_s)?;
-    let (mut objective, mut gradient) =
-        objective_and_gradient(&slowness, observations, acquisition, config)?;
+    let experiment = Objective::new(&slowness, observations, acquisition, config)?;
+    let (mut objective, mut gradient) = experiment.evaluate(&slowness)?;
     let mut history = vec![objective];
     let mut direction = gradient.mapv(|value| -value);
     let mut previous_gradient = gradient.clone();
@@ -89,15 +91,8 @@ pub fn invert(
             break;
         }
 
-        let seed_step = model_minimizer_step(
-            &slowness,
-            &gradient,
-            &direction,
-            observations,
-            acquisition,
-            config,
-        )?
-        .unwrap_or(config.initial_step_s_per_m / direction_scale);
+        let seed_step = model_minimizer_step(&slowness, &gradient, &direction, &experiment)?
+            .unwrap_or(config.initial_step_s_per_m / direction_scale);
 
         let mut accepted = None;
         for search_step in 0..8 {
@@ -107,8 +102,7 @@ pub fn invert(
                 *value += step * dir;
             }
             clamp_slowness(&mut candidate, config);
-            let (candidate_objective, candidate_gradient) =
-                objective_and_gradient(&candidate, observations, acquisition, config)?;
+            let (candidate_objective, candidate_gradient) = experiment.evaluate(&candidate)?;
             // (config is &Config; no move)
             if candidate_objective < objective {
                 accepted = Some((candidate, candidate_objective, candidate_gradient));
@@ -154,9 +148,7 @@ fn model_minimizer_step(
     slowness: &Array3<f64>,
     gradient: &Array3<f64>,
     direction: &Array3<f64>,
-    observations: &[FrequencyObservation],
-    acquisition: &dyn TransmissionAcquisition,
-    config: &Config,
+    experiment: &Objective<'_>,
 ) -> KwaversResult<Option<f64>> {
     let directional_derivative = dot(gradient, direction);
     // A non-descent direction is the caller's safeguard to handle, not ours.
@@ -165,14 +157,12 @@ fn model_minimizer_step(
     }
 
     let fd_epsilon = GaussNewtonConfig::default().fd_epsilon;
-    let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
+    let reference_slowness = 1.0 / experiment.config.reference_sound_speed_m_s;
     let hd = hessian_vector(
         slowness,
         gradient,
         direction,
-        observations,
-        acquisition,
-        config,
+        experiment,
         reference_slowness,
         fd_epsilon,
     )?;

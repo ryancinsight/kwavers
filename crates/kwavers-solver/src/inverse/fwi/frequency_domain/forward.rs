@@ -1,6 +1,7 @@
 //! Matrix-free frequency-domain forward model.
 
 use super::acquisition::TransmissionAcquisition;
+use super::born_kernel::{cell_volume, integrate, VOXELS_PER_BLOCK};
 use super::cbs::{
     real_scattering_potential, real_scattering_potential_for_operator, sample_array_for_operator,
     solve_volume_field_with_operator, source_density_for_operator, CbsConfig, GreenOperatorKind,
@@ -69,13 +70,17 @@ pub(super) fn predict_born_rows(
 ) -> KwaversResult<Array2<Complex64>> {
     let shape = slowness_s_per_m.shape();
     let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-    let cell_volume = config.spacing_m.powi(3);
+    let cell_volume = cell_volume(config.spacing_m);
     let omega = TWO_PI * frequency_hz;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let reference_wavenumber = omega * reference_slowness;
     let min_distance = 0.5 * config.spacing_m;
     let centers = voxel_centers((nx, ny, nz), config.spacing_m);
-    let potential = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?;
+    let potential_volume = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?
+        .into_iter()
+        .map(|value| value * cell_volume)
+        .collect::<Vec<_>>();
+    let mut green = Vec::with_capacity(centers.len());
 
     let mut output = Array2::zeros([transmissions, acquisition.receiver_count()]);
     for transmit in 0..transmissions {
@@ -86,14 +91,11 @@ pub(super) fn predict_born_rows(
                 .iter()
                 .map(|&source| outgoing_green(source, receiver, reference_wavenumber, min_distance))
                 .sum::<Complex64>();
-            let mut scattered = Complex64::new(0.0, 0.0);
-            for ((_, point), (&potential_value, &incident_value)) in
-                centers.iter().zip(potential.iter().zip(incident.iter()))
-            {
-                let receiver_green =
-                    outgoing_green(*point, receiver, reference_wavenumber, min_distance);
-                scattered += incident_value * receiver_green * (potential_value * cell_volume);
-            }
+            green.clear();
+            green.extend(centers.iter().map(|(_, point)| {
+                outgoing_green(*point, receiver, reference_wavenumber, min_distance)
+            }));
+            let scattered = integrate::<_, VOXELS_PER_BLOCK>(&incident, &green, &potential_volume);
             output[[transmit, receiver_index]] = direct + scattered;
         }
     }

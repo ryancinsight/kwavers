@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
-use super::gradient::objective_and_gradient;
+use super::gradient::objective::Objective;
 use super::{
     invert, simulate_frequency_observation, AbsorbingBoundary, AngularSpectrumSplitStepOperator,
     Config, DenseConvergentBornOperator, FrequencyObservation, PstdFiniteWindowBornOperator,

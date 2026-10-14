@@ -1,6 +1,7 @@
 //! Discrete adjoint gradient for frequency-domain FWI.
 
 use super::acquisition::TransmissionAcquisition;
+use super::born_kernel::{cell_volume, VOXELS_PER_BLOCK};
 use super::cbs::{
     apply_shifted_green_adjoint_operator, real_scattering_potential,
     real_scattering_potential_for_operator, receiver_adjoint_for_operator,
@@ -8,84 +9,25 @@ use super::cbs::{
     solve_adjoint_volume_field_with_operator, solve_volume_field_with_operator,
     source_density_for_operator, GridSpec,
 };
-use super::forward::{incident_field, validate_forward_inputs, voxel_centers};
 use super::types::{Config, FrequencyObservation};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
-use kwavers_math::linear_algebra::NumericOps;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     complex_l2_objective, complex_source_scale,
 };
 use leto::Array3;
 
+mod born_geometry;
 mod born_receiver;
+pub(super) mod hessian;
+pub(super) mod objective;
+#[cfg(test)]
+pub(super) mod test_support;
+pub(super) mod vector;
+use born_geometry::BornGeometry;
 use born_receiver::BornReceiverTerms;
-
-pub(super) fn objective_and_gradient(
-    slowness_s_per_m: &Array3<f64>,
-    observations: &[FrequencyObservation],
-    acquisition: &dyn TransmissionAcquisition,
-    config: &Config,
-) -> KwaversResult<(f64, Array3<f64>)> {
-    if observations.is_empty() {
-        return Err(KwaversError::InvalidInput(
-            "FWI requires at least one frequency observation".to_owned(),
-        ));
-    }
-
-    let mut objective = 0.0;
-    let shape = slowness_s_per_m.shape();
-    let mut gradient = Array3::zeros([shape[0], shape[1], shape[2]]);
-    for observation in observations {
-        let rows = observation.observed_pressure.shape()[0];
-        if observation.observed_pressure.shape()[1] != acquisition.receiver_count() {
-            return Err(KwaversError::DimensionMismatch(format!(
-                "receiver count mismatch: observed {}, geometry {}",
-                observation.observed_pressure.shape()[1],
-                acquisition.receiver_count()
-            )));
-        }
-        validate_forward_inputs(
-            slowness_s_per_m,
-            acquisition,
-            observation.frequency_hz,
-            config,
-            rows,
-        )?;
-        if config.forward_operator.uses_finite_window_adjoint() {
-            accumulate_finite_window_frequency_gradient(
-                slowness_s_per_m,
-                observation,
-                acquisition,
-                config,
-                &mut objective,
-                &mut gradient,
-            )?;
-        } else if config.forward_operator.uses_volume_field_adjoint() {
-            accumulate_dense_cbs_frequency_gradient(
-                slowness_s_per_m,
-                observation,
-                acquisition,
-                config,
-                &mut objective,
-                &mut gradient,
-            )?;
-        } else {
-            accumulate_frequency_gradient(
-                slowness_s_per_m,
-                observation,
-                acquisition,
-                config,
-                &mut objective,
-                &mut gradient,
-            )?;
-        }
-    }
-
-    apply_tikhonov(slowness_s_per_m, config, &mut objective, &mut gradient);
-    Ok((objective, gradient))
-}
+use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::helmholtz_slowness_derivative;
 
 fn accumulate_finite_window_frequency_gradient(
     slowness_s_per_m: &Array3<f64>,
@@ -266,42 +208,34 @@ fn accumulate_dense_cbs_slowness_gradient(
 fn accumulate_frequency_gradient(
     slowness_s_per_m: &Array3<f64>,
     observation: &FrequencyObservation,
-    acquisition: &dyn TransmissionAcquisition,
+    geometry: &BornGeometry,
     config: &Config,
     objective: &mut f64,
     gradient: &mut Array3<f64>,
 ) -> KwaversResult<()> {
-    let rows = observation.observed_pressure.shape()[0];
     let omega = TWO_PI * observation.frequency_hz;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
-    let reference_wavenumber = omega * reference_slowness;
-    let min_distance = 0.5 * config.spacing_m;
-    let cell_volume = config.spacing_m.powi(3);
-    let shape = slowness_s_per_m.shape();
-    let centers = voxel_centers((shape[0], shape[1], shape[2]), config.spacing_m);
-    let potential = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?;
-    let slowness = slowness_s_per_m.iter().copied().collect::<Vec<_>>();
+    let cell_volume = cell_volume(config.spacing_m);
+    // These exact products depend on the model/frequency, not the receiver.
+    // Hoist them without regrouping any multiplication in prediction/adjoint.
+    let potential_volume = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?
+        .into_iter()
+        .map(|value| value * cell_volume)
+        .collect::<Vec<_>>();
+    let derivative_volume = slowness_s_per_m
+        .iter()
+        .map(|&value| helmholtz_slowness_derivative(omega, value) * cell_volume)
+        .collect::<Vec<_>>();
     let gradient = gradient
         .as_slice_mut()
         .expect("freshly allocated gradient has dense C-order storage");
 
-    for transmit in 0..rows {
-        let sources = acquisition.sources(transmit);
-        let incident = incident_field(sources, &centers, reference_wavenumber, min_distance);
-        let receivers = acquisition.receivers(transmit);
+    for (transmit, row) in geometry.transmits.iter().enumerate() {
         let terms = BornReceiverTerms {
-            centers: &centers,
-            incident: &incident,
-            potential: &potential,
-            slowness: &slowness,
-            omega,
-            reference_wavenumber,
-            min_distance,
-            cell_volume,
+            incident: &row.incident,
+            potential_volume: &potential_volume,
+            derivative_volume: &derivative_volume,
         };
-        // One receiver-sized scratch is independent of receiver count. Its
-        // terms are consumed immediately; the public operator stays stateless.
-        let mut green = Vec::with_capacity(centers.len());
         let observed = observation
             .observed_pressure
             .index_axis::<1>(0, transmit)
@@ -310,13 +244,12 @@ fn accumulate_frequency_gradient(
             .copied()
             .collect::<Vec<_>>();
         let (source_scale, mut scaled_prediction) = if config.estimate_source_scaling {
-            // The coupled source scale needs the complete prediction row.
-            let predicted = receivers
+            // Source fitting retains the complete coupled prediction row.
+            let predicted = row
+                .receivers
                 .iter()
-                .map(|&receiver| {
-                    terms.fill_green(receiver, &mut green);
-                    terms.predict(sources, receiver, &green)
-                })
+                .enumerate()
+                .map(|(index, &field)| terms.predict(row.direct[index], &geometry.fields[field]))
                 .collect::<Vec<_>>();
             let scale = complex_source_scale(&predicted, &observed)?;
             (
@@ -329,19 +262,28 @@ fn accumulate_frequency_gradient(
         } else {
             (
                 Complex64::new(1.0, 0.0),
-                Vec::with_capacity(receivers.len()),
+                Vec::with_capacity(row.receivers.len()),
             )
         };
-        for (receiver_index, &receiver) in receivers.iter().enumerate() {
-            terms.fill_green(receiver, &mut green);
-            // Without source fitting, prediction and adjoint consume the same
-            // Green terms once. Keep the scale multiplication and every
-            // receiver/voxel accumulation in their original order.
+        // Preserve the original left-associated source_scale * incident * G.
+        let scaled_incident = row
+            .incident
+            .iter()
+            .map(|&value| source_scale * value)
+            .collect::<Vec<_>>();
+        for (receiver_index, &field) in row.receivers.iter().enumerate() {
+            let green = &geometry.fields[field];
             if !config.estimate_source_scaling {
-                scaled_prediction.push(source_scale * terms.predict(sources, receiver, &green));
+                scaled_prediction
+                    .push(source_scale * terms.predict(row.direct[receiver_index], green));
             }
             let residual = scaled_prediction[receiver_index] - observed[receiver_index];
-            terms.accumulate_adjoint(gradient, source_scale, residual, &green);
+            terms.accumulate_adjoint::<VOXELS_PER_BLOCK>(
+                gradient,
+                &scaled_incident,
+                residual,
+                green,
+            );
         }
         // Preserve the established objective's exact reduction contract.
         *objective += complex_l2_objective(&scaled_prediction, &observed)
@@ -365,80 +307,4 @@ fn apply_tikhonov(
         *objective += 0.5 * config.tikhonov_weight * diff * diff;
         *grad += config.tikhonov_weight * diff;
     }
-}
-
-/// Inner product `⟨a, b⟩` of two fields.
-///
-/// The reduction is [`NumericOps::dot_product`]'s, the kwavers-math scalar
-/// SSOT; this function is only the `Array3` → slice bridge. A non-contiguous
-/// view has no borrowed slice, so it keeps the element walk — the same
-/// left fold over the same C-order elements.
-#[must_use]
-pub(super) fn dot(a: &Array3<f64>, b: &Array3<f64>) -> f64 {
-    match (a.as_slice(), b.as_slice()) {
-        (Some(a), Some(b)) => {
-            f64::dot_product(a, b).expect("invariant: two fields of one shape share a length")
-        }
-        _ => a.iter().zip(b.iter()).map(|(&x, &y)| x * y).sum(),
-    }
-}
-
-#[must_use]
-pub(super) fn max_abs(a: &Array3<f64>) -> f64 {
-    a.iter().map(|value| value.abs()).fold(0.0, f64::max)
-}
-
-/// Matrix-free Hessian action `H v`, by central-free forward difference of the
-/// exact adjoint gradient:
-///
-/// ```text
-/// H v ≈ [g(m + ε v) − g(m)] / ε,   ε = fd_epsilon · reference_slowness / max|v|
-/// ```
-///
-/// Scaling `ε` by `max|v|` keeps the largest slowness perturbation at
-/// `fd_epsilon · reference_slowness` regardless of how `v` is normalized, so the
-/// difference stays in the regime where the linearization dominates round-off.
-/// No Jacobian is assembled, so this works for any
-/// [`super::operator::HelmholtzForwardOperator`] (single-scatter Born or CBS).
-///
-/// Both consumers use this one implementation: [`super::gauss_newton`] for the
-/// Newton-CG inner solve, and [`super::inversion`] for the curvature term of its
-/// line search.
-///
-/// # Errors
-/// Propagates forward/adjoint evaluation errors from [`objective_and_gradient`].
-// allow(too_many_arguments): each parameter is a distinct mathematical input to the
-// matrix-free Hessian action (current model, base gradient, probe direction, the
-// forward-problem triple, FD step). Bundling them into a struct would hide the
-// finite-difference formula rather than clarify it.
-#[allow(clippy::too_many_arguments)]
-pub(super) fn hessian_vector(
-    slowness: &Array3<f64>,
-    gradient0: &Array3<f64>,
-    direction: &Array3<f64>,
-    observations: &[FrequencyObservation],
-    acquisition: &dyn TransmissionAcquisition,
-    config: &Config,
-    reference_slowness: f64,
-    fd_epsilon: f64,
-) -> KwaversResult<Array3<f64>> {
-    let scale = max_abs(direction);
-    if scale <= f64::EPSILON {
-        let shape = slowness.shape();
-        return Ok(Array3::zeros([shape[0], shape[1], shape[2]]));
-    }
-    // Keep the largest slowness perturbation at fd_epsilon · reference_slowness.
-    let eps = fd_epsilon * reference_slowness / scale;
-    let mut perturbed = slowness.clone();
-    for (m, &v) in perturbed.iter_mut().zip(direction.iter()) {
-        *m += eps * v;
-    }
-    super::inversion::clamp_slowness(&mut perturbed, config);
-    let (_objective, gradient1) =
-        objective_and_gradient(&perturbed, observations, acquisition, config)?;
-    let mut hv = gradient1;
-    for (h, &g0) in hv.iter_mut().zip(gradient0.iter()) {
-        *h = (*h - g0) / eps;
-    }
-    Ok(hv)
 }

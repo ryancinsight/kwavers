@@ -76,13 +76,14 @@ fn source_scaled_gradient_is_descent_direction() {
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
     let observations = [FrequencyObservation::new(200_000.0, observed)];
-    let (objective, gradient) = objective_and_gradient(
+    let (objective, gradient) = Objective::new(
         &current_slowness,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
-    .expect("objective_and_gradient");
+    .and_then(|objective| objective.evaluate(&current_slowness))
+    .expect("objective evaluation");
     // Compute a normalized step h in the −∇J direction small enough to stay
     // within the quadratic regime.
     let grad_norm = gradient.iter().map(|v| v * v).sum::<f64>().sqrt();
@@ -98,12 +99,13 @@ fn source_scaled_gradient_is_descent_direction() {
         .collect::<Vec<_>>();
     let candidate_slowness =
         Array3::from_shape_vec(current_slowness.shape(), candidate_slowness).expect("shape");
-    let (candidate_objective, _) = objective_and_gradient(
+    let (candidate_objective, _) = Objective::new(
         &candidate_slowness,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
+    .and_then(|objective| objective.evaluate(&candidate_slowness))
     .expect("candidate objective");
     assert!(
         candidate_objective < objective,
