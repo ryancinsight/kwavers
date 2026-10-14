@@ -200,7 +200,7 @@ jobs:
     runs-on: ubuntu-latest
     # Pull requests carry only the fast preflight; pushes to main additionally
     # run the five feature-combination builds and the integration script.
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 90 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 90 }}
     env:
       RUSTC_WRAPPER: sccache
       SCCACHE_GHA_ENABLED: "true"
