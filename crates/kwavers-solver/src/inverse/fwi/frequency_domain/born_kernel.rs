@@ -36,12 +36,7 @@ pub(super) fn weighted_products<'out, T: Arithmetic, P: FieldProducts<T>, const 
         .expect("Born block range is reversed");
     assert_eq!(len, weights.len(), "Born field/weight lengths differ");
     fields.write_products(range, output);
-    let mut lane = 0;
-    while lane < len {
-        let (product, weight) = (output[lane], weights[lane]);
-        output[lane] = T::weight(product, weight);
-        lane += 1;
-    }
+    T::weight_block(output, weights);
     &output[..len]
 }
 
@@ -83,13 +78,7 @@ pub(super) fn integrate<T: Arithmetic, P: FieldProducts<T>, const K: usize>(
     for (block, weights) in weights.chunks(K).enumerate() {
         let start = block * K;
         let values = weighted_products(fields, start..start + weights.len(), weights, &mut values);
-        let len = values.len();
-        let mut lane = 0;
-        while lane < len {
-            let value = values[lane];
-            sum = T::accumulate(sum, value);
-            lane += 1;
-        }
+        sum = T::accumulate_block(sum, values);
     }
     sum
 }
@@ -120,12 +109,7 @@ pub(super) fn project_adjoint<
         .expect("Born block range is reversed");
     assert_eq!(len, weights.len(), "Born field/weight lengths differ");
     fields.write_products(range, products);
-    let mut lane = 0;
-    while lane < len {
-        let derivative = T::weight(products[lane], weights[lane]);
-        output[lane] = T::projection::<ACCUMULATE>(derivative, residual, output[lane]);
-        lane += 1;
-    }
+    T::project_block::<K, ACCUMULATE>(products, weights, residual, output);
     &output[..len]
 }
 

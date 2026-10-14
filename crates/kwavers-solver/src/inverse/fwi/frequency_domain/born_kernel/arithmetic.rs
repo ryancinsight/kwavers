@@ -16,13 +16,14 @@ pub(in super::super) trait Arithmetic:
     FloatElement + Neg<Output = Self> + sealed::Sealed
 {
     fn product(incident: Complex<Self>, green: Complex<Self>) -> Complex<Self>;
-    fn weight(value: Complex<Self>, weight: Self) -> Complex<Self>;
-    fn accumulate(sum: Complex<Self>, value: Complex<Self>) -> Complex<Self>;
-    fn projection<const ACCUMULATE: bool>(
-        derivative: Complex<Self>,
+    fn weight_block<const K: usize>(values: &mut [Complex<Self>; K], weights: &[Self]);
+    fn accumulate_block(sum: Complex<Self>, values: &[Complex<Self>]) -> Complex<Self>;
+    fn project_block<const K: usize, const ACCUMULATE: bool>(
+        values: &[Complex<Self>; K],
+        weights: &[Self],
         residual: Complex<Self>,
-        current: Self,
-    ) -> Self;
+        output: &mut [Self; K],
+    );
 }
 
 include!(concat!(env!("OUT_DIR"), "/native_arithmetic.rs"));

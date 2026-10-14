@@ -72,7 +72,8 @@
   Full reconstruction inputs, numerical tolerances and execution caps remain.
 - [patch] One arithmetic specification generates native scalar operation
   implementations through a dependency-free build script. Primitive MIR
-  arithmetic removes operator forwarding; fused adjoint traversal preserves
+  arithmetic removes operator forwarding; checked block methods remove
+  per-voxel arithmetic dispatch, and fused adjoint traversal preserves
   expression order and all floating-point operations with default Miri checks.
 - [patch] Born inversion prepares immutable spatial products under an 8 MiB
   requested-allocation budget. One sealed generic field interface serves both

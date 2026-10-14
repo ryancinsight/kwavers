@@ -46,3 +46,9 @@
 
 - [x] [patch] Retain native arithmetic through one canonical build-generated scalar specification and fuse weighting/projection traversal. All 75 focused FD, 1,121 solver (six existing ignores), 41 facade tests, strict solver Clippy and 17 isolated Linux Miri contracts pass; original primitive operation order is verified in Rust 1.97 MIR.
 - [ ] [patch] Complete all three unchanged full reconstruction Miri cases and actual installed-wheel/k-Wave, benchmark and required final-head CI after the generated-arithmetic correction. The prior bounded-product differential reaches 900.01 seconds; no execution bound, scenario, tolerance or interpreter check changes.
+
+- [x] [patch] The unchanged full localized reconstruction passes isolated Linux Miri at `bbf2846d` in 465.85 wall seconds. Differential still reaches 900.01 seconds; retain the complete fixtures and existing limits.
+- [x] [patch] Replace per-voxel arithmetic dispatch with concrete checked block methods. All 75 focused FD, 1,121 solver (six old ignores), 41 facade tests and strict solver Clippy pass; primitive MIR operation order is verified.
+- [ ] [patch] Complete all three full reconstruction Miri cases and required exact-head hosted validation for the concrete block implementation.
+
+- [x] [patch] All 17 isolated Linux Miri contracts pass for concrete checked block arithmetic with unchanged interpreter checks and exact matching Rust source hashes.

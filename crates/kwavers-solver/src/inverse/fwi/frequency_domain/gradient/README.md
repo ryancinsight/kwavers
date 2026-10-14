@@ -80,9 +80,12 @@ or interpreter exception. The generated source is a normal Cargo build output;
 source/lock/compiler/profile provenance and the wheel build-script handoff apply.
 
 The adjoint weights each spatial coefficient and projects it directly into its
-existing accumulator in one traversal. The two scalar operation calls retain
-the original intermediate complex value and arithmetic grouping; a weighted
-complex buffer is no longer written and reread between separate loops.
+existing accumulator in one traversal. Concrete methods own the complete checked
+weighting, accumulation and projection block loops: one call per block replaces
+per-voxel arithmetic dispatch. Each loop visits exactly the valid prefix, retaining
+the original intermediate values, scalar expression trees and addition order.
+The adjoint does not write and reread an intermediate weighted complex buffer.
+Rust 1.97 MIR confirms the primitive operations inside these block bodies.
 
 ## Checked traversal and exact projected probes
 
