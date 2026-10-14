@@ -181,7 +181,7 @@ impl ConservationMonitor {
             let vz = velocity_z[[i, j, k]];
 
             let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
-            let gamma = medium.gamma(x, y, z, &self.grid);
+            let gamma = medium.gamma(x, y, z, &self.grid).into_base();
 
             // Kinetic energy density
             let kinetic = 0.5 * density * vz.mul_add(vz, vx.mul_add(vx, vy * vy));

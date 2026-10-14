@@ -1,3 +1,7 @@
+use aequitas::systems::si::quantities::{
+    DynamicViscosity, ReciprocalTemperature, SpecificHeatCapacity, ThermalConductivity,
+    ThermalDiffusivity,
+};
 use leto::Array3;
 
 use crate::{
@@ -72,20 +76,22 @@ impl ElasticArrayAccess for HomogeneousMedium {
 }
 
 impl ThermalProperties for HomogeneousMedium {
-    fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.specific_heat
+    fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> SpecificHeatCapacity {
+        SpecificHeatCapacity::from_base(self.specific_heat)
     }
 
-    fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.thermal_conductivity
+    fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> ThermalConductivity {
+        ThermalConductivity::from_base(self.thermal_conductivity)
     }
 
-    fn thermal_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.thermal_conductivity / (self.density * self.specific_heat)
+    fn thermal_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> ThermalDiffusivity {
+        ThermalDiffusivity::from_base(
+            self.thermal_conductivity / (self.density * self.specific_heat),
+        )
     }
 
-    fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.thermal_expansion
+    fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> ReciprocalTemperature {
+        ReciprocalTemperature::from_base(self.thermal_expansion)
     }
 }
 
@@ -122,16 +128,16 @@ impl MediumOpticalProperties for HomogeneousMedium {
 }
 
 impl ViscousProperties for HomogeneousMedium {
-    fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.viscosity
+    fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> DynamicViscosity {
+        DynamicViscosity::from_base(self.viscosity)
     }
 
-    fn shear_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.shear_viscosity
+    fn shear_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> DynamicViscosity {
+        DynamicViscosity::from_base(self.shear_viscosity)
     }
 
-    fn bulk_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.bulk_viscosity
+    fn bulk_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> DynamicViscosity {
+        DynamicViscosity::from_base(self.bulk_viscosity)
     }
 }
 

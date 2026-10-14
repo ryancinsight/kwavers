@@ -288,8 +288,8 @@ fn lossy_westervelt_stokes_coefficient_matches_analytical() {
     let dt = 0.245 * dx / c;
 
     // Diffusivity of sound δ = (4η_s/3 + η_b)/ρ from the actual medium.
-    let eta_s = medium.shear_viscosity(0.0, 0.0, 0.0, &grid);
-    let eta_b = medium.bulk_viscosity(0.0, 0.0, 0.0, &grid);
+    let eta_s = medium.shear_viscosity(0.0, 0.0, 0.0, &grid).into_base();
+    let eta_b = medium.bulk_viscosity(0.0, 0.0, 0.0, &grid).into_base();
     let rho = kwavers_medium::density_at(&medium, 0.0, 0.0, 0.0, &grid);
     let delta = (4.0 * eta_s / 3.0 + eta_b) / rho;
 
@@ -358,8 +358,8 @@ fn lossy_westervelt_absorption_rate_matches_stokes_end_to_end() {
     let c = SOUND_SPEED_WATER_SIM;
     let dt = 0.245 * dx / c;
 
-    let eta_s = medium.shear_viscosity(0.0, 0.0, 0.0, &grid);
-    let eta_b = medium.bulk_viscosity(0.0, 0.0, 0.0, &grid);
+    let eta_s = medium.shear_viscosity(0.0, 0.0, 0.0, &grid).into_base();
+    let eta_b = medium.bulk_viscosity(0.0, 0.0, 0.0, &grid).into_base();
     let rho = kwavers_medium::density_at(&medium, 0.0, 0.0, 0.0, &grid);
     let delta = (4.0 * eta_s / 3.0 + eta_b) / rho;
 
