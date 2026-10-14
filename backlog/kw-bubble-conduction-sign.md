@@ -4,3 +4,5 @@
 - Implemented in physics 3.0.1: subtract outward-positive conductive power in the shared balance; five regressions cover both callers, hot/cold/equilibrium, pressure work and disabling.
 - Native physics suite: 1,584 pass, zero skipped; package-only strict all-target/all-feature Clippy passes. Unchanged core native lint diagnostics and hosted gates remain separate checks.
 - Merge held: main triggers package-publication attempts and book deployment; release/deployment decisions are pending.
+- Validation repair: reuse same-run locked, checksum-verified crate sources; preserve all compile bounds and selected tests/benchmarks.
+- Miri selection/error repair: current simulation configuration tests and the complete facade harness; no ignored errors or successful empty harnesses. Hosted final validation remains pending.

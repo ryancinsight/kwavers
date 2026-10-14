@@ -13,6 +13,11 @@
 
 ### Changed
 
+- CI shares checksum-verified locked crate sources within a workflow run;
+  compile jobs retain their five-minute pull-request bounds and full selections.
+  Miri executes current configuration and all facade tests, rejects empty
+  selections, and propagates errors.
+
 - **[patch] The lossless staggered FDTD pressure update is one pass.** On a
   Cartesian grid without a CPML or absorption, the three velocity
   divergences are swept a row at a time into buffers that stay in cache and

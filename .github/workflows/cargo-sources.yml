@@ -1,0 +1,25 @@
+name: Locked source preparation
+on:
+  workflow_call:
+    inputs:
+      artifact:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  prepare:
+    name: Prepare locked sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+      - uses: ./.github/actions/prepare-cargo-sources
+        with:
+          artifact: ${{ inputs.artifact }}

@@ -6146,19 +6146,11 @@ The following workspace measurement found 69 additional solver panic-doc sites; 
 ## KW-BUBBLE-CONDUCTION-SIGN [patch] — 2026-10-14
 Reproduced on main `99a6185d`: outward-positive conductive power is added to bubble internal energy; the stationary hot-bubble Euler step heats by 2 K instead of cooling by 2 K.
 Physics 3.0.1 subtracts that power in the shared balance. Five analytic regressions cover both callers, hot/cold/equilibrium, unchanged pressure work and thermal disabling; the native physics suite passes 1,584 tests with zero skips.
-Residual checks: three native core lint sites match main; hosted gates are pending. Merge is held because main triggers publication attempts and book deployment; the existing ambient-temperature floor is preserved.
+Residual checks: three native core lint sites match main; hosted compile timeouts require same-run locked source reuse. Miri originally selects zero tests and ignores an invalid command; repaired selections must execute and errors must fail. Merge remains held for publication/Pages side effects; ambient floor stays unchanged.
 
 ## `missing_panics_doc` solver slice — 2026-08-21
 
-The `kwavers-solver` slice documents the 69 measured panic contracts across
-forward solvers, nonlinear and PSTD operators, plugin registries, analytical
-near-field paths, inverse and multiphysics reconstruction, workspace helpers,
-and safety layout adapters. Strict offline Clippy with
-`-D clippy::missing_panics_doc -D warnings` passes; Nextest run
-`300a3e32-83e8-476a-8f9f-ec8c396c05f4` passes 901/901 with four intentional
-skips (15 tests exceeded the 30-second slow threshold, with the suite completing
-in 52.252 seconds); doctests pass 5/5 (8 ignored); and rustdoc passes with
-`RUSTDOCFLAGS=-D warnings`.
+The `kwavers-solver` slice documents the 69 measured panic contracts across forward solvers, nonlinear and PSTD operators, plugin registries, analytical near-field paths, inverse and multiphysics reconstruction, workspace helpers, and safety layout adapters. Strict offline Clippy with `-D clippy::missing_panics_doc -D warnings` passes; Nextest run `300a3e32-83e8-476a-8f9f-ec8c396c05f4` passes 901/901 with four intentional skips (15 tests exceeded the 30-second slow threshold, with the suite completing in 52.252 seconds); doctests pass 5/5 (8 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 
 ## `missing_panics_doc` analysis slice — 2026-08-21
 

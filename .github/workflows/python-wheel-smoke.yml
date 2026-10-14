@@ -8,6 +8,9 @@ on:
       - Cargo.toml
       - crates/kwavers-python/**
       - .github/actions/install-system-dependencies/**
+      - .github/actions/prepare-cargo-sources/**
+      - .github/actions/restore-cargo-sources/**
+      - .github/workflows/cargo-sources.yml
       - .github/workflows/python-wheel-smoke.yml
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
@@ -17,6 +20,9 @@ on:
       - Cargo.toml
       - crates/kwavers-python/**
       - .github/actions/install-system-dependencies/**
+      - .github/actions/prepare-cargo-sources/**
+      - .github/actions/restore-cargo-sources/**
+      - .github/workflows/cargo-sources.yml
       - .github/workflows/python-wheel-smoke.yml
   # The full three-OS matrix below is a drift backstop, not a per-change
   # signal: the Windows and macOS wheel builds do not depend on which lines
@@ -38,7 +44,14 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
+  sources:
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    uses: ./.github/workflows/cargo-sources.yml
+    with:
+      artifact: wheel-cargo-sources-${{ github.sha }}
+
   base-wheel:
+    needs: sources
     # Per-pull-request coverage is Ubuntu only; the Windows and macOS legs run
     # on push to main, on the nightly schedule, and on manual dispatch. A
     # platform-specific wheel regression that only a non-Ubuntu leg would
@@ -49,7 +62,7 @@ jobs:
     # pull-request budget, while the smoke's contract is build-plus-import,
     # not ship-ready optimization. Pushes, the schedule, and the release
     # pipeline keep the release build.
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: Base wheel (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 45 }}
@@ -60,6 +73,12 @@ jobs:
         # narrowing is the row list itself.
         os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest", "windows-latest", "macos-latest"]') }}
     steps:
+      - name: Require successful pull-request source preparation
+        if: github.event_name == 'pull_request'
+        env:
+          SOURCE_RESULT: ${{ needs.sources.result }}
+        run: test "$SOURCE_RESULT" = success
+
       - name: Checkout candidate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -71,10 +90,18 @@ jobs:
         with:
           python-version: "3.10"
 
+      - uses: ./source/.github/actions/restore-cargo-sources
+        if: github.event_name == 'pull_request'
+        with:
+          repository: source
+          artifact: wheel-cargo-sources-${{ github.sha }}
+
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           maturin-version: v1.14.1
+          rust-toolchain: 1.97.0
+          docker-options: ${{ github.event_name == 'pull_request' && format('-e CARGO_HOME={0}/.ci-cargo/home', github.workspace) || '' }}
           target: ${{ matrix.os == 'macos-latest' && 'universal2-apple-darwin' || 'x86_64' }}
           manylinux: ${{ matrix.os == 'ubuntu-latest' && '2_17' || 'off' }}
           sccache: true
@@ -101,7 +128,8 @@ jobs:
           "$smoke_python" source/crates/kwavers-python/tests/optional_submodule_contract.py access
 
   kwave-comparison:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    needs: sources
+    if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: k-Wave comparison (Ubuntu)
     runs-on: ubuntu-latest
     # Same debug-on-pull-request split as `base-wheel` above: the release
@@ -110,6 +138,12 @@ jobs:
     # `--timeout=60` (thread method) still bounds a debug-slowed case.
     timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
     steps:
+      - name: Require successful pull-request source preparation
+        if: github.event_name == 'pull_request'
+        env:
+          SOURCE_RESULT: ${{ needs.sources.result }}
+        run: test "$SOURCE_RESULT" = success
+
       - name: Checkout candidate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -153,10 +187,18 @@ jobs:
           packages: ${{ steps.hdf5-runtime.outputs.packages }}
           refresh: "false"
 
+      - uses: ./source/.github/actions/restore-cargo-sources
+        if: github.event_name == 'pull_request'
+        with:
+          repository: source
+          artifact: wheel-cargo-sources-${{ github.sha }}
+
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           maturin-version: v1.14.1
+          rust-toolchain: 1.97.0
+          docker-options: ${{ github.event_name == 'pull_request' && format('-e CARGO_HOME={0}/.ci-cargo/home', github.workspace) || '' }}
           target: x86_64
           manylinux: "2_17"
           sccache: true

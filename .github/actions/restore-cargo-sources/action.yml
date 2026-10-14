@@ -1,0 +1,45 @@
+name: Restore locked Cargo sources
+description: Reuse only same-run crate sources, verifying the candidate lock and Cargo checksums.
+inputs:
+  repository:
+    description: Checked-out repository path.
+    default: .
+  artifact:
+    description: Same-run artifact name.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Fetch exact-run source bundle
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: ${{ inputs.artifact }}
+        path: ${{ runner.temp }}/kwavers-cargo-download
+
+    - name: Verify and configure locked offline sources
+      shell: bash
+      env:
+        SOURCE_REPOSITORY: ${{ inputs.repository }}
+      run: |
+        set -euo pipefail
+        bundle="$GITHUB_WORKSPACE/.ci-cargo"
+        mkdir -p "$bundle/home"
+        tar -xzf "$RUNNER_TEMP/kwavers-cargo-download/kwavers-cargo-sources.tar.gz" -C "$bundle"
+        actual=$(sha256sum "$SOURCE_REPOSITORY/Cargo.lock" | cut -d' ' -f1)
+        expected=$(cat "$bundle/lock.sha256")
+        [ "$actual" = "$expected" ] || { echo 'source bundle belongs to another lock' >&2; exit 1; }
+        python3 - "$bundle" <<'PY'
+        import json
+        import pathlib
+        import re
+        import sys
+        root = pathlib.Path(sys.argv[1])
+        config = (root / "config.toml").read_text()
+        config, count = re.subn(r'^directory = .+$',
+                               "directory = " + json.dumps(str(root / "vendor")),
+                               config, flags=re.MULTILINE)
+        if count != 1:
+            raise SystemExit("expected exactly one vendored source directory")
+        (root / "home" / "config.toml").write_text(config + "\n[net]\noffline = true\n")
+        PY
+        echo "CARGO_HOME=$bundle/home" >> "$GITHUB_ENV"

@@ -160,8 +160,11 @@ jobs:
           cache-targets: false
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - name: Verify Cargo.lock resolves under --locked
-        run: python3 scripts/lockfile.py --check
+      # The complete graph is verified once and bundled without repository
+      # fixture trees, instead of refetching pinned Git sources in each job.
+      - uses: ./.github/actions/prepare-cargo-sources
+        with:
+          artifact: ci-cargo-sources-${{ github.sha }}
 
   # Folded from the former standalone `architecture-validation.yml`
   # (KWAVERS-CI-PIPELINE-001): same job, same `changes`-gated `if`, now
@@ -436,7 +439,7 @@ jobs:
   # Keep the exact doctest command and its own five-minute pull-request bound;
   # the Architecture gate requires both jobs, including cancellation failures.
   full-feature-doctests:
-    needs: changes
+    needs: [changes, lockfile]
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
     name: Full-feature doc tests
     runs-on: ubuntu-latest
@@ -460,10 +463,9 @@ jobs:
 
     - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
 
-    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+    - uses: ./.github/actions/restore-cargo-sources
       with:
-        shared-key: kwavers-full-doctests
-        save-if: ${{ github.ref == 'refs/heads/main' }}
+        artifact: ci-cargo-sources-${{ github.sha }}
 
     - name: Run full-feature doc tests
       run: cargo test --locked -p kwavers --doc --no-default-features --features full
@@ -974,13 +976,19 @@ jobs:
       - name: Setup miri
         run: cargo +nightly miri setup
 
-      - name: Run miri on configuration tests
-        run: cargo +nightly miri test --locked -p kwavers --lib configuration::builder::tests
-        continue-on-error: true # Allow to continue while fixing UB
+      - uses: ./.github/actions/restore-cargo-sources
+        with:
+          artifact: ci-cargo-sources-${{ github.sha }}
 
-      - name: Run miri on other safe tests
-        run: cargo +nightly miri test --locked -p kwavers --lib --exclude configuration::builder::tests
-        continue-on-error: true
+      # Configuration moved to kwavers-simulation; the old facade filter
+      # selected zero tests. Every command failure and empty harness now fails.
+      - name: Run Miri on current configuration tests
+        run: python3 scripts/miri_gate.py --package kwavers-simulation --filter configuration::tests
+
+      # Cargo --exclude names workspace packages, not test modules. Execute
+      # the whole facade harness instead of ignoring the invalid command.
+      - name: Run Miri on all facade tests
+        run: python3 scripts/miri_gate.py --package kwavers
 
   coverage:
     name: Code Coverage
@@ -1356,6 +1364,7 @@ jobs:
       - changes
       - integration-runner-windows
       - architecture-checks
+      - lockfile
       - full-feature-doctests
       - clippy
       - cuda-runtime-build
