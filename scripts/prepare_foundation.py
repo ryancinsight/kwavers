@@ -11,14 +11,18 @@ def main() -> None:
     parser.add_argument('--manifest', required=True)
     parser.add_argument('--profile', choices=['dev', 'test'], required=True)
     parser.add_argument('--features', required=True)
+    parser.add_argument('--target')
+    parser.add_argument('--packages', nargs='+', default=['kwavers-core', 'kwavers-math', 'kwavers-grid', 'kwavers-medium'])
     args = parser.parse_args()
     query = ['cargo', 'build', '--locked', '--manifest-path', args.manifest,
              '-p', 'kwavers', '--profile', args.profile, '--no-default-features',
              '--features', args.features, '-Z', 'unstable-options', '--unit-graph']
+    if args.target:
+        query += ['--target', args.target]
     # Bootstrap applies only to Cargo's read-only graph query. Actual build
     # commands use the pinned compiler with its ordinary stable configuration.
     graph = json.loads(subprocess.check_output(query, env=dict(os.environ, RUSTC_BOOTSTRAP='1')))
-    selected = ['kwavers-core', 'kwavers-math', 'kwavers-grid', 'kwavers-medium']
+    selected = args.packages
     feature_map = {}
     for unit in graph['units']:
         if unit['target']['kind'] == ['lib'] and unit['target']['name'].replace('_', '-') in selected:
@@ -27,6 +31,8 @@ def main() -> None:
         raise SystemExit('foundation graph does not contain every required package')
     command = ['cargo', 'build', '--locked', '--manifest-path', args.manifest,
                '--profile', args.profile, '--no-default-features']
+    if args.target:
+        command += ['--target', args.target]
     for package in selected:
         command += ['-p', package]
     features = [f'{package}/{feature}' for package in selected for feature in feature_map[package]]

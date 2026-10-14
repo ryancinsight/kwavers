@@ -14,6 +14,7 @@ on:
       - .github/actions/prepare-compiled/**
       - .github/actions/restore-compiled/**
       - .github/workflows/bounded-compile.yml
+      - .github/workflows/bounded-wheel-compile.yml
       - scripts/prepare_foundation.py
       - .github/workflows/python-wheel-smoke.yml
   pull_request:
@@ -30,6 +31,7 @@ on:
       - .github/actions/prepare-compiled/**
       - .github/actions/restore-compiled/**
       - .github/workflows/bounded-compile.yml
+      - .github/workflows/bounded-wheel-compile.yml
       - scripts/prepare_foundation.py
       - .github/workflows/python-wheel-smoke.yml
   # The full three-OS matrix below is a drift backstop, not a per-change
@@ -86,6 +88,7 @@ jobs:
           container: quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5
           docker-options: -e CARGO_HOME=/root/.cargo
           command: --version
+          sccache: true
           before-script-linux: |
             cp "$GITHUB_WORKSPACE/.ci-cargo/home/config.toml" /root/.cargo/config.toml
             cargo build --locked --profile dev --target x86_64-unknown-linux-gnu               --target-dir "$GITHUB_WORKSPACE/target"               --manifest-path source/Cargo.toml -p aws-lc-sys
@@ -95,8 +98,28 @@ jobs:
           profile: wheel-dev
           artifact: wheel-native-prerequisites-${{ github.sha }}
 
-  base-wheel:
+  foundation-prerequisites:
     needs: [sources, native-prerequisites]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    uses: ./.github/workflows/bounded-wheel-compile.yml
+    with:
+      sources: wheel-cargo-sources-${{ github.sha }}
+      previous: wheel-native-prerequisites-${{ github.sha }}
+      artifact: wheel-foundation-prerequisites-${{ github.sha }}
+      packages: kwavers-core kwavers-math kwavers-grid
+
+  medium-prerequisites:
+    needs: [sources, foundation-prerequisites]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    uses: ./.github/workflows/bounded-wheel-compile.yml
+    with:
+      sources: wheel-cargo-sources-${{ github.sha }}
+      previous: wheel-foundation-prerequisites-${{ github.sha }}
+      artifact: wheel-prerequisites-${{ github.sha }}
+      packages: kwavers-medium
+
+  base-wheel:
+    needs: [sources, medium-prerequisites]
     # Per-pull-request coverage is Ubuntu only; the Windows and macOS legs run
     # on push to main, on the nightly schedule, and on manual dispatch. A
     # platform-specific wheel regression that only a non-Ubuntu leg would
@@ -144,7 +167,7 @@ jobs:
       - name: Require successful native preparation
         if: github.event_name == 'pull_request'
         env:
-          BUILD_RESULT: ${{ needs.native-prerequisites.result }}
+          BUILD_RESULT: ${{ needs.medium-prerequisites.result }}
         run: test "$BUILD_RESULT" = success
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         if: github.event_name == 'pull_request'
@@ -155,7 +178,7 @@ jobs:
         with:
           repository: source
           profile: wheel-dev
-          artifact: wheel-native-prerequisites-${{ github.sha }}
+          artifact: wheel-prerequisites-${{ github.sha }}
 
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
@@ -194,7 +217,7 @@ jobs:
           "$smoke_python" source/crates/kwavers-python/tests/optional_submodule_contract.py access
 
   kwave-comparison:
-    needs: [sources, native-prerequisites]
+    needs: [sources, medium-prerequisites]
     if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: k-Wave comparison (Ubuntu)
     runs-on: ubuntu-latest
@@ -262,7 +285,7 @@ jobs:
       - name: Require successful native preparation
         if: github.event_name == 'pull_request'
         env:
-          BUILD_RESULT: ${{ needs.native-prerequisites.result }}
+          BUILD_RESULT: ${{ needs.medium-prerequisites.result }}
         run: test "$BUILD_RESULT" = success
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         if: github.event_name == 'pull_request'
@@ -273,7 +296,7 @@ jobs:
         with:
           repository: source
           profile: wheel-dev
-          artifact: wheel-native-prerequisites-${{ github.sha }}
+          artifact: wheel-prerequisites-${{ github.sha }}
 
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0

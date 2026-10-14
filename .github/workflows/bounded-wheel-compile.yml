@@ -1,0 +1,66 @@
+name: Bounded manylinux prerequisite
+on:
+  workflow_call:
+    inputs:
+      sources:
+        type: string
+        required: true
+      previous:
+        type: string
+        required: true
+      artifact:
+        type: string
+        required: true
+      packages:
+        type: string
+        required: true
+permissions:
+  contents: read
+env:
+  CARGO_INCREMENTAL: '0'
+jobs:
+  compile:
+    name: Matching manylinux libraries
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: source
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+      - uses: ./source/.github/actions/restore-cargo-sources
+        with:
+          repository: source
+          artifact: ${{ inputs.sources }}
+      - uses: ./source/.github/actions/restore-compiled
+        with:
+          repository: source
+          profile: wheel-dev
+          artifact: ${{ inputs.previous }}
+      - name: Compile the matching selected libraries
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b
+        env:
+          PREPARE_PACKAGES: ${{ inputs.packages }}
+        with:
+          maturin-version: v1.14.1
+          rust-toolchain: 1.97.0
+          target: x86_64
+          manylinux: '2_17'
+          container: quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5
+          docker-options: -e CARGO_HOME=/root/.cargo -e PREPARE_PACKAGES
+          sccache: true
+          command: --version
+          before-script-linux: |
+            cp "$GITHUB_WORKSPACE/.ci-cargo/home/config.toml" /root/.cargo/config.toml
+            read -r -a packages <<< "$PREPARE_PACKAGES"
+            CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target" python3 source/scripts/prepare_foundation.py \
+              --manifest source/Cargo.toml --profile dev --features default \
+              --target x86_64-unknown-linux-gnu --packages "${packages[@]}"
+      - uses: ./source/.github/actions/prepare-compiled
+        with:
+          repository: source
+          profile: wheel-dev
+          artifact: ${{ inputs.artifact }}
