@@ -1,6 +1,6 @@
 //! Per-receiver Born terms shared by prediction and the discrete adjoint.
 
-use super::super::born_kernel::{integrate, project_adjoint, weighted_product};
+use super::super::born_kernel::{integrate, project_adjoint, weighted_products};
 use kwavers_math::fft::Complex64;
 
 #[cfg(test)]
@@ -36,40 +36,40 @@ impl BornReceiverTerms<'_> {
         scaled_incident: &[Complex64],
         receivers: &[(&[Complex64], Complex64)],
     ) {
-        debug_assert_eq!(gradient.len(), scaled_incident.len());
-        debug_assert_eq!(gradient.len(), self.derivative_volume.len());
-        let receivers: Vec<_> = receivers
-            .iter()
-            .map(|&(green, residual)| {
-                assert_eq!(gradient.len(), green.len());
-                let (blocks, tail) = green.as_chunks::<K>();
-                (blocks, tail, residual)
-            })
-            .collect();
-        let (gradient, gradient_tail) = gradient.as_chunks_mut::<K>();
-        let (incident, incident_tail) = scaled_incident.as_chunks::<K>();
-        let (weights, weights_tail) = self.derivative_volume.as_chunks::<K>();
-        for (block, ((gradient, incident), weights)) in
-            gradient.iter_mut().zip(incident).zip(weights).enumerate()
+        const { assert!(K > 0, "Born block capacity must be positive") };
+        assert_eq!(gradient.len(), scaled_incident.len());
+        assert_eq!(gradient.len(), self.derivative_volume.len());
+        for &(green, _) in receivers {
+            assert_eq!(gradient.len(), green.len());
+        }
+        let mut derivatives = [Complex64::new(0.0, 0.0); K];
+        let mut projected = [0.0; K];
+        let mut accumulated = [0.0; K];
+        for (block, ((gradient, incident), weights)) in gradient
+            .chunks_mut(K)
+            .zip(scaled_incident.chunks(K))
+            .zip(self.derivative_volume.chunks(K))
+            .enumerate()
         {
-            let (mut accumulated, incident, weights) = (*gradient, *incident, *weights);
-            for &(green, _, residual) in &receivers {
-                let green = green[block];
-                for lane in 0..K {
-                    let derivative = weighted_product(incident[lane], green[lane], weights[lane]);
-                    accumulated[lane] += project_adjoint(derivative, residual);
+            let len = gradient.len();
+            let accumulated = &mut accumulated[..len];
+            accumulated.copy_from_slice(gradient);
+            let start = block * K;
+            for &(green, residual) in receivers {
+                let derivatives = weighted_products(
+                    incident,
+                    &green[start..start + len],
+                    weights,
+                    &mut derivatives,
+                );
+                let projected = project_adjoint(derivatives, residual, &mut projected);
+                let mut lane = 0;
+                while lane < len {
+                    accumulated[lane] += projected[lane];
+                    lane += 1;
                 }
             }
-            *gradient = accumulated;
-        }
-        for lane in 0..gradient_tail.len() {
-            let mut accumulated = gradient_tail[lane];
-            for &(_, green, residual) in &receivers {
-                let derivative =
-                    weighted_product(incident_tail[lane], green[lane], weights_tail[lane]);
-                accumulated += project_adjoint(derivative, residual);
-            }
-            gradient_tail[lane] = accumulated;
+            gradient.copy_from_slice(accumulated);
         }
     }
 }

@@ -46,17 +46,25 @@ fn check_scalar_contract<T: FloatElement + Neg<Output = T>>() {
     drop(arrange);
     let (actual, integrated, projection) = {
         let _act = tracing::info_span!("act").entered();
-        let actual = weighted_product(incident, green, weight);
+        let mut actual = [Complex {
+            re: T::ZERO,
+            im: T::ZERO,
+        }];
+        weighted_products(&[incident], &[green], &[weight], &mut actual);
+        let mut projected = [T::ZERO];
+        project_adjoint(
+            &actual,
+            Complex {
+                re: two,
+                im: -T::ONE,
+            },
+            &mut projected,
+        );
+        let [actual] = actual;
         (
             actual,
             integrate::<_, 1>(&[incident; 17], &[green; 17], &[weight; 17]),
-            project_adjoint(
-                actual,
-                Complex {
-                    re: two,
-                    im: -T::ONE,
-                },
-            ),
+            projected[0],
         )
     };
     let _assert = tracing::info_span!("assert").entered();
@@ -96,6 +104,51 @@ fn weighted_integration_preserves_native_precision() {
     check_scalar_contract::<eunomia::Bf16>();
 }
 
+/// Block inputs vary by exact quarter-turns and signs, so a reused or reordered
+/// lane cannot satisfy the complex-operation oracle.
+fn check_block_expression<const K: usize>(
+    incident: Complex<f64>,
+    green: Complex<f64>,
+    weight: f64,
+    residual: Complex<f64>,
+) {
+    let _arrange = tracing::info_span!("arrange_block", K).entered();
+    let incidents: [_; K] = std::array::from_fn(|lane| {
+        if lane % 2 == 0 {
+            incident
+        } else {
+            Complex::new(incident.im, -incident.re)
+        }
+    });
+    let greens: [_; K] = std::array::from_fn(|lane| {
+        if lane % 3 == 0 {
+            green
+        } else {
+            Complex::new(-green.im, green.re)
+        }
+    });
+    let weights: [_; K] = std::array::from_fn(|lane| if lane % 2 == 0 { weight } else { -weight });
+    drop(_arrange);
+    let (actual, projected) = {
+        let _act = tracing::info_span!("act_block", K).entered();
+        let mut actual = [Complex::new(0.0, 0.0); K];
+        let mut projected = [0.0; K];
+        weighted_products(&incidents, &greens, &weights, &mut actual);
+        project_adjoint(&actual, residual, &mut projected);
+        (actual, projected)
+    };
+    let _assert = tracing::info_span!("assert_block", K).entered();
+    for lane in 0..K {
+        let expected = incidents[lane] * greens[lane] * weights[lane];
+        assert_eq!(actual[lane].re.to_bits(), expected.re.to_bits());
+        assert_eq!(actual[lane].im.to_bits(), expected.im.to_bits());
+        assert_eq!(
+            projected[lane].to_bits(),
+            (expected.conj() * residual).re.to_bits()
+        );
+    }
+}
+
 /// Bitwise differential checks include non-dyadic operands, signed zero and
 /// subnormals. The existing complex API defines the exact expression tree.
 #[test]
@@ -121,8 +174,11 @@ fn weighted_product_and_projection_match_complex_operations() {
                 drop(arrange);
                 let (actual, projection) = {
                     let _act = tracing::info_span!("act").entered();
-                    let actual = weighted_product(incident, green, weight);
-                    (actual, project_adjoint(actual, residual))
+                    let mut actual = [Complex::new(0.0, 0.0)];
+                    let mut projected = [0.0];
+                    weighted_products(&[incident], &[green], &[weight], &mut actual);
+                    project_adjoint(&actual, residual, &mut projected);
+                    (actual[0], projected[0])
                 };
                 let _assert = tracing::info_span!("assert").entered();
                 assert_eq!(actual.re.to_bits(), reference.re.to_bits());
@@ -131,7 +187,111 @@ fn weighted_product_and_projection_match_complex_operations() {
                     projection.to_bits(),
                     (reference.conj() * residual).re.to_bits()
                 );
+                check_block_expression::<4>(incident, green, weight, residual);
+                check_block_expression::<8>(incident, green, weight, residual);
+                check_block_expression::<16>(incident, green, weight, residual);
             }
         }
     }
+}
+
+/// Partial blocks consume precisely the valid prefix and leave all spare
+/// output lanes unchanged. The quarter-turn fields give each lane a distinct
+/// exact dyadic value; the existing complex operations define the oracle.
+fn check_partial_blocks<const K: usize>() {
+    let incident: [_; K] = std::array::from_fn(|lane| {
+        let q = (lane + 1) as f64;
+        Complex::new(q / 2.0, -q / 4.0)
+    });
+    let green: [_; K] = std::array::from_fn(|lane| {
+        let q = (lane + 1) as f64;
+        Complex::new(-q / 8.0, q / 16.0)
+    });
+    let weights = [0.5; K];
+    let residual = Complex::new(0.5, -0.25);
+    let spare = Complex::new(11.0 / 2.0, -7.0 / 4.0);
+    for len in [0, 1, K - 1, K] {
+        let mut values = [spare; K];
+        let mut projected = [13.0 / 8.0; K];
+        let valid = weighted_products(
+            &incident[..len],
+            &green[..len],
+            &weights[..len],
+            &mut values,
+        );
+        assert_eq!(valid.len(), len);
+        let projected_prefix = project_adjoint(valid, residual, &mut projected);
+        assert_eq!(projected_prefix.len(), len);
+        let mut sum = Complex::new(0.0, 0.0);
+        for lane in 0..len {
+            let expected = incident[lane] * green[lane] * weights[lane];
+            assert_eq!(valid[lane].re.to_bits(), expected.re.to_bits());
+            assert_eq!(valid[lane].im.to_bits(), expected.im.to_bits());
+            assert_eq!(
+                projected_prefix[lane].to_bits(),
+                (expected.conj() * residual).re.to_bits()
+            );
+            sum += expected;
+        }
+        let integrated = integrate::<_, K>(&incident[..len], &green[..len], &weights[..len]);
+        assert_eq!(integrated.re.to_bits(), sum.re.to_bits());
+        assert_eq!(integrated.im.to_bits(), sum.im.to_bits());
+        assert!(values[len..].iter().all(|&value| value == spare));
+        assert!(projected[len..].iter().all(|&value| value == 13.0 / 8.0));
+    }
+}
+
+#[test]
+fn checked_partial_blocks_preserve_values_and_spare_storage() {
+    let _subscriber =
+        tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
+    let _span = tracing::info_span!("checked_partial_blocks").entered();
+    check_partial_blocks::<4>();
+    check_partial_blocks::<8>();
+    check_partial_blocks::<16>();
+    check_partial_blocks::<256>();
+}
+
+#[test]
+#[should_panic(expected = "Born field/Green lengths differ")]
+fn weighted_products_reject_mismatched_fields() {
+    let _subscriber =
+        tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
+    let _span = tracing::info_span!("act_reject_mismatched_fields").entered();
+    let mut output = [Complex::new(0.0, 0.0); 4];
+    weighted_products(&[Complex::new(1.0, 0.5)], &[], &[0.5], &mut output);
+}
+
+#[test]
+#[should_panic(expected = "Born field/weight lengths differ")]
+fn weighted_products_reject_mismatched_weights() {
+    let _subscriber =
+        tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
+    let _span = tracing::info_span!("act_reject_mismatched_weights").entered();
+    let field = [Complex::new(1.0, 0.5)];
+    let mut output = [Complex::new(0.0, 0.0); 4];
+    weighted_products(&field, &field, &[], &mut output);
+}
+
+#[test]
+#[should_panic(expected = "Born block exceeds output capacity")]
+fn weighted_products_reject_excess_capacity() {
+    let _subscriber =
+        tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
+    let _span = tracing::info_span!("act_reject_excess_capacity").entered();
+    let field = [Complex::new(1.0, 0.5); 2];
+    weighted_products(&field, &field, &[0.5; 2], &mut [Complex::new(0.0, 0.0)]);
+}
+
+#[test]
+#[should_panic(expected = "Born block exceeds output capacity")]
+fn adjoint_projection_rejects_excess_capacity() {
+    let _subscriber =
+        tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
+    let _span = tracing::info_span!("act_reject_projection_capacity").entered();
+    project_adjoint(
+        &[Complex::new(1.0, 0.5); 2],
+        Complex::new(0.5, -0.25),
+        &mut [0.0],
+    );
 }

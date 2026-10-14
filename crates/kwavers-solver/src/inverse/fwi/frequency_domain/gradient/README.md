@@ -24,18 +24,33 @@ general integer-power operation has unspecified precision; an isolated-Miri
 regression reproduces a four-ULP difference for the existing 1 mm spacing.
 Two IEEE products give each model/Hessian probe the same spatial measure,
 without disabling Miri's extra-rounding checks or changing numerical tolerances.
-Checked const-sized blocks copy scalar field arrays once per block; one block
-covers a 64-byte native FD scalar row. Block arity only partitions traversal.
-The complete voxel sequence and addition order remain, with the same kernel
-handling the tail. Contracts exercise arities 1, 4, 8 and 16 and mixed full/tail
-shapes. Forward prediction prepares the same geometry within one call;
+Checked blocks borrow input slices and reuse const-capacity output storage.
+The returned slice exposes only the written prefix; full and partial blocks
+use one kernel. Equal input lengths and capacity are checked before arithmetic.
+The 32 KiB active-working-set budget accounts for ten native FD scalars per
+voxel: incident, Green and derivative complex values, weights, projected values,
+gradient and its local accumulator. Its largest fitting power-of-two capacity
+is 256 voxels. Correctness does not depend on a cache-size assumption.
+The complete voxel sequence and addition order remain. Contracts exercise
+capacities 1, 4, 8, 16 and 256, empty/partial/full blocks, untouched spare output
+storage, and rejected input/capacity mismatches. Forward prediction prepares the same geometry within one call;
 its public operator remains stateless. For T transmits, R receivers per row
 and U distinct receiver positions, receiver Green evaluation falls from TRV
 to UV without changing any source or receiver selection.
 The adjoint keeps each gradient block local while sweeping the receivers in
 their original order. Independent voxels interleave differently, but each
 scalar expression and per-voxel receiver reduction remains bitwise identical.
+For block index b, `b*K <= V` and its clipped length obeys `b*K + len <= V`.
+Equal full Green/model lengths therefore bound every receiver projection. Only
+`[0, len)` is exposed from each output buffer, so spare capacity cannot contribute.
 Batch-versus-sequential differential tests cover full blocks and tails.
+Fixed-bound lane traversal uses explicit counters with invariant
+`0 <= lane <= bound`; the processed prefix is exactly `[0, lane)`.
+Advancing from `bound - 1` reaches `bound` without overflow, and termination
+preserves the same complete checked traversal and floating-point reduction.
+An unchanged full-fixture diagnostic attributes 40.643 of 180 profiled seconds
+to Range iteration. The counter change removes that iterator dispatch without
+changing an interpreter option, scalar expression, sample or stopping rule.
 
 For each frequency, V voxels, T transmit rows, U distinct receiver positions
 and R receivers per row require `(T + U)V + TR` complex coefficients and TR
@@ -68,3 +83,11 @@ The generic kernel has exact dyadic contracts in four native precisions and
 bitwise complex-operation comparisons for non-dyadic values, subnormals and
 signed zero.
 Full Miri cases retain isolation, safety checks and the 15-minute execution cap.
+
+Weighted products and real adjoint projections process one const-sized block
+per call, borrowing coefficient slices and writing caller-owned buffers. Every
+valid output lane is assigned before consumption; spare capacity is untouched. Buffers are reused across blocks
+and receivers; no coefficient or result array crosses a call by value. Each
+scalar expression tree and each observer reduction order remains unchanged.
+Distinct quarter-turn/sign lane fixtures compare arities 4, 8 and 16 bitwise
+against the original complex operations, including subnormals and signed zero.

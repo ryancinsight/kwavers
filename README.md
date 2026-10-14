@@ -29,7 +29,8 @@ recompute model-dependent pressures, source fits, gradients and Hessian probes.
 Forward pressure and the adjoint share a native-precision weighted field kernel;
 the [workspace contract](crates/kwavers-solver/src/inverse/fwi/frequency_domain/gradient/README.md)
 records its storage bound and differential verification.
-Checked blocks retain voxel order and handle complete blocks and tails. FWI
+Checked blocks retain voxel order and handle complete blocks and tails through
+one valid-prefix kernel with reused output storage. FWI
 uses the same two-product cubic voxel measure in every model evaluation.
 Forward prediction shares the prepared geometry and evaluates each distinct
 receiver Green field once per call. Receiver sweeps retain each gradient block

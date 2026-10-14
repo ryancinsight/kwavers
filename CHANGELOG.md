@@ -67,6 +67,15 @@
   as inversion. Distinct receiver Green fields are computed once per call,
   reducing TRV Green evaluations to UV with the documented geometry workspace.
   Ring and rotating heterogeneous pressures match the uncached equations bitwise.
+- [patch] Fixed-bound Born lane counters preserve the complete checked
+  traversal and bitwise reduction while removing profiled Range dispatch.
+  Full reconstruction inputs, numerical tolerances and execution caps remain.
+- [patch] Weighted field products and adjoint projections borrow checked slices
+  and reuse caller-owned const-capacity output buffers. Full and partial blocks
+  use one valid-prefix kernel. A 32 KiB working-set budget bounds block capacity;
+  scalar expression trees, every voxel and reduction order remain unchanged.
+  Computed-value contracts cover empty/partial/full blocks, spare storage and
+  input/capacity rejection in addition to the existing native-precision oracles.
 
 - CI shares checksum-verified locked crate sources within a workflow run;
   compile jobs retain their five-minute pull-request bounds and full selections.

@@ -15,30 +15,16 @@ pub(super) fn cell_volume<T: FloatElement>(spacing: T) -> T {
 /// tree. The sealed scalar contract is Copy; reading its fields directly
 /// avoids Clone calls and temporary complex operations without widening,
 /// reassociation or a change to the resulting real/imaginary components.
+/// Equal input lengths and output capacity are checked before computation.
+/// The returned slice exposes precisely the overwritten prefix; spare lanes
+/// are never read or written. This gives full and partial blocks one kernel.
 #[inline]
-pub(super) fn weighted_product<T: FloatElement>(
-    incident: Complex<T>,
-    green: Complex<T>,
-    weight: T,
-) -> Complex<T> {
-    Complex {
-        re: (incident.re * green.re - incident.im * green.im) * weight,
-        im: (incident.re * green.im + incident.im * green.re) * weight,
-    }
-}
-
-/// Eight native FD scalars occupy one 64-byte row block. The const arity only
-/// partitions traversal; every voxel and addition retains its original order.
-pub(super) const VOXELS_PER_BLOCK: usize = 64 / std::mem::size_of::<f64>();
-
-/// The same left fold as `Complex::sum`, over checked blocks and their tail.
-/// Copy arrays amortize slice projections while all arithmetic stays in `T`.
-#[inline]
-pub(super) fn integrate<T: FloatElement, const K: usize>(
+pub(super) fn weighted_products<'out, T: FloatElement, const K: usize>(
     incident: &[Complex<T>],
     green: &[Complex<T>],
     weights: &[T],
-) -> Complex<T> {
+    output: &'out mut [Complex<T>; K],
+) -> &'out [Complex<T>] {
     assert_eq!(
         incident.len(),
         green.len(),
@@ -49,25 +35,73 @@ pub(super) fn integrate<T: FloatElement, const K: usize>(
         weights.len(),
         "Born field/weight lengths differ"
     );
-    let (incident, incident_tail) = incident.as_chunks::<K>();
-    let (green, green_tail) = green.as_chunks::<K>();
-    let (weights, weights_tail) = weights.as_chunks::<K>();
+    assert!(incident.len() <= K, "Born block exceeds output capacity");
+    let mut lane = 0;
+    while lane < incident.len() {
+        let (incident, green, weight) = (incident[lane], green[lane], weights[lane]);
+        output[lane] = Complex {
+            re: (incident.re * green.re - incident.im * green.im) * weight,
+            im: (incident.re * green.im + incident.im * green.re) * weight,
+        };
+        lane += 1;
+    }
+    &output[..incident.len()]
+}
+
+/// Bound a block's active working set to 32 KiB: incident, Green and derivative
+/// complex values plus weights, projected values, gradient and accumulated
+/// gradient require ten native FD scalars per voxel. The largest fitting
+/// power of two is 256 voxels. This storage budget changes traversal only;
+/// correctness is independent of cache size and all voxels remain included.
+pub(super) const VOXELS_PER_BLOCK: usize = {
+    let capacity = 32 * 1024 / (10 * std::mem::size_of::<f64>());
+    1 << (usize::BITS - 1 - capacity.leading_zeros())
+};
+
+/// The same left fold as `Complex::sum`, over checked blocks and their tail.
+/// Borrowed blocks and reused output storage amortize slice projections;
+/// all arithmetic stays in `T`.
+/// Each counter visits exactly `[0, bound)`: its prefix contains precisely the
+/// contributions already folded. The final increment reaches `bound`, never
+/// exceeding it; each scalar expression and its reduction order remain unchanged.
+#[inline]
+pub(super) fn integrate<T: FloatElement, const K: usize>(
+    incident: &[Complex<T>],
+    green: &[Complex<T>],
+    weights: &[T],
+) -> Complex<T> {
+    const { assert!(K > 0, "Born block capacity must be positive") };
+    assert_eq!(
+        incident.len(),
+        green.len(),
+        "Born field/Green lengths differ"
+    );
+    assert_eq!(
+        incident.len(),
+        weights.len(),
+        "Born field/weight lengths differ"
+    );
     let mut sum = Complex {
         re: T::ZERO,
         im: T::ZERO,
     };
-    for ((incident, green), weights) in incident.iter().zip(green).zip(weights) {
-        let (incident, green, weights) = (*incident, *green, *weights);
-        for lane in 0..K {
-            let value = weighted_product(incident[lane], green[lane], weights[lane]);
+    let mut values = [Complex {
+        re: T::ZERO,
+        im: T::ZERO,
+    }; K];
+    for ((incident, green), weights) in incident
+        .chunks(K)
+        .zip(green.chunks(K))
+        .zip(weights.chunks(K))
+    {
+        let values = weighted_products(incident, green, weights, &mut values);
+        let mut lane = 0;
+        while lane < values.len() {
+            let value = values[lane];
             sum.re += value.re;
             sum.im += value.im;
+            lane += 1;
         }
-    }
-    for lane in 0..incident_tail.len() {
-        let value = weighted_product(incident_tail[lane], green_tail[lane], weights_tail[lane]);
-        sum.re += value.re;
-        sum.im += value.im;
     }
     sum
 }
@@ -75,11 +109,19 @@ pub(super) fn integrate<T: FloatElement, const K: usize>(
 /// `Re(conj(derivative) * residual)` needs no imaginary output. The subtraction
 /// and negation match the original complex multiplication even for signed zero.
 #[inline]
-pub(super) fn project_adjoint<T: FloatElement + Neg<Output = T>>(
-    derivative: Complex<T>,
+pub(super) fn project_adjoint<'out, T: FloatElement + Neg<Output = T>, const K: usize>(
+    derivatives: &[Complex<T>],
     residual: Complex<T>,
-) -> T {
-    derivative.re * residual.re - (-derivative.im) * residual.im
+    output: &'out mut [T; K],
+) -> &'out [T] {
+    assert!(derivatives.len() <= K, "Born block exceeds output capacity");
+    let mut lane = 0;
+    while lane < derivatives.len() {
+        let derivative = derivatives[lane];
+        output[lane] = derivative.re * residual.re - (-derivative.im) * residual.im;
+        lane += 1;
+    }
+    &output[..derivatives.len()]
 }
 
 #[cfg(test)]

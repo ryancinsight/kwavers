@@ -110,4 +110,5 @@ fn dense_adjoint_matches_coordinate_oracle() {
     check_adjoint::<4>();
     check_adjoint::<8>();
     check_adjoint::<16>();
+    check_adjoint::<256>();
 }
