@@ -5,6 +5,8 @@ The retention/restoration commands must preserve the complete file tree and
 executable modes and must fail when their source artifacts are missing.
 These tests execute the workflow commands on the compiled Kwavers build script;
 installed-wheel and numerical behavior remain the hosted wheel suites' contract.
+The scalar generator also treats its canonical template as a compiler input and
+emits identical complete methods from different working directories.
 """
 
 from __future__ import annotations
@@ -308,6 +310,42 @@ class CompiledArtifactTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse((self.workspace / "compiled-info.json").exists())
         self.assertFalse((self.workspace / "target").exists())
+
+
+class GeneratedArithmeticInputTests(unittest.TestCase):
+    def test_canonical_body_is_compiler_input_and_generator_is_checkout_independent(self) -> None:
+        crate = ROOT / "crates/kwavers-solver"
+        relative = "src/inverse/fwi/frequency_domain/born_kernel/arithmetic/operations.rs.in"
+        source = crate / relative
+        body = source.read_text()
+        expected = "".join(
+            f"impl sealed::Sealed for {scalar} {{}}\nimpl Arithmetic for {scalar} {{\n{body}\n}}\n"
+            for scalar in ("f32", "f64", "::eunomia::F16", "::eunomia::Bf16", "::eunomia::F32", "::eunomia::F64")
+        )
+        with tempfile.TemporaryDirectory(prefix="kwavers-generator-input-") as temporary:
+            directory = Path(temporary)
+            executable = directory / "generator"
+            dependencies = directory / "generator.d"
+            environment = os.environ.copy()
+            environment["CARGO_MANIFEST_DIR"] = str(crate)
+            subprocess.run(
+                ["rustc", str(crate / "build.rs"), "--edition=2021",
+                 "--emit=link,dep-info=" + str(dependencies), "-o", str(executable)],
+                env=environment, check=True, capture_output=True, text=True, timeout=30,
+            )
+            self.assertIn(str(source), dependencies.read_text())
+            for index, manifest in enumerate((crate, directory)):
+                output = directory / f"output-{index}"
+                output.mkdir()
+                environment.update({"CARGO_MANIFEST_DIR": str(manifest), "OUT_DIR": str(output)})
+                result = subprocess.run(
+                    [str(executable)], cwd=manifest, env=environment,
+                    check=True, capture_output=True, text=True, timeout=5,
+                )
+                self.assertEqual(result.stdout.splitlines(), [
+                    "cargo:rerun-if-changed=" + relative, "cargo:rerun-if-changed=build.rs",
+                ])
+                self.assertEqual((output / "native_arithmetic.rs").read_text(), expected)
 
 
 if __name__ == "__main__":

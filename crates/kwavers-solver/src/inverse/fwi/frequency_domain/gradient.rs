@@ -253,7 +253,7 @@ fn accumulate_frequency_gradient(
                 &observed,
                 false,
                 |receiver| {
-                    let (fields, _) = products.fields(receiver);
+                    let fields = products.fields::<false>(receiver);
                     terms.predict(row.direct[receiver], &StoredProducts::new(fields))
                 },
                 |scale, residuals, gradient| {
@@ -263,7 +263,7 @@ fn accumulate_frequency_gradient(
                         .iter()
                         .enumerate()
                         .map(|(receiver, &residual)| {
-                            let (_, fields) = products.fields(receiver);
+                            let fields = products.fields::<true>(receiver);
                             (StoredProducts::new(fields), residual)
                         })
                         .collect::<Vec<_>>();

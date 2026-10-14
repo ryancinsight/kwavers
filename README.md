@@ -24,6 +24,11 @@ contract, retaining linear scratch space and the established objective reduction
 The Born adjoint checks and borrows dense gradient storage once per frequency;
 an exact coordinate oracle verifies its row-major projection. The dependency
 lock uses Rustls 0.23.46 and retains the first-party Git source identities.
+The Python wheel workflow persists only k-Wave reference outputs across CI runs.
+Reference code, dependency records, CPU executable and runtime identities scope
+the cache; a sealed integrity manifest precedes reuse. Kwavers results and all
+comparison assertions execute against the freshly installed wheel.
+
 Inversions retain model-independent Born geometry in a private workspace and
 recompute model-dependent pressures, source fits, gradients and Hessian probes.
 Forward pressure and the adjoint share a native-precision weighted field kernel;
@@ -493,8 +498,3 @@ provenance, the tolerance derivation, and what the comparison does not establish
 ---
 
 **A research library for acoustic and optical physics simulations.**
-
-The Python wheel workflow persists only k-Wave reference outputs across CI runs.
-Reference code, dependency records, CPU executable and runtime identities scope
-the cache; a sealed integrity manifest precedes reuse. Kwavers results and all
-comparison assertions execute against the freshly installed wheel.

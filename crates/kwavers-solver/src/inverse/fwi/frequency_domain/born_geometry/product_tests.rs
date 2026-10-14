@@ -48,7 +48,8 @@ fn spatial_products_obey_exact_budget_and_preserve_fields() {
                     expected += row.incident[voxel] * green[voxel] * weights[voxel];
                 }
                 let actual = if let Some(products) = &geometry.products {
-                    let (unscaled, unit_scaled) = products[transmit].fields(receiver);
+                    let unscaled = products[transmit].fields::<false>(receiver);
+                    let unit_scaled = products[transmit].fields::<true>(receiver);
                     assert_eq!(unscaled.len(), 6);
                     assert_eq!(unit_scaled.len(), 6);
                     for voxel in 0..6 {

@@ -57,14 +57,22 @@ fn check_product_representations<T: Arithmetic>() {
         re: T::ONE,
         im: -T::ONE,
     }; 8];
-    let prefix = weighted_products(&stored, 3..8, &weights[3..8], &mut output);
+    let initial = Complex {
+        re: T::ONE,
+        im: -T::ONE,
+    };
+    let mut sum = initial;
+    let prefix = weighted_products(&stored, 3..8, &weights[3..8], &mut output, &mut sum);
     assert_eq!(prefix.len(), 5);
+    let mut expected_sum = initial;
     for lane in 0..5 {
+        expected_sum += incident[lane + 3] * green[lane + 3] * weights[lane + 3];
         assert_eq!(
             prefix[lane],
             incident[lane + 3] * green[lane + 3] * weights[lane + 3]
         );
     }
+    assert_eq!(sum, expected_sum);
     assert_eq!(
         output[5..],
         [Complex {

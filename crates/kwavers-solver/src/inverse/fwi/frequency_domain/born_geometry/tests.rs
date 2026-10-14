@@ -96,7 +96,8 @@ fn prepared_coefficients_match_uncached_equations() {
                             outgoing_green(*point, receiver, wavenumber, min_distance),
                         );
                     }
-                    let (unscaled, unit_scaled) = products[transmit].fields(receiver_index);
+                    let unscaled = products[transmit].fields::<false>(receiver_index);
+                    let unit_scaled = products[transmit].fields::<true>(receiver_index);
                     assert_eq!(unscaled.len(), centers.len());
                     assert_eq!(unit_scaled.len(), centers.len());
                     for index in 0..centers.len() {

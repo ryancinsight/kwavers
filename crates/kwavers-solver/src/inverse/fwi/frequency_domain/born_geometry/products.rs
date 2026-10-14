@@ -15,19 +15,26 @@ pub(in super::super) const WORKSPACE_BYTES: usize = 8 * 1024 * 1024;
 
 pub(in super::super) struct ProductRow {
     voxels: usize,
-    unscaled: Vec<Complex64>,
-    unit_scaled: Vec<Complex64>,
+    unscaled: Box<[Complex64]>,
+    unit_scaled: Box<[Complex64]>,
 }
 
 impl ProductRow {
     /// Receiver order is the acquisition's original order; both arrays have
     /// R*V entries. Validate the index before multiplying it by the stride.
     #[inline]
-    pub(in super::super) fn fields(&self, receiver: usize) -> (&[Complex64], &[Complex64]) {
-        assert!(receiver < self.unscaled.len() / self.voxels);
+    pub(in super::super) fn fields<const UNIT_SCALED: bool>(
+        &self,
+        receiver: usize,
+    ) -> &[Complex64] {
+        let values: &[Complex64] = if UNIT_SCALED {
+            &self.unit_scaled
+        } else {
+            &self.unscaled
+        };
+        assert!(receiver < values.len() / self.voxels);
         let start = receiver * self.voxels;
-        let end = start + self.voxels;
-        (&self.unscaled[start..end], &self.unit_scaled[start..end])
+        &values[start..start + self.voxels]
     }
 }
 
@@ -59,11 +66,8 @@ impl BornGeometry {
         for row in &self.transmits {
             let voxels = row.incident.len();
             let capacity = row.receivers.len() * voxels;
-            let mut prepared = ProductRow {
-                voxels,
-                unscaled: Vec::with_capacity(capacity),
-                unit_scaled: Vec::with_capacity(capacity),
-            };
+            let mut unscaled = Vec::with_capacity(capacity);
+            let mut unit_scaled = Vec::with_capacity(capacity);
             for &field in &row.receivers {
                 let green = &self.fields[field];
                 let fields = FactoredProducts::new(&row.incident, green);
@@ -95,14 +99,18 @@ impl BornGeometry {
                         {
                             return 0;
                         }
-                        prepared.unscaled.push(raw);
-                        prepared.unit_scaled.push(unit);
+                        unscaled.push(raw);
+                        unit_scaled.push(unit);
                         lane += 1;
                     }
                     start = end;
                 }
             }
-            products.push(prepared);
+            products.push(ProductRow {
+                voxels,
+                unscaled: unscaled.into_boxed_slice(),
+                unit_scaled: unit_scaled.into_boxed_slice(),
+            });
         }
         self.products = Some(products);
         required

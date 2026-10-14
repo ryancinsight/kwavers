@@ -46,7 +46,7 @@ For F validated nonempty frequency observations, each receives floor(B/F)
 bytes. Therefore their sum cannot exceed B. A frequency requests
 `T*sizeof(ProductRow) + 2*V*sum(R_t)*sizeof(Complex64)` bytes: row metadata plus
 the two complete product arrays. Checked arithmetic rejects an unrepresentable
-layout. Vectors reserve exactly their complete row sizes; three fixed complex
+layout. Construction reserves complete rows and transfers them into immutable boxed slices; three fixed complex
 blocks (12 KiB) serve preparation without voxel-sized temporary allocations.
 Allocator bookkeeping and existing per-frequency collection metadata are
 excluded. Repreparation drops the previous expanded allocation first.
@@ -55,7 +55,7 @@ Changing B changes representation only; bitwise equivalence defines acceptance.
 The factored geometry stores `(T+U)V + sum(R_t)` complex values and sum(R_t)
 receiver indices, where U counts distinct receiver positions. For the unchanged
 two-frequency 12×12×1, 16-transmit/16-receiver ring, those payloads occupy
-155,648 and 4,096 bytes. Expanded products request 2,361,088 bytes on the tested
+155,648 and 4,096 bytes. Expanded products request 2,360,576 bytes on the tested
 64-bit layout, including row metadata. Model-dependent scratch remains O(V+R).
 No model-dependent Jacobian or Hessian is retained. Larger experiments keep
 the factored representation under the same memory budget.
@@ -86,6 +86,14 @@ per-voxel arithmetic dispatch. Each loop visits exactly the valid prefix, retain
 the original intermediate values, scalar expression trees and addition order.
 The adjoint does not write and reread an intermediate weighted complex buffer.
 Rust 1.97 MIR confirms the primitive operations inside these block bodies.
+Pressure weighting also updates the existing complex left fold in that same loop;
+every product and each real/imaginary addition keeps its original expression and
+voxel order. Only the requested raw or unit-scaled immutable slice is exposed,
+avoiding a second unused view. The canonical input is embedded in the generator
+with `include_str!`, so its bytes belong to the compiler dependency graph and
+compiled build-script identity; generation does not read a baked-in checkout path.
+A real-compiler regression verifies that dependency and exact output from two
+working directories, and fails on the preceding runtime-file-read generator.
 
 ## Checked traversal and exact projected probes
 

@@ -30,6 +30,11 @@
 
 ### Fixed
 
+- [patch] Embed the canonical scalar template as a compiler input of its
+  generator. Shared build-directory reuse cannot read a checkout path captured
+  in another compiled generator. A real-compiler regression verifies dependency
+  tracking and exact output from two working directories.
+
 - [patch] Reuse genuine k-Wave reference results across CI runs with exact
   source/environment/binary identity and sealed content checks. Pin the
   previously validated k-wave-python 0.6.2; retain fresh Kwavers computations,
@@ -48,6 +53,10 @@
   executable contents, modes, symlinks, corruption and all provenance fields.
 
 ### Changed
+
+- [patch] Immutable Born products expose only the requested spatial slice.
+  Pressure weighting and the original complex left fold share one checked
+  traversal, preserving every scalar expression and per-voxel addition order.
 
 - [patch] The Born adjoint borrows dense gradient storage once per frequency,
   eliminating repeated coordinate projection without changing arithmetic,

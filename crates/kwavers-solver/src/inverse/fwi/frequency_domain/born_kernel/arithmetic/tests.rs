@@ -30,7 +30,8 @@ fn native_arithmetic_preserves_the_original_expression_tree() {
                 let _act = tracing::info_span!("act", seed).entered();
                 let product = <f64 as Arithmetic>::product(incident, green);
                 let mut weighted = [product];
-                <f64 as Arithmetic>::weight_block(&mut weighted, &[weight]);
+                let mut sum = Complex::new(seed, -seed);
+                <f64 as Arithmetic>::weight_block(&mut weighted, &[weight], &mut sum);
                 let mut projected = [seed];
                 let mut accumulated = [seed];
                 <f64 as Arithmetic>::project_block::<1, false>(
@@ -45,13 +46,7 @@ fn native_arithmetic_preserves_the_original_expression_tree() {
                     residual,
                     &mut accumulated,
                 );
-                (
-                    product,
-                    weighted[0],
-                    projected[0],
-                    accumulated[0],
-                    <f64 as Arithmetic>::accumulate_block(Complex::new(seed, -seed), &weighted),
-                )
+                (product, weighted[0], projected[0], accumulated[0], sum)
             };
             let _assert = tracing::info_span!("assert", seed).entered();
             assert_eq!(product.re.to_bits(), expected_product.re.to_bits());

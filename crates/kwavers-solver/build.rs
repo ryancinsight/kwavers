@@ -6,13 +6,11 @@ fn main() -> io::Result<()> {
     let relative = "src/inverse/fwi/frequency_domain/born_kernel/arithmetic/operations.rs.in";
     println!("cargo:rerun-if-changed={relative}");
     println!("cargo:rerun-if-changed=build.rs");
-    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(relative);
-    let bodies = fs::read_to_string(&source).map_err(|error| {
-        io::Error::new(
-            error.kind(),
-            format!("reading {}: {error}", source.display()),
-        )
-    })?;
+    // The generator's compiled identity includes the canonical input bytes.
+    // Reusing a compiled build script across checkouts must not read a path
+    // embedded for a different checkout at compile time.
+    let bodies =
+        include_str!("src/inverse/fwi/frequency_domain/born_kernel/arithmetic/operations.rs.in");
     let directory = env::var_os("OUT_DIR")
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Cargo did not provide OUT_DIR"))?;
     let destination = PathBuf::from(directory).join("native_arithmetic.rs");

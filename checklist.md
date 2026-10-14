@@ -55,3 +55,9 @@
 
 - [x] [patch] Persist genuine k-Wave references across runs with exact environment/source/binary identity and a sealed integrity manifest; pin the already validated reference version 0.6.2. Seven cache and ten existing artifact regressions pass; workflow lint passes.
 - [ ] [patch] Verify actual installed-wheel comparisons on both a cold reference cache and a restored reference cache at the final PR source. Fresh Kwavers results and all existing tolerances/assertions remain mandatory.
+
+- [x] [patch] Expose only the requested immutable boxed spatial slice and fuse weighting with the original left fold. All 75 focused FD, 1,121 solver (six existing ignores), 41 facade cases and strict solver Clippy pass; primitive MIR retains the original operations.
+- [x] [patch] Embed the canonical arithmetic template in the generator's compiler inputs. The real-compiler dependency/output regression fails before correction and passes afterwards from two working directories; all eleven artifact/generator and seven reference-cache regressions pass.
+- [ ] [patch] Complete all three full reconstruction Miri cases, cold/restored reference-cache comparisons and required final-head hosted gates for the fused-fold implementation.
+
+- [x] [patch] All 17 isolated Linux Miri contracts pass for the fused fold, selected immutable slices and embedded generator, with exact matching Rust source hashes and unchanged interpreter checks.

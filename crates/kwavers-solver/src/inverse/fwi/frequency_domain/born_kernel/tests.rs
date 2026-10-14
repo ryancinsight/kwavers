@@ -56,6 +56,10 @@ fn check_scalar_contract<T: Arithmetic>() {
             0..1,
             &[weight],
             &mut actual,
+            &mut Complex {
+                re: T::ZERO,
+                im: T::ZERO,
+            },
         );
         let mut projected = [T::ZERO];
         project_adjoint::<_, _, 1, false>(
@@ -179,6 +183,7 @@ fn check_block_expression<const K: usize>(
             0..K,
             &weights,
             &mut actual,
+            &mut Complex::new(0.0, 0.0),
         );
         project_adjoint::<_, _, K, false>(
             &StoredProducts::new(&actual),
@@ -234,6 +239,7 @@ fn weighted_product_and_projection_match_complex_operations() {
                         0..1,
                         &[weight],
                         &mut actual,
+                        &mut Complex::new(0.0, 0.0),
                     );
                     project_adjoint::<_, _, 1, false>(
                         &StoredProducts::new(&actual),
@@ -283,6 +289,7 @@ fn check_partial_blocks<const K: usize>() {
             0..len,
             &weights[..len],
             &mut values,
+            &mut Complex::new(0.0, 0.0),
         );
         assert_eq!(valid.len(), len);
         let projected_prefix = project_adjoint::<_, _, K, false>(
@@ -339,6 +346,7 @@ fn weighted_products_reject_mismatched_fields() {
         0..1,
         &[0.5],
         &mut output,
+        &mut Complex::new(0.0, 0.0),
     );
 }
 
@@ -355,6 +363,7 @@ fn weighted_products_reject_mismatched_weights() {
         0..1,
         &[],
         &mut output,
+        &mut Complex::new(0.0, 0.0),
     );
 }
 
@@ -370,6 +379,7 @@ fn weighted_products_reject_excess_capacity() {
         0..2,
         &[0.5; 2],
         &mut [Complex::new(0.0, 0.0)],
+        &mut Complex::new(0.0, 0.0),
     );
 }
 

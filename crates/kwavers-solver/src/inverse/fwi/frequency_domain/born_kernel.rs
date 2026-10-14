@@ -29,6 +29,7 @@ pub(super) fn weighted_products<'out, T: Arithmetic, P: FieldProducts<T>, const 
     range: Range<usize>,
     weights: &[T],
     output: &'out mut [Complex<T>; K],
+    sum: &mut Complex<T>,
 ) -> &'out [Complex<T>] {
     let len = range
         .end
@@ -36,7 +37,7 @@ pub(super) fn weighted_products<'out, T: Arithmetic, P: FieldProducts<T>, const 
         .expect("Born block range is reversed");
     assert_eq!(len, weights.len(), "Born field/weight lengths differ");
     fields.write_products(range, output);
-    T::weight_block(output, weights);
+    T::weight_block(output, weights, sum);
     &output[..len]
 }
 
@@ -77,8 +78,13 @@ pub(super) fn integrate<T: Arithmetic, P: FieldProducts<T>, const K: usize>(
     }; K];
     for (block, weights) in weights.chunks(K).enumerate() {
         let start = block * K;
-        let values = weighted_products(fields, start..start + weights.len(), weights, &mut values);
-        sum = T::accumulate_block(sum, values);
+        weighted_products(
+            fields,
+            start..start + weights.len(),
+            weights,
+            &mut values,
+            &mut sum,
+        );
     }
     sum
 }
