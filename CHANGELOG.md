@@ -35,8 +35,15 @@
   preflight verifies retention/restoration order, compiled contents, executable
   modes, symlinks and missing-artifact rejection. Existing compiler/container
   pins, provenance checks, numerical tolerances and execution limits remain.
+- [patch] Rustls 0.23.46 resolves four security advisories while retaining
+  first-party source identities. Remove the obsolete rkyv 0.7 advisory exemption.
 
 ### Changed
+
+- [patch] The Born adjoint borrows dense gradient storage once per frequency,
+  eliminating repeated coordinate projection without changing arithmetic,
+  update order, numerical tolerances or linear scratch-space requirements.
+  An exact dyadic coordinate oracle covers asymmetric shapes and source gains.
 
 - CI shares checksum-verified locked crate sources within a workflow run;
   compile jobs retain their five-minute pull-request bounds and full selections.

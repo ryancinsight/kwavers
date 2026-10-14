@@ -4,7 +4,9 @@ use super::super::forward::outgoing_green;
 use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::helmholtz_slowness_derivative;
 use kwavers_transducer::transducers::ElementPosition;
-use leto::ArrayViewMut3;
+
+#[cfg(test)]
+mod tests;
 
 pub(super) struct BornReceiverTerms<'a> {
     pub(super) centers: &'a [(usize, ElementPosition)],
@@ -59,17 +61,22 @@ impl BornReceiverTerms<'_> {
         direct + scattered
     }
 
+    /// Adds the adjoint in the same C-order used by `voxel_centers`.
+    /// For shape `(nx, ny, nz)`, voxel `(ix, iy, iz)` has offset
+    /// `(ix * ny + iy) * nz + iz`. The freshly allocated gradient and every
+    /// term vector share that order and length. Borrowing its dense slice once
+    /// removes repeated coordinate division and checked layout projection;
+    /// complex arithmetic and receiver/voxel addition order remain identical.
     pub(super) fn accumulate_adjoint(
         &self,
-        gradient: &mut ArrayViewMut3<'_, f64>,
+        gradient: &mut [f64],
         source_scale: Complex64,
         residual: Complex64,
         green: &[Complex64],
     ) {
-        let [_, ny, nz] = gradient.shape();
-        for (((linear_index, _), (&incident, &slowness)), &value) in self
-            .centers
-            .iter()
+        debug_assert_eq!(gradient.len(), self.centers.len());
+        for ((grad, (&incident, &slowness)), &value) in gradient
+            .iter_mut()
             .zip(self.incident.iter().zip(self.slowness.iter()))
             .zip(green.iter())
         {
@@ -77,9 +84,7 @@ impl BornReceiverTerms<'_> {
                 * incident
                 * value
                 * (helmholtz_slowness_derivative(self.omega, slowness) * self.cell_volume);
-            let ix = linear_index / (ny * nz);
-            let rem = linear_index % (ny * nz);
-            gradient[[ix, rem / nz, rem % nz]] += (derivative.conj() * residual).re;
+            *grad += (derivative.conj() * residual).re;
         }
     }
 }

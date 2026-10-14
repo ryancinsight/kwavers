@@ -21,6 +21,9 @@ test scenarios. Checked chunks retain sample order and strided RF rows normalize
 once; emission synthesis retains a checked mutable view. Unscaled FD prediction
 and adjoint reuse per-receiver Green terms within the current stateless operator
 contract, retaining linear scratch space and the established objective reduction.
+The Born adjoint checks and borrows dense gradient storage once per frequency;
+an exact coordinate oracle verifies its row-major projection. The dependency
+lock uses Rustls 0.23.46 and retains the first-party Git source identities.
 
 ![Theranostic feedback loop](docs/book/figures/theranostics_feedback_loop.svg)
 

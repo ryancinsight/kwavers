@@ -281,6 +281,9 @@ fn accumulate_frequency_gradient(
     let centers = voxel_centers((shape[0], shape[1], shape[2]), config.spacing_m);
     let potential = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?;
     let slowness = slowness_s_per_m.iter().copied().collect::<Vec<_>>();
+    let gradient = gradient
+        .as_slice_mut()
+        .expect("freshly allocated gradient has dense C-order storage");
 
     for transmit in 0..rows {
         let sources = acquisition.sources(transmit);
@@ -329,7 +332,6 @@ fn accumulate_frequency_gradient(
                 Vec::with_capacity(receivers.len()),
             )
         };
-        let mut gradient_view = gradient.view_mut();
         for (receiver_index, &receiver) in receivers.iter().enumerate() {
             terms.fill_green(receiver, &mut green);
             // Without source fitting, prediction and adjoint consume the same
@@ -339,7 +341,7 @@ fn accumulate_frequency_gradient(
                 scaled_prediction.push(source_scale * terms.predict(sources, receiver, &green));
             }
             let residual = scaled_prediction[receiver_index] - observed[receiver_index];
-            terms.accumulate_adjoint(&mut gradient_view, source_scale, residual, &green);
+            terms.accumulate_adjoint(gradient, source_scale, residual, &green);
         }
         // Preserve the established objective's exact reduction contract.
         *objective += complex_l2_objective(&scaled_prediction, &observed)
