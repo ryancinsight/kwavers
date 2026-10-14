@@ -30,6 +30,11 @@
 
 ### Fixed
 
+- [patch] Reuse genuine k-Wave reference results across CI runs with exact
+  source/environment/binary identity and sealed content checks. Pin the
+  previously validated k-wave-python 0.6.2; retain fresh Kwavers computations,
+  complete installed-wheel comparisons and unchanged numerical tolerances.
+
 - [patch] Both Python wheel consumers retain verified compiled build scripts
   before Maturin deletes their original directory. A required five-test wheel
   preflight verifies retention/restoration order, compiled contents, executable

@@ -52,3 +52,6 @@
 - [ ] [patch] Complete all three full reconstruction Miri cases and required exact-head hosted validation for the concrete block implementation.
 
 - [x] [patch] All 17 isolated Linux Miri contracts pass for concrete checked block arithmetic with unchanged interpreter checks and exact matching Rust source hashes.
+
+- [x] [patch] Persist genuine k-Wave references across runs with exact environment/source/binary identity and a sealed integrity manifest; pin the already validated reference version 0.6.2. Seven cache and ten existing artifact regressions pass; workflow lint passes.
+- [ ] [patch] Verify actual installed-wheel comparisons on both a cold reference cache and a restored reference cache at the final PR source. Fresh Kwavers results and all existing tolerances/assertions remain mandatory.

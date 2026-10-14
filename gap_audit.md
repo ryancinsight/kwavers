@@ -6238,3 +6238,5 @@ pass 8/8 (1 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 The refreshed workspace measurement after this merge found three
 `missing_panics_doc` sites in the `kwavers` facade; that package is the current
 ratchet slice.
+
+- [patch] The user authorizes reuse of k-Wave comparison references. CI now persists the bridge's existing per-input NPZ cache with an exact namespace covering reference source, k-wave-python 0.6.2, the actual CPU executable, dependency records, Python, system packages and thread environment. A sealed SHA-256 manifest rejects modified, missing, extra or mismatched entries before reuse. Both installed-wheel consumers and every fresh Kwavers comparison/assertion remain mandatory. Seven new cache regressions and all ten artifact regressions pass; workflow lint passes. Actual hosted cold/warm reference-cache validation remains required.

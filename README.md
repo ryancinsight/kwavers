@@ -493,3 +493,8 @@ provenance, the tolerance derivation, and what the comparison does not establish
 ---
 
 **A research library for acoustic and optical physics simulations.**
+
+The Python wheel workflow persists only k-Wave reference outputs across CI runs.
+Reference code, dependency records, CPU executable and runtime identities scope
+the cache; a sealed integrity manifest precedes reuse. Kwavers results and all
+comparison assertions execute against the freshly installed wheel.
