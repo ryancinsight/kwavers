@@ -43,7 +43,6 @@ impl BornReceiverTerms<'_> {
             assert_eq!(gradient.len(), green.len());
         }
         let mut derivatives = [Complex64::new(0.0, 0.0); K];
-        let mut projected = [0.0; K];
         let mut accumulated = [0.0; K];
         for (block, ((gradient, incident), weights)) in gradient
             .chunks_mut(K)
@@ -52,8 +51,7 @@ impl BornReceiverTerms<'_> {
             .enumerate()
         {
             let len = gradient.len();
-            let accumulated = &mut accumulated[..len];
-            accumulated.copy_from_slice(gradient);
+            accumulated[..len].copy_from_slice(gradient);
             let start = block * K;
             for &(green, residual) in receivers {
                 let derivatives = weighted_products(
@@ -62,14 +60,9 @@ impl BornReceiverTerms<'_> {
                     weights,
                     &mut derivatives,
                 );
-                let projected = project_adjoint(derivatives, residual, &mut projected);
-                let mut lane = 0;
-                while lane < len {
-                    accumulated[lane] += projected[lane];
-                    lane += 1;
-                }
+                project_adjoint::<_, K, true>(derivatives, residual, &mut accumulated);
             }
-            gradient.copy_from_slice(accumulated);
+            gradient.copy_from_slice(&accumulated[..len]);
         }
     }
 }

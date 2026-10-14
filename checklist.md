@@ -34,3 +34,8 @@
 - [x] [patch] Verify the checked valid-prefix block kernel natively: 70 focused FD, 1,116 complete solver (six existing ignores), 41 facade cases and strict solver Clippy pass. Full/partial/empty blocks, native precisions, spare storage and rejected length/capacity mismatches retain computed-value coverage.
 - [x] [patch] Validate the valid-prefix kernel with all 12 isolated Linux Miri contracts, using default interpreter checks.
 - [ ] [patch] Validate all three unchanged reconstruction cases and exact-head hosted gates for the valid-prefix implementation. The earlier eight-lane borrowed differential still reaches 900.01 seconds; no scenario, tolerance, interpreter check or time limit changes.
+
+- [x] [patch] Recheck `0250d5af` on attempt 1: actual installed wheels, k-Wave, complete hosted benchmarks, full-feature doctests, Security Audit and Architecture gate pass. Differential Miri still reaches its unchanged limits locally and in CI.
+- [x] [patch] Hoist immutable lane bounds and combine the exact projection with its existing gradient addition through const selection. All 71 focused FD, 1,117 complete solver (six old ignores), 41 facade tests and strict solver Clippy pass.
+- [x] [patch] All 13 isolated Linux Miri contracts pass for the combined projection; native/Miri accumulation also passes in all four scalar precisions.
+- [ ] [patch] Verify all three full Miri reconstructions and required final-head gates for the combined projection implementation; retain all scenarios, tolerances, interpreter checks and runtime bounds.

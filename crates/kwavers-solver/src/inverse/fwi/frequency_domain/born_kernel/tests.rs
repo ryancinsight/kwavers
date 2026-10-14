@@ -44,7 +44,7 @@ fn check_scalar_contract<T: FloatElement + Neg<Output = T>>() {
         im: T::ONE,
     };
     drop(arrange);
-    let (actual, integrated, projection) = {
+    let (actual, integrated, projection, accumulated) = {
         let _act = tracing::info_span!("act").entered();
         let mut actual = [Complex {
             re: T::ZERO,
@@ -52,7 +52,7 @@ fn check_scalar_contract<T: FloatElement + Neg<Output = T>>() {
         }];
         weighted_products(&[incident], &[green], &[weight], &mut actual);
         let mut projected = [T::ZERO];
-        project_adjoint(
+        project_adjoint::<_, 1, false>(
             &actual,
             Complex {
                 re: two,
@@ -60,11 +60,21 @@ fn check_scalar_contract<T: FloatElement + Neg<Output = T>>() {
             },
             &mut projected,
         );
+        let mut accumulated = [T::from_count(3)];
+        project_adjoint::<_, 1, true>(
+            &actual,
+            Complex {
+                re: two,
+                im: -T::ONE,
+            },
+            &mut accumulated,
+        );
         let [actual] = actual;
         (
             actual,
             integrate::<_, 1>(&[incident; 17], &[green; 17], &[weight; 17]),
             projected[0],
+            accumulated[0],
         )
     };
     let _assert = tracing::info_span!("assert").entered();
@@ -91,6 +101,7 @@ fn check_scalar_contract<T: FloatElement + Neg<Output = T>>() {
         }
     );
     assert_eq!(projection, T::from_count(10));
+    assert_eq!(accumulated, T::from_count(13));
 }
 
 #[test]
@@ -134,7 +145,7 @@ fn check_block_expression<const K: usize>(
         let mut actual = [Complex::new(0.0, 0.0); K];
         let mut projected = [0.0; K];
         weighted_products(&incidents, &greens, &weights, &mut actual);
-        project_adjoint(&actual, residual, &mut projected);
+        project_adjoint::<_, K, false>(&actual, residual, &mut projected);
         (actual, projected)
     };
     let _assert = tracing::info_span!("assert_block", K).entered();
@@ -177,7 +188,7 @@ fn weighted_product_and_projection_match_complex_operations() {
                     let mut actual = [Complex::new(0.0, 0.0)];
                     let mut projected = [0.0];
                     weighted_products(&[incident], &[green], &[weight], &mut actual);
-                    project_adjoint(&actual, residual, &mut projected);
+                    project_adjoint::<_, 1, false>(&actual, residual, &mut projected);
                     (actual[0], projected[0])
                 };
                 let _assert = tracing::info_span!("assert").entered();
@@ -220,7 +231,7 @@ fn check_partial_blocks<const K: usize>() {
             &mut values,
         );
         assert_eq!(valid.len(), len);
-        let projected_prefix = project_adjoint(valid, residual, &mut projected);
+        let projected_prefix = project_adjoint::<_, K, false>(valid, residual, &mut projected);
         assert_eq!(projected_prefix.len(), len);
         let mut sum = Complex::new(0.0, 0.0);
         for lane in 0..len {
@@ -289,9 +300,60 @@ fn adjoint_projection_rejects_excess_capacity() {
     let _subscriber =
         tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
     let _span = tracing::info_span!("act_reject_projection_capacity").entered();
-    project_adjoint(
+    project_adjoint::<_, 1, false>(
         &[Complex::new(1.0, 0.5); 2],
         Complex::new(0.5, -0.25),
         &mut [0.0],
     );
+}
+
+/// Assignment exposes the projection bits; accumulation adds that exact value
+/// once to the existing gradient. Spare lanes never enter either operation.
+#[test]
+fn projection_modes_preserve_exact_accumulation_and_spare_storage() {
+    let _subscriber =
+        tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
+    let _span = tracing::info_span!("projection_modes").entered();
+    for q in [0.0, -0.0, f64::from_bits(1), f64::MIN_POSITIVE, 1.0 / 3.0] {
+        let arrange = tracing::info_span!("arrange", q).entered();
+        let derivatives = std::array::from_fn::<_, 8, _>(|lane| {
+            if lane % 2 == 0 {
+                Complex::new(q, -q)
+            } else {
+                Complex::new(-q, 1.0 / 7.0)
+            }
+        });
+        let initial =
+            std::array::from_fn::<_, 8, _>(|lane| if lane % 2 == 0 { -0.0 } else { 11.0 / 13.0 });
+        let residual = Complex::new(-1.0 / 7.0, 1.0 / 3.0);
+        drop(arrange);
+        for len in [0, 1, 7, 8] {
+            let mut assigned = initial;
+            let mut accumulated = initial;
+            let (assigned_len, accumulated_len) = {
+                let _act = tracing::info_span!("act", len).entered();
+                (
+                    project_adjoint::<_, 8, false>(&derivatives[..len], residual, &mut assigned)
+                        .len(),
+                    project_adjoint::<_, 8, true>(&derivatives[..len], residual, &mut accumulated)
+                        .len(),
+                )
+            };
+            let _assert = tracing::info_span!("assert", len).entered();
+            assert_eq!(assigned_len, len);
+            assert_eq!(accumulated_len, len);
+            for lane in 0..len {
+                let expected = (derivatives[lane].conj() * residual).re;
+                assert_eq!(assigned[lane].to_bits(), expected.to_bits());
+                assert_eq!(
+                    accumulated[lane].to_bits(),
+                    (initial[lane] + expected).to_bits()
+                );
+            }
+            for lane in len..8 {
+                assert_eq!(assigned[lane].to_bits(), initial[lane].to_bits());
+                assert_eq!(accumulated[lane].to_bits(), initial[lane].to_bits());
+            }
+        }
+    }
 }

@@ -70,6 +70,10 @@
 - [patch] Fixed-bound Born lane counters preserve the complete checked
   traversal and bitwise reduction while removing profiled Range dispatch.
   Full reconstruction inputs, numerical tolerances and execution caps remain.
+- [patch] Born kernels retain fixed slice lengths outside lane loops. Const
+  projection accumulation removes its intermediate buffer and second traversal
+  while preserving the exact projection expression and each gradient addition.
+  Assignment/accumulation modes have bitwise value and spare-storage coverage.
 - [patch] Weighted field products and adjoint projections borrow checked slices
   and reuse caller-owned const-capacity output buffers. Full and partial blocks
   use one valid-prefix kernel. A 32 KiB working-set budget bounds block capacity;

@@ -27,9 +27,9 @@ without disabling Miri's extra-rounding checks or changing numerical tolerances.
 Checked blocks borrow input slices and reuse const-capacity output storage.
 The returned slice exposes only the written prefix; full and partial blocks
 use one kernel. Equal input lengths and capacity are checked before arithmetic.
-The 32 KiB active-working-set budget accounts for ten native FD scalars per
-voxel: incident, Green and derivative complex values, weights, projected values,
-gradient and its local accumulator. Its largest fitting power-of-two capacity
+The 32 KiB active-working-set budget accounts for nine native FD scalars per
+voxel: incident, Green and derivative complex values, weights, gradient and its
+local accumulator. Its largest fitting power-of-two capacity
 is 256 voxels. Correctness does not depend on a cache-size assumption.
 The complete voxel sequence and addition order remain. Contracts exercise
 capacities 1, 4, 8, 16 and 256, empty/partial/full blocks, untouched spare output
@@ -91,3 +91,14 @@ and receivers; no coefficient or result array crosses a call by value. Each
 scalar expression tree and each observer reduction order remains unchanged.
 Distinct quarter-turn/sign lane fixtures compare arities 4, 8 and 16 bitwise
 against the original complex operations, including subnormals and signed zero.
+
+Each lane loop retains its immutable length once before traversal. A 180-second
+full-fixture diagnostic at `0250d5af` attributes 16.499 inclusive seconds to
+4,558,590 repeated slice-length queries. Hoisting that metadata query changes no
+access or numerical operation. The adjoint projection has a const accumulation
+policy: assignment writes `p`, while accumulation writes the exact `old + p`.
+Both use the same `p = derivative.re * residual.re - (-derivative.im) * residual.im`
+expression. The const choice removes an intermediate projection buffer and
+second lane loop; it neither reassociates the sum nor changes receiver order.
+Native-precision and bitwise mode contracts cover existing accumulators, signed
+zero, subnormals, partial prefixes and untouched spare storage.
