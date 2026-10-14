@@ -108,7 +108,7 @@ jobs:
     # wheel build measured 11.9m here as well (run 37653455660), while the
     # parity suites themselves run in under half a minute. The per-test
     # `--timeout=60` (thread method) still bounds a debug-slowed case.
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 30 }}
     steps:
       - name: Checkout candidate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
