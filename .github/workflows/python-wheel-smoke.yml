@@ -101,6 +101,11 @@ jobs:
             sccache --version
             cp "$GITHUB_WORKSPACE/.ci-cargo/home/config.toml" /root/.cargo/config.toml
             cargo build --locked --profile dev --target x86_64-unknown-linux-gnu               --target-dir "$GITHUB_WORKSPACE/target"               --manifest-path source/Cargo.toml -p aws-lc-sys
+      # The Docker helper uses a separate target-dir to preserve build scripts.
+      # Its automatic ownership repair therefore covers only that helper path.
+      - name: Restore runner ownership of actual compiled artifacts
+        shell: bash
+        run: sudo chown -R "$(id -u):$(id -g)" target
       - uses: ./source/.github/actions/prepare-compiled
         with:
           repository: source
