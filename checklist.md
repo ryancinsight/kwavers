@@ -15,4 +15,5 @@
 - [x] [patch] Replace Born adjoint coordinate projection with one checked dense gradient borrow. The exact dyadic coordinate oracle and all 58 existing focused FD regressions pass; preserve arithmetic, accumulation order, stateless operators and O(voxels) scratch.
 - [x] [patch] Recheck the complete native solver and facade suites: 1,105 solver tests pass with six existing ignores, and all 41 facade cases pass.
 - [x] [patch] The exact adjoint oracle passes isolated Linux x86-64 Miri; timestamp-free tracing retains phase/span context without host-clock access. Formatting, strict solver Clippy, lock provenance and five wheel-artifact regressions pass.
+- [x] [patch] Reconcile main's independent Rustls/rkyv correction on the PR branch; preserve the candidate lock edges and both five-minute compile bounds rather than inheriting main's larger bounds.
 - [ ] [patch] Complete the authorized Miri performance increment and final-head verification under unchanged 15-minute limits, full scenarios, numerical tolerances and safety checks. Merge, publication and deployment remain excluded.

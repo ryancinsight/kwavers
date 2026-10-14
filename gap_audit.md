@@ -2,6 +2,8 @@
 
 [patch] Rustls 0.23.46 resolves RUSTSEC-2026-0346/0347/0348/0349 in the refreshed application audit. The lock retains all 94 first-party Git package identities and unrelated dependency edges. The obsolete rkyv 0.7 advisory exemption is removed; only rkyv 0.8.18 is resolved.
 
+[patch] Main `d61167e8` independently lands the security correction. The PR branch reconciles the empty-ignore-list conflict while preserving its dependency edges and five-minute compile bounds. The exact coordinate oracle passes isolated Linux x86-64 Miri with timestamp-free tracing; full facade Miri and hosted validation remain pending.
+
 [patch] Profiling the original full localized-lesion case identifies repeated Leto layout projection in the Born adjoint. A checked dense slice borrow removes that projection while preserving the C-order bijection, complex arithmetic, accumulation order, stateless operators and O(voxels) scratch. The exact dyadic coordinate oracle and all 58 existing focused FD tests pass. ARM Miri stops on an unsupported NEON reduction intrinsic; Linux x86-64 verification and final-head hosted gates remain pending. Existing test scenarios, tolerances, safety checks and 15-minute limits remain; merging, publication and deployment remain excluded.
 
 ## ATLAS-KWAVERS-HEPHAESTUS-FDTD-107 — Collocated FDTD provider cutover — Apollo co-evolution blocker 2026-08-18
