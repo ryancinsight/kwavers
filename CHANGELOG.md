@@ -37,6 +37,10 @@
   pins, provenance checks, numerical tolerances and execution limits remain.
 - [patch] Rustls 0.23.46 resolves four security advisories while retaining
   first-party source identities. Remove the obsolete rkyv 0.7 advisory exemption.
+- [patch] Compiled prerequisites use parallel lossless Zstandard compression.
+  Foundation compilation previously completed before archive compression
+  reached the unchanged five-minute job cap. Ten artifact regressions exercise
+  executable contents, modes, symlinks, corruption and all provenance fields.
 
 ### Changed
 
@@ -55,6 +59,14 @@
   replacing an unspecified-precision general power call. A repeatability
   regression reproduces the original four-ULP discrepancy under isolated Miri;
   the mathematical volume and numerical tolerances remain unchanged.
+- [patch] The Born adjoint sweeps receivers within each local gradient block,
+  preserving every scalar expression and per-voxel addition order. Identical
+  projected Born Hessian probes use the exact finite-gradient difference
+  identity; changed models and other operators retain full evaluation.
+- [patch] Stateless forward Born prediction uses the same prepared geometry
+  as inversion. Distinct receiver Green fields are computed once per call,
+  reducing TRV Green evaluations to UV with the documented geometry workspace.
+  Ring and rotating heterogeneous pressures match the uncached equations bitwise.
 
 - CI shares checksum-verified locked crate sources within a workflow run;
   compile jobs retain their five-minute pull-request bounds and full selections.

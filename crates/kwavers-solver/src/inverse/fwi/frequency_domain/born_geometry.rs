@@ -1,13 +1,14 @@
 //! Model-independent geometry for one Born frequency observation.
 
-use super::super::acquisition::TransmissionAcquisition;
-use super::super::forward::{incident_field, outgoing_green, voxel_centers};
-use super::super::types::{Config, FrequencyObservation};
+use self::field::{incident_field, outgoing_green, voxel_centers};
+use super::acquisition::TransmissionAcquisition;
+use super::types::Config;
 use aequitas::systems::si::units::Meter;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::fft::Complex64;
 use std::collections::BTreeMap;
 
+pub(super) mod field;
 #[cfg(test)]
 mod tests;
 
@@ -38,21 +39,21 @@ pub(super) struct BornGeometry {
 }
 
 impl BornGeometry {
-    /// The objective validates shape, frequency and acquisition before calling.
+    /// Consumers validate shape, frequency, acquisition and row count first.
     pub(super) fn new(
         shape: [usize; 3],
-        observation: &FrequencyObservation,
+        frequency_hz: f64,
         acquisition: &dyn TransmissionAcquisition,
         config: &Config,
+        transmissions: usize,
     ) -> Self {
         let centers = voxel_centers((shape[0], shape[1], shape[2]), config.spacing_m);
-        let wavenumber =
-            TWO_PI * observation.frequency_hz * (1.0 / config.reference_sound_speed_m_s);
+        let wavenumber = TWO_PI * frequency_hz * (1.0 / config.reference_sound_speed_m_s);
         let min_distance = 0.5 * config.spacing_m;
         let mut fields = Vec::new();
         let mut positions = BTreeMap::new();
-        let mut transmits = Vec::with_capacity(observation.observed_pressure.shape()[0]);
-        for transmit in 0..observation.observed_pressure.shape()[0] {
+        let mut transmits = Vec::with_capacity(transmissions);
+        for transmit in 0..transmissions {
             let sources = acquisition.sources(transmit);
             let mut row = BornTransmit {
                 incident: incident_field(sources, &centers, wavenumber, min_distance),

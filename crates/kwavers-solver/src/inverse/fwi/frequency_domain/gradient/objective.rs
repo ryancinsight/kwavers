@@ -1,9 +1,9 @@
 //! One validated experiment and its model-independent Born coefficients.
 
 use super::super::acquisition::TransmissionAcquisition;
+use super::super::born_geometry::BornGeometry;
 use super::super::forward::validate_forward_inputs;
 use super::super::types::{Config, FrequencyObservation};
-use super::born_geometry::BornGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
@@ -11,8 +11,9 @@ use leto::Array3;
 mod tests;
 
 /// Owns immutable geometry for one inversion; public operators stay stateless.
-/// All model-dependent values are evaluated afresh, including finite-difference
-/// Hessian probes and the coupled source fit. No iteration/tolerance changes.
+/// Every distinct model is evaluated afresh, including finite-difference
+/// Hessian probes and the coupled source fit. An identical projected Born
+/// probe permits the exact zero-difference identity. No tolerance changes.
 pub(in super::super) struct Objective<'a> {
     pub(in super::super) config: &'a Config,
     observations: &'a [FrequencyObservation],
@@ -22,6 +23,13 @@ pub(in super::super) struct Objective<'a> {
 }
 
 impl<'a> Objective<'a> {
+    /// Prepared Born coefficients and IEEE polynomial arithmetic give the same
+    /// gradient bits for the same model. Other operators retain their full
+    /// evaluation because their transcendental precision is unspecified.
+    pub(super) fn has_repeatable_gradient(&self) -> bool {
+        self.born.is_some()
+    }
+
     pub(in super::super) fn new(
         model: &Array3<f64>,
         observations: &'a [FrequencyObservation],
@@ -43,7 +51,13 @@ impl<'a> Objective<'a> {
                 observations
                     .iter()
                     .map(|observation| {
-                        BornGeometry::new(result.shape, observation, acquisition, config)
+                        BornGeometry::new(
+                            result.shape,
+                            observation.frequency_hz,
+                            acquisition,
+                            config,
+                            observation.observed_pressure.shape()[0],
+                        )
                     })
                     .collect(),
             );

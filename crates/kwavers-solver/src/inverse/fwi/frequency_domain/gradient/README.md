@@ -28,7 +28,14 @@ Checked const-sized blocks copy scalar field arrays once per block; one block
 covers a 64-byte native FD scalar row. Block arity only partitions traversal.
 The complete voxel sequence and addition order remain, with the same kernel
 handling the tail. Contracts exercise arities 1, 4, 8 and 16 and mixed full/tail
-shapes. Forward prediction retains one receiver-sized scratch field, O(V).
+shapes. Forward prediction prepares the same geometry within one call;
+its public operator remains stateless. For T transmits, R receivers per row
+and U distinct receiver positions, receiver Green evaluation falls from TRV
+to UV without changing any source or receiver selection.
+The adjoint keeps each gradient block local while sweeping the receivers in
+their original order. Independent voxels interleave differently, but each
+scalar expression and per-voxel receiver reduction remains bitwise identical.
+Batch-versus-sequential differential tests cover full blocks and tails.
 
 For each frequency, V voxels, T transmit rows, U distinct receiver positions
 and R receivers per row require `(T + U)V + TR` complex coefficients and TR
@@ -43,10 +50,19 @@ or storing a full transmit×receiver×voxel Jacobian. Preparation stores separat
 incident and receiver fields and leaves the model-dependent action matrix-free.
 It neither changes the finite-difference step nor replaces the Hessian formula.
 The objective rejects changes to its prepared shape and validates each model.
+If a Hessian probe projects onto the exact current Born model, the prepared
+coefficients and IEEE polynomial arithmetic make its gradient repeatable.
+For finite current gradients and finite positive epsilon,
+`(g(m) - g(m)) / epsilon` is exactly positive zero. A bitwise model comparison
+permits that identity; other operators, changed models and nonfinite inputs
+retain the full gradient evaluation. The current model/gradient pair is a
+private consumer invariant. A bound-directed probe and an inward probe compare
+every result bit against the complete finite-difference computation.
 
 Verification uses bitwise Green/incident/direct comparisons for real ring and
 rotating acquisitions, an exact dyadic adjoint oracle, and model updates compared
-against uncached forward pressures with both source-fitting modes. Existing FD,
+against stateless forward pressures with both source-fitting modes. Separate
+pressure/geometry regressions compare against the uncached equations. Existing FD,
 inversion and full reconstruction fixtures retain their inputs and tolerances.
 The generic kernel has exact dyadic contracts in four native precisions and
 bitwise complex-operation comparisons for non-dyadic values, subnormals and

@@ -31,6 +31,12 @@ the [workspace contract](crates/kwavers-solver/src/inverse/fwi/frequency_domain/
 records its storage bound and differential verification.
 Checked blocks retain voxel order and handle complete blocks and tails. FWI
 uses the same two-product cubic voxel measure in every model evaluation.
+Forward prediction shares the prepared geometry and evaluates each distinct
+receiver Green field once per call. Receiver sweeps retain each gradient block
+locally with the original scalar
+addition order. Exact projected Born probes use the zero-gradient-difference
+identity. Compiled prerequisite archives use parallel lossless Zstandard;
+the wheel preflight verifies artifact round trips and all provenance fields.
 
 ![Theranostic feedback loop](docs/book/figures/theranostics_feedback_loop.svg)
 

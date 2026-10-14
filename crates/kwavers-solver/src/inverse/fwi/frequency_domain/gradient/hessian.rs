@@ -5,6 +5,9 @@ use super::vector::max_abs;
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
+#[cfg(test)]
+mod tests;
+
 /// Matrix-free Hessian action `H v`, by central-free forward difference of the
 /// exact adjoint gradient:
 ///
@@ -21,6 +24,8 @@ use leto::Array3;
 /// Both consumers use this one implementation: [`super::super::gauss_newton`] for the
 /// Newton-CG inner solve, and [`super::super::inversion`] for the curvature term of its
 /// line search.
+/// `gradient0` is the current gradient from `objective.evaluate(slowness)`;
+/// each consumer retains that model/gradient pair until accepting a new pair.
 ///
 /// # Errors
 /// Propagates forward/adjoint evaluation errors from [`Objective::evaluate`].
@@ -44,6 +49,23 @@ pub(in super::super) fn hessian_vector(
         *m += eps * v;
     }
     super::super::inversion::clamp_slowness(&mut perturbed, objective.config);
+    // If projection leaves a valid model unchanged, repeatable g(m) gives
+    // (g(m) - g(m)) / eps = +0 for finite g(m) and finite positive eps.
+    // Compare every bit; retain evaluation for invalid/nonfinite inputs and
+    // operators whose elementary functions permit varying precision.
+    if objective.has_repeatable_gradient()
+        && eps.is_finite()
+        && eps > 0.0
+        && gradient0.iter().all(|value| value.is_finite())
+        && perturbed
+            .iter()
+            .zip(slowness.iter())
+            .all(|(&trial, &base)| {
+                base.is_finite() && base > 0.0 && trial.to_bits() == base.to_bits()
+            })
+    {
+        return Ok(Array3::zeros(slowness.shape()));
+    }
     let (_objective, gradient1) = objective.evaluate(&perturbed)?;
     let mut hv = gradient1;
     for (h, &g0) in hv.iter_mut().zip(gradient0.iter()) {

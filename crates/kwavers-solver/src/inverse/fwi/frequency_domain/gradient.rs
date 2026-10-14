@@ -1,6 +1,7 @@
 //! Discrete adjoint gradient for frequency-domain FWI.
 
 use super::acquisition::TransmissionAcquisition;
+use super::born_geometry::BornGeometry;
 use super::born_kernel::{cell_volume, VOXELS_PER_BLOCK};
 use super::cbs::{
     apply_shifted_green_adjoint_operator, real_scattering_potential,
@@ -18,14 +19,12 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
 };
 use leto::Array3;
 
-mod born_geometry;
 mod born_receiver;
 pub(super) mod hessian;
 pub(super) mod objective;
 #[cfg(test)]
 pub(super) mod test_support;
 pub(super) mod vector;
-use born_geometry::BornGeometry;
 use born_receiver::BornReceiverTerms;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::helmholtz_slowness_derivative;
 
@@ -271,6 +270,7 @@ fn accumulate_frequency_gradient(
             .iter()
             .map(|&value| source_scale * value)
             .collect::<Vec<_>>();
+        let mut receivers = Vec::with_capacity(row.receivers.len());
         for (receiver_index, &field) in row.receivers.iter().enumerate() {
             let green = &geometry.fields[field];
             if !config.estimate_source_scaling {
@@ -278,13 +278,9 @@ fn accumulate_frequency_gradient(
                     .push(source_scale * terms.predict(row.direct[receiver_index], green));
             }
             let residual = scaled_prediction[receiver_index] - observed[receiver_index];
-            terms.accumulate_adjoint::<VOXELS_PER_BLOCK>(
-                gradient,
-                &scaled_incident,
-                residual,
-                green,
-            );
+            receivers.push((green.as_slice(), residual));
         }
+        terms.accumulate_adjoint::<VOXELS_PER_BLOCK>(gradient, &scaled_incident, &receivers);
         // Preserve the established objective's exact reduction contract.
         *objective += complex_l2_objective(&scaled_prediction, &observed)
             .expect("validated equal row lengths");

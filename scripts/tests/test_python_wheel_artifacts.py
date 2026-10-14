@@ -10,6 +10,7 @@ installed-wheel and numerical behavior remain the hosted wheel suites' contract.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -188,6 +189,125 @@ class PythonWheelArtifactTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("wheel-build-scripts", result.stderr)
                 self.assertEqual(tree_identity(workspace / "target/debug/build"), {})
+
+
+class CompiledArtifactTests(unittest.TestCase):
+    """Execute both composite actions against a real compiled executable."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.prepare = load_yaml(".github/actions/prepare-compiled/action.yml")["runs"]
+        cls.restore = load_yaml(".github/actions/restore-compiled/action.yml")["runs"]
+        cls.pack = matching_step(cls.prepare, "shell", "bash")["run"]
+        cls.unpack = matching_step(cls.restore, "shell", "bash")["run"]
+        cls.archive = "compiled-prerequisites.tar.zst"
+        cls.compiled_directory = tempfile.TemporaryDirectory(prefix="kwavers-archive-executable-")
+        cls.addClassCleanup(cls.compiled_directory.cleanup)
+        cls.binary = Path(cls.compiled_directory.name) / "build-script-build"
+        # A scratch working directory must use the repository's selected
+        # compiler, just as the workflow's toolchain action selects it.
+        cls.toolchain = subprocess.check_output(
+            ["rustup", "show", "active-toolchain"], cwd=ROOT, text=True, timeout=5,
+        ).split()[0]
+        subprocess.run(
+            ["rustc", str(ROOT / "crates/kwavers/build.rs"), "-o", str(cls.binary)],
+            check=True, capture_output=True, text=True, timeout=30,
+            env=dict(os.environ, RUSTUP_TOOLCHAIN=cls.toolchain),
+        )
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix="kwavers-archive-")
+        self.addCleanup(temporary.cleanup)
+        self.workspace = Path(temporary.name) / "runner workspace"
+        self.target = self.workspace / "target/debug/build/kwavers"
+        self.target.mkdir(parents=True)
+        shutil.copy2(self.binary, self.target / "build-script-build")
+        (self.target / "output").write_text("cargo:rerun-if-changed=src/\n")
+        (self.target / "executable-link").symlink_to("build-script-build")
+        self.runner_temp = Path(temporary.name) / "runner temp"
+        self.download = self.runner_temp / "compiled-download"
+        self.download.mkdir(parents=True)
+        self.environment = dict(
+            os.environ, SOURCE_REPOSITORY=str(ROOT), BUILD_PROFILE="dev",
+            RUNNER_TEMP=str(self.runner_temp), RUSTUP_TOOLCHAIN=self.toolchain,
+        )
+
+    def execute(self, command: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["bash", "-c", command], cwd=self.workspace, env=self.environment,
+            capture_output=True, text=True, timeout=15,
+        )
+
+    def retain(self) -> None:
+        result = self.execute(self.pack)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        shutil.copy2(self.runner_temp / self.archive, self.download / self.archive)
+
+    def test_archive_format_matches_without_error_suppression(self) -> None:
+        upload = matching_step(
+            self.prepare, "uses",
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+        )
+        self.assertEqual(upload["with"]["path"], "${{ runner.temp }}/" + self.archive)
+        self.assertEqual(upload["with"]["compression-level"], "0")
+        self.assertEqual(upload["with"]["if-no-files-found"], "error")
+        for command in (self.pack, self.unpack):
+            self.assertIn("set -euo pipefail", command)
+            self.assertIn(self.archive, command)
+            self.assertNotIn("|| true", command)
+        for action in (self.prepare, self.restore):
+            for step in action["steps"]:
+                self.assertNotIn("continue-on-error", step)
+
+    def test_round_trip_preserves_files_and_exact_provenance(self) -> None:
+        expected = tree_identity(self.workspace / "target")
+        self.retain()
+        info = json.loads((self.workspace / "compiled-info.json").read_text())
+        self.assertEqual(info, {
+            "head": subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip(),
+            "lock": hashlib.sha256((ROOT / "Cargo.lock").read_bytes()).hexdigest(),
+            "compiler": subprocess.check_output(["rustc", "-vV"], text=True, env=self.environment),
+            "profile": "dev",
+        })
+        shutil.rmtree(self.workspace / "target")
+        (self.workspace / "compiled-info.json").unlink()
+        result = self.execute(self.unpack)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(tree_identity(self.workspace / "target"), expected)
+        self.assertEqual(
+            subprocess.check_output([str(self.target / "executable-link")], text=True, timeout=5),
+            "cargo:rerun-if-changed=src/\n",
+        )
+
+    def test_each_provenance_dimension_rejects_a_mismatch(self) -> None:
+        self.retain()
+        info_path = self.workspace / "compiled-info.json"
+        original = json.loads(info_path.read_text())
+        # Repackage the real executable with one adversarial identity field.
+        archive_command = self.pack.splitlines()[-1]
+        for field in ("head", "lock", "compiler", "profile"):
+            with self.subTest(field=field):
+                info_path.write_text(json.dumps(dict(original, **{field: "mismatched identity"})))
+                result = self.execute("set -euo pipefail\n" + archive_command)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                shutil.copy2(self.runner_temp / self.archive, self.download / self.archive)
+                result = self.execute(self.unpack)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("another revision/compiler/profile", result.stderr)
+
+    def test_missing_compiled_tree_fails_retention(self) -> None:
+        shutil.rmtree(self.workspace / "target")
+        result = self.execute(self.pack)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("target", result.stderr)
+
+    def test_corrupt_archive_fails_before_provenance_or_reuse(self) -> None:
+        (self.download / self.archive).write_bytes(b"invalid compressed archive")
+        shutil.rmtree(self.workspace / "target")
+        result = self.execute(self.unpack)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.workspace / "compiled-info.json").exists())
+        self.assertFalse((self.workspace / "target").exists())
 
 
 if __name__ == "__main__":

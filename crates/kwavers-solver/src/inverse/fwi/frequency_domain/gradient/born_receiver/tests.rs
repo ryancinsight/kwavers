@@ -1,6 +1,6 @@
 //! Exact dyadic oracle for the row-major Born adjoint projection.
 
-use super::super::super::forward::voxel_centers;
+use super::super::super::born_geometry::field::voxel_centers;
 use super::*;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::helmholtz_slowness_derivative;
 
@@ -52,8 +52,7 @@ fn check_adjoint<const K: usize>() {
                     terms.accumulate_adjoint::<K>(
                         gradient.as_slice_mut().unwrap(),
                         &scaled_incident,
-                        residual,
-                        &green,
+                        &[(green.as_slice(), residual)],
                     );
                 }
                 let _assert = tracing::info_span!("assert").entered();
@@ -76,6 +75,30 @@ fn check_adjoint<const K: usize>() {
                 for (&actual, &reference) in gradient.iter().zip(expected.iter()) {
                     assert_eq!(actual.to_bits(), reference.to_bits());
                 }
+            }
+            let mut batched = ordinal.clone();
+            let alternate_green: Vec<_> = green
+                .iter()
+                .map(|value| Complex64::new(-value.im, value.re))
+                .collect();
+            let receivers = [
+                (green.as_slice(), Complex64::new(0.5, -0.25)),
+                (alternate_green.as_slice(), Complex64::new(-0.25, 0.75)),
+            ];
+            terms.accumulate_adjoint::<K>(&mut batched, &scaled_incident, &receivers);
+            let mut sequential = ordinal.clone();
+            for receiver in receivers {
+                terms.accumulate_adjoint::<K>(&mut sequential, &scaled_incident, &[receiver]);
+            }
+            for (index, (&actual, &sequential)) in batched.iter().zip(&sequential).enumerate() {
+                let mut reference = ordinal[index];
+                for (green, residual) in receivers {
+                    let derivative =
+                        (source_scale * incident[index] * green[index]) * derivative_volume[index];
+                    reference += (derivative.conj() * residual).re;
+                }
+                assert_eq!(actual.to_bits(), reference.to_bits());
+                assert_eq!(actual.to_bits(), sequential.to_bits());
             }
         }
     }

@@ -50,6 +50,7 @@
 
 mod acquisition;
 mod as_operator;
+mod born_geometry;
 mod born_kernel;
 pub mod cbs;
 mod finite_window;

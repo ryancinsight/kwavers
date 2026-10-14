@@ -23,7 +23,7 @@ runs:
         BUILD_PROFILE: ${{ inputs.profile }}
       run: |
         set -euo pipefail
-        tar -xzf "$RUNNER_TEMP/compiled-download/compiled-prerequisites.tar.gz"
+        zstd -q -d -c "$RUNNER_TEMP/compiled-download/compiled-prerequisites.tar.zst" | tar -xf -
         python3 - <<'PY'
         import hashlib, json, os, pathlib, subprocess
         repo = pathlib.Path(os.environ['SOURCE_REPOSITORY'])
