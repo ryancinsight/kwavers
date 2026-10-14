@@ -294,12 +294,21 @@ jobs:
       run: cargo fmt -- --check
 
     - name: Audit per-crate READMEs
+      # The filesystem auditor is not a numerical kernel. Its cold optimized
+      # build cost 76s before scanning 24 READMEs, leaving too little of the
+      # unchanged five-minute job for full-feature doctest compilation.
+      # Scope this to the tool command; simulation/test optimization stays at
+      # the committed profile, and the complete audit still runs.
+      env:
+        CARGO_PROFILE_DEV_OPT_LEVEL: "0"
       run: cargo run --locked -p xtask -- check-readmes
 
     # A file walk, so it costs a second and rides the job that already built
     # xtask. It fails only when the count of `# Errors` sections on infallible
     # functions rises above its baseline.
     - name: Audit `# Errors` sections against their signatures
+      env:
+        CARGO_PROFILE_DEV_OPT_LEVEL: "0"
       run: cargo run --locked -p xtask -- audit-errors-docs
 
     # Clippy lives in the dedicated `clippy` job below: strict (3.3m) plus
