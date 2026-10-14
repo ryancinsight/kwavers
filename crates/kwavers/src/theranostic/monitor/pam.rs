@@ -102,9 +102,11 @@ pub fn passive_acoustic_map(
                     leto::SliceArg::Index(0),
                     leto::SliceArg::All,
                 ])
-                .expect("PAM uses the first channel")
+                .map_err(|error| {
+                    KwaversError::InvalidInput(format!("PAM: invalid first-channel shape: {error}"))
+                })
         })
-        .collect::<Vec<_>>();
+        .collect::<KwaversResult<Vec<_>>>()?;
     // Contiguous rows can retain their bounded slice directly; strided rows
     // keep the checked layout-aware access path.
     let row_slices = sensor_rows
@@ -199,7 +201,7 @@ mod tests {
                 .finish(),
         );
         let _test = tracing::info_span!("analytic_pam_energy").entered();
-        let (data, strided, elements, cfg) = {
+        let (data, strided, invalid_channels, elements, cfg) = {
             let _arrange = tracing::info_span!("arrange").entered();
             let data =
                 Array3::from_shape_vec((2, 1, 4), vec![1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0])
@@ -217,11 +219,15 @@ mod tests {
                 nx: 3,
                 nz: 1,
             };
-            (data, strided, elements, cfg)
+            (data, strided, Array3::zeros((2, 0, 4)), elements, cfg)
         };
-        let maps = {
+        let (maps, invalid) = {
             let _act = tracing::info_span!("act").entered();
-            [data, strided].map(|data| passive_acoustic_map(&data, &elements, 1.0, &cfg).unwrap())
+            (
+                [data, strided]
+                    .map(|data| passive_acoustic_map(&data, &elements, 1.0, &cfg).unwrap()),
+                passive_acoustic_map(&invalid_channels, &elements, 1.0, &cfg),
+            )
         };
         let _assert = tracing::info_span!("assert").entered();
         // Pixels 0/1 have advances [0,1]: sums [21,32,43,4].
@@ -233,6 +239,12 @@ mod tests {
             assert_eq!(map[[0, 0]], 3330.0);
             assert_eq!(map[[1, 0]], 3330.0);
             assert_eq!(map[[2, 0]], 3429.0);
+        }
+        match invalid.unwrap_err() {
+            KwaversError::InvalidInput(message) => {
+                assert!(message.starts_with("PAM: invalid first-channel shape:"));
+            }
+            error => panic!("unexpected invalid-channel error: {error}"),
         }
     }
 
