@@ -9,7 +9,13 @@
 //! - Aki & Richards, "Quantitative Seismology", 2002
 //! - Carcione, "Wave Fields in Real Media", 2007
 
-use aequitas::systems::si::{quantities::ReciprocalLength, units::PerMeter};
+use aequitas::systems::si::{
+    quantities::{
+        DynamicViscosity, ReciprocalLength, ReciprocalTemperature, SpecificHeatCapacity,
+        ThermalConductivity, ThermalDiffusivity,
+    },
+    units::PerMeter,
+};
 use eunomia::assert_relative_eq;
 use hyperion::coefficient::{InteractionCoefficient, ReducedScattering};
 use kwavers_grid::Grid;
@@ -179,7 +185,7 @@ impl AcousticProperties for TestElasticMedium {
 
     fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Acoustic diffusivity = thermal diffusivity / c²
-        let thermal_diff = self.thermal_diffusivity(x, y, z, grid);
+        let thermal_diff = self.thermal_diffusivity(x, y, z, grid).into_base();
         // Convert coordinates to indices (simplified for test)
         let i = (x / grid.dx) as usize;
         let j = (y / grid.dy) as usize;
@@ -212,26 +218,26 @@ impl ElasticArrayAccess for TestElasticMedium {
 }
 
 impl ThermalProperties for TestElasticMedium {
-    fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.6 // W/(m·K) typical for water
+    fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> ThermalConductivity {
+        ThermalConductivity::from_base(0.6) // W/(m·K) typical for water
     }
 
-    fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        4182.0 // J/(kg·K) for water
+    fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> SpecificHeatCapacity {
+        SpecificHeatCapacity::from_base(4182.0) // J/(kg·K) for water
     }
 
-    fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let thermal_k = self.thermal_conductivity(x, y, z, grid);
+    fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ThermalDiffusivity {
+        let thermal_k = self.thermal_conductivity(x, y, z, grid).into_base();
         let i = (x / grid.dx) as usize;
         let j = (y / grid.dy) as usize;
         let k = (z / grid.dz) as usize;
         let rho = self.density(i, j, k);
-        let cp = self.specific_heat(x, y, z, grid);
-        thermal_k / (rho * cp)
+        let cp = self.specific_heat(x, y, z, grid).into_base();
+        ThermalDiffusivity::from_base(thermal_k / (rho * cp))
     }
 
-    fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        2.07e-4 // 1/K for water at 20°C
+    fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> ReciprocalTemperature {
+        ReciprocalTemperature::from_base(2.07e-4) // 1/K for water at 20°C
     }
 }
 
@@ -265,8 +271,8 @@ impl MediumOpticalProperties for TestElasticMedium {
 }
 
 impl ViscousProperties for TestElasticMedium {
-    fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.001 // Pa·s (water at 20°C)
+    fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> DynamicViscosity {
+        DynamicViscosity::from_base(0.001) // Pa·s (water at 20°C)
     }
 }
 
