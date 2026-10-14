@@ -159,7 +159,7 @@ impl CattaneoVernotte {
                 let (x, y, z) = grid.coords(i, j, k);
 
                 let rho = kwavers_medium::density_at(medium, x, y, z, grid);
-                let cp = medium.specific_heat(x, y, z, grid);
+                let cp = medium.specific_heat(x, y, z, grid).into_base();
 
                 *t -= dt_s * div / (rho * cp);
             },
@@ -187,7 +187,7 @@ impl CattaneoVernotte {
             }
 
             let (x, y, z) = grid.coords(i, j, k);
-            let k_thermal = medium.thermal_conductivity(x, y, z, grid);
+            let k_thermal = medium.thermal_conductivity(x, y, z, grid).into_base();
             let grad_t = Self::centered_gradient::<AXIS>(temperature, i, j, k, grid);
             let q_previous = *q;
 

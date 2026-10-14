@@ -1,9 +1,14 @@
 //! Thermal properties trait for heat transfer and thermal effects
 //!
 //! This module defines traits for thermal properties including heat capacity,
-//! thermal conductivity, and temperature-dependent effects.
+//! thermal conductivity, and temperature-dependent effects. Quantities carry
+//! their SI dimensions (ADR 0050's typed exchange discipline).
 
 use crate::core::CoreMedium;
+use aequitas::systems::si::quantities::{
+    Dimensionless, ReciprocalTemperature, SpecificHeatCapacity, ThermalConductivity,
+    ThermalDiffusivity,
+};
 use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER_37C;
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -11,34 +16,41 @@ use leto::Array3;
 /// Trait for thermal medium properties
 pub trait ThermalProperties: CoreMedium {
     /// Get specific heat capacity at constant pressure (J/(kg·K))
-    fn specific_heat_capacity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+    fn specific_heat_capacity(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> SpecificHeatCapacity {
         // SSOT: SPECIFIC_HEAT_WATER_37C = 4180.0 J/(kg·K) — water at body temperature
-        SPECIFIC_HEAT_WATER_37C
+        SpecificHeatCapacity::from_base(SPECIFIC_HEAT_WATER_37C)
     }
 
     /// Get specific heat at constant volume (J/(kg·K))
     /// Note: This is different from `specific_heat_capacity` (Cp)
-    fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> SpecificHeatCapacity {
         // For liquids, Cv ≈ Cp
         self.specific_heat_capacity(x, y, z, grid)
     }
 
     /// Get thermal conductivity (W/(m·K))
-    fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ThermalConductivity;
 
     /// Get thermal diffusivity (m²/s)
-    fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ThermalDiffusivity;
 
     /// Get thermal expansion coefficient (1/K)
-    fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ReciprocalTemperature;
 
     /// Get specific heat ratio (γ = Cp/Cv)
-    fn specific_heat_ratio(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        1.1 // Default for liquids
+    fn specific_heat_ratio(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Dimensionless {
+        // Default for liquids
+        Dimensionless::from_base(1.1)
     }
 
     /// Get adiabatic index (same as specific heat ratio)
-    fn gamma(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn gamma(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Dimensionless {
         self.specific_heat_ratio(x, y, z, grid)
     }
 }

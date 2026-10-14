@@ -181,8 +181,8 @@ pub(super) fn compute_viscoelastic_term_into(
                     ),
                 );
 
-                let eta_s = medium.shear_viscosity(x, y, z, grid);
-                let eta_b = medium.bulk_viscosity(x, y, z, grid);
+                let eta_s = medium.shear_viscosity(x, y, z, grid).into_base();
+                let eta_b = medium.bulk_viscosity(x, y, z, grid).into_base();
                 let rho = rho_arr[[i, j, k]].max(1e-9);
 
                 // Diffusivity of sound δ = (4η_s/3 + η_b)/ρ [m²/s]. The Stokes
@@ -310,8 +310,8 @@ mod tests {
         compute_viscoelastic_term_into(&mut output, &pressure, &prev_pressure, &medium, &grid, DT);
 
         // Query actual viscosities from the medium — do not hardcode defaults.
-        let eta_s = medium.shear_viscosity(2.0, 2.0, 2.0, &grid);
-        let eta_b = medium.bulk_viscosity(2.0, 2.0, 2.0, &grid);
+        let eta_s = medium.shear_viscosity(2.0, 2.0, 2.0, &grid).into_base();
+        let eta_b = medium.bulk_viscosity(2.0, 2.0, 2.0, &grid).into_base();
         let visc_coeff = (4.0 * eta_s / 3.0 + eta_b) / RHO;
         let laplacian_at_center = 12.0_f64; // 2+4+6 for the quadratic field (Δx=1)
                                             // δ·∇²(∂p/∂t): NO c² factor.

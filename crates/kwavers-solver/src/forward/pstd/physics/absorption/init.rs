@@ -120,8 +120,8 @@ pub(crate) fn initialize_absorption_operators(
                         let (x, y_coord, z) = grid.indices_to_coordinates(i, j, k);
                         let c0 = medium.sound_speed(i, j, k);
                         let rho0 = medium.density(i, j, k);
-                        let eta_s = medium.shear_viscosity(x, y_coord, z, grid);
-                        let eta_b = medium.bulk_viscosity(x, y_coord, z, grid);
+                        let eta_s = medium.shear_viscosity(x, y_coord, z, grid).into_base();
+                        let eta_b = medium.bulk_viscosity(x, y_coord, z, grid).into_base();
 
                         if rho0 > 0.0 && c0 > 0.0 {
                             let a_si = (4.0 * eta_s / 3.0 + eta_b) / (2.0 * rho0 * c0 * c0 * c0);

@@ -2,34 +2,39 @@
 
 use super::HeterogeneousTissueMedium;
 use crate::thermal::{ThermalField, ThermalProperties};
+use aequitas::systems::si::quantities::{
+    ReciprocalTemperature, SpecificHeatCapacity, ThermalConductivity, ThermalDiffusivity,
+};
 use kwavers_grid::Grid;
 use leto::Array3;
 
 impl ThermalProperties for HeterogeneousTissueMedium {
-    fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> SpecificHeatCapacity {
         let (i, j, k) = crate::continuous_to_discrete(x, y, z, grid);
-        self.get_tissue_properties(i, j, k).specific_heat
+        SpecificHeatCapacity::from_base(self.get_tissue_properties(i, j, k).specific_heat)
     }
 
-    fn specific_heat_capacity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn specific_heat_capacity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> SpecificHeatCapacity {
         self.specific_heat(x, y, z, grid)
     }
 
-    fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ThermalConductivity {
         let (i, j, k) = crate::continuous_to_discrete(x, y, z, grid);
-        self.get_tissue_properties(i, j, k).thermal_conductivity
+        ThermalConductivity::from_base(self.get_tissue_properties(i, j, k).thermal_conductivity)
     }
 
-    fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ThermalDiffusivity {
         let (i, j, k) = crate::continuous_to_discrete(x, y, z, grid);
         let props = self.get_tissue_properties(i, j, k);
         // alpha = k / (rho * Cp)
-        props.thermal_conductivity / (props.density * props.specific_heat)
+        ThermalDiffusivity::from_base(
+            props.thermal_conductivity / (props.density * props.specific_heat),
+        )
     }
 
-    fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ReciprocalTemperature {
         let (i, j, k) = crate::continuous_to_discrete(x, y, z, grid);
-        self.get_tissue_properties(i, j, k).thermal_expansion
+        ReciprocalTemperature::from_base(self.get_tissue_properties(i, j, k).thermal_expansion)
     }
 }
 

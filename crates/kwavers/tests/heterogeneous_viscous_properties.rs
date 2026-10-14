@@ -19,19 +19,19 @@ fn test_heterogeneous_viscous_properties_interpolated() {
     let z = 1.5e-3;
 
     // Validate dynamic viscosity
-    let mu = medium.viscosity(x, y, z, &grid);
+    let mu = medium.viscosity(x, y, z, &grid).into_base();
     assert!((mu - 1.0e-3).abs() < 1e-12);
 
     // Validate shear viscosity coefficient retrieval
-    let mu_s = medium.shear_viscosity(x, y, z, &grid);
+    let mu_s = medium.shear_viscosity(x, y, z, &grid).into_base();
     assert!((mu_s - 2.0e-3).abs() < 1e-12);
 
     // Validate bulk viscosity coefficient retrieval
-    let mu_b = medium.bulk_viscosity(x, y, z, &grid);
+    let mu_b = medium.bulk_viscosity(x, y, z, &grid).into_base();
     assert!((mu_b - 5.0e-3).abs() < 1e-12);
 
     // Validate kinematic viscosity ν = μ / ρ
-    let nu = medium.kinematic_viscosity(x, y, z, &grid);
+    let nu = medium.kinematic_viscosity(x, y, z, &grid).into_base();
     assert!((nu - 1.0e-6).abs() < 1e-12);
 }
 
@@ -50,15 +50,15 @@ fn test_heterogeneous_viscous_properties_nearest_neighbor() {
     let y = 1.0e-3; // index 1
     let z = 0.0; // index 0
 
-    let mu = medium.viscosity(x, y, z, &grid);
+    let mu = medium.viscosity(x, y, z, &grid).into_base();
     assert!((mu - 1.2e-3).abs() < 1e-12);
 
-    let mu_s = medium.shear_viscosity(x, y, z, &grid);
+    let mu_s = medium.shear_viscosity(x, y, z, &grid).into_base();
     assert!((mu_s - 2.4e-3).abs() < 1e-12);
 
-    let mu_b = medium.bulk_viscosity(x, y, z, &grid);
+    let mu_b = medium.bulk_viscosity(x, y, z, &grid).into_base();
     assert!((mu_b - 3.6e-3).abs() < 1e-12);
 
-    let nu = medium.kinematic_viscosity(x, y, z, &grid);
+    let nu = medium.kinematic_viscosity(x, y, z, &grid).into_base();
     assert!((nu - 1.2e-6).abs() < 1e-12);
 }
