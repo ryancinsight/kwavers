@@ -11,6 +11,10 @@ on:
       - .github/actions/prepare-cargo-sources/**
       - .github/actions/restore-cargo-sources/**
       - .github/workflows/cargo-sources.yml
+      - .github/actions/prepare-compiled/**
+      - .github/actions/restore-compiled/**
+      - .github/workflows/bounded-compile.yml
+      - scripts/prepare_foundation.py
       - .github/workflows/python-wheel-smoke.yml
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
@@ -23,6 +27,10 @@ on:
       - .github/actions/prepare-cargo-sources/**
       - .github/actions/restore-cargo-sources/**
       - .github/workflows/cargo-sources.yml
+      - .github/actions/prepare-compiled/**
+      - .github/actions/restore-compiled/**
+      - .github/workflows/bounded-compile.yml
+      - scripts/prepare_foundation.py
       - .github/workflows/python-wheel-smoke.yml
   # The full three-OS matrix below is a drift backstop, not a per-change
   # signal: the Windows and macOS wheel builds do not depend on which lines
@@ -50,8 +58,45 @@ jobs:
     with:
       artifact: wheel-cargo-sources-${{ github.sha }}
 
-  base-wheel:
+  native-prerequisites:
     needs: sources
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    name: Manylinux native TLS prerequisite
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: source
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+      - uses: ./source/.github/actions/restore-cargo-sources
+        with:
+          repository: source
+          artifact: wheel-cargo-sources-${{ github.sha }}
+      - name: Compile the real TLS prerequisite in the wheel's ABI image
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b
+        with:
+          maturin-version: v1.14.1
+          rust-toolchain: 1.97.0
+          target: x86_64
+          manylinux: '2_17'
+          container: quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5
+          docker-options: -e CARGO_HOME=/root/.cargo
+          command: --version
+          before-script-linux: |
+            cp "$GITHUB_WORKSPACE/.ci-cargo/home/config.toml" /root/.cargo/config.toml
+            cargo build --locked --profile dev --target x86_64-unknown-linux-gnu               --target-dir "$GITHUB_WORKSPACE/target"               --manifest-path source/Cargo.toml -p aws-lc-sys
+      - uses: ./source/.github/actions/prepare-compiled
+        with:
+          repository: source
+          profile: wheel-dev
+          artifact: wheel-native-prerequisites-${{ github.sha }}
+
+  base-wheel:
+    needs: [sources, native-prerequisites]
     # Per-pull-request coverage is Ubuntu only; the Windows and macOS legs run
     # on push to main, on the nightly schedule, and on manual dispatch. A
     # platform-specific wheel regression that only a non-Ubuntu leg would
@@ -96,12 +141,32 @@ jobs:
           repository: source
           artifact: wheel-cargo-sources-${{ github.sha }}
 
+      - name: Require successful native preparation
+        if: github.event_name == 'pull_request'
+        env:
+          BUILD_RESULT: ${{ needs.native-prerequisites.result }}
+        run: test "$BUILD_RESULT" = success
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        if: github.event_name == 'pull_request'
+        with:
+          toolchain: 1.97.0
+      - uses: ./source/.github/actions/restore-compiled
+        if: github.event_name == 'pull_request'
+        with:
+          repository: source
+          profile: wheel-dev
+          artifact: wheel-native-prerequisites-${{ github.sha }}
+
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           maturin-version: v1.14.1
           rust-toolchain: 1.97.0
-          docker-options: ${{ github.event_name == 'pull_request' && format('-e CARGO_HOME={0}/.ci-cargo/home', github.workspace) || '' }}
+          # Rustup's container bootstrap expects its default bin directory.
+          # Install normally, then configure the restored sources before Cargo.
+          docker-options: ${{ github.event_name == 'pull_request' && '-e CARGO_HOME=/root/.cargo' || '' }}
+          before-script-linux: ${{ github.event_name == 'pull_request' && format('cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml', github.workspace) || '' }}
+          container: ${{ github.event_name == 'pull_request' && 'quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5' || '' }}
           target: ${{ matrix.os == 'macos-latest' && 'universal2-apple-darwin' || 'x86_64' }}
           manylinux: ${{ matrix.os == 'ubuntu-latest' && '2_17' || 'off' }}
           sccache: true
@@ -110,6 +175,7 @@ jobs:
             --locked
             --compatibility pypi
             --manifest-path source/crates/kwavers-python/Cargo.toml
+            ${{ github.event_name == 'pull_request' && format('--target-dir {0}/target', github.workspace) || '' }}
             --out dist
             -i ${{ matrix.os == 'ubuntu-latest' && 'python3.10' || 'python' }}
 
@@ -128,7 +194,7 @@ jobs:
           "$smoke_python" source/crates/kwavers-python/tests/optional_submodule_contract.py access
 
   kwave-comparison:
-    needs: sources
+    needs: [sources, native-prerequisites]
     if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: k-Wave comparison (Ubuntu)
     runs-on: ubuntu-latest
@@ -193,12 +259,30 @@ jobs:
           repository: source
           artifact: wheel-cargo-sources-${{ github.sha }}
 
+      - name: Require successful native preparation
+        if: github.event_name == 'pull_request'
+        env:
+          BUILD_RESULT: ${{ needs.native-prerequisites.result }}
+        run: test "$BUILD_RESULT" = success
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        if: github.event_name == 'pull_request'
+        with:
+          toolchain: 1.97.0
+      - uses: ./source/.github/actions/restore-compiled
+        if: github.event_name == 'pull_request'
+        with:
+          repository: source
+          profile: wheel-dev
+          artifact: wheel-native-prerequisites-${{ github.sha }}
+
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           maturin-version: v1.14.1
           rust-toolchain: 1.97.0
-          docker-options: ${{ github.event_name == 'pull_request' && format('-e CARGO_HOME={0}/.ci-cargo/home', github.workspace) || '' }}
+          docker-options: ${{ github.event_name == 'pull_request' && '-e CARGO_HOME=/root/.cargo' || '' }}
+          before-script-linux: ${{ github.event_name == 'pull_request' && format('cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml', github.workspace) || '' }}
+          container: ${{ github.event_name == 'pull_request' && 'quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5' || '' }}
           target: x86_64
           manylinux: "2_17"
           sccache: true
@@ -207,6 +291,7 @@ jobs:
             --locked
             --compatibility pypi
             --manifest-path source/crates/kwavers-python/Cargo.toml
+            ${{ github.event_name == 'pull_request' && format('--target-dir {0}/target', github.workspace) || '' }}
             --out dist
             -i python3.10
 

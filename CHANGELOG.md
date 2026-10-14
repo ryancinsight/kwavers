@@ -16,7 +16,8 @@
 - CI shares checksum-verified locked crate sources within a workflow run;
   compile jobs retain their five-minute pull-request bounds and full selections.
   Miri executes current configuration and all facade tests, rejects empty
-  selections, and propagates errors.
+  selections, and propagates errors. Slow cases receive independent gates,
+  and compile prerequisites require matching revision/lock/compiler/profile.
 
 - **[patch] The lossless staggered FDTD pressure update is one pass.** On a
   Cartesian grid without a CPML or absorption, the three velocity

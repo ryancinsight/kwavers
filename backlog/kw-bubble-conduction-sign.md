@@ -6,3 +6,4 @@
 - Merge held: main triggers package-publication attempts and book deployment; release/deployment decisions are pending.
 - Validation repair: reuse same-run locked, checksum-verified crate sources; preserve all compile bounds and selected tests/benchmarks.
 - Miri selection/error repair: current simulation configuration tests and the complete facade harness; no ignored errors or successful empty harnesses. Hosted final validation remains pending.
+- Bounded compilation repair prepares real native TLS and feature-matched foundation artifacts; Miri inventories and independently gates all 39 facade cases without omissions.

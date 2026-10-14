@@ -438,8 +438,18 @@ jobs:
   # compilation exceeded the five-minute preflight together (run 38524672691).
   # Keep the exact doctest command and its own five-minute pull-request bound;
   # the Architecture gate requires both jobs, including cancellation failures.
-  full-feature-doctests:
+  doctest-prerequisites:
     needs: [changes, lockfile]
+    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
+    uses: ./.github/workflows/bounded-compile.yml
+    with:
+      sources: ci-cargo-sources-${{ github.sha }}
+      artifact: full-doctest-prerequisites-${{ github.sha }}
+      profile: test
+      features: full
+
+  full-feature-doctests:
+    needs: [changes, lockfile, doctest-prerequisites]
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
     name: Full-feature doc tests
     runs-on: ubuntu-latest
@@ -450,6 +460,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
     - name: Install system dependencies
       uses: ./.github/actions/install-system-dependencies
@@ -466,6 +478,11 @@ jobs:
     - uses: ./.github/actions/restore-cargo-sources
       with:
         artifact: ci-cargo-sources-${{ github.sha }}
+
+    - uses: ./.github/actions/restore-compiled
+      with:
+        profile: test
+        artifact: full-doctest-prerequisites-${{ github.sha }}
 
     - name: Run full-feature doc tests
       run: cargo test --locked -p kwavers --doc --no-default-features --features full
@@ -960,13 +977,17 @@ jobs:
       - name: Run security audit
         run: cargo deny --config deny.toml --manifest-path crates/kwavers/Cargo.toml check
 
-  memory-safety:
-    name: Memory Safety (Miri)
+  miri-preparation:
+    name: Prepare real Miri harnesses
     needs: lockfile
     runs-on: ubuntu-latest
     timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 30 }}
+    outputs:
+      matrix: ${{ steps.inventory.outputs.matrix }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Install Rust nightly with miri
         uses: dtolnay/rust-toolchain@7c8d7d138f5c09cef361f8214cf96882cd029cdb # nightly
@@ -985,10 +1006,47 @@ jobs:
       - name: Run Miri on current configuration tests
         run: python3 scripts/miri_gate.py --package kwavers-simulation --filter configuration::tests
 
-      # Cargo --exclude names workspace packages, not test modules. Execute
-      # the whole facade harness instead of ignoring the invalid command.
-      - name: Run Miri on all facade tests
-        run: python3 scripts/miri_gate.py --package kwavers
+      - name: Compile and inventory the complete facade harness
+        id: inventory
+        run: |
+          python3 scripts/miri_gate.py --package kwavers --prepare-matrix miri-matrix.json
+          echo "matrix=$(cat miri-matrix.json)" >> "$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/prepare-compiled
+        with:
+          profile: miri
+          artifact: miri-prerequisites-${{ github.sha }}
+
+  memory-safety:
+    name: Memory Safety (Miri, ${{ matrix.case }})
+    needs: [lockfile, miri-preparation]
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 30 }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.miri-preparation.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: dtolnay/rust-toolchain@7c8d7d138f5c09cef361f8214cf96882cd029cdb
+        with:
+          components: miri
+      - name: Setup Miri
+        run: cargo +nightly miri setup
+      - uses: ./.github/actions/restore-cargo-sources
+        with:
+          artifact: ci-cargo-sources-${{ github.sha }}
+      - uses: ./.github/actions/restore-compiled
+        with:
+          profile: miri
+          artifact: miri-prerequisites-${{ github.sha }}
+      # Every inventoried case gets its own unchanged bound. No test is
+      # excluded: matrix failure/cancellation is required by the CI gate.
+      - name: Execute the exact inventoried test
+        env:
+          MIRI_CASE: ${{ matrix.case }}
+        run: python3 scripts/miri_gate.py --package kwavers --filter "$MIRI_CASE" --exact
 
   coverage:
     name: Code Coverage
@@ -1330,6 +1388,7 @@ jobs:
       - toolchain-roll
       - security
       - memory-safety
+      - miri-preparation
       - coverage
       - validation
       - lib-tests
@@ -1366,6 +1425,7 @@ jobs:
       - architecture-checks
       - lockfile
       - full-feature-doctests
+      - doctest-prerequisites
       - clippy
       - cuda-runtime-build
     runs-on: ubuntu-latest

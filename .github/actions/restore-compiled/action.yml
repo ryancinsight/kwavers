@@ -1,0 +1,36 @@
+name: Restore compiled prerequisites
+description: Require matching revision, lock, compiler and profile before Cargo reuse.
+inputs:
+  repository:
+    default: .
+    description: Repository path.
+  artifact:
+    required: true
+    description: Exact-run artifact name.
+  profile:
+    required: true
+    description: Required Cargo profile.
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        name: ${{ inputs.artifact }}
+        path: ${{ runner.temp }}/compiled-download
+    - shell: bash
+      env:
+        SOURCE_REPOSITORY: ${{ inputs.repository }}
+        BUILD_PROFILE: ${{ inputs.profile }}
+      run: |
+        set -euo pipefail
+        tar -xzf "$RUNNER_TEMP/compiled-download/compiled-prerequisites.tar.gz"
+        python3 - <<'PY'
+        import hashlib, json, os, pathlib, subprocess
+        repo = pathlib.Path(os.environ['SOURCE_REPOSITORY'])
+        actual = {'head': subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip(),
+                  'lock': hashlib.sha256((repo / 'Cargo.lock').read_bytes()).hexdigest(),
+                  'compiler': subprocess.check_output(['rustc', *(['+nightly'] if os.environ['BUILD_PROFILE'] == 'miri' else []), '-vV'], text=True),
+                  'profile': os.environ['BUILD_PROFILE']}
+        if json.loads(pathlib.Path('compiled-info.json').read_text()) != actual:
+            raise SystemExit('compiled prerequisites belong to another revision/compiler/profile')
+        PY

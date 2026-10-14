@@ -12,8 +12,9 @@ bubble is subtracted from its internal energy. Both the complete-rate and
 temperature-update paths follow this convention in `kwavers-physics` 3.0.1.
 
 CI transports the locked dependency graph in a checksum-verified source bundle.
-Miri requires nonempty passing harnesses; compilation jobs retain their existing
-time limits.
+Miri requires nonempty passing harnesses and gates every inventoried case.
+Compilation jobs reuse matching revision, lock, compiler and profile artifacts
+while retaining their existing time limits.
 
 ![Theranostic feedback loop](docs/book/figures/theranostics_feedback_loop.svg)
 

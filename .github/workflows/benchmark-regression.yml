@@ -13,6 +13,10 @@ on:
       - .github/actions/prepare-cargo-sources/**
       - .github/actions/restore-cargo-sources/**
       - .github/workflows/cargo-sources.yml
+      - .github/actions/prepare-compiled/**
+      - .github/actions/restore-compiled/**
+      - .github/workflows/bounded-compile.yml
+      - scripts/prepare_foundation.py
       - .github/workflows/benchmark-regression.yml
   workflow_dispatch:
 
@@ -47,8 +51,18 @@ jobs:
     with:
       artifact: benchmark-cargo-sources-${{ github.sha }}
 
-  benchmark-smoke:
+  prerequisites:
     needs: sources
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    uses: ./.github/workflows/bounded-compile.yml
+    with:
+      sources: benchmark-cargo-sources-${{ github.sha }}
+      artifact: benchmark-prerequisites-${{ github.sha }}
+      profile: dev
+      features: default,plotting
+
+  benchmark-smoke:
+    needs: [sources, prerequisites]
     if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: complete benchmark smoke
     runs-on: ubuntu-24.04
@@ -72,11 +86,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          path: kwavers-candidate
           persist-credentials: false
 
       - name: Install system dependencies
-        uses: ./kwavers-candidate/.github/actions/install-system-dependencies
+        uses: ./.github/actions/install-system-dependencies
         with:
           packages: libfontconfig1-dev
 
@@ -94,13 +107,22 @@ jobs:
       # once per job.
       - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
 
-      - uses: ./kwavers-candidate/.github/actions/restore-cargo-sources
+      - uses: ./.github/actions/restore-cargo-sources
         with:
-          repository: kwavers-candidate
           artifact: benchmark-cargo-sources-${{ github.sha }}
 
+      - name: Require successful compilation prerequisites
+        env:
+          BUILD_RESULT: ${{ needs.prerequisites.result }}
+        run: test "$BUILD_RESULT" = success
+
+      - uses: ./.github/actions/restore-compiled
+        with:
+          profile: dev
+          artifact: benchmark-prerequisites-${{ github.sha }}
+
       - name: Verify the candidate lockfile
-        run: python3 kwavers-candidate/scripts/lockfile.py --check
+        run: python3 scripts/lockfile.py --check
 
       - name: Validate complete benchmark registry
         shell: bash
@@ -170,17 +192,17 @@ jobs:
             fi
           }
 
-          validate_registry kwavers-candidate
+          validate_registry .
 
           if grep --recursive --line-number --extended-regexp \
             'fn[[:space:]]+main[[:space:]]*\(\)[[:space:]]*\{[[:space:]]*\}' \
-            kwavers-candidate/crates/kwavers/benches; then
+            crates/kwavers/benches; then
             echo "::error::empty benchmark entry point"
             exit 1
           fi
 
           for target in $PR_BENCH_TARGETS; do
-            if [[ ! -f "kwavers-candidate/crates/kwavers/benches/$target.rs" ]]; then
+            if [[ ! -f "crates/kwavers/benches/$target.rs" ]]; then
               echo "::error::missing merge-critical benchmark target: $target"
               exit 1
             fi
@@ -190,10 +212,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mv kwavers-candidate kwavers-measurement
           status=0
           cargo bench \
-            --manifest-path kwavers-measurement/Cargo.toml \
+            --manifest-path Cargo.toml \
             --target-dir "$BENCH_TARGET_DIR" \
             --locked \
             --profile dev \
@@ -202,7 +223,6 @@ jobs:
             --benches \
             -- \
             --test || status=$?
-          mv kwavers-measurement kwavers-candidate
           exit "$status"
 
       - name: sccache stats
