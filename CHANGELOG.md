@@ -1,5 +1,14 @@
 # Changelog
 
+## kwavers-physics 3.0.1
+
+### Fixed
+
+- [patch] Bubble energy balance subtracts outward-positive conductive power.
+  A stationary hot bubble now cools instead of heating; both the complete-rate
+  and temperature-update callers use the corrected first-law sign. The heat
+  transfer API's existing outward-positive convention is preserved.
+
 ## Unreleased
 
 ### Changed

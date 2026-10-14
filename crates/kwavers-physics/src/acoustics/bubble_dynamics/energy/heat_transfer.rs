@@ -22,12 +22,12 @@ impl EnergyBalanceCalculator {
     ///
     /// Complete energy balance equation:
     /// ```text
-    /// dU/dt = -P(dV/dt) + Q_heat + Q_latent + Q_reaction + Q_plasma + Q_radiation
+    /// dU/dt = -P(dV/dt) - Q_heat + Q_latent + Q_reaction + Q_plasma + Q_radiation
     /// ```
     ///
     /// Where:
     /// - P(dV/dt): Work done by bubble expansion/compression
-    /// - Q_heat: Conductive heat transfer to/from liquid
+    /// - Q_heat: Outward-positive conductive heat transfer to the liquid
     /// - Q_latent: Latent heat from phase changes (evaporation/condensation)
     /// - Q_reaction: Chemical reaction enthalpy changes
     /// - Q_plasma: Ionization/recombination energy
@@ -35,9 +35,10 @@ impl EnergyBalanceCalculator {
     ///
     /// # Physics Correctness
     ///
-    /// All energy terms follow first law of thermodynamics with proper sign convention:
-    /// - Positive: Energy input to bubble
-    /// - Negative: Energy loss from bubble
+    /// `heat_transfer_rate` is positive for energy leaving the bubble and
+    /// negative for energy entering it, matching `calculate_heat_transfer_rate`.
+    /// It is therefore subtracted. The other supplied/calculated power terms
+    /// are signed energy input to the bubble and are added.
     #[must_use]
     pub fn calculate_energy_rate(
         &self,
@@ -55,7 +56,7 @@ impl EnergyBalanceCalculator {
         // dV/dt = surface_area * wall_velocity
         let volume_rate = surface_area * wall_velocity;
 
-        // Work done by the bubble (negative when compressing)
+        // Pressure work adds energy during compression and removes it during expansion.
         let work_rate = -internal_pressure * volume_rate;
 
         // Calculate additional energy terms
@@ -64,8 +65,7 @@ impl EnergyBalanceCalculator {
         let radiation_rate = self.calculate_radiation_losses(state);
 
         // Total energy rate (sum of all contributions)
-        work_rate
-            + heat_transfer_rate
+        work_rate - heat_transfer_rate
             + latent_heat_rate
             + chemical_rate
             + plasma_rate
@@ -100,7 +100,10 @@ impl EnergyBalanceCalculator {
         self.calculate_energy_rate(state, pressure, heat_transfer_rate, latent_heat_rate)
     }
 
-    /// Calculate heat transfer rate using Nusselt correlation
+    /// Calculate outward-positive conductive power using the Nusselt correlation.
+    ///
+    /// A bubble hotter than the liquid returns positive power (heat loss);
+    /// a colder bubble returns negative power (heat gain).
     #[must_use]
     pub fn calculate_heat_transfer_rate(&self, state: &BubbleState, peclet_number: f64) -> Power {
         // Nusselt number correlation for oscillating bubble

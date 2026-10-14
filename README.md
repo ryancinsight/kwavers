@@ -7,6 +7,10 @@
 
 **An interdisciplinary ultrasound-light physics simulation library.** Kwavers models acoustic wave propagation, cavitation dynamics, and sonoluminescence for multi-modal imaging research and physics studies.
 
+Bubble energy balances use outward-positive conductive power: heat leaving a
+bubble is subtracted from its internal energy. Both the complete-rate and
+temperature-update paths follow this convention in `kwavers-physics` 3.0.1.
+
 ![Theranostic feedback loop](docs/book/figures/theranostics_feedback_loop.svg)
 
 ## 📋 Library Components

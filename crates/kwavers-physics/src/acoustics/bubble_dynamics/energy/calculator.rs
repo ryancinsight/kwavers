@@ -22,13 +22,13 @@ use crate::acoustics::bubble_dynamics::BubbleParameters;
 ///
 /// First law of thermodynamics for open system:
 /// ```text
-/// dU/dt = -P(dV/dt) + Q_heat + Q_latent + Q_reaction + Q_plasma + Q_radiation
+/// dU/dt = -P(dV/dt) - Q_heat + Q_latent + Q_reaction + Q_plasma + Q_radiation
 /// ```
 ///
 /// Where:
 /// - U: Internal energy
 /// - P(dV/dt): Work done by bubble expansion/compression
-/// - Q_heat: Conductive heat transfer to liquid
+/// - Q_heat: Outward-positive conductive heat transfer to the liquid
 /// - Q_latent: Latent heat from mass transfer
 /// - Q_reaction: Chemical reaction enthalpy changes
 /// - Q_plasma: Ionization/recombination energy

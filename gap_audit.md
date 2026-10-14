@@ -6139,19 +6139,14 @@ The refreshed workspace measurement then found 31 additional
 ratchet item.
 
 ## `missing_panics_doc` physics slice — 2026-08-21
+The 31 measured panic contracts are documented across phase-shifting arrays, bubble integration, conservation checks, imaging, thermal dose, zero-copy state containers, sonogenetics, analytical RTM, transducers, nonlinear FFT, chemistry, electromagnetics and ablation.
+Evidence at that increment: strict offline `-D clippy::missing_panics_doc -D warnings`; Nextest `d08bec08-3f94-4730-8710-118e8ce0db5a` 1561/1561 with one intentional skip; doctests 9/9 (4 ignored); `RUSTDOCFLAGS=-D warnings` passes.
+The following workspace measurement found 69 additional solver panic-doc sites; solver remains that ratchet item.
 
-The `kwavers-physics` slice documents the 31 measured panic contracts across
-phase-shifting arrays, bubble integration, conservation checks, imaging and
-thermal-dose paths, zero-copy state containers, sonogenetics, analytical RTM
-and transducer helpers, nonlinear FFT inputs, chemistry, electromagnetics, and
-ablation. Strict offline Clippy with `-D clippy::missing_panics_doc -D warnings`
-passes; Nextest run `d08bec08-3f94-4730-8710-118e8ce0db5a` passes 1561/1561
-with one intentional skip; doctests pass 9/9 (4 ignored); and rustdoc passes
-with `RUSTDOCFLAGS=-D warnings`.
-
-The refreshed workspace measurement then found 69 additional
-`missing_panics_doc` sites in `kwavers-solver`; that package is the current
-ratchet item.
+## KW-BUBBLE-CONDUCTION-SIGN [patch] — 2026-10-14
+Reproduced on main `99a6185d`: outward-positive conductive power is added to bubble internal energy; the stationary hot-bubble Euler step heats by 2 K instead of cooling by 2 K.
+Physics 3.0.1 subtracts that power in the shared balance. Five analytic regressions cover both callers, hot/cold/equilibrium, unchanged pressure work and thermal disabling; the native physics suite passes 1,584 tests with zero skips.
+Residual checks: three native core lint sites match main; hosted gates are pending. Merge is held because main triggers publication attempts and book deployment; the existing ambient-temperature floor is preserved.
 
 ## `missing_panics_doc` solver slice — 2026-08-21
 

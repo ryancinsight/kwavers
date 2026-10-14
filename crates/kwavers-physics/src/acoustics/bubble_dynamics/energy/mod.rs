@@ -13,5 +13,8 @@ mod radiation;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod sign_tests;
+
 pub use calculator::EnergyBalanceCalculator;
 pub use heat_transfer::update_temperature_energy_balance;

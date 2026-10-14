@@ -1,7 +1,6 @@
 # Backlog / Strategy
 
 <a id="kwavers-medium-quantity-typing"></a>- [KW-MEDIUM-QUANTITY-TYPING](backlog/kwavers-medium-quantity-typing.md) — Type the medium physics traits with aequitas quantities [tightening][minor] — todo
-
 <a id="atlas-kwavers-hephaestus-vis-104"></a>- [ATLAS-KWAVERS-HEPHAESTUS-VIS-104](backlog/atlas-kwavers-hephaestus-vis-104.md) — Reject uninitialized GPU visualization [patch] — review
 <a id="kw-aperture-001"></a>- [KW-APERTURE-001](backlog/kw-aperture-001.md) — Own finite circular-piston propagation [minor] — review
 <a id="kw-aperture-002"></a>- [KW-APERTURE-002](backlog/kw-aperture-002.md) — General planar aperture propagation [major] — review
@@ -54,3 +53,4 @@
 <a id="kw-subspace-jacobi-eigen"></a>- [KW-SUBSPACE-JACOBI-EIGEN](backlog/kw-subspace-jacobi-eigen.md) — MUSIC and ESMV beamformers still use the classical Jacobi Hermitian eigensolver [patch] [perf] — todo
 <a id="kw-test-cpml-thicknesses-budget"></a>- [KW-TEST-CPML-THICKNESSES-BUDGET](backlog/kw-test-cpml-thicknesses-budget.md) — `test_cpml_stable_across_thicknesses` runs 45 s against a 10 s slow bound [patch] [perf] — todo
 <a id="kw-wallclock-test-assertions"></a>- [KW-WALLCLOCK-TEST-ASSERTIONS](backlog/kw-wallclock-test-assertions.md) — Three test files still assert on elapsed time and sleep to synchronize [patch] — todo
+<a id="kw-bubble-conduction-sign"></a>- [KW-BUBBLE-CONDUCTION-SIGN](backlog/kw-bubble-conduction-sign.md) — restore the composed first-law sign [patch] — review
