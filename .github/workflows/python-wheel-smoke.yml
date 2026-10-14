@@ -112,15 +112,25 @@ jobs:
           profile: wheel-dev
           artifact: wheel-native-prerequisites-${{ github.sha }}
 
-  foundation-prerequisites:
+  core-prerequisites:
     needs: [sources, native-prerequisites]
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
     uses: ./.github/workflows/bounded-wheel-compile.yml
     with:
       sources: wheel-cargo-sources-${{ github.sha }}
       previous: wheel-native-prerequisites-${{ github.sha }}
+      artifact: wheel-core-prerequisites-${{ github.sha }}
+      packages: kwavers-core
+
+  foundation-prerequisites:
+    needs: [sources, core-prerequisites]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    uses: ./.github/workflows/bounded-wheel-compile.yml
+    with:
+      sources: wheel-cargo-sources-${{ github.sha }}
+      previous: wheel-core-prerequisites-${{ github.sha }}
       artifact: wheel-foundation-prerequisites-${{ github.sha }}
-      packages: kwavers-core kwavers-math kwavers-grid
+      packages: kwavers-math kwavers-grid
 
   medium-prerequisites:
     needs: [sources, foundation-prerequisites]

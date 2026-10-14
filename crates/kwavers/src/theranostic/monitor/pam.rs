@@ -19,6 +19,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array2, Array3};
+use std::borrow::Cow;
 
 /// Geometry of the monitored 2-D coronal (x–z) PAM image slice.
 #[derive(Clone, Debug)]
@@ -60,8 +61,24 @@ fn pixel_position(cfg: &PamMonitorConfig, ix: usize, iz: usize) -> [f64; 3] {
 
 /// Add a shifted channel to the per-time coherent sums in sample order.
 #[inline]
-fn add_channel<'a>(coherent: &mut [f64], samples: impl Iterator<Item = &'a f64>) {
-    for (sum, &sample) in coherent.iter_mut().zip(samples) {
+fn add_channel(coherent: &mut [f64], samples: &[f64]) {
+    let (sums, sum_tail) = coherent[..samples.len()].as_chunks_mut::<8>();
+    let (chunks, sample_tail) = samples.as_chunks::<8>();
+    // One checked chunk borrow amortizes iterator/bounds work across eight
+    // independent time samples; each sample's channel order stays unchanged.
+    for ([d0, d1, d2, d3, d4, d5, d6, d7], &[s0, s1, s2, s3, s4, s5, s6, s7]) in
+        sums.iter_mut().zip(chunks)
+    {
+        *d0 += s0;
+        *d1 += s1;
+        *d2 += s2;
+        *d3 += s3;
+        *d4 += s4;
+        *d5 += s5;
+        *d6 += s6;
+        *d7 += s7;
+    }
+    for (sum, &sample) in sum_tail.iter_mut().zip(sample_tail) {
         *sum += sample;
     }
 }
@@ -115,11 +132,14 @@ pub fn passive_acoustic_map(
                 })
         })
         .collect::<KwaversResult<Vec<_>>>()?;
-    // Contiguous rows can retain their bounded slice directly; strided rows
-    // keep the checked layout-aware access path.
+    // Retain contiguous rows without copying. Normalize other layouts once
+    // in logical sample order, so the same kernel serves both layouts.
     let row_slices = sensor_rows
         .iter()
-        .map(|row| row.as_slice())
+        .map(|row| match row.as_slice() {
+            Some(samples) => Cow::Borrowed(samples),
+            None => Cow::Owned(row.iter().copied().collect::<Vec<_>>()),
+        })
         .collect::<Vec<_>>();
     let mut tof = vec![0.0_f64; n_elements];
     let mut shifts = vec![0_usize; n_elements];
@@ -143,13 +163,9 @@ pub fn passive_acoustic_map(
             // channels in their original order; the final energy reduction
             // also keeps its original time order. Layout dispatch and delay
             // bounds are resolved once per channel instead of per sample.
-            for ((row, slice), &shift) in sensor_rows.iter().zip(&row_slices).zip(&shifts) {
+            for (samples, &shift) in row_slices.iter().zip(&shifts) {
                 if shift < n_samples {
-                    if let Some(samples) = slice {
-                        add_channel(&mut coherent, samples[shift..].iter());
-                    } else {
-                        add_channel(&mut coherent, row.iter().skip(shift));
-                    }
+                    add_channel(&mut coherent, &samples[shift..]);
                 }
             }
             let energy = coherent.iter().fold(0.0, |sum, &value| sum + value * value);
@@ -250,12 +266,21 @@ mod tests {
         let _test = tracing::info_span!("analytic_pam_energy").entered();
         let (data, strided, invalid_channels, elements, cfg) = {
             let _arrange = tracing::info_span!("arrange").entered();
-            let data =
-                Array3::from_shape_vec((2, 1, 4), vec![1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0])
-                    .unwrap();
+            let data = Array3::from_shape_vec(
+                (2, 1, 11),
+                (1..=11)
+                    .map(f64::from)
+                    .chain((1..=11).map(|value| 10.0 * f64::from(value)))
+                    .collect(),
+            )
+            .unwrap();
             let strided = Array3::new(
-                leto::Layout::try_new([2, 1, 4], [1, 8, 2], 0).unwrap(),
-                leto::VecStorage::new(vec![1.0, 10.0, 2.0, 20.0, 3.0, 30.0, 4.0, 40.0]),
+                leto::Layout::try_new([2, 1, 11], [1, 22, 2], 0).unwrap(),
+                leto::VecStorage::new(
+                    (1..=11)
+                        .flat_map(|value| [f64::from(value), 10.0 * f64::from(value)])
+                        .collect(),
+                ),
             )
             .unwrap();
             let elements = [[1.0, 0.0, 0.0], [2.0, 0.0, 0.0]];
@@ -266,7 +291,7 @@ mod tests {
                 nx: 3,
                 nz: 1,
             };
-            (data, strided, Array3::zeros((2, 0, 4)), elements, cfg)
+            (data, strided, Array3::zeros((2, 0, 11)), elements, cfg)
         };
         let (maps, invalid) = {
             let _act = tracing::info_span!("act").entered();
@@ -277,15 +302,16 @@ mod tests {
             )
         };
         let _assert = tracing::info_span!("assert").entered();
-        // Pixels 0/1 have advances [0,1]: sums [21,32,43,4].
-        // Pixel 2 has advances [1,0]: sums [12,23,34,40].
+        // Eleven samples exercise complete chunks and nonzero remainders.
+        // Pixels 0/1 have advances [0,1]: sum_{j=0..9}(21+11j)^2 + 11^2.
+        // Pixel 2 has advances [1,0]: sum_{j=0..9}(12+11j)^2 + 110^2.
         // All values and squares are exact binary64 integers, including the
         // final partially overlapping sample; no numerical tolerance enters.
         for map in maps {
             assert_eq!(map.shape(), [3, 1]);
-            assert_eq!(map[[0, 0]], 3330.0);
-            assert_eq!(map[[1, 0]], 3330.0);
-            assert_eq!(map[[2, 0]], 3429.0);
+            assert_eq!(map[[0, 0]], 59_806.0);
+            assert_eq!(map[[1, 0]], 59_806.0);
+            assert_eq!(map[[2, 0]], 59_905.0);
         }
         match invalid.unwrap_err() {
             KwaversError::InvalidInput(message) => {

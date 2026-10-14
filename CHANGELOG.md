@@ -15,7 +15,9 @@
 
 - [patch] PAM computes unchanged per-pixel sample delays once and retains
   checked contiguous or strided row borrows; a channel sweep preserves each
-  sample's addition order and emission synthesis retains checked writes. Exact
+  sample's addition order, checked eight-sample chunks amortize access overhead,
+  and emission synthesis retains checked writes. Contiguous rows remain
+  borrowed; strided rows normalize once in logical order. Exact
   delayed-Gaussian (documented intrinsic precision) and integer-energy regressions
   cover geometry and both layouts; localization fixtures and tolerances are unchanged.
 - [patch] Frequency-domain adjoint gradients retain a checked mutable view

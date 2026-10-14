@@ -17,7 +17,8 @@ Compilation jobs reuse matching revision, lock, compiler and profile artifacts
 while retaining their existing time limits. Complete benchmark compilation and
 execution run in separate mandatory jobs. PAM and adjoint gradients retain
 checked array borrows and sweep channels without changing numerical order or
-test scenarios. Emission synthesis retains a checked mutable view.
+test scenarios. Checked chunks retain sample order and strided RF rows normalize
+once; emission synthesis retains a checked mutable view.
 
 ![Theranostic feedback loop](docs/book/figures/theranostics_feedback_loop.svg)
 

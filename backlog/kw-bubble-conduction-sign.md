@@ -10,3 +10,5 @@
 - [patch] Facade/solver 3.0.1 retain checked numerical borrows; analytic Gaussian/PAM layout coverage and all 58 focused FD regressions pass. A channel sweep preserves per-time addition order; full-size Miri timing remains under investigation.
 - Corrected manylinux prerequisite routing: the pinned Maturin action selects Docker only for build/publish. Preparations now use build help after fail-fast real compilation; installed-wheel contracts remain mandatory.
 - Complete benchmark compilation and execution are independent mandatory bounded jobs. No selected program is omitted.
+- [patch] Full-size PAM Miri passes locally in 321.37 wall seconds with checked chunks; 11-sample exact integer oracles cover complete chunks, tails and strided layouts. Hosted six-case budgets remain red until final validation.
+- [patch] Complete benchmark CI now passes all eight programs/234 cases. Prepare remaining physics/solver/analysis features and separate wheel core from math/grid under unchanged five-minute bounds.
