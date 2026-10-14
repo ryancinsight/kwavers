@@ -12,3 +12,6 @@
 - Complete benchmark compilation and execution are independent mandatory bounded jobs. No selected program is omitted.
 - [patch] Full-size PAM Miri passes locally in 321.37 wall seconds with checked chunks; 11-sample exact integer oracles cover complete chunks, tails and strided layouts. Hosted six-case budgets remain red until final validation.
 - [patch] Complete benchmark CI now passes all eight programs/234 cases. Prepare remaining physics/solver/analysis features and separate wheel core from math/grid under unchanged five-minute bounds.
+- [patch] Per-receiver unscaled Born reuse passes all 58 focused finite-difference/source-fit cases, 41 facade and 1,104 solver tests (six old ignores); unchanged homogeneous Miri passes locally in 358.44 wall seconds. Public operators remain stateless; scratch remains O(voxels).
+- Additional combined backbone preparation introduced mismatched transitive/dev features and cancelled before benchmarks. Removed it to restore the prior successful complete benchmark chain; failed feature-identity experiments are preserved as evidence, not accepted validation.
+- Three-line CI resource proposal (full docs/wheels 10m, Miri cases 30m) is unapplied pending explicit approval. Existing checks, cases, tolerances, publication and merge holds remain.

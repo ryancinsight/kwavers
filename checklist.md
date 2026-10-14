@@ -8,3 +8,5 @@
 
 - [x] [patch] Preserve exact PAM energy for contiguous and strided rows; retain checked FD gradient borrows and pass 58 focused FD regressions; all 41 facade cases and 1,104 solver tests pass (six pre-existing ignores).
 - [x] [patch] Checked PAM chunks pass the unchanged full-size Miri fixture locally in 321.37 wall seconds; exact integer chunk/tail and strided regressions pass.
+- [x] [patch] Per-call FD receiver reuse preserves source-scaling and objective/gradient order; 58 focused, 41 facade and 1,104 full solver tests pass. Homogeneous full-size Miri passes locally in 358.44 wall seconds.
+- [ ] [patch] Decide bounded full-doctest/wheel/Miri resources; the three-line 10/30-minute proposal is reviewable and remains unapplied pending approval.

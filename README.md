@@ -18,7 +18,9 @@ while retaining their existing time limits. Complete benchmark compilation and
 execution run in separate mandatory jobs. PAM and adjoint gradients retain
 checked array borrows and sweep channels without changing numerical order or
 test scenarios. Checked chunks retain sample order and strided RF rows normalize
-once; emission synthesis retains a checked mutable view.
+once; emission synthesis retains a checked mutable view. Unscaled FD prediction
+and adjoint reuse per-receiver Green terms within the current stateless operator
+contract, retaining linear scratch space and the established objective reduction.
 
 ![Theranostic feedback loop](docs/book/figures/theranostics_feedback_loop.svg)
 

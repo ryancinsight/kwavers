@@ -8,17 +8,19 @@ use super::cbs::{
     solve_adjoint_volume_field_with_operator, solve_volume_field_with_operator,
     source_density_for_operator, GridSpec,
 };
-use super::forward::{incident_field, outgoing_green, validate_forward_inputs, voxel_centers};
+use super::forward::{incident_field, validate_forward_inputs, voxel_centers};
 use super::types::{Config, FrequencyObservation};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::NumericOps;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
-    complex_l2_objective, complex_source_scale, helmholtz_slowness_derivative,
+    complex_l2_objective, complex_source_scale,
 };
-use kwavers_transducer::transducers::ElementPosition;
 use leto::Array3;
+
+mod born_receiver;
+use born_receiver::BornReceiverTerms;
 
 pub(super) fn objective_and_gradient(
     slowness_s_per_m: &Array3<f64>,
@@ -283,16 +285,20 @@ fn accumulate_frequency_gradient(
     for transmit in 0..rows {
         let sources = acquisition.sources(transmit);
         let incident = incident_field(sources, &centers, reference_wavenumber, min_distance);
-        let predicted = predicted_row(
-            sources,
-            &centers,
-            &incident,
-            &potential,
-            acquisition.receivers(transmit),
+        let receivers = acquisition.receivers(transmit);
+        let terms = BornReceiverTerms {
+            centers: &centers,
+            incident: &incident,
+            potential: &potential,
+            slowness: &slowness,
+            omega,
             reference_wavenumber,
             min_distance,
             cell_volume,
-        );
+        };
+        // One receiver-sized scratch is independent of receiver count. Its
+        // terms are consumed immediately; the public operator stays stateless.
+        let mut green = Vec::with_capacity(centers.len());
         let observed = observation
             .observed_pressure
             .index_axis::<1>(0, transmit)
@@ -300,100 +306,46 @@ fn accumulate_frequency_gradient(
             .iter()
             .copied()
             .collect::<Vec<_>>();
-        let source_scale = if config.estimate_source_scaling {
-            complex_source_scale(&predicted, &observed)?
+        let (source_scale, mut scaled_prediction) = if config.estimate_source_scaling {
+            // The coupled source scale needs the complete prediction row.
+            let predicted = receivers
+                .iter()
+                .map(|&receiver| {
+                    terms.fill_green(receiver, &mut green);
+                    terms.predict(sources, receiver, &green)
+                })
+                .collect::<Vec<_>>();
+            let scale = complex_source_scale(&predicted, &observed)?;
+            (
+                scale,
+                predicted
+                    .iter()
+                    .map(|&value| scale * value)
+                    .collect::<Vec<_>>(),
+            )
         } else {
-            Complex64::new(1.0, 0.0)
+            (
+                Complex64::new(1.0, 0.0),
+                Vec::with_capacity(receivers.len()),
+            )
         };
-        let scaled_prediction = predicted
-            .iter()
-            .map(|&value| source_scale * value)
-            .collect::<Vec<_>>();
+        let mut gradient_view = gradient.view_mut();
+        for (receiver_index, &receiver) in receivers.iter().enumerate() {
+            terms.fill_green(receiver, &mut green);
+            // Without source fitting, prediction and adjoint consume the same
+            // Green terms once. Keep the scale multiplication and every
+            // receiver/voxel accumulation in their original order.
+            if !config.estimate_source_scaling {
+                scaled_prediction.push(source_scale * terms.predict(sources, receiver, &green));
+            }
+            let residual = scaled_prediction[receiver_index] - observed[receiver_index];
+            terms.accumulate_adjoint(&mut gradient_view, source_scale, residual, &green);
+        }
+        // Preserve the established objective's exact reduction contract.
         *objective += complex_l2_objective(&scaled_prediction, &observed)
             .expect("validated equal row lengths");
-        accumulate_row_adjoint(
-            gradient,
-            &centers,
-            &incident,
-            &slowness,
-            acquisition.receivers(transmit),
-            omega,
-            reference_wavenumber,
-            min_distance,
-            cell_volume,
-            source_scale,
-            &scaled_prediction,
-            &observed,
-        );
     }
     Ok(())
-}
-
-#[allow(clippy::too_many_arguments)]
-fn predicted_row(
-    sources: &[ElementPosition],
-    centers: &[(usize, ElementPosition)],
-    incident: &[Complex64],
-    potential: &[f64],
-    receivers: &[ElementPosition],
-    reference_wavenumber: f64,
-    min_distance: f64,
-    cell_volume: f64,
-) -> Vec<Complex64> {
-    receivers
-        .iter()
-        .map(|&receiver| {
-            let direct = sources
-                .iter()
-                .map(|&source| outgoing_green(source, receiver, reference_wavenumber, min_distance))
-                .sum::<Complex64>();
-            let scattered = centers
-                .iter()
-                .zip(incident.iter().zip(potential.iter()))
-                .map(|((_, point), (&incident_value, &potential_value))| {
-                    incident_value
-                        * outgoing_green(*point, receiver, reference_wavenumber, min_distance)
-                        * (potential_value * cell_volume)
-                })
-                .sum::<Complex64>();
-            direct + scattered
-        })
-        .collect()
-}
-
-#[allow(clippy::too_many_arguments)]
-fn accumulate_row_adjoint(
-    gradient: &mut Array3<f64>,
-    centers: &[(usize, ElementPosition)],
-    incident: &[Complex64],
-    slowness: &[f64],
-    receivers: &[ElementPosition],
-    omega: f64,
-    reference_wavenumber: f64,
-    min_distance: f64,
-    cell_volume: f64,
-    source_scale: Complex64,
-    predicted: &[Complex64],
-    observed: &[Complex64],
-) {
-    let [_nx, ny, nz] = gradient.shape();
-    let mut gradient_view = gradient.view_mut();
-    for (receiver_index, &receiver) in receivers.iter().enumerate() {
-        let residual = predicted[receiver_index] - observed[receiver_index];
-        for ((linear_index, point), (&incident_value, &slowness_value)) in
-            centers.iter().zip(incident.iter().zip(slowness.iter()))
-        {
-            let derivative = source_scale
-                * incident_value
-                * outgoing_green(*point, receiver, reference_wavenumber, min_distance)
-                * (helmholtz_slowness_derivative(omega, slowness_value) * cell_volume);
-            let ix = linear_index / (ny * nz);
-            let rem = linear_index % (ny * nz);
-            let iy = rem / nz;
-            let iz = rem % nz;
-            gradient_view[[ix, iy, iz]] += (derivative.conj() * residual).re;
-        }
-    }
 }
 
 fn apply_tikhonov(

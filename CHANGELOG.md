@@ -22,7 +22,9 @@
   cover geometry and both layouts; localization fixtures and tolerances are unchanged.
 - [patch] Frequency-domain adjoint gradients retain a checked mutable view
   instead of reborrowing the complete backing allocation per voxel. Arithmetic,
-  accumulation order and public operator contracts are unchanged.
+  accumulation order and public operator contracts are unchanged. Unscaled Born
+  prediction and adjoint share each receiver's Green terms in linear scratch
+  space; source fitting retains the complete coupled prediction row.
 
 ## Unreleased
 
