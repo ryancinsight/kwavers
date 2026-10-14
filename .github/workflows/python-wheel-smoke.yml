@@ -16,6 +16,7 @@ on:
       - .github/workflows/bounded-compile.yml
       - .github/workflows/bounded-wheel-compile.yml
       - scripts/prepare_foundation.py
+      - scripts/tests/test_python_wheel_artifacts.py
       - .github/workflows/python-wheel-smoke.yml
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
@@ -33,6 +34,7 @@ on:
       - .github/workflows/bounded-compile.yml
       - .github/workflows/bounded-wheel-compile.yml
       - scripts/prepare_foundation.py
+      - scripts/tests/test_python_wheel_artifacts.py
       - .github/workflows/python-wheel-smoke.yml
   # The full three-OS matrix below is a drift backstop, not a per-change
   # signal: the Windows and macOS wheel builds do not depend on which lines
@@ -75,6 +77,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
           toolchain: 1.97.0
+      - name: Verify wheel build-script handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/wheel-handoff-tests"
+          "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m pip install --disable-pip-version-check 'PyYAML==6.0.3'
+          "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m unittest discover -s source/scripts/tests -p test_python_wheel_artifacts.py -v
       - uses: ./source/.github/actions/restore-cargo-sources
         with:
           repository: source

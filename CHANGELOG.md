@@ -28,6 +28,14 @@
 
 ## Unreleased
 
+### Fixed
+
+- [patch] Both Python wheel consumers retain verified compiled build scripts
+  before Maturin deletes their original directory. A required five-test wheel
+  preflight verifies retention/restoration order, compiled contents, executable
+  modes, symlinks and missing-artifact rejection. Existing compiler/container
+  pins, provenance checks, numerical tolerances and execution limits remain.
+
 ### Changed
 
 - CI shares checksum-verified locked crate sources within a workflow run;

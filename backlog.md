@@ -53,4 +53,4 @@
 <a id="kw-subspace-jacobi-eigen"></a>- [KW-SUBSPACE-JACOBI-EIGEN](backlog/kw-subspace-jacobi-eigen.md) — MUSIC and ESMV beamformers still use the classical Jacobi Hermitian eigensolver [patch] [perf] — todo
 <a id="kw-test-cpml-thicknesses-budget"></a>- [KW-TEST-CPML-THICKNESSES-BUDGET](backlog/kw-test-cpml-thicknesses-budget.md) — `test_cpml_stable_across_thicknesses` runs 45 s against a 10 s slow bound [patch] [perf] — todo
 <a id="kw-wallclock-test-assertions"></a>- [KW-WALLCLOCK-TEST-ASSERTIONS](backlog/kw-wallclock-test-assertions.md) — Three test files still assert on elapsed time and sleep to synchronize [patch] — todo
-<a id="kw-bubble-conduction-sign"></a>- [KW-BUBBLE-CONDUCTION-SIGN](backlog/kw-bubble-conduction-sign.md) — restore the composed first-law sign [patch] — review
+<a id="kw-bubble-conduction-sign"></a>- [KW-BUBBLE-CONDUCTION-SIGN](backlog/kw-bubble-conduction-sign.md) — restore the composed first-law sign and verify wheel artifact handoff [patch] — review

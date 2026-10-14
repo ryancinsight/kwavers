@@ -6146,7 +6146,11 @@ The following workspace measurement found 69 additional solver panic-doc sites; 
 ## KW-BUBBLE-CONDUCTION-SIGN [patch] — 2026-10-14
 Reproduced on main `99a6185d`: outward-positive conductive power is added to bubble internal energy; the stationary hot-bubble Euler step heats by 2 K instead of cooling by 2 K.
 Physics 3.0.1 subtracts that power in the shared balance. Five analytic regressions cover both callers, hot/cold/equilibrium, unchanged pressure work and thermal disabling; the native physics suite passes 1,584 tests with zero skips.
-Residual checks: three native core lint sites match main; bounded jobs reuse same-run locked sources/compiled artifacts. False-green Miri selections are repaired; 33/39 original hosted cases pass and six time out. Facade/solver 3.0.1 retain checked PAM rows/gradient views with exact energy/Gaussian coverage, 41 facade and 1,104 solver tests passing (six pre-existing solver ignores). Complete benchmarks pass eight programs/234 cases; PAM checked chunks pass Miri locally in 321 wall seconds. Per-call receiver reuse passes native suites and full homogeneous Miri locally in 358s. Hosted d0bc passes 37/41 Miri cases; four cancel, and consumer builds remain over budget. Combined backbone regression is removed; an unapplied 10/30-minute resource patch awaits approval. Merge is held for publication/Pages decisions; ambient floor stays unchanged.
+Residual checks: three native core lint sites match main; bounded jobs reuse same-run locked sources/compiled artifacts. False-green Miri selections are repaired. Facade/solver 3.0.1 retain checked PAM rows/gradient views with exact energy/Gaussian coverage, 41 facade and 1,104 solver tests passing (six pre-existing solver ignores). Complete benchmarks pass eight programs/234 cases; PAM checked chunks pass Miri locally in 321 wall seconds. Per-call receiver reuse passes native suites and full homogeneous Miri locally in 358s.
+
+Wheel handoff closure at exact source `2eac1317`: both consumers save matching compiled build scripts outside Maturin's deleted `target/debug/build` directory and restore them inside the unchanged workspace mount. Revision/lock/compiler/profile checks, pinned manylinux image, runner ownership repair, prerequisite dependencies and five-minute pull-request bounds remain intact. Five required preflight regressions verify ordering, compiled contents, executable modes, links and missing-artifact rejection; the original `d0bc1f3c` k-Wave workflow fails the two positive handoff regressions.
+
+Hosted wheel run `38566712505` builds and installs both wheels and passes 26 boundary, three k-Wave and 13 export-inventory tests (three existing optional-feature skips). Benchmark run `38566712405` and full doctests pass. Pipeline `38566713160` is cancelled with 38/41 passing Miri cases and three cases reaching the 15-minute job limit; its CI gate fails and Architecture gate passes. Final-head aggregate success remains unestablished. Remaining Miri resource/performance work is a separate increment; this wheel correction changes no scientific code, lockfile, tolerance or timeout. Merge, publication and deployment remain excluded.
 
 ## `missing_panics_doc` solver slice — 2026-08-21
 
@@ -6194,4 +6198,3 @@ pass 8/8 (1 ignored); and rustdoc passes with `RUSTDOCFLAGS=-D warnings`.
 The refreshed workspace measurement after this merge found three
 `missing_panics_doc` sites in the `kwavers` facade; that package is the current
 ratchet slice.
-
