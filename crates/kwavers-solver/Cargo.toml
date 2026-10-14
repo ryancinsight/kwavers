@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-solver"
-version = "3.0.0"
+version = "3.0.1"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]

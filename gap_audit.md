@@ -6146,7 +6146,7 @@ The following workspace measurement found 69 additional solver panic-doc sites; 
 ## KW-BUBBLE-CONDUCTION-SIGN [patch] — 2026-10-14
 Reproduced on main `99a6185d`: outward-positive conductive power is added to bubble internal energy; the stationary hot-bubble Euler step heats by 2 K instead of cooling by 2 K.
 Physics 3.0.1 subtracts that power in the shared balance. Five analytic regressions cover both callers, hot/cold/equilibrium, unchanged pressure work and thermal disabling; the native physics suite passes 1,584 tests with zero skips.
-Residual checks: three native core lint sites match main; hosted compile timeouts require same-run locked source reuse. Miri originally selects zero tests and ignores an invalid command; repaired selections must execute and errors must fail. Merge remains held for publication/Pages side effects; ambient floor stays unchanged.
+Residual checks: three native core lint sites match main; bounded jobs reuse same-run locked sources/compiled artifacts. False-green Miri selections are repaired; 33/39 original hosted cases pass and six time out. Facade/solver 3.0.1 retain checked PAM rows/gradient views with exact layout coverage and 58 FD regressions passing. Complete benchmark build/run stages and actual fail-fast Docker prerequisites require final hosted verification. Merge is held for publication/Pages decisions; ambient floor stays unchanged.
 
 ## `missing_panics_doc` solver slice — 2026-08-21
 

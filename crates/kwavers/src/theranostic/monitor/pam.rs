@@ -87,7 +87,32 @@ pub fn passive_acoustic_map(
     }
 
     let mut map = Array2::<f64>::zeros((cfg.nx, cfg.nz));
+    if cfg.nx == 0 || cfg.nz == 0 || n_samples == 0 {
+        return Ok(map);
+    }
+    // Borrow the strided backing once. Array indexing otherwise reacquires
+    // the complete storage slice for every sample; the retained view preserves
+    // arbitrary layouts and the same bounds-checked element access.
+    let sensor_view = sensor_data.view();
+    let sensor_rows = (0..n_elements)
+        .map(|i| {
+            sensor_view
+                .slice_with::<1>(&[
+                    leto::SliceArg::Index(i as isize),
+                    leto::SliceArg::Index(0),
+                    leto::SliceArg::All,
+                ])
+                .expect("PAM uses the first channel")
+        })
+        .collect::<Vec<_>>();
+    // Contiguous rows can retain their bounded slice directly; strided rows
+    // keep the checked layout-aware access path.
+    let row_slices = sensor_rows
+        .iter()
+        .map(|row| row.as_slice())
+        .collect::<Vec<_>>();
     let mut tof = vec![0.0_f64; n_elements];
+    let mut shifts = vec![0_usize; n_elements];
     for ix in 0..cfg.nx {
         for iz in 0..cfg.nz {
             let p = pixel_position(cfg, ix, iz);
@@ -98,14 +123,21 @@ pub fn passive_acoustic_map(
                 tof_min = tof_min.min(t);
             }
             // Per-channel sample advance to align this pixel's emission to t=0.
+            // Geometry and rounded advances are constant across time samples.
+            for (shift, &t) in shifts.iter_mut().zip(&tof) {
+                *shift = ((t - tof_min) * sample_rate).round() as usize;
+            }
             let mut energy = 0.0_f64;
             for o in 0..n_samples {
                 let mut coherent = 0.0_f64;
-                for (i, &t) in tof.iter().enumerate() {
-                    let shift = ((t - tof_min) * sample_rate).round() as usize;
+                for (i, &shift) in shifts.iter().enumerate() {
                     let idx = o + shift;
                     if idx < n_samples {
-                        coherent += sensor_data[[i, 0, idx]];
+                        coherent += if let Some(samples) = row_slices[i] {
+                            samples[idx]
+                        } else {
+                            sensor_rows[i][idx]
+                        };
                     }
                 }
                 energy += coherent * coherent;
@@ -157,6 +189,52 @@ pub fn synthesize_emission(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn analytic_relative_delays_preserve_coherent_time_energy() {
+        let _capture = tracing::subscriber::set_default(
+            tracing_subscriber::fmt()
+                .with_test_writer()
+                .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
+                .finish(),
+        );
+        let _test = tracing::info_span!("analytic_pam_energy").entered();
+        let (data, strided, elements, cfg) = {
+            let _arrange = tracing::info_span!("arrange").entered();
+            let data =
+                Array3::from_shape_vec((2, 1, 4), vec![1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0])
+                    .unwrap();
+            let strided = Array3::new(
+                leto::Layout::try_new([2, 1, 4], [1, 8, 2], 0).unwrap(),
+                leto::VecStorage::new(vec![1.0, 10.0, 2.0, 20.0, 3.0, 30.0, 4.0, 40.0]),
+            )
+            .unwrap();
+            let elements = [[1.0, 0.0, 0.0], [2.0, 0.0, 0.0]];
+            let cfg = PamMonitorConfig {
+                sound_speed_m_s: 1.0,
+                origin_m: [0.0; 3],
+                spacing_m: 1.0,
+                nx: 3,
+                nz: 1,
+            };
+            (data, strided, elements, cfg)
+        };
+        let maps = {
+            let _act = tracing::info_span!("act").entered();
+            [data, strided].map(|data| passive_acoustic_map(&data, &elements, 1.0, &cfg).unwrap())
+        };
+        let _assert = tracing::info_span!("assert").entered();
+        // Pixels 0/1 have advances [0,1]: sums [21,32,43,4].
+        // Pixel 2 has advances [1,0]: sums [12,23,34,40].
+        // All values and squares are exact binary64 integers, including the
+        // final partially overlapping sample; no numerical tolerance enters.
+        for map in maps {
+            assert_eq!(map.shape(), [3, 1]);
+            assert_eq!(map[[0, 0]], 3330.0);
+            assert_eq!(map[[1, 0]], 3330.0);
+            assert_eq!(map[[2, 0]], 3429.0);
+        }
+    }
 
     /// Ring of `n` elements in the x–z plane at y = `y_slice`, radius `r`,
     /// centred at `(cx, y_slice, cz)`.

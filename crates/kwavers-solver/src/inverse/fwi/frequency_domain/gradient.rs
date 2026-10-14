@@ -243,6 +243,9 @@ fn accumulate_dense_cbs_slowness_gradient(
     slowness_derivative_factor: f64,
 ) {
     let [_nx, ny, nz] = gradient.shape();
+    // Retain one checked strided borrow rather than reborrowing the entire
+    // backing allocation for each voxel update.
+    let mut gradient_view = gradient.view_mut();
     for (linear_index, ((&forward_value, &adjoint_value), &slowness_value)) in forward_field
         .iter()
         .zip(green_adjoint.iter())
@@ -253,7 +256,7 @@ fn accumulate_dense_cbs_slowness_gradient(
         let rem = linear_index % (ny * nz);
         let iy = rem / nz;
         let iz = rem % nz;
-        gradient[[ix, iy, iz]] -= (adjoint_value.conj() * forward_value).re
+        gradient_view[[ix, iy, iz]] -= (adjoint_value.conj() * forward_value).re
             * (slowness_derivative_factor * slowness_value);
     }
 }
@@ -374,6 +377,7 @@ fn accumulate_row_adjoint(
     observed: &[Complex64],
 ) {
     let [_nx, ny, nz] = gradient.shape();
+    let mut gradient_view = gradient.view_mut();
     for (receiver_index, &receiver) in receivers.iter().enumerate() {
         let residual = predicted[receiver_index] - observed[receiver_index];
         for ((linear_index, point), (&incident_value, &slowness_value)) in
@@ -387,7 +391,7 @@ fn accumulate_row_adjoint(
             let rem = linear_index % (ny * nz);
             let iy = rem / nz;
             let iz = rem % nz;
-            gradient[[ix, iy, iz]] += (derivative.conj() * residual).re;
+            gradient_view[[ix, iy, iz]] += (derivative.conj() * residual).re;
         }
     }
 }

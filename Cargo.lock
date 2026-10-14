@@ -2725,7 +2725,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -3205,7 +3205,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-solver"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "aequitas",
  "anyhow",

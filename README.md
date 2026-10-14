@@ -1,6 +1,6 @@
 # Kwavers 🌀
 
-[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-3.0.1-blue.svg)](https://github.com/kwavers/kwavers)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-available-blue.svg)](https://docs.rs/kwavers)
 [![Rust](https://img.shields.io/badge/rust-2021+-orange.svg)](https://www.rust-lang.org/)
@@ -14,7 +14,9 @@ temperature-update paths follow this convention in `kwavers-physics` 3.0.1.
 CI transports the locked dependency graph in a checksum-verified source bundle.
 Miri requires nonempty passing harnesses and gates every inventoried case.
 Compilation jobs reuse matching revision, lock, compiler and profile artifacts
-while retaining their existing time limits.
+while retaining their existing time limits. Complete benchmark compilation and
+execution run in separate mandatory jobs. PAM and adjoint gradients retain
+checked array borrows without changing numerical order or test scenarios.
 
 ![Theranostic feedback loop](docs/book/figures/theranostics_feedback_loop.svg)
 

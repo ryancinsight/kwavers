@@ -9,6 +9,17 @@
   and temperature-update callers use the corrected first-law sign. The heat
   transfer API's existing outward-positive convention is preserved.
 
+## kwavers and kwavers-solver 3.0.1
+
+### Changed
+
+- [patch] PAM computes unchanged per-pixel sample delays once and retains
+  checked contiguous or strided row borrows. An exact integer-energy regression
+  covers both layouts; localization fixtures and tolerances are unchanged.
+- [patch] Frequency-domain adjoint gradients retain a checked mutable view
+  instead of reborrowing the complete backing allocation per voxel. Arithmetic,
+  accumulation order and public operator contracts are unchanged.
+
 ## Unreleased
 
 ### Changed

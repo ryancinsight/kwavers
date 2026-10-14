@@ -17,6 +17,7 @@ on:
       - .github/actions/restore-compiled/**
       - .github/workflows/bounded-compile.yml
       - scripts/prepare_foundation.py
+      - scripts/benchmark_artifacts.py
       - .github/workflows/benchmark-regression.yml
   workflow_dispatch:
 
@@ -61,10 +62,10 @@ jobs:
       profile: dev
       features: default,plotting
 
-  benchmark-smoke:
+  benchmark-compile:
     needs: [sources, prerequisites]
     if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
-    name: complete benchmark smoke
+    name: compile complete benchmark smoke
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
     env:
@@ -208,26 +209,56 @@ jobs:
             fi
           done
 
-      - name: Execute every benchmark once
+      - name: Compile every eligible benchmark
         shell: bash
         run: |
           set -euo pipefail
-          status=0
-          cargo bench \
-            --manifest-path Cargo.toml \
-            --target-dir "$BENCH_TARGET_DIR" \
-            --locked \
-            --profile dev \
-            --package kwavers \
-            --features plotting \
-            --benches \
-            -- \
-            --test || status=$?
-          exit "$status"
+          cargo bench --manifest-path Cargo.toml --target-dir "$BENCH_TARGET_DIR" \
+            --locked --profile dev --package kwavers --features plotting --benches \
+            --no-run --message-format=json > "$RUNNER_TEMP/benchmark-artifacts.jsonl"
+          python3 scripts/benchmark_artifacts.py pack \
+            --artifacts "$RUNNER_TEMP/benchmark-artifacts.jsonl" \
+            --output "$RUNNER_TEMP/benchmarks.tar.gz"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: complete-benchmarks-${{ github.sha }}
+          path: ${{ runner.temp }}/benchmarks.tar.gz
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
 
       - name: sccache stats
         if: always()
         run: sccache --show-stats
+
+  benchmark-smoke:
+    needs: benchmark-compile
+    if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    name: complete benchmark smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    steps:
+      - name: Require complete successful compilation
+        env:
+          BUILD_RESULT: ${{ needs.benchmark-compile.result }}
+        run: test "$BUILD_RESULT" = success
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: complete-benchmarks-${{ github.sha }}
+          path: ${{ runner.temp }}/benchmarks
+      - name: Execute every compiled target once
+        run: python3 scripts/benchmark_artifacts.py run --archive "$RUNNER_TEMP/benchmarks/benchmarks.tar.gz"
 
   # The double-checkout, double-compile diagnostic this workflow used to run
   # on every pull request (see the header comment). It never fails: its only

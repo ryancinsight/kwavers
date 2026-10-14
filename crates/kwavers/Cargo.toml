@@ -1,6 +1,6 @@
 [package]
 name = "kwavers"
-version = "3.0.0"
+version = "3.0.1"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -117,6 +117,7 @@ consus-io = { workspace = true }
 flate2 = { workspace = true }
 
 [dev-dependencies]
+tracing-subscriber = { version = "0.3", features = ["fmt"] }
 # Minimal dev dependencies for testing only
 hyperion = { workspace = true }
 # Enable kwavers-solver's `test-util` feature so cross-crate test helpers

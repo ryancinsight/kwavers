@@ -70,6 +70,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: source
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
@@ -87,9 +88,13 @@ jobs:
           manylinux: '2_17'
           container: quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5
           docker-options: -e CARGO_HOME=/root/.cargo
-          command: --version
+          # The action selects Docker only for build/publish. --help runs
+          # after the mandatory real prerequisite command; this is not a wheel.
+          command: build
+          args: --help
           sccache: true
           before-script-linux: |
+            set -euo pipefail
             cp "$GITHUB_WORKSPACE/.ci-cargo/home/config.toml" /root/.cargo/config.toml
             cargo build --locked --profile dev --target x86_64-unknown-linux-gnu               --target-dir "$GITHUB_WORKSPACE/target"               --manifest-path source/Cargo.toml -p aws-lc-sys
       - uses: ./source/.github/actions/prepare-compiled
@@ -151,6 +156,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: source
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Set up Python 3.10
@@ -188,7 +194,7 @@ jobs:
           # Rustup's container bootstrap expects its default bin directory.
           # Install normally, then configure the restored sources before Cargo.
           docker-options: ${{ github.event_name == 'pull_request' && '-e CARGO_HOME=/root/.cargo' || '' }}
-          before-script-linux: ${{ github.event_name == 'pull_request' && format('cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml', github.workspace) || '' }}
+          before-script-linux: ${{ github.event_name == 'pull_request' && format('set -e; cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml', github.workspace) || '' }}
           container: ${{ github.event_name == 'pull_request' && 'quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5' || '' }}
           target: ${{ matrix.os == 'macos-latest' && 'universal2-apple-darwin' || 'x86_64' }}
           manylinux: ${{ matrix.os == 'ubuntu-latest' && '2_17' || 'off' }}
@@ -237,6 +243,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: source
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Set up Python 3.10
@@ -304,7 +311,7 @@ jobs:
           maturin-version: v1.14.1
           rust-toolchain: 1.97.0
           docker-options: ${{ github.event_name == 'pull_request' && '-e CARGO_HOME=/root/.cargo' || '' }}
-          before-script-linux: ${{ github.event_name == 'pull_request' && format('cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml', github.workspace) || '' }}
+          before-script-linux: ${{ github.event_name == 'pull_request' && format('set -e; cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml', github.workspace) || '' }}
           container: ${{ github.event_name == 'pull_request' && 'quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5' || '' }}
           target: x86_64
           manylinux: "2_17"

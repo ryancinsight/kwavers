@@ -6,4 +6,7 @@
 - Merge held: main triggers package-publication attempts and book deployment; release/deployment decisions are pending.
 - Validation repair: reuse same-run locked, checksum-verified crate sources; preserve all compile bounds and selected tests/benchmarks.
 - Miri selection/error repair: current simulation configuration tests and the complete facade harness; no ignored errors or successful empty harnesses. Hosted final validation remains pending.
-- Bounded compilation repair prepares real native TLS and feature-matched foundation artifacts; Miri inventories and independently gates all 39 facade cases without omissions.
+- Bounded compilation repair prepares real native TLS and feature-matched foundation artifacts; Miri inventories and independently gates the complete facade inventory without omissions.
+- [patch] Facade/solver 3.0.1 retain checked numerical borrows; analytic PAM layout coverage and all 58 focused FD regressions pass. Full-size Miri runtime remains under investigation.
+- Corrected manylinux prerequisite routing: the pinned Maturin action selects Docker only for build/publish. Preparations now use build help after fail-fast real compilation; installed-wheel contracts remain mandatory.
+- Complete benchmark compilation and execution are independent mandatory bounded jobs. No selected program is omitted.

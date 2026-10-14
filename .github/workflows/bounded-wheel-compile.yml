@@ -27,6 +27,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: source
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
@@ -52,8 +53,12 @@ jobs:
           container: quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5
           docker-options: -e CARGO_HOME=/root/.cargo -e PREPARE_PACKAGES
           sccache: true
-          command: --version
+          # The action selects Docker only for build/publish. --help runs
+          # after the mandatory real prerequisite command; this is not a wheel.
+          command: build
+          args: --help
           before-script-linux: |
+            set -euo pipefail
             cp "$GITHUB_WORKSPACE/.ci-cargo/home/config.toml" /root/.cargo/config.toml
             read -r -a packages <<< "$PREPARE_PACKAGES"
             CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target" python3 source/scripts/prepare_foundation.py \
