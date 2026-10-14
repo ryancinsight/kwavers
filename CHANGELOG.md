@@ -14,8 +14,10 @@
 ### Changed
 
 - [patch] PAM computes unchanged per-pixel sample delays once and retains
-  checked contiguous or strided row borrows. An exact integer-energy regression
-  covers both layouts; localization fixtures and tolerances are unchanged.
+  checked contiguous or strided row borrows; a channel sweep preserves each
+  sample's addition order and emission synthesis retains checked writes. Exact
+  delayed-Gaussian (documented intrinsic precision) and integer-energy regressions
+  cover geometry and both layouts; localization fixtures and tolerances are unchanged.
 - [patch] Frequency-domain adjoint gradients retain a checked mutable view
   instead of reborrowing the complete backing allocation per voxel. Arithmetic,
   accumulation order and public operator contracts are unchanged.

@@ -58,6 +58,14 @@ fn pixel_position(cfg: &PamMonitorConfig, ix: usize, iz: usize) -> [f64; 3] {
     ]
 }
 
+/// Add a shifted channel to the per-time coherent sums in sample order.
+#[inline]
+fn add_channel<'a>(coherent: &mut [f64], samples: impl Iterator<Item = &'a f64>) {
+    for (sum, &sample) in coherent.iter_mut().zip(samples) {
+        *sum += sample;
+    }
+}
+
 /// Time-exposure-acoustics passive map over the monitored slice.
 ///
 /// `sensor_data` is `(n_elements, 1, n_samples)` passively-recorded RF; the map
@@ -115,6 +123,7 @@ pub fn passive_acoustic_map(
         .collect::<Vec<_>>();
     let mut tof = vec![0.0_f64; n_elements];
     let mut shifts = vec![0_usize; n_elements];
+    let mut coherent = vec![0.0_f64; n_samples];
     for ix in 0..cfg.nx {
         for iz in 0..cfg.nz {
             let p = pixel_position(cfg, ix, iz);
@@ -129,21 +138,21 @@ pub fn passive_acoustic_map(
             for (shift, &t) in shifts.iter_mut().zip(&tof) {
                 *shift = ((t - tof_min) * sample_rate).round() as usize;
             }
-            let mut energy = 0.0_f64;
-            for o in 0..n_samples {
-                let mut coherent = 0.0_f64;
-                for (i, &shift) in shifts.iter().enumerate() {
-                    let idx = o + shift;
-                    if idx < n_samples {
-                        coherent += if let Some(samples) = row_slices[i] {
-                            samples[idx]
-                        } else {
-                            sensor_rows[i][idx]
-                        };
+            coherent.fill(0.0);
+            // Sweep each channel's samples once. Each time sample still adds
+            // channels in their original order; the final energy reduction
+            // also keeps its original time order. Layout dispatch and delay
+            // bounds are resolved once per channel instead of per sample.
+            for ((row, slice), &shift) in sensor_rows.iter().zip(&row_slices).zip(&shifts) {
+                if shift < n_samples {
+                    if let Some(samples) = slice {
+                        add_channel(&mut coherent, samples[shift..].iter());
+                    } else {
+                        add_channel(&mut coherent, row.iter().skip(shift));
                     }
                 }
-                energy += coherent * coherent;
             }
+            let energy = coherent.iter().fold(0.0, |sum, &value| sum + value * value);
             map[[ix, iz]] = energy;
         }
     }
@@ -175,6 +184,7 @@ pub fn synthesize_emission(
     }
     let n = element_positions.len();
     let mut data = Array3::<f64>::zeros((n, 1, n_samples));
+    let mut data_view = data.view_mut();
     for (i, &e) in element_positions.iter().enumerate() {
         // 1/r geometric spreading + TOF delay.
         let r = distance(e, source_m).max(0.5 / sample_rate * sound_speed_m_s);
@@ -182,7 +192,7 @@ pub fn synthesize_emission(
         let amplitude = 1.0 / r;
         for t in 0..n_samples {
             let u = (t as f64 - centre) / pulse_halfwidth_samples;
-            data[[i, 0, t]] = amplitude * (-u * u).exp();
+            data_view[[i, 0, t]] = amplitude * (-u * u).exp();
         }
     }
     Ok(data)
@@ -193,9 +203,46 @@ mod tests {
     use super::*;
 
     #[test]
+    fn synthesized_samples_match_delayed_gaussian_with_geometric_spreading() {
+        let _capture = tracing::subscriber::set_default(
+            tracing_subscriber::fmt()
+                .without_time()
+                .with_test_writer()
+                .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
+                .finish(),
+        );
+        let _test = tracing::info_span!("analytic_pam_emission").entered();
+        let elements = {
+            let _arrange = tracing::info_span!("arrange").entered();
+            [[1.0, 0.0, 0.0], [2.0, 0.0, 0.0]]
+        };
+        let data = {
+            let _act = tracing::info_span!("act").entered();
+            synthesize_emission([0.0; 3], &elements, 1.0, 1.0, 4, 1.0).unwrap()
+        };
+        let _assert = tracing::info_span!("assert").entered();
+        // For c=f_s=width=1, s_i[t]=exp(-(t-r_i)^2)/r_i.
+        // Correctly rounded analytic e^-1 and e^-4 references. Rust exp has
+        // unspecified precision; Miri deliberately perturbs each call by up
+        // to four ULP (rust-lang/miri src/math.rs::host_unary_float_op).
+        // One host-libm rounding ULP plus those four gives this five-ULP
+        // bound. Halving is exact, and the exp(0) peaks are checked exactly.
+        let e1 = 0.367_879_441_171_442_33_f64;
+        let e4 = 0.018_315_638_888_734_18_f64;
+        assert_eq!(data.shape(), [2, 1, 4]);
+        assert_eq!(data[[0, 0, 1]], 1.0);
+        assert_eq!(data[[1, 0, 2]], 0.5);
+        let expected = [e1, 1.0, e1, e4, 0.5 * e4, 0.5 * e1, 0.5, 0.5 * e1];
+        for (&actual, reference) in data.as_slice().unwrap().iter().zip(expected) {
+            assert!(actual.to_bits().abs_diff(reference.to_bits()) <= 5);
+        }
+    }
+
+    #[test]
     fn analytic_relative_delays_preserve_coherent_time_energy() {
         let _capture = tracing::subscriber::set_default(
             tracing_subscriber::fmt()
+                .without_time()
                 .with_test_writer()
                 .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
                 .finish(),

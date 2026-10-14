@@ -91,10 +91,14 @@ jobs:
           # The action selects Docker only for build/publish. --help runs
           # after the mandatory real prerequisite command; this is not a wheel.
           command: build
-          args: --help
+          args: --help --target-dir ${{ github.workspace }}/.ci-cargo/helper-target
           sccache: true
           before-script-linux: |
             set -euo pipefail
+            # Maturin installs its cache wrapper after before-script. Real
+            # Cargo commands here require the same wrapper first.
+            uv tool install 'sccache==0.16.0'
+            sccache --version
             cp "$GITHUB_WORKSPACE/.ci-cargo/home/config.toml" /root/.cargo/config.toml
             cargo build --locked --profile dev --target x86_64-unknown-linux-gnu               --target-dir "$GITHUB_WORKSPACE/target"               --manifest-path source/Cargo.toml -p aws-lc-sys
       - uses: ./source/.github/actions/prepare-compiled
@@ -186,6 +190,16 @@ jobs:
           profile: wheel-dev
           artifact: wheel-prerequisites-${{ github.sha }}
 
+      # Maturin deletes target/debug/build before entering its container.
+      # Preserve the exact restored build-script binaries so their deletion
+      # cannot trigger another cold native dependency build.
+      - name: Retain matching compiled build scripts
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -a target/debug/build .ci-cargo/wheel-build-scripts
+
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
@@ -194,7 +208,7 @@ jobs:
           # Rustup's container bootstrap expects its default bin directory.
           # Install normally, then configure the restored sources before Cargo.
           docker-options: ${{ github.event_name == 'pull_request' && '-e CARGO_HOME=/root/.cargo' || '' }}
-          before-script-linux: ${{ github.event_name == 'pull_request' && format('set -e; cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml', github.workspace) || '' }}
+          before-script-linux: ${{ github.event_name == 'pull_request' && format('set -e; cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml; mkdir -p "{0}/target/debug/build"; cp -a "{0}/.ci-cargo/wheel-build-scripts/." "{0}/target/debug/build/"', github.workspace) || '' }}
           container: ${{ github.event_name == 'pull_request' && 'quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5' || '' }}
           target: ${{ matrix.os == 'macos-latest' && 'universal2-apple-darwin' || 'x86_64' }}
           manylinux: ${{ matrix.os == 'ubuntu-latest' && '2_17' || 'off' }}
@@ -311,7 +325,7 @@ jobs:
           maturin-version: v1.14.1
           rust-toolchain: 1.97.0
           docker-options: ${{ github.event_name == 'pull_request' && '-e CARGO_HOME=/root/.cargo' || '' }}
-          before-script-linux: ${{ github.event_name == 'pull_request' && format('set -e; cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml', github.workspace) || '' }}
+          before-script-linux: ${{ github.event_name == 'pull_request' && format('set -e; cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml; mkdir -p "{0}/target/debug/build"; cp -a "{0}/.ci-cargo/wheel-build-scripts/." "{0}/target/debug/build/"', github.workspace) || '' }}
           container: ${{ github.event_name == 'pull_request' && 'quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5' || '' }}
           target: x86_64
           manylinux: "2_17"

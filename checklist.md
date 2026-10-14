@@ -6,4 +6,4 @@
 
 - [ ] KW-BUBBLE-CONDUCTION-SIGN CI repair: execute bounded full doctests, all benchmarks, installed-wheel contracts and real nonempty Miri harnesses on the final revision.
 
-- [x] [patch] Preserve exact PAM energy for contiguous and strided rows; retain checked FD gradient borrows and pass 58 focused FD regressions.
+- [x] [patch] Preserve exact PAM energy for contiguous and strided rows; retain checked FD gradient borrows and pass 58 focused FD regressions; all 41 facade cases and 1,104 solver tests pass (six pre-existing ignores).

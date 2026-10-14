@@ -56,9 +56,13 @@ jobs:
           # The action selects Docker only for build/publish. --help runs
           # after the mandatory real prerequisite command; this is not a wheel.
           command: build
-          args: --help
+          args: --help --target-dir ${{ github.workspace }}/.ci-cargo/helper-target
           before-script-linux: |
             set -euo pipefail
+            # Maturin installs its cache wrapper after before-script. Real
+            # Cargo commands here require the same wrapper first.
+            uv tool install 'sccache==0.16.0'
+            sccache --version
             cp "$GITHUB_WORKSPACE/.ci-cargo/home/config.toml" /root/.cargo/config.toml
             read -r -a packages <<< "$PREPARE_PACKAGES"
             CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target" python3 source/scripts/prepare_foundation.py \
