@@ -190,9 +190,10 @@ jobs:
   # together they are ~18m sequential (strict 3.3m + ratchet 2.0m + lib suite
   # 12.8m, run 37653456632), which no single pull-request job can carry under
   # the 5-minute budget. What remains here is the script-fast preflight
-  # (layering, fmt, xtask audits), the rustdoc build, and the full-feature
-  # doctests; the feature-combination builds and the integration script run on
-  # pushes to main only, where the budget does not apply.
+  # (layering, fmt, xtask audits) and the rustdoc build; full-feature doctests
+  # have their own equally bounded job below. The feature-combination builds
+  # and the integration script run on pushes to main only, where the budget
+  # does not apply.
   architecture-checks:
     needs: changes
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
@@ -426,10 +427,44 @@ jobs:
         cargo doc --locked --workspace --exclude kwavers-python --no-deps
         RUSTDOCFLAGS="-D warnings" cargo doc --locked -p kwavers --no-default-features --features full --no-deps
 
-    # Default-feature doctests already run in CI's stable Build & Test job.
-    # Keeping the full-feature variant beside the full-feature rustdoc build
-    # avoids rebuilding that disjoint feature graph after the 5,759-test
-    # coverage suite while preserving both doctest configurations.
+    - name: sccache stats
+      if: always()
+      run: sccache --show-stats
+
+  # The audit-tool build, two rustdoc configurations and full-feature doctest
+  # compilation exceeded the five-minute preflight together (run 38524672691).
+  # Keep the exact doctest command and its own five-minute pull-request bound;
+  # the Architecture gate requires both jobs, including cancellation failures.
+  full-feature-doctests:
+    needs: changes
+    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
+    name: Full-feature doc tests
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 90 }}
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+    - name: Install system dependencies
+      uses: ./.github/actions/install-system-dependencies
+      with:
+        packages: libfontconfig1-dev
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+      with:
+        toolchain: 1.97.0
+
+    - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      with:
+        shared-key: kwavers-full-doctests
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+
     - name: Run full-feature doc tests
       run: cargo test --locked -p kwavers --doc --no-default-features --features full
 
@@ -1321,6 +1356,7 @@ jobs:
       - changes
       - integration-runner-windows
       - architecture-checks
+      - full-feature-doctests
       - clippy
       - cuda-runtime-build
     runs-on: ubuntu-latest

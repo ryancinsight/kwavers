@@ -47,6 +47,10 @@ jobs:
       BENCH_TARGET_DIR: ${{ github.workspace }}/target
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
+      # Installing sccache alone does not route Cargo through it: the bounded
+      # smoke recorded zero compiler requests in run 38524672045.
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
       PR_BENCH_TARGETS: performance_baseline critical_path_benchmarks simd_field_ops
     steps:
       - name: Checkout candidate
