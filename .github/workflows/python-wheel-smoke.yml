@@ -334,6 +334,13 @@ jobs:
           profile: wheel-dev
           artifact: wheel-prerequisites-${{ github.sha }}
 
+      - name: Retain matching compiled build scripts
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -a target/debug/build .ci-cargo/wheel-build-scripts
+
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
