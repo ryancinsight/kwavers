@@ -1,7 +1,12 @@
 //! Native-precision weighted Born field integration and real adjoint projection.
 
 use eunomia::{Complex, FloatElement};
-use std::ops::Neg;
+use std::ops::Range;
+
+pub(super) mod arithmetic;
+pub(super) mod fields;
+use arithmetic::Arithmetic;
+use fields::FieldProducts;
 
 /// Cubic voxel volume with the explicit two-product rounding contract.
 /// General `powi` has unspecified precision and can vary between evaluations;
@@ -19,31 +24,22 @@ pub(super) fn cell_volume<T: FloatElement>(spacing: T) -> T {
 /// The returned slice exposes precisely the overwritten prefix; spare lanes
 /// are never read or written. This gives full and partial blocks one kernel.
 #[inline]
-pub(super) fn weighted_products<'out, T: FloatElement, const K: usize>(
-    incident: &[Complex<T>],
-    green: &[Complex<T>],
+pub(super) fn weighted_products<'out, T: Arithmetic, P: FieldProducts<T>, const K: usize>(
+    fields: &P,
+    range: Range<usize>,
     weights: &[T],
     output: &'out mut [Complex<T>; K],
 ) -> &'out [Complex<T>] {
-    assert_eq!(
-        incident.len(),
-        green.len(),
-        "Born field/Green lengths differ"
-    );
-    assert_eq!(
-        incident.len(),
-        weights.len(),
-        "Born field/weight lengths differ"
-    );
-    let len = incident.len();
-    assert!(len <= K, "Born block exceeds output capacity");
+    let len = range
+        .end
+        .checked_sub(range.start)
+        .expect("Born block range is reversed");
+    assert_eq!(len, weights.len(), "Born field/weight lengths differ");
+    fields.write_products(range, output);
     let mut lane = 0;
     while lane < len {
-        let (incident, green, weight) = (incident[lane], green[lane], weights[lane]);
-        output[lane] = Complex {
-            re: (incident.re * green.re - incident.im * green.im) * weight,
-            im: (incident.re * green.im + incident.im * green.re) * weight,
-        };
+        let (product, weight) = (output[lane], weights[lane]);
+        output[lane] = T::weight(product, weight);
         lane += 1;
     }
     &output[..len]
@@ -66,19 +62,13 @@ pub(super) const VOXELS_PER_BLOCK: usize = {
 /// contributions already folded. The final increment reaches `bound`, never
 /// exceeding it; each scalar expression and its reduction order remain unchanged.
 #[inline]
-pub(super) fn integrate<T: FloatElement, const K: usize>(
-    incident: &[Complex<T>],
-    green: &[Complex<T>],
+pub(super) fn integrate<T: Arithmetic, P: FieldProducts<T>, const K: usize>(
+    fields: &P,
     weights: &[T],
 ) -> Complex<T> {
     const { assert!(K > 0, "Born block capacity must be positive") };
     assert_eq!(
-        incident.len(),
-        green.len(),
-        "Born field/Green lengths differ"
-    );
-    assert_eq!(
-        incident.len(),
+        fields.len(),
         weights.len(),
         "Born field/weight lengths differ"
     );
@@ -90,18 +80,14 @@ pub(super) fn integrate<T: FloatElement, const K: usize>(
         re: T::ZERO,
         im: T::ZERO,
     }; K];
-    for ((incident, green), weights) in incident
-        .chunks(K)
-        .zip(green.chunks(K))
-        .zip(weights.chunks(K))
-    {
-        let values = weighted_products(incident, green, weights, &mut values);
+    for (block, weights) in weights.chunks(K).enumerate() {
+        let start = block * K;
+        let values = weighted_products(fields, start..start + weights.len(), weights, &mut values);
         let len = values.len();
         let mut lane = 0;
         while lane < len {
             let value = values[lane];
-            sum.re += value.re;
-            sum.im += value.im;
+            sum = T::accumulate(sum, value);
             lane += 1;
         }
     }
@@ -116,25 +102,28 @@ pub(super) fn integrate<T: FloatElement, const K: usize>(
 #[inline]
 pub(super) fn project_adjoint<
     'out,
-    T: FloatElement + Neg<Output = T>,
+    T: Arithmetic,
+    P: FieldProducts<T>,
     const K: usize,
     const ACCUMULATE: bool,
 >(
-    derivatives: &[Complex<T>],
+    fields: &P,
+    range: Range<usize>,
+    weights: &[T],
     residual: Complex<T>,
+    products: &mut [Complex<T>; K],
     output: &'out mut [T; K],
 ) -> &'out [T] {
-    let len = derivatives.len();
-    assert!(len <= K, "Born block exceeds output capacity");
+    let len = range
+        .end
+        .checked_sub(range.start)
+        .expect("Born block range is reversed");
+    assert_eq!(len, weights.len(), "Born field/weight lengths differ");
+    fields.write_products(range, products);
     let mut lane = 0;
     while lane < len {
-        let derivative = derivatives[lane];
-        let projection = derivative.re * residual.re - (-derivative.im) * residual.im;
-        if ACCUMULATE {
-            output[lane] += projection;
-        } else {
-            output[lane] = projection;
-        }
+        let derivative = T::weight(products[lane], weights[lane]);
+        output[lane] = T::projection::<ACCUMULATE>(derivative, residual, output[lane]);
         lane += 1;
     }
     &output[..len]

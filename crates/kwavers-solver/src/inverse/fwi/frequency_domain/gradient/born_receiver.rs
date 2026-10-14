@@ -1,22 +1,25 @@
 //! Per-receiver Born terms shared by prediction and the discrete adjoint.
 
-use super::super::born_kernel::{integrate, project_adjoint, weighted_products};
+use super::super::born_kernel::fields::FieldProducts;
+use super::super::born_kernel::{integrate, project_adjoint};
 use kwavers_math::fft::Complex64;
 
 #[cfg(test)]
 mod tests;
 
 pub(super) struct BornReceiverTerms<'a> {
-    pub(super) incident: &'a [Complex64],
     pub(super) potential_volume: &'a [f64],
     pub(super) derivative_volume: &'a [f64],
 }
 
 impl BornReceiverTerms<'_> {
-    pub(super) fn predict(&self, direct: Complex64, green: &[Complex64]) -> Complex64 {
-        let scattered = integrate::<_, { super::super::born_kernel::VOXELS_PER_BLOCK }>(
-            self.incident,
-            green,
+    pub(super) fn predict<P: FieldProducts<f64>>(
+        &self,
+        direct: Complex64,
+        fields: &P,
+    ) -> Complex64 {
+        let scattered = integrate::<_, _, { super::super::born_kernel::VOXELS_PER_BLOCK }>(
+            fields,
             self.potential_volume,
         );
         direct + scattered
@@ -30,37 +33,35 @@ impl BornReceiverTerms<'_> {
     /// A block keeps its gradient, incident field and weights local while
     /// visiting receivers in their original order. Interleaving independent
     /// voxels changes no scalar expression or per-voxel addition sequence.
-    pub(super) fn accumulate_adjoint<const K: usize>(
+    pub(super) fn accumulate_adjoint<const K: usize, P: FieldProducts<f64>>(
         &self,
         gradient: &mut [f64],
-        scaled_incident: &[Complex64],
-        receivers: &[(&[Complex64], Complex64)],
+        receivers: &[(P, Complex64)],
     ) {
         const { assert!(K > 0, "Born block capacity must be positive") };
-        assert_eq!(gradient.len(), scaled_incident.len());
         assert_eq!(gradient.len(), self.derivative_volume.len());
-        for &(green, _) in receivers {
-            assert_eq!(gradient.len(), green.len());
+        for (fields, _) in receivers {
+            assert_eq!(gradient.len(), fields.len());
         }
         let mut derivatives = [Complex64::new(0.0, 0.0); K];
         let mut accumulated = [0.0; K];
-        for (block, ((gradient, incident), weights)) in gradient
+        for (block, (gradient, weights)) in gradient
             .chunks_mut(K)
-            .zip(scaled_incident.chunks(K))
             .zip(self.derivative_volume.chunks(K))
             .enumerate()
         {
             let len = gradient.len();
             accumulated[..len].copy_from_slice(gradient);
             let start = block * K;
-            for &(green, residual) in receivers {
-                let derivatives = weighted_products(
-                    incident,
-                    &green[start..start + len],
+            for &(ref fields, residual) in receivers {
+                project_adjoint::<_, _, K, true>(
+                    fields,
+                    start..start + len,
                     weights,
+                    residual,
                     &mut derivatives,
+                    &mut accumulated,
                 );
-                project_adjoint::<_, K, true>(derivatives, residual, &mut accumulated);
             }
             gradient.copy_from_slice(&accumulated[..len]);
         }

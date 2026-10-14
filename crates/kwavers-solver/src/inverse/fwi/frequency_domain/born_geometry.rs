@@ -10,6 +10,9 @@ use std::collections::BTreeMap;
 
 pub(super) mod field;
 #[cfg(test)]
+mod product_tests;
+pub(super) mod products;
+#[cfg(test)]
 mod tests;
 
 pub(super) struct BornTransmit {
@@ -36,6 +39,7 @@ pub(super) struct BornTransmit {
 pub(super) struct BornGeometry {
     pub(super) transmits: Vec<BornTransmit>,
     pub(super) fields: Vec<Vec<Complex64>>,
+    pub(super) products: Option<Vec<products::ProductRow>>,
 }
 
 impl BornGeometry {
@@ -88,6 +92,10 @@ impl BornGeometry {
             }
             transmits.push(row);
         }
-        Self { transmits, fields }
+        Self {
+            transmits,
+            fields,
+            products: None,
+        }
     }
 }

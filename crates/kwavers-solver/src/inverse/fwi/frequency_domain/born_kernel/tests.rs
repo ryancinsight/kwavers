@@ -1,5 +1,6 @@
 //! Exact scalar and differential arithmetic contracts.
 
+use super::fields::{FactoredProducts, StoredProducts};
 use super::*;
 
 /// A cubic voxel has volume `(h*h)*h`; two IEEE products fix its rounding.
@@ -27,7 +28,7 @@ fn cell_volume_has_repeatable_ieee_products() {
 
 /// `(1+2i)(3-4i)/2 = 11/2+i`; every operand/result is dyadic and exactly
 /// representable in each tested native precision. No widened oracle is used.
-fn check_scalar_contract<T: FloatElement + Neg<Output = T>>() {
+fn check_scalar_contract<T: Arithmetic>() {
     let arrange = tracing::info_span!("arrange", scalar = std::any::type_name::<T>()).entered();
     let two = T::from_count(2);
     let incident = Complex {
@@ -50,29 +51,49 @@ fn check_scalar_contract<T: FloatElement + Neg<Output = T>>() {
             re: T::ZERO,
             im: T::ZERO,
         }];
-        weighted_products(&[incident], &[green], &[weight], &mut actual);
+        weighted_products(
+            &FactoredProducts::new(&[incident], &[green]),
+            0..1,
+            &[weight],
+            &mut actual,
+        );
         let mut projected = [T::ZERO];
-        project_adjoint::<_, 1, false>(
-            &actual,
+        project_adjoint::<_, _, 1, false>(
+            &StoredProducts::new(&actual),
+            0..actual.len(),
+            &[T::ONE; 1][..actual.len()],
             Complex {
                 re: two,
                 im: -T::ONE,
             },
+            &mut [Complex {
+                re: T::ZERO,
+                im: T::ZERO,
+            }; 1],
             &mut projected,
         );
         let mut accumulated = [T::from_count(3)];
-        project_adjoint::<_, 1, true>(
-            &actual,
+        project_adjoint::<_, _, 1, true>(
+            &StoredProducts::new(&actual),
+            0..actual.len(),
+            &[T::ONE; 1][..actual.len()],
             Complex {
                 re: two,
                 im: -T::ONE,
             },
+            &mut [Complex {
+                re: T::ZERO,
+                im: T::ZERO,
+            }; 1],
             &mut accumulated,
         );
         let [actual] = actual;
         (
             actual,
-            integrate::<_, 1>(&[incident; 17], &[green; 17], &[weight; 17]),
+            integrate::<_, _, 1>(
+                &FactoredProducts::new(&[incident; 17], &[green; 17]),
+                &[weight; 17],
+            ),
             projected[0],
             accumulated[0],
         )
@@ -80,9 +101,18 @@ fn check_scalar_contract<T: FloatElement + Neg<Output = T>>() {
     let _assert = tracing::info_span!("assert").entered();
     assert_eq!(actual, expected);
     for integrated in [
-        integrate::<_, 4>(&[incident; 17], &[green; 17], &[weight; 17]),
-        integrate::<_, 8>(&[incident; 17], &[green; 17], &[weight; 17]),
-        integrate::<_, 16>(&[incident; 17], &[green; 17], &[weight; 17]),
+        integrate::<_, _, 4>(
+            &FactoredProducts::new(&[incident; 17], &[green; 17]),
+            &[weight; 17],
+        ),
+        integrate::<_, _, 8>(
+            &FactoredProducts::new(&[incident; 17], &[green; 17]),
+            &[weight; 17],
+        ),
+        integrate::<_, _, 16>(
+            &FactoredProducts::new(&[incident; 17], &[green; 17]),
+            &[weight; 17],
+        ),
     ] {
         assert_eq!(
             integrated,
@@ -144,8 +174,20 @@ fn check_block_expression<const K: usize>(
         let _act = tracing::info_span!("act_block", K).entered();
         let mut actual = [Complex::new(0.0, 0.0); K];
         let mut projected = [0.0; K];
-        weighted_products(&incidents, &greens, &weights, &mut actual);
-        project_adjoint::<_, K, false>(&actual, residual, &mut projected);
+        weighted_products(
+            &FactoredProducts::new(&incidents, &greens),
+            0..K,
+            &weights,
+            &mut actual,
+        );
+        project_adjoint::<_, _, K, false>(
+            &StoredProducts::new(&actual),
+            0..actual.len(),
+            &[1.0; K][..actual.len()],
+            residual,
+            &mut [Complex::new(0.0, 0.0); K],
+            &mut projected,
+        );
         (actual, projected)
     };
     let _assert = tracing::info_span!("assert_block", K).entered();
@@ -187,8 +229,20 @@ fn weighted_product_and_projection_match_complex_operations() {
                     let _act = tracing::info_span!("act").entered();
                     let mut actual = [Complex::new(0.0, 0.0)];
                     let mut projected = [0.0];
-                    weighted_products(&[incident], &[green], &[weight], &mut actual);
-                    project_adjoint::<_, 1, false>(&actual, residual, &mut projected);
+                    weighted_products(
+                        &FactoredProducts::new(&[incident], &[green]),
+                        0..1,
+                        &[weight],
+                        &mut actual,
+                    );
+                    project_adjoint::<_, _, 1, false>(
+                        &StoredProducts::new(&actual),
+                        0..actual.len(),
+                        &[1.0; 1][..actual.len()],
+                        residual,
+                        &mut [Complex::new(0.0, 0.0); 1],
+                        &mut projected,
+                    );
                     (actual[0], projected[0])
                 };
                 let _assert = tracing::info_span!("assert").entered();
@@ -225,13 +279,20 @@ fn check_partial_blocks<const K: usize>() {
         let mut values = [spare; K];
         let mut projected = [13.0 / 8.0; K];
         let valid = weighted_products(
-            &incident[..len],
-            &green[..len],
+            &FactoredProducts::new(&incident[..len], &green[..len]),
+            0..len,
             &weights[..len],
             &mut values,
         );
         assert_eq!(valid.len(), len);
-        let projected_prefix = project_adjoint::<_, K, false>(valid, residual, &mut projected);
+        let projected_prefix = project_adjoint::<_, _, K, false>(
+            &StoredProducts::new(valid),
+            0..(valid).len(),
+            &[1.0; K][..(valid).len()],
+            residual,
+            &mut [Complex::new(0.0, 0.0); K],
+            &mut projected,
+        );
         assert_eq!(projected_prefix.len(), len);
         let mut sum = Complex::new(0.0, 0.0);
         for lane in 0..len {
@@ -244,7 +305,10 @@ fn check_partial_blocks<const K: usize>() {
             );
             sum += expected;
         }
-        let integrated = integrate::<_, K>(&incident[..len], &green[..len], &weights[..len]);
+        let integrated = integrate::<_, _, K>(
+            &FactoredProducts::new(&incident[..len], &green[..len]),
+            &weights[..len],
+        );
         assert_eq!(integrated.re.to_bits(), sum.re.to_bits());
         assert_eq!(integrated.im.to_bits(), sum.im.to_bits());
         assert!(values[len..].iter().all(|&value| value == spare));
@@ -270,7 +334,12 @@ fn weighted_products_reject_mismatched_fields() {
         tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
     let _span = tracing::info_span!("act_reject_mismatched_fields").entered();
     let mut output = [Complex::new(0.0, 0.0); 4];
-    weighted_products(&[Complex::new(1.0, 0.5)], &[], &[0.5], &mut output);
+    weighted_products(
+        &FactoredProducts::new(&[Complex::new(1.0, 0.5)], &[]),
+        0..1,
+        &[0.5],
+        &mut output,
+    );
 }
 
 #[test]
@@ -281,7 +350,12 @@ fn weighted_products_reject_mismatched_weights() {
     let _span = tracing::info_span!("act_reject_mismatched_weights").entered();
     let field = [Complex::new(1.0, 0.5)];
     let mut output = [Complex::new(0.0, 0.0); 4];
-    weighted_products(&field, &field, &[], &mut output);
+    weighted_products(
+        &FactoredProducts::new(&field, &field),
+        0..1,
+        &[],
+        &mut output,
+    );
 }
 
 #[test]
@@ -291,7 +365,12 @@ fn weighted_products_reject_excess_capacity() {
         tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
     let _span = tracing::info_span!("act_reject_excess_capacity").entered();
     let field = [Complex::new(1.0, 0.5); 2];
-    weighted_products(&field, &field, &[0.5; 2], &mut [Complex::new(0.0, 0.0)]);
+    weighted_products(
+        &FactoredProducts::new(&field, &field),
+        0..2,
+        &[0.5; 2],
+        &mut [Complex::new(0.0, 0.0)],
+    );
 }
 
 #[test]
@@ -300,9 +379,12 @@ fn adjoint_projection_rejects_excess_capacity() {
     let _subscriber =
         tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
     let _span = tracing::info_span!("act_reject_projection_capacity").entered();
-    project_adjoint::<_, 1, false>(
-        &[Complex::new(1.0, 0.5); 2],
+    project_adjoint::<_, _, 1, false>(
+        &StoredProducts::new(&[Complex::new(1.0, 0.5); 2]),
+        0..[Complex::new(1.0, 0.5); 2].len(),
+        &[1.0; 2],
         Complex::new(0.5, -0.25),
+        &mut [Complex::new(0.0, 0.0); 1],
         &mut [0.0],
     );
 }
@@ -333,10 +415,24 @@ fn projection_modes_preserve_exact_accumulation_and_spare_storage() {
             let (assigned_len, accumulated_len) = {
                 let _act = tracing::info_span!("act", len).entered();
                 (
-                    project_adjoint::<_, 8, false>(&derivatives[..len], residual, &mut assigned)
-                        .len(),
-                    project_adjoint::<_, 8, true>(&derivatives[..len], residual, &mut accumulated)
-                        .len(),
+                    project_adjoint::<_, _, 8, false>(
+                        &StoredProducts::new(&derivatives[..len]),
+                        0..derivatives[..len].len(),
+                        &[1.0; 8][..derivatives[..len].len()],
+                        residual,
+                        &mut [Complex::new(0.0, 0.0); 8],
+                        &mut assigned,
+                    )
+                    .len(),
+                    project_adjoint::<_, _, 8, true>(
+                        &StoredProducts::new(&derivatives[..len]),
+                        0..derivatives[..len].len(),
+                        &[1.0; 8][..derivatives[..len].len()],
+                        residual,
+                        &mut [Complex::new(0.0, 0.0); 8],
+                        &mut accumulated,
+                    )
+                    .len(),
                 )
             };
             let _assert = tracing::info_span!("assert", len).entered();

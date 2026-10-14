@@ -1,6 +1,7 @@
 //! Exact dyadic oracle for the row-major Born adjoint projection.
 
 use super::super::super::born_geometry::field::voxel_centers;
+use super::super::super::born_kernel::fields::FactoredProducts;
 use super::*;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::helmholtz_slowness_derivative;
 
@@ -35,7 +36,6 @@ fn check_adjoint<const K: usize>() {
             .map(|&value| helmholtz_slowness_derivative(omega, value) * cell_volume)
             .collect();
         let terms = BornReceiverTerms {
-            incident: &incident,
             potential_volume: &potential_volume,
             derivative_volume: &derivative_volume,
         };
@@ -49,10 +49,9 @@ fn check_adjoint<const K: usize>() {
             for residual in [Complex64::new(0.5, -0.25), Complex64::new(-0.25, 0.75)] {
                 {
                     let _act = tracing::info_span!("act").entered();
-                    terms.accumulate_adjoint::<K>(
+                    terms.accumulate_adjoint::<K, _>(
                         gradient.as_slice_mut().unwrap(),
-                        &scaled_incident,
-                        &[(green.as_slice(), residual)],
+                        &[(FactoredProducts::new(&scaled_incident, &green), residual)],
                     );
                 }
                 let _assert = tracing::info_span!("assert").entered();
@@ -85,10 +84,16 @@ fn check_adjoint<const K: usize>() {
                 (green.as_slice(), Complex64::new(0.5, -0.25)),
                 (alternate_green.as_slice(), Complex64::new(-0.25, 0.75)),
             ];
-            terms.accumulate_adjoint::<K>(&mut batched, &scaled_incident, &receivers);
+            let products: Vec<_> = receivers
+                .iter()
+                .map(|&(green, residual)| {
+                    (FactoredProducts::new(&scaled_incident, green), residual)
+                })
+                .collect();
+            terms.accumulate_adjoint::<K, _>(&mut batched, &products);
             let mut sequential = ordinal.clone();
-            for receiver in receivers {
-                terms.accumulate_adjoint::<K>(&mut sequential, &scaled_incident, &[receiver]);
+            for receiver in products {
+                terms.accumulate_adjoint::<K, _>(&mut sequential, &[receiver]);
             }
             for (index, (&actual, &sequential)) in batched.iter().zip(&sequential).enumerate() {
                 let mut reference = ordinal[index];

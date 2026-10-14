@@ -1,104 +1,122 @@
 # Prepared Born objective
 
-The inversion holds acquisition geometry, voxel shape/spacing, observation
-frequencies and reference sound speed fixed. Its model and finite-difference
-Hessian probes change slowness. Therefore the outgoing reference Green fields,
-incident fields and direct source-to-receiver pressures are invariant during
-one solve. `Objective` owns those coefficients and evaluates every model through
-the same forward/adjoint kernels. Public operator interfaces remain stateless.
+An inversion fixes acquisition geometry, voxel shape/spacing, frequencies and
+reference sound speed while changing slowness. `Objective` owns the immutable
+Born coefficients and evaluates every model through shared native-precision
+weighted integration and adjoint kernels. Public operators remain stateless.
 
-Preparation calls the original Green and incident equations with their original
-arguments and summation order. Receivers share a field only when all three SI
-coordinate bit patterns match. Each transmit retains its receiver mapping, so
-rotating acquisitions do not inherit ring symmetry. Reusing these coefficients
-preserves their bits. Model-dependent scattering potentials, source fitting,
-predictions, residuals, gradients and Hessian differences remain recomputed.
-Scalar volume factors and source-scaled incident fields are hoisted only across
-loops in which their operands are invariant; multiplication grouping remains.
-Forward pressure and the adjoint use one native-precision weighted Born kernel.
-It reads Copy scalar fields directly and computes only the required real
-adjoint projection, preserving the original complex expression tree, signed
-zero and left-fold order. It introduces no precision-changing conversions.
-The cubic voxel measure is the shared native expression `(h*h)*h`. Rust's
-general integer-power operation has unspecified precision; an isolated-Miri
-regression reproduces a four-ULP difference for the existing 1 mm spacing.
-Two IEEE products give each model/Hessian probe the same spatial measure,
-without disabling Miri's extra-rounding checks or changing numerical tolerances.
-Checked blocks borrow input slices and reuse const-capacity output storage.
-The returned slice exposes only the written prefix; full and partial blocks
-use one kernel. Equal input lengths and capacity are checked before arithmetic.
-The 32 KiB active-working-set budget accounts for nine native FD scalars per
-voxel: incident, Green and derivative complex values, weights, gradient and its
-local accumulator. Its largest fitting power-of-two capacity
-is 256 voxels. Correctness does not depend on a cache-size assumption.
-The complete voxel sequence and addition order remain. Contracts exercise
-capacities 1, 4, 8, 16 and 256, empty/partial/full blocks, untouched spare output
-storage, and rejected input/capacity mismatches. Forward prediction prepares the same geometry within one call;
-its public operator remains stateless. For T transmits, R receivers per row
-and U distinct receiver positions, receiver Green evaluation falls from TRV
-to UV without changing any source or receiver selection.
-The adjoint keeps each gradient block local while sweeping the receivers in
-their original order. Independent voxels interleave differently, but each
-scalar expression and per-voxel receiver reduction remains bitwise identical.
-For block index b, `b*K <= V` and its clipped length obeys `b*K + len <= V`.
-Equal full Green/model lengths therefore bound every receiver projection. Only
-`[0, len)` is exposed from each output buffer, so spare capacity cannot contribute.
-Batch-versus-sequential differential tests cover full blocks and tails.
-Fixed-bound lane traversal uses explicit counters with invariant
-`0 <= lane <= bound`; the processed prefix is exactly `[0, lane)`.
-Advancing from `bound - 1` reaches `bound` without overflow, and termination
-preserves the same complete checked traversal and floating-point reduction.
-An unchanged full-fixture diagnostic attributes 40.643 of 180 profiled seconds
-to Range iteration. The counter change removes that iterator dispatch without
-changing an interpreter option, scalar expression, sample or stopping rule.
+## Mathematical and rounding contracts
 
-For each frequency, V voxels, T transmit rows, U distinct receiver positions
-and R receivers per row require `(T + U)V + TR` complex coefficients and TR
-receiver indices. This immutable workspace replaces repeated Green evaluation;
-model-dependent scratch remains O(V). For the unchanged two-frequency 12×12×1,
-16-transmit/16-receiver ring, coefficients occupy 155,648 bytes and receiver
-indices occupy 4,096 bytes, excluding collection metadata. No Jacobian is
-assembled. CBS and finite-window operators use their existing volume adjoints.
+Incident fields I, receiver Green fields G and direct source-to-receiver
+pressures depend on the fixed experiment. Preparation evaluates their original
+equations with the original arguments and summation order. Receiver sharing
+requires equality of all three SI-coordinate bit patterns; each transmit keeps
+its own receiver mapping, including rotating acquisitions.
 
-The alternatives are repeated trigonometric evaluation on every Hessian probe
-or storing a full transmit×receiver×voxel Jacobian. Preparation stores separate
-incident and receiver fields and leaves the model-dependent action matrix-free.
-It neither changes the finite-difference step nor replaces the Hessian formula.
-The objective rejects changes to its prepared shape and validates each model.
-If a Hessian probe projects onto the exact current Born model, the prepared
-coefficients and IEEE polynomial arithmetic make its gradient repeatable.
-For finite current gradients and finite positive epsilon,
-`(g(m) - g(m)) / epsilon` is exactly positive zero. A bitwise model comparison
-permits that identity; other operators, changed models and nonfinite inputs
-retain the full gradient evaluation. The current model/gradient pair is a
-private consumer invariant. A bound-directed probe and an inward probe compare
-every result bit against the complete finite-difference computation.
+The weighted product remains `(I * G) * weight`, with the original complex
+expression tree. A derivative uses `(source_scale * I) * G` before weighting.
+The projection remains
+`p = derivative.re * residual.re - (-derivative.im) * residual.im`.
+Its const policy either assigns p or performs exactly one `old + p` addition.
+Per-voxel receiver order and the objective's left fold remain unchanged.
+All arithmetic executes in the generic scalar precision, without conversions.
 
-Verification uses bitwise Green/incident/direct comparisons for real ring and
-rotating acquisitions, an exact dyadic adjoint oracle, and model updates compared
-against stateless forward pressures with both source-fitting modes. Separate
-pressure/geometry regressions compare against the uncached equations. Existing FD,
-inversion and full reconstruction fixtures retain their inputs and tolerances.
-The generic kernel has exact dyadic contracts in four native precisions and
-bitwise complex-operation comparisons for non-dyadic values, subnormals and
-signed zero.
-Full Miri cases retain isolation, safety checks and the 15-minute execution cap.
+The shared cubic voxel measure is `(h*h)*h`. A repeatability regression
+reproduces the original four-ULP discrepancy from general `powi(3)` under Miri.
+Two IEEE products give every model/Hessian probe the same spatial measure;
+existing numerical tolerances remain unchanged.
 
-Weighted products and real adjoint projections process one const-sized block
-per call, borrowing coefficient slices and writing caller-owned buffers. Every
-valid output lane is assigned before consumption; spare capacity is untouched. Buffers are reused across blocks
-and receivers; no coefficient or result array crosses a call by value. Each
-scalar expression tree and each observer reduction order remains unchanged.
-Distinct quarter-turn/sign lane fixtures compare arities 4, 8 and 16 bitwise
-against the original complex operations, including subnormals and signed zero.
+## Bounded coefficient representations
 
-Each lane loop retains its immutable length once before traversal. A 180-second
-full-fixture diagnostic at `0250d5af` attributes 16.499 inclusive seconds to
-4,558,590 repeated slice-length queries. Hoisting that metadata query changes no
-access or numerical operation. The adjoint projection has a const accumulation
-policy: assignment writes `p`, while accumulation writes the exact `old + p`.
-Both use the same `p = derivative.re * residual.re - (-derivative.im) * residual.im`
-expression. The const choice removes an intermediate projection buffer and
-second lane loop; it neither reassociates the sum nor changes receiver order.
-Native-precision and bitwise mode contracts cover existing accumulators, signed
-zero, subnormals, partial prefixes and untouched spare storage.
+The sealed `FieldProducts<T>` trait selects factored incident/Green slices or
+prepared spatial products through static dispatch. Both use the same weighting,
+integration, projection, source-fitting and residual reductions. Preparation
+calls the same canonical product expression as the factored representation.
+The immutable products are spatial coefficients; model weights, predictions,
+source fits, residuals, gradients and Hessian differences remain recomputed.
+
+For a fixed unit source scale, preparation retains both `I*G` and `(1*I)*G`.
+Keeping both expression trees preserves signed-zero behavior. Source fitting
+uses the complete factored calculation because its scale changes with the
+model. Products that are nonfinite or exceed the budget also retain the complete
+factored calculation, preserving IEEE propagation and every selected voxel.
+
+The per-inversion budget B is 8 MiB of requested expanded vector allocations.
+For F validated nonempty frequency observations, each receives floor(B/F)
+bytes. Therefore their sum cannot exceed B. A frequency requests
+`T*sizeof(ProductRow) + 2*V*sum(R_t)*sizeof(Complex64)` bytes: row metadata plus
+the two complete product arrays. Checked arithmetic rejects an unrepresentable
+layout. Vectors reserve exactly their complete row sizes; three fixed complex
+blocks (12 KiB) serve preparation without voxel-sized temporary allocations.
+Allocator bookkeeping and existing per-frequency collection metadata are
+excluded. Repreparation drops the previous expanded allocation first.
+Changing B changes representation only; bitwise equivalence defines acceptance.
+
+The factored geometry stores `(T+U)V + sum(R_t)` complex values and sum(R_t)
+receiver indices, where U counts distinct receiver positions. For the unchanged
+two-frequency 12×12×1, 16-transmit/16-receiver ring, those payloads occupy
+155,648 and 4,096 bytes. Expanded products request 2,361,088 bytes on the tested
+64-bit layout, including row metadata. Model-dependent scratch remains O(V+R).
+No model-dependent Jacobian or Hessian is retained. Larger experiments keep
+the factored representation under the same memory budget.
+
+Alternatives are repeating all spatial products for every gradient/Hessian
+probe, or allocating an unbounded expanded operator. Bounded preparation removes
+only invariant work and retains the existing factored algorithm for all sizes.
+The trait and row callbacks keep representation separate from model evaluation;
+no algorithm body is cloned per layout or scalar precision.
+
+## Native scalar arithmetic lowering
+
+One Rust operation specification supplies product, weighting, complex accumulation
+and real projection bodies for each supported scalar. The dependency-free build
+script places those bodies inside concrete scalar implementations before Rust
+typechecks them. Required trait methods prevent an implicit generic operator
+implementation. Rust 1.97 MIR inspection confirms primitive arithmetic for the
+double-precision operations, with the original multiply/subtract/negate/add order.
+This changes operator forwarding; every floating-point operation still executes.
+The implementation adds no casts, unsafe code, compiler pin, optimization flag
+or interpreter exception. The generated source is a normal Cargo build output;
+source/lock/compiler/profile provenance and the wheel build-script handoff apply.
+
+The adjoint weights each spatial coefficient and projects it directly into its
+existing accumulator in one traversal. The two scalar operation calls retain
+the original intermediate complex value and arithmetic grouping; a weighted
+complex buffer is no longer written and reread between separate loops.
+
+## Checked traversal and exact projected probes
+
+Checked valid-prefix blocks reuse caller-owned storage. Equal input lengths,
+range bounds and output capacity are checked before arithmetic. Only overwritten
+lanes are exposed; spare capacity never contributes. The 32 KiB active-working-
+set budget counts nine native FD scalars per voxel; its largest fitting power
+of two is 256. Correctness is independent of cache size and block capacity.
+For block b, `b*K <= V` and `b*K + len <= V`, so matching full field/model
+lengths bound every projection, including the final partial block.
+
+Each loop retains its immutable length and visits exactly `[0, len)` with a
+counter. A 180-second full-fixture diagnostic at `0250d5af` attributes 16.499
+inclusive seconds to 4,558,590 repeated slice-length queries. Hoisting metadata
+and combining projection accumulation removes dispatch, a temporary buffer and
+a second traversal while preserving each scalar expression and addition.
+
+If a Hessian probe projects onto the exact current Born model, repeatable
+polynomial arithmetic gives `(g(m)-g(m))/epsilon = +0` for finite gradients and
+finite positive epsilon. Bitwise model equality permits that identity; changed
+models, other operators and nonfinite inputs retain full evaluation. The
+current model/gradient pair is a private consumer invariant. Bound-directed and
+inward probes compare every result bit against the full difference formula.
+
+## Verification and remaining gates
+
+Exact dyadic/native-precision contracts cover four scalar precisions, capacities
+1/4/8/16/256, nonzero offsets, empty/partial/full blocks and untouched spare
+storage. Bitwise comparisons include non-dyadic values, signed zero, subnormals,
+assignment and accumulation. Real ring/rotating coefficients and heterogeneous
+pressures match uncached equations. Budget tests cover zero, one byte below,
+exact capacity and nonfinite propagation. Prepared/factored objectives and every
+gradient value agree across model changes and both source-fitting modes;
+shape drift is rejected. Existing FD and full reconstruction fixtures retain
+all inputs, stopping rules and tolerances. Isolated/full Miri retains default
+safety checks and the existing 15-minute execution cap. Required final-head CI
+and actual installed-wheel/k-Wave/benchmark checks remain mandatory.

@@ -2,6 +2,7 @@
 
 use super::acquisition::TransmissionAcquisition;
 use super::born_geometry::BornGeometry;
+use super::born_kernel::fields::FactoredProducts;
 use super::born_kernel::{cell_volume, integrate, VOXELS_PER_BLOCK};
 use super::cbs::{
     real_scattering_potential, real_scattering_potential_for_operator, sample_array_for_operator,
@@ -79,9 +80,8 @@ pub(super) fn predict_born_rows(
     let mut output = Array2::zeros([transmissions, acquisition.receiver_count()]);
     for (transmit, row) in geometry.transmits.iter().enumerate() {
         for (receiver_index, &field) in row.receivers.iter().enumerate() {
-            let scattered = integrate::<_, VOXELS_PER_BLOCK>(
-                &row.incident,
-                &geometry.fields[field],
+            let scattered = integrate::<_, _, VOXELS_PER_BLOCK>(
+                &FactoredProducts::new(&row.incident, &geometry.fields[field]),
                 &potential_volume,
             );
             output[[transmit, receiver_index]] = row.direct[receiver_index] + scattered;

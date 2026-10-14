@@ -39,3 +39,10 @@
 - [x] [patch] Hoist immutable lane bounds and combine the exact projection with its existing gradient addition through const selection. All 71 focused FD, 1,117 complete solver (six old ignores), 41 facade tests and strict solver Clippy pass.
 - [x] [patch] All 13 isolated Linux Miri contracts pass for the combined projection; native/Miri accumulation also passes in all four scalar precisions.
 - [ ] [patch] Verify all three full Miri reconstructions and required final-head gates for the combined projection implementation; retain all scenarios, tolerances, interpreter checks and runtime bounds.
+
+- [x] [patch] Implement bounded immutable spatial products with one generic weighting/adjoint algorithm. Native coverage passes 74 focused FD, 1,120 complete solver (six prior ignores), 41 facade cases and strict solver Clippy; budget boundaries, nonfinite propagation and every prepared/factored gradient value have computed-value coverage.
+- [x] [patch] All 16 isolated Linux Miri contracts pass for bounded spatial products, including ring/rotating acquisitions and model changes.
+- [ ] [patch] Complete all three unchanged full reconstruction cases and exact-head hosted verification for bounded spatial products. The earlier combined-projection differential still reaches 900.01 seconds; retain every existing input, tolerance, safety check and runtime cap.
+
+- [x] [patch] Retain native arithmetic through one canonical build-generated scalar specification and fuse weighting/projection traversal. All 75 focused FD, 1,121 solver (six existing ignores), 41 facade tests, strict solver Clippy and 17 isolated Linux Miri contracts pass; original primitive operation order is verified in Rust 1.97 MIR.
+- [ ] [patch] Complete all three unchanged full reconstruction Miri cases and actual installed-wheel/k-Wave, benchmark and required final-head CI after the generated-arithmetic correction. The prior bounded-product differential reaches 900.01 seconds; no execution bound, scenario, tolerance or interpreter check changes.

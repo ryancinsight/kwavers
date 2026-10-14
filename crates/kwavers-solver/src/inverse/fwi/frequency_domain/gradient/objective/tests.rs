@@ -47,12 +47,31 @@ fn prepared_objective_recomputes_changed_models_and_rejects_new_shape() {
             ..config.clone()
         };
         let experiment = Objective::new(&baseline, &observations, &acquisition, &config).unwrap();
+        let mut factored = Objective::new(&baseline, &observations, &acquisition, &config).unwrap();
+        for geometry in factored.born.as_mut().unwrap() {
+            geometry.products = None;
+        }
+        for geometry in experiment.born.as_ref().unwrap() {
+            assert_eq!(
+                geometry.products.as_ref().map(Vec::len),
+                if estimate_source_scaling {
+                    None
+                } else {
+                    Some(acquisition.transmission_count())
+                }
+            );
+        }
         for (model, changed) in [(&baseline, false), (&inclusion, true), (&baseline, false)] {
             let (actual, gradient) = {
                 let _act = tracing::info_span!("act", estimate_source_scaling).entered();
                 experiment.evaluate(model).unwrap()
             };
             let _assert = tracing::info_span!("assert").entered();
+            let (factored_value, factored_gradient) = factored.evaluate(model).unwrap();
+            assert_eq!(actual.to_bits(), factored_value.to_bits());
+            for (&actual, &expected) in gradient.iter().zip(factored_gradient.iter()) {
+                assert_eq!(actual.to_bits(), expected.to_bits());
+            }
             let mut expected = 0.0;
             for observation in &observations {
                 let predicted = predict_frequency_rows(

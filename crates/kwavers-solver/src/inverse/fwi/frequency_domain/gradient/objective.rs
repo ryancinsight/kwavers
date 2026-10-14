@@ -1,7 +1,7 @@
 //! One validated experiment and its model-independent Born coefficients.
 
 use super::super::acquisition::TransmissionAcquisition;
-use super::super::born_geometry::BornGeometry;
+use super::super::born_geometry::{products::WORKSPACE_BYTES, BornGeometry};
 use super::super::forward::validate_forward_inputs;
 use super::super::types::{Config, FrequencyObservation};
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -51,13 +51,17 @@ impl<'a> Objective<'a> {
                 observations
                     .iter()
                     .map(|observation| {
-                        BornGeometry::new(
+                        let mut geometry = BornGeometry::new(
                             result.shape,
                             observation.frequency_hz,
                             acquisition,
                             config,
                             observation.observed_pressure.shape()[0],
-                        )
+                        );
+                        if !config.estimate_source_scaling {
+                            geometry.prepare_products(WORKSPACE_BYTES / observations.len());
+                        }
+                        geometry
                     })
                     .collect(),
             );

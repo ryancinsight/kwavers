@@ -1,0 +1,35 @@
+// Canonical operation bodies. The generator supplies each concrete Self type;
+// no precision-changing conversion or expression reassociation occurs.
+
+#[inline]
+fn product(incident: Complex<Self>, green: Complex<Self>) -> Complex<Self> {
+    Complex {
+        re: incident.re * green.re - incident.im * green.im,
+        im: incident.re * green.im + incident.im * green.re,
+    }
+}
+
+#[inline]
+fn weight(value: Complex<Self>, weight: Self) -> Complex<Self> {
+    Complex { re: value.re * weight, im: value.im * weight }
+}
+
+#[inline]
+fn accumulate(mut sum: Complex<Self>, value: Complex<Self>) -> Complex<Self> {
+    sum.re += value.re;
+    sum.im += value.im;
+    sum
+}
+
+#[inline]
+fn projection<const ACCUMULATE: bool>(
+    derivative: Complex<Self>, residual: Complex<Self>, mut current: Self,
+) -> Self {
+    let projection = derivative.re * residual.re - (-derivative.im) * residual.im;
+    if ACCUMULATE {
+        current += projection;
+        current
+    } else {
+        projection
+    }
+}

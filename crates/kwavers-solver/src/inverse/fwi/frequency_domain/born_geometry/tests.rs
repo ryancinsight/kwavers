@@ -50,15 +50,17 @@ fn prepared_coefficients_match_uncached_equations() {
             let observed =
                 simulate_frequency_observation(&model, acquisition, frequency_hz, &config).unwrap();
             drop(_arrange);
-            let geometry = {
+            let (geometry, retained) = {
                 let _act = tracing::info_span!("act").entered();
-                BornGeometry::new(
+                let mut geometry = BornGeometry::new(
                     model.shape(),
                     frequency_hz,
                     acquisition,
                     &config,
                     acquisition.transmission_count(),
-                )
+                );
+                let retained = geometry.prepare_products(products::WORKSPACE_BYTES);
+                (geometry, retained)
             };
             let _assert = tracing::info_span!("assert").entered();
             let wavenumber = TWO_PI * frequency_hz * (1.0 / config.reference_sound_speed_m_s);
@@ -72,6 +74,9 @@ fn prepared_coefficients_match_uncached_equations() {
             .unwrap();
             let volume = cell_volume(config.spacing_m);
             assert_eq!(geometry.transmits.len(), acquisition.transmission_count());
+            assert!(retained > 0 && retained <= products::WORKSPACE_BYTES);
+            let products = geometry.products.as_ref().unwrap();
+            assert_eq!(products.len(), acquisition.transmission_count());
             for (transmit, row) in geometry.transmits.iter().enumerate() {
                 let sources = acquisition.sources(transmit);
                 let reference = incident_field(sources, &centers, wavenumber, min_distance);
@@ -89,6 +94,16 @@ fn prepared_coefficients_match_uncached_equations() {
                         assert_complex_bits(
                             actual,
                             outgoing_green(*point, receiver, wavenumber, min_distance),
+                        );
+                    }
+                    let (unscaled, unit_scaled) = products[transmit].fields(receiver_index);
+                    assert_eq!(unscaled.len(), centers.len());
+                    assert_eq!(unit_scaled.len(), centers.len());
+                    for index in 0..centers.len() {
+                        assert_complex_bits(unscaled[index], reference[index] * field[index]);
+                        assert_complex_bits(
+                            unit_scaled[index],
+                            (Complex64::new(1.0, 0.0) * reference[index]) * field[index],
                         );
                     }
                     let direct = sources

@@ -2,6 +2,7 @@
 
 use super::acquisition::TransmissionAcquisition;
 use super::born_geometry::BornGeometry;
+use super::born_kernel::fields::{FactoredProducts, StoredProducts};
 use super::born_kernel::{cell_volume, VOXELS_PER_BLOCK};
 use super::cbs::{
     apply_shifted_green_adjoint_operator, real_scattering_potential,
@@ -20,6 +21,7 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
 use leto::Array3;
 
 mod born_receiver;
+mod born_row;
 pub(super) mod hessian;
 pub(super) mod objective;
 #[cfg(test)]
@@ -231,7 +233,6 @@ fn accumulate_frequency_gradient(
 
     for (transmit, row) in geometry.transmits.iter().enumerate() {
         let terms = BornReceiverTerms {
-            incident: &row.incident,
             potential_volume: &potential_volume,
             derivative_volume: &derivative_volume,
         };
@@ -242,48 +243,72 @@ fn accumulate_frequency_gradient(
             .iter()
             .copied()
             .collect::<Vec<_>>();
-        let (source_scale, mut scaled_prediction) = if config.estimate_source_scaling {
-            // Source fitting retains the complete coupled prediction row.
-            let predicted = row
-                .receivers
-                .iter()
-                .enumerate()
-                .map(|(index, &field)| terms.predict(row.direct[index], &geometry.fields[field]))
-                .collect::<Vec<_>>();
-            let scale = complex_source_scale(&predicted, &observed)?;
-            (
-                scale,
-                predicted
-                    .iter()
-                    .map(|&value| scale * value)
-                    .collect::<Vec<_>>(),
-            )
+        if let Some(products) = &geometry.products {
+            assert!(
+                !config.estimate_source_scaling,
+                "prepared unit-source products require fixed source scaling"
+            );
+            let products = &products[transmit];
+            born_row::accumulate(
+                &observed,
+                false,
+                |receiver| {
+                    let (fields, _) = products.fields(receiver);
+                    terms.predict(row.direct[receiver], &StoredProducts::new(fields))
+                },
+                |scale, residuals, gradient| {
+                    assert_eq!(scale.re.to_bits(), 1.0_f64.to_bits());
+                    assert_eq!(scale.im.to_bits(), 0.0_f64.to_bits());
+                    let receivers = residuals
+                        .iter()
+                        .enumerate()
+                        .map(|(receiver, &residual)| {
+                            let (_, fields) = products.fields(receiver);
+                            (StoredProducts::new(fields), residual)
+                        })
+                        .collect::<Vec<_>>();
+                    terms.accumulate_adjoint::<VOXELS_PER_BLOCK, _>(gradient, &receivers);
+                },
+                objective,
+                gradient,
+            )?;
         } else {
-            (
-                Complex64::new(1.0, 0.0),
-                Vec::with_capacity(row.receivers.len()),
-            )
-        };
-        // Preserve the original left-associated source_scale * incident * G.
-        let scaled_incident = row
-            .incident
-            .iter()
-            .map(|&value| source_scale * value)
-            .collect::<Vec<_>>();
-        let mut receivers = Vec::with_capacity(row.receivers.len());
-        for (receiver_index, &field) in row.receivers.iter().enumerate() {
-            let green = &geometry.fields[field];
-            if !config.estimate_source_scaling {
-                scaled_prediction
-                    .push(source_scale * terms.predict(row.direct[receiver_index], green));
-            }
-            let residual = scaled_prediction[receiver_index] - observed[receiver_index];
-            receivers.push((green.as_slice(), residual));
+            born_row::accumulate(
+                &observed,
+                config.estimate_source_scaling,
+                |receiver| {
+                    terms.predict(
+                        row.direct[receiver],
+                        &FactoredProducts::new(
+                            &row.incident,
+                            &geometry.fields[row.receivers[receiver]],
+                        ),
+                    )
+                },
+                |scale, residuals, gradient| {
+                    // Preserve the original left-associated scale * incident * G.
+                    let scaled = row
+                        .incident
+                        .iter()
+                        .map(|&value| scale * value)
+                        .collect::<Vec<_>>();
+                    let receivers = row
+                        .receivers
+                        .iter()
+                        .zip(residuals)
+                        .map(|(&field, &residual)| {
+                            (
+                                FactoredProducts::new(&scaled, &geometry.fields[field]),
+                                residual,
+                            )
+                        })
+                        .collect::<Vec<_>>();
+                    terms.accumulate_adjoint::<VOXELS_PER_BLOCK, _>(gradient, &receivers);
+                },
+                objective,
+                gradient,
+            )?;
         }
-        terms.accumulate_adjoint::<VOXELS_PER_BLOCK>(gradient, &scaled_incident, &receivers);
-        // Preserve the established objective's exact reduction contract.
-        *objective += complex_l2_objective(&scaled_prediction, &observed)
-            .expect("validated equal row lengths");
     }
     Ok(())
 }

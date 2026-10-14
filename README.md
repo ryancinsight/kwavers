@@ -29,6 +29,9 @@ recompute model-dependent pressures, source fits, gradients and Hessian probes.
 Forward pressure and the adjoint share a native-precision weighted field kernel;
 the [workspace contract](crates/kwavers-solver/src/inverse/fwi/frequency_domain/gradient/README.md)
 records its storage bound and differential verification.
+Prepared spatial products share the same generic kernel with factored fields;
+requested expanded allocations are bounded to 8 MiB per inversion. Model weights
+and results remain recomputed, including source fitting and Hessian probes.
 Checked blocks retain voxel order and handle complete blocks and tails through
 one valid-prefix kernel with reused output storage. FWI
 uses the same two-product cubic voxel measure in every model evaluation.
