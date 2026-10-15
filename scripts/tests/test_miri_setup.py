@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -59,8 +60,24 @@ class MiriSetupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="kwavers-miri-sparse-") as temporary:
             sparse = Path(temporary) / "checkout"
             def git(*args: str) -> str:
-                return subprocess.check_output(["git", *args], cwd=sparse if sparse.exists() else ROOT, text=True, stderr=subprocess.PIPE, timeout=30)
-            git("clone", "--quiet", "--no-checkout", "--shared", str(ROOT), str(sparse))
+                result = subprocess.run(["git", *args], cwd=sparse if sparse.exists() else ROOT, text=True, capture_output=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                return result.stdout
+            # A shallow partial source cannot serve an ordinary local clone:
+            # upload-pack would need blobs that sparse checkout never fetched.
+            # Share its existing object store without transport or source edits.
+            objects = Path(git("rev-parse", "--git-path", "objects").strip())
+            if not objects.is_absolute():
+                objects = ROOT / objects
+            shallow = Path(git("rev-parse", "--git-path", "shallow").strip())
+            if not shallow.is_absolute():
+                shallow = ROOT / shallow
+            head = git("rev-parse", "HEAD").strip()
+            git("init", "--quiet", str(sparse))
+            (sparse / ".git/objects/info/alternates").write_text(str(objects.resolve()) + "\n")
+            if shallow.exists():
+                shutil.copyfile(shallow, sparse / ".git/shallow")
+            git("update-ref", "HEAD", head)
             git("sparse-checkout", "set", "--cone", *patterns)
             git("checkout", "--quiet", "HEAD")
             tracked = git("ls-tree", "-r", "--name-only", "HEAD").splitlines()

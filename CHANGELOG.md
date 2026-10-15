@@ -34,6 +34,8 @@
   reuse a compiler/interpreter-keyed standard library with unconditional Miri
   validation. Four regressions check Git object identities, workspace manifests,
   compile-time includes, cache identity, complete inventory and unchanged bounds.
+  The checkout regression shares existing Git objects and the shallow boundary,
+  so verification also works from the hosted shallow partial checkout.
 
 - [patch] Embed the canonical scalar template as a compiler input of its
   generator. Shared build-directory reuse cannot read a checkout path captured
