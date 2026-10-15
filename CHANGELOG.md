@@ -35,6 +35,7 @@
   all boundary/parity/export assertions. The immutable artifact ID, full wheel
   digest, source revision and lockfile bind the complete cross-job handoff.
   Five focused regressions cover transport integrity and workflow dependencies.
+  The real-wheel fixture honors Python's configured system or bundled source.
 
 - [patch] Ten bounded native/wheel compilation jobs use complete compiler-input
   sparse checkout. Regression coverage checks every consumer and retains all

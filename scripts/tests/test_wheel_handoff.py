@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import shutil
 import sys
+import sysconfig
 import tempfile
 import unittest
 import zipfile
@@ -19,9 +20,12 @@ class WheelHandoffTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix="wheel-handoff-")
         self.addCleanup(self.temporary.cleanup)
         self.directory = Path(self.temporary.name)
-        # ensurepip ships a complete real wheel on every supported Python.
-        # Transport hashes all bytes; it does not substitute package behavior.
-        wheels = list((Path(ensurepip.__file__).parent / "_bundled").glob("pip-*.whl"))
+        # Use Python's declared wheel source: distributions can keep it in
+        # WHEEL_PKG_DIR instead of ensurepip's bundled directory. Both contain
+        # complete real wheels; transport never substitutes package behavior.
+        wheel_directory = sysconfig.get_config_var("WHEEL_PKG_DIR")
+        origin = Path(wheel_directory) if wheel_directory else Path(ensurepip.__file__).parent / "_bundled"
+        wheels = list(origin.glob("pip-*.whl"))
         self.assertEqual(len(wheels), 1)
         self.wheel = self.directory / wheels[0].name
         shutil.copyfile(wheels[0], self.wheel)
