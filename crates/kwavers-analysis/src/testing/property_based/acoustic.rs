@@ -85,8 +85,8 @@ pub mod medium_properties {
                 for k in 0..grid.nz {
                     let density_val = medium.density(i, j, k).into_base();
                     let speed_val = medium.sound_speed(i, j, k).into_base();
-                    let abs_val = medium.absorption(i, j, k);
-                    let nl_val = medium.nonlinearity(i, j, k);
+                    let abs_val = medium.absorption(i, j, k).into_base();
+                    let nl_val = medium.nonlinearity(i, j, k).into_base();
 
                     if !density_val.is_finite() || density_val <= 0.0 {
                         return Err(format!(

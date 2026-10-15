@@ -54,7 +54,8 @@ impl KuznetsovWave {
                     .into_base(),
                     kwavers_medium::nonlinearity_at(
                         medium, center_x, center_y, center_z, &self.grid,
-                    ),
+                    )
+                    .into_base(),
                     self.config.acoustic_diffusivity,
                 )
             } else {
@@ -125,7 +126,8 @@ impl KuznetsovWave {
                             kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid).into_base();
                         if include_nonlinearity {
                             self.workspace.cache_nonlinearity[[i, j, k]] =
-                                kwavers_medium::nonlinearity_at(medium, x, y, z, &self.grid);
+                                kwavers_medium::nonlinearity_at(medium, x, y, z, &self.grid)
+                                    .into_base();
                         }
                         self.workspace.cache_source[[i, j, k]] =
                             source.get_source_term(t, x, y, z, &self.grid);

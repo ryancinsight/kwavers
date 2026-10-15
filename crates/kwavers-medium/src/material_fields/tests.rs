@@ -43,7 +43,10 @@ fn sampling_reproduces_medium_properties() {
                     fields.alpha_power[index],
                     medium.alpha_power(x, y, z, &grid)
                 );
-                assert_eq!(fields.nonlinearity[index], medium.nonlinearity(i, j, k));
+                assert_eq!(
+                    fields.nonlinearity[index],
+                    medium.nonlinearity(i, j, k).into_base()
+                );
             }
         }
     }

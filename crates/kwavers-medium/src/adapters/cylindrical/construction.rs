@@ -75,7 +75,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
 
                 let c = medium.sound_speed(i, j, k).into_base();
                 let rho = medium.density(i, j, k).into_base();
-                let alpha = medium.absorption(i, j, k);
+                let alpha = medium.absorption(i, j, k).into_base();
 
                 sound_speed_2d[[iz, ir]] = c;
                 density_2d[[iz, ir]] = rho;
@@ -113,7 +113,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
         // Project nonlinearity if medium has it.
         // Homogeneous medium: constant sample at origin; heterogeneous: per-cell projection.
         let nonlinearity_2d = if is_homogeneous {
-            let b_over_a = medium.nonlinearity(0, 0, 0);
+            let b_over_a = medium.nonlinearity(0, 0, 0).into_base();
             if b_over_a != 0.0 {
                 Some(Array2::from_elem(shape, b_over_a))
             } else {
@@ -132,7 +132,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
                     let y = 0.0;
 
                     if let Some((i, j, k)) = grid.coordinates_to_indices(x, y, z) {
-                        let b_over_a = medium.nonlinearity(i, j, k);
+                        let b_over_a = medium.nonlinearity(i, j, k).into_base();
                         nonlin_2d[[iz, ir]] = b_over_a;
 
                         if b_over_a != 0.0 {
