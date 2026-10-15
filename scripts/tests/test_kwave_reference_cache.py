@@ -84,14 +84,18 @@ class ReferenceCacheTests(unittest.TestCase):
 
     def test_workflow_retains_fresh_assertions_and_exact_reference_namespace(self) -> None:
         workflow = yaml.load((ROOT / ".github/workflows/python-wheel-smoke.yml").read_text(), Loader=yaml.BaseLoader)
-        steps = workflow["jobs"]["kwave-comparison"]["steps"]
+        steps = workflow["jobs"]["kwave-validation"]["steps"]
         by_name = {step.get("name"): step for step in steps}
         restore = by_name["Restore k-Wave reference results"]
         self.assertEqual(restore["uses"], "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9")
         self.assertEqual(restore["with"]["path"], "kwave_cache")
         self.assertEqual(restore["with"]["key"], "kwave-reference-${{ runner.os }}-${{ runner.arch }}-${{ steps.kwave-reference.outputs.identity }}")
         self.assertNotIn("restore-keys", restore["with"])
-        self.assertNotIn("if", by_name["Build stable-ABI wheel"])
+        producer_builds = [step for step in workflow["jobs"]["kwave-comparison"]["steps"]
+                           if step.get("name") == "Build stable-ABI wheel"]
+        self.assertEqual(len(producer_builds), 1)
+        self.assertNotIn("if", producer_builds[0])
+        self.assertEqual(workflow["jobs"]["kwave-validation"]["needs"], "kwave-comparison")
         parity = by_name["Run value-semantic k-Wave parity suite"]
         self.assertNotIn("if", parity)
         self.assertIn("--capture=tee-sys", parity["run"])

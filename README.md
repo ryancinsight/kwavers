@@ -32,6 +32,10 @@ contract, retaining linear scratch space and the established objective reduction
 The Born adjoint checks and borrows dense gradient storage once per frequency;
 an exact coordinate oracle verifies its row-major projection. The dependency
 lock uses Rustls 0.23.46 and retains the first-party Git source identities.
+The k-Wave wheel build and installed-wheel checks use separate bounded jobs.
+The consumer verifies the exact producer artifact's full SHA-256, source head
+and lockfile before installation; both Maturin build-script handoffs remain.
+
 The Python wheel workflow persists only k-Wave reference outputs across CI runs.
 Reference code, dependency records, CPU executable and runtime identities scope
 the cache; a sealed integrity manifest precedes reuse. Kwavers results and all

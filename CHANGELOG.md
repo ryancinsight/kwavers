@@ -30,6 +30,12 @@
 
 ### Fixed
 
+- [patch] Separate k-Wave wheel construction from installed-wheel validation,
+  retaining each original time limit, both Maturin build-script handoffs and
+  all boundary/parity/export assertions. The immutable artifact ID, full wheel
+  digest, source revision and lockfile bind the complete cross-job handoff.
+  Five focused regressions cover transport integrity and workflow dependencies.
+
 - [patch] Ten bounded native/wheel compilation jobs use complete compiler-input
   sparse checkout. Regression coverage checks every consumer and retains all
   commands, prerequisite edges, features, permissions, selections and time limits.
