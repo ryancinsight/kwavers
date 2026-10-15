@@ -92,7 +92,7 @@ impl NonlinearWave {
                 for k in 0..nz {
                     let (x, y, z) = grid.coords(i, j, k);
 
-                    let density = kwavers_medium::density_at(medium, x, y, z, grid);
+                    let density = kwavers_medium::density_at(medium, x, y, z, grid).into_base();
                     let b_over_a = kwavers_medium::AcousticProperties::nonlinearity_parameter(
                         medium, x, y, z, grid,
                     );

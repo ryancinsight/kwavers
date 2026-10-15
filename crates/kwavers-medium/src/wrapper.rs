@@ -1,12 +1,18 @@
 //! Continuous-coordinate access for [`CoreMedium`] properties.
 
 use crate::{continuous_to_discrete, CoreMedium};
-use aequitas::systems::si::quantities::Velocity;
+use aequitas::systems::si::quantities::{MassDensity, Velocity};
 use kwavers_grid::Grid;
 
-/// Get density at continuous coordinates.
+/// Get density at continuous coordinates, in kilograms per cubic metre.
 #[inline]
-pub fn density_at<M: CoreMedium + ?Sized>(medium: &M, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+pub fn density_at<M: CoreMedium + ?Sized>(
+    medium: &M,
+    x: f64,
+    y: f64,
+    z: f64,
+    grid: &Grid,
+) -> MassDensity<f64> {
     let (i, j, k) = continuous_to_discrete(x, y, z, grid);
     medium.density(i, j, k)
 }

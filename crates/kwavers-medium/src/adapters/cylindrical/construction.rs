@@ -74,7 +74,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
                 })?;
 
                 let c = medium.sound_speed(i, j, k).into_base();
-                let rho = medium.density(i, j, k);
+                let rho = medium.density(i, j, k).into_base();
                 let alpha = medium.absorption(i, j, k);
 
                 sound_speed_2d[[iz, ir]] = c;

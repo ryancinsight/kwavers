@@ -32,7 +32,7 @@ fn estimate_elastic_time_step<M: Medium>(
     for k in 0..grid.nz {
         for j in 0..grid.ny {
             for i in 0..grid.nx {
-                let rho = medium.density(i, j, k);
+                let rho = medium.density(i, j, k).into_base();
                 if rho <= 0.0 {
                     continue;
                 }

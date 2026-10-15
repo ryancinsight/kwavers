@@ -155,7 +155,9 @@ fn bench_medium_access(c: &mut Criterion) {
             for i in 0..64 {
                 for j in 0..64 {
                     for k in 0..64 {
-                        sum += medium.density(black_box(i), black_box(j), black_box(k));
+                        sum += medium
+                            .density(black_box(i), black_box(j), black_box(k))
+                            .into_base();
                         sum += medium
                             .sound_speed(black_box(i), black_box(j), black_box(k))
                             .into_base();
@@ -173,7 +175,9 @@ fn bench_medium_access(c: &mut Criterion) {
             for k in 0..64 {
                 for j in 0..64 {
                     for i in 0..64 {
-                        sum += medium.density(black_box(i), black_box(j), black_box(k));
+                        sum += medium
+                            .density(black_box(i), black_box(j), black_box(k))
+                            .into_base();
                         sum += medium
                             .sound_speed(black_box(i), black_box(j), black_box(k))
                             .into_base();

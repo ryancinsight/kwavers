@@ -290,7 +290,7 @@ fn lossy_westervelt_stokes_coefficient_matches_analytical() {
     // Diffusivity of sound δ = (4η_s/3 + η_b)/ρ from the actual medium.
     let eta_s = medium.shear_viscosity(0.0, 0.0, 0.0, &grid).into_base();
     let eta_b = medium.bulk_viscosity(0.0, 0.0, 0.0, &grid).into_base();
-    let rho = kwavers_medium::density_at(&medium, 0.0, 0.0, 0.0, &grid);
+    let rho = kwavers_medium::density_at(&medium, 0.0, 0.0, 0.0, &grid).into_base();
     let delta = (4.0 * eta_s / 3.0 + eta_b) / rho;
 
     // Resolved mode m=2 (k·Δx = π/8). FD Laplacian wavenumber vs the continuous k₀.
@@ -360,7 +360,7 @@ fn lossy_westervelt_absorption_rate_matches_stokes_end_to_end() {
 
     let eta_s = medium.shear_viscosity(0.0, 0.0, 0.0, &grid).into_base();
     let eta_b = medium.bulk_viscosity(0.0, 0.0, 0.0, &grid).into_base();
-    let rho = kwavers_medium::density_at(&medium, 0.0, 0.0, 0.0, &grid);
+    let rho = kwavers_medium::density_at(&medium, 0.0, 0.0, 0.0, &grid).into_base();
     let delta = (4.0 * eta_s / 3.0 + eta_b) / rho;
 
     let m = 2.0_f64;

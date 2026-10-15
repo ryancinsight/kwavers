@@ -70,7 +70,7 @@ impl PennesBioheat {
             |[i, j, k], q, &t| {
                 let (x, y, z) = grid.coords(i, j, k);
 
-                let rho = kwavers_medium::density_at(medium, x, y, z, grid);
+                let rho = kwavers_medium::density_at(medium, x, y, z, grid).into_base();
                 let cp = medium.specific_heat(x, y, z, grid).into_base();
 
                 let perfusion_coeff = self.params.perfusion_rate.into_base()
@@ -113,7 +113,7 @@ impl PennesBioheat {
             |[i, j, k], t, &lap| {
                 let (x, y, z) = grid.coords(i, j, k);
 
-                let rho = kwavers_medium::density_at(medium, x, y, z, grid);
+                let rho = kwavers_medium::density_at(medium, x, y, z, grid).into_base();
                 let cp = medium.specific_heat(x, y, z, grid).into_base();
                 let alpha = medium.thermal_diffusivity(x, y, z, grid).into_base();
                 let perfusion = self.params.perfusion_rate.into_base()

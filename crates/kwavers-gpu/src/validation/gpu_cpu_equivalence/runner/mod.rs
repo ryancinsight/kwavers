@@ -70,7 +70,7 @@ fn medium_values(grid: &Grid, medium: &dyn Medium) -> Result<Vec<FdtdMedium>, Kw
     for z in 0..grid.nz {
         for y in 0..grid.ny {
             for x in 0..grid.nx {
-                let density = provider_f32("density", medium.density(x, y, z))?;
+                let density = provider_f32("density", medium.density(x, y, z).into_base())?;
                 let sound_speed =
                     provider_f32("sound speed", medium.sound_speed(x, y, z).into_base())?;
                 let cell = FdtdMedium::new(density, sound_speed).map_err(|error| {

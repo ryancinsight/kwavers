@@ -34,7 +34,7 @@ pub trait ViscousProperties: CoreMedium {
     fn kinematic_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> KinematicViscosity {
         let mu = self.viscosity(x, y, z, grid).into_base();
         let (i, j, k) = crate::continuous_to_discrete(x, y, z, grid);
-        let rho = self.density(i, j, k);
+        let rho = self.density(i, j, k).into_base();
         if rho > 0.0 {
             KinematicViscosity::from_base(mu / rho)
         } else {

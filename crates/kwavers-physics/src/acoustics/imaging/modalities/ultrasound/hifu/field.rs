@@ -85,7 +85,7 @@ pub fn compute_intensity_field(
     medium: &dyn Medium,
 ) -> KwaversResult<Array3<f64>> {
     let pressure = compute_pressure_field(transducer, grid, medium)?;
-    let rho = medium.density(grid.nx / 2, grid.ny / 2, 0);
+    let rho = medium.density(grid.nx / 2, grid.ny / 2, 0).into_base();
     let c = medium.sound_speed(grid.nx / 2, grid.ny / 2, 0).into_base();
     let impedance = rho * c;
 
@@ -114,7 +114,7 @@ fn validate_field_inputs(
     validate_positive("focal_length", transducer.focal_length)?;
     validate_positive("aperture_radius", transducer.aperture_radius)?;
 
-    let density = medium.density(grid.nx / 2, grid.ny / 2, 0);
+    let density = medium.density(grid.nx / 2, grid.ny / 2, 0).into_base();
     let sound_speed = medium.sound_speed(grid.nx / 2, grid.ny / 2, 0).into_base();
     validate_positive("reference_density", density)?;
     validate_positive("reference_sound_speed", sound_speed)?;

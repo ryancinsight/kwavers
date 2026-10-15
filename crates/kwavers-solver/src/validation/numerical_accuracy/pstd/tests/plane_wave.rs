@@ -45,7 +45,7 @@ fn test_pstd_plane_wave_accuracy() {
     // Initialize plane wave in the solver
     let k = TWO_PI / wavelength;
     let c0 = medium.sound_speed(0, 0, 0).into_base();
-    let rho0 = medium.density(0, 0, 0);
+    let rho0 = medium.density(0, 0, 0).into_base();
 
     for i in 0..n {
         for j in 0..n {

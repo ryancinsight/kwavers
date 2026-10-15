@@ -119,7 +119,7 @@ pub(crate) fn initialize_absorption_operators(
                     for i in 0..grid.nx {
                         let (x, y_coord, z) = grid.indices_to_coordinates(i, j, k);
                         let c0 = medium.sound_speed(i, j, k).into_base();
-                        let rho0 = medium.density(i, j, k);
+                        let rho0 = medium.density(i, j, k).into_base();
                         let eta_s = medium.shear_viscosity(x, y_coord, z, grid).into_base();
                         let eta_b = medium.bulk_viscosity(x, y_coord, z, grid).into_base();
 

@@ -77,7 +77,8 @@ impl KuznetsovWave {
     ) {
         let (center_x, center_y, center_z) = self.grid.center();
         self.medium_properties.rho0 =
-            kwavers_medium::density_at(medium, center_x, center_y, center_z, &self.grid);
+            kwavers_medium::density_at(medium, center_x, center_y, center_z, &self.grid)
+                .into_base();
         self.medium_properties.c0 =
             kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid)
                 .into_base();

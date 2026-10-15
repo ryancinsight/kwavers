@@ -146,16 +146,16 @@ impl ElasticWave {
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
-                    let center = medium.density(i, j, k);
+                    let center = medium.density(i, j, k).into_base();
 
                     // Check neighbors
                     let neighbors = [
-                        medium.density(i + 1, j, k),
-                        medium.density(i.saturating_sub(1), j, k),
-                        medium.density(i, j + 1, k),
-                        medium.density(i, j.saturating_sub(1), k),
-                        medium.density(i, j, k + 1),
-                        medium.density(i, j, k.saturating_sub(1)),
+                        medium.density(i + 1, j, k).into_base(),
+                        medium.density(i.saturating_sub(1), j, k).into_base(),
+                        medium.density(i, j + 1, k).into_base(),
+                        medium.density(i, j.saturating_sub(1), k).into_base(),
+                        medium.density(i, j, k + 1).into_base(),
+                        medium.density(i, j, k.saturating_sub(1)).into_base(),
                     ];
 
                     // Check for significant jumps

@@ -46,7 +46,8 @@ impl KuznetsovWave {
             if !is_heterogeneous {
                 let (center_x, center_y, center_z) = self.grid.center();
                 (
-                    kwavers_medium::density_at(medium, center_x, center_y, center_z, &self.grid),
+                    kwavers_medium::density_at(medium, center_x, center_y, center_z, &self.grid)
+                        .into_base(),
                     kwavers_medium::sound_speed_at(
                         medium, center_x, center_y, center_z, &self.grid,
                     )
@@ -119,7 +120,7 @@ impl KuznetsovWave {
                     for i in 0..nx {
                         let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
                         self.workspace.cache_density[[i, j, k]] =
-                            kwavers_medium::density_at(medium, x, y, z, &self.grid);
+                            kwavers_medium::density_at(medium, x, y, z, &self.grid).into_base();
                         self.workspace.cache_sound_speed[[i, j, k]] =
                             kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid).into_base();
                         if include_nonlinearity {

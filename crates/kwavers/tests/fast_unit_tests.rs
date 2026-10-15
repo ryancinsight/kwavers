@@ -48,7 +48,7 @@ fn test_medium_properties_basic() {
 
     // Test property access
     let sound_speed = medium.sound_speed(0, 0, 0).into_base();
-    let density = medium.density(0, 0, 0);
+    let density = medium.density(0, 0, 0).into_base();
 
     assert!((sound_speed - SOUND_SPEED_WATER).abs() < 1e-10);
     assert!((density - DENSITY_WATER).abs() < 1e-10);

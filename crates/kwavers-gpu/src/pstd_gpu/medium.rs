@@ -177,7 +177,7 @@ impl PstdMediumSnapshot {
                     let sound_speed = medium.sound_speed(ix, iy, iz).into_base();
                     c_ref = c_ref.max(sound_speed);
                     c0_flat.push(sound_speed as f32);
-                    rho0_flat.push(medium.density(ix, iy, iz) as f32);
+                    rho0_flat.push(medium.density(ix, iy, iz).into_base() as f32);
                     bon_a_flat.push((medium.nonlinearity(ix, iy, iz) / 2.0) as f32);
                     if absorption.uses_medium() {
                         let (x, y, z) = grid.indices_to_coordinates(ix, iy, iz);

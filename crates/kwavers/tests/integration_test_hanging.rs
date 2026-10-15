@@ -75,10 +75,10 @@ fn test_medium_properties() {
         medium.sound_speed(0, 0, 0).into_base()
     );
     assert!(
-        (medium.density(0, 0, 0) - DENSITY_WATER).abs() < 1e-6,
+        (medium.density(0, 0, 0).into_base() - DENSITY_WATER).abs() < 1e-6,
         "Density mismatch: expected {}, got {}",
         DENSITY_WATER,
-        medium.density(0, 0, 0)
+        medium.density(0, 0, 0).into_base()
     );
     assert!(medium.is_homogeneous());
 }

@@ -180,7 +180,7 @@ impl ConservationMonitor {
             let vy = velocity_y[[i, j, k]];
             let vz = velocity_z[[i, j, k]];
 
-            let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
+            let density = kwavers_medium::density_at(medium, x, y, z, &self.grid).into_base();
             let gamma = medium.gamma(x, y, z, &self.grid).into_base();
 
             // Kinetic energy density
@@ -256,7 +256,8 @@ impl ConservationMonitor {
                     let vy_val = vy[[i, j, k]];
                     let vz_val = vz[[i, j, k]];
 
-                    let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
+                    let density =
+                        kwavers_medium::density_at(medium, x, y, z, &self.grid).into_base();
                     let sound_speed =
                         kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid).into_base();
 
@@ -279,7 +280,7 @@ impl ConservationMonitor {
                 let z = k as f64 * self.grid.dz;
                 let p = pressure[[i, j, k]];
 
-                let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
+                let density = kwavers_medium::density_at(medium, x, y, z, &self.grid).into_base();
                 let sound_speed =
                     kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid).into_base();
 
