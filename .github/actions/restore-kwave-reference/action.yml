@@ -1,0 +1,33 @@
+name: Restore validated k-Wave reference results
+description: Bind reference results to exact source and environment identities before reuse.
+outputs:
+  identity:
+    description: Exact reference code and execution environment digest.
+    value: ${{ steps.kwave-reference.outputs.identity }}
+runs:
+  using: composite
+  steps:
+    - name: Identify the k-Wave reference environment
+      id: kwave-reference
+      shell: bash
+      run: |
+        set -euo pipefail
+        source wheel-smoke/bin/activate
+        python source/scripts/kwave_reference_cache.py identity --repository source --output "$GITHUB_OUTPUT"
+
+    - name: Restore k-Wave reference results
+      id: kwave-reference-cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: kwave_cache
+        key: kwave-reference-${{ runner.os }}-${{ runner.arch }}-${{ steps.kwave-reference.outputs.identity }}
+
+    - name: Verify restored k-Wave reference results
+      if: steps.kwave-reference-cache.outputs.cache-hit == 'true'
+      shell: bash
+      env:
+        REFERENCE_IDENTITY: ${{ steps.kwave-reference.outputs.identity }}
+      run: |
+        set -euo pipefail
+        source wheel-smoke/bin/activate
+        python source/scripts/kwave_reference_cache.py verify --directory kwave_cache --identity "$REFERENCE_IDENTITY"

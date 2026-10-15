@@ -84,7 +84,16 @@ class ReferenceCacheTests(unittest.TestCase):
 
     def test_workflow_retains_fresh_assertions_and_exact_reference_namespace(self) -> None:
         workflow = yaml.load((ROOT / ".github/workflows/python-wheel-smoke.yml").read_text(), Loader=yaml.BaseLoader)
-        steps = workflow["jobs"]["kwave-validation"]["steps"]
+        steps = []
+        reference_path = ".github/actions/restore-kwave-reference/action.yml"
+        for step in workflow["jobs"]["kwave-validation"]["steps"]:
+            if step.get("uses") == "./source/.github/actions/restore-kwave-reference":
+                self.assertEqual(step["id"], "kwave-reference")
+                reference = yaml.load((ROOT / reference_path).read_text(), Loader=yaml.BaseLoader)
+                self.assertEqual(reference["outputs"]["identity"]["value"], "${{ steps.kwave-reference.outputs.identity }}")
+                steps.extend(reference["runs"]["steps"])
+            else:
+                steps.append(step)
         by_name = {step.get("name"): step for step in steps}
         restore = by_name["Restore k-Wave reference results"]
         self.assertEqual(restore["uses"], "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9")
@@ -106,7 +115,16 @@ class ReferenceCacheTests(unittest.TestCase):
         for event in ("pull_request", "push"):
             self.assertIn("scripts/kwave_reference_cache.py", workflow["on"][event]["paths"])
             self.assertIn("scripts/tests/test_kwave_reference_cache.py", workflow["on"][event]["paths"])
-        self.assertIn('"k-wave-python==0.6.2"', by_name["Install wheel and k-Wave comparison dependency"]["run"])
+        setup_path = ".github/actions/setup-kwave/action.yml"
+        self.assertEqual(by_name["Install wheel and k-Wave comparison dependency"]["uses"], "./source/" + str(Path(setup_path).parent))
+        setup = yaml.load((ROOT / setup_path).read_text(), Loader=yaml.BaseLoader)
+        commands = "\n".join(step.get("run", "") for step in setup["runs"]["steps"])
+        self.assertIn('"k-wave-python==0.6.2"', commands)
+        self.assertIn(setup_path, CACHE.SOURCE_INPUTS)
+        self.assertIn(reference_path, CACHE.SOURCE_INPUTS)
+        for event in ("pull_request", "push"):
+            self.assertIn(setup_path, workflow["on"][event]["paths"])
+            self.assertIn(reference_path, workflow["on"][event]["paths"])
         preflight = [step for step in workflow["jobs"]["native-prerequisites"]["steps"]
                      if step.get("name") == "Verify wheel build-script handoff"]
         self.assertEqual(len(preflight), 1)

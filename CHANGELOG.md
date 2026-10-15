@@ -36,6 +36,9 @@
   digest, source revision and lockfile bind the complete cross-job handoff.
   Five focused regressions cover transport integrity and workflow dependencies.
   The real-wheel fixture honors Python's configured system or bundled source.
+  Environment preparation and reference restoration use dedicated local actions;
+  both actions belong to the exact cache source identity. The workflow retains
+  its complete checks within 500 lines.
 
 - [patch] Ten bounded native/wheel compilation jobs use complete compiler-input
   sparse checkout. Regression coverage checks every consumer and retains all

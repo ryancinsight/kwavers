@@ -24,6 +24,15 @@ import sys
 
 MANIFEST = "manifest.json"
 REFERENCE_NAME = re.compile(r"[0-9a-f]{64}\.npz")
+SOURCE_INPUTS = (
+    "scripts/kwave_reference_cache.py",
+    ".github/actions/setup-kwave/action.yml",
+    ".github/actions/restore-kwave-reference/action.yml",
+    ".github/workflows/python-wheel-smoke.yml",
+    "crates/kwavers-python/python/pykwavers/comparison.py",
+    "crates/kwavers-python/python/pykwavers/kwave_python_bridge.py",
+    "crates/kwavers-python/tests/test_kwave_comparison.py",
+)
 
 
 def file_digest(path: Path) -> str:
@@ -60,13 +69,7 @@ def reference_identity(repository: Path) -> str:
         and "bin" not in path.relative_to(package).parts
     }
     files["cpu-executable"] = binary
-    for relative in (
-        "scripts/kwave_reference_cache.py",
-        ".github/workflows/python-wheel-smoke.yml",
-        "crates/kwavers-python/python/pykwavers/comparison.py",
-        "crates/kwavers-python/python/pykwavers/kwave_python_bridge.py",
-        "crates/kwavers-python/tests/test_kwave_comparison.py",
-    ):
+    for relative in SOURCE_INPUTS:
         files["source/" + relative] = repository / relative
     packages = {}
     for distribution in importlib.metadata.distributions():

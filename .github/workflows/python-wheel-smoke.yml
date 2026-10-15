@@ -22,6 +22,8 @@ on:
       - scripts/tests/test_compiler_checkouts.py
       - scripts/tests/test_wheel_validation_workflow.py
       - scripts/tests/test_wheel_handoff.py
+      - .github/actions/setup-kwave/action.yml
+      - .github/actions/restore-kwave-reference/action.yml
       - scripts/wheel_handoff.py
       - .github/workflows/python-wheel-smoke.yml
   pull_request:
@@ -46,6 +48,8 @@ on:
       - scripts/tests/test_compiler_checkouts.py
       - scripts/tests/test_wheel_validation_workflow.py
       - scripts/tests/test_wheel_handoff.py
+      - .github/actions/setup-kwave/action.yml
+      - .github/actions/restore-kwave-reference/action.yml
       - scripts/wheel_handoff.py
       - .github/workflows/python-wheel-smoke.yml
   # The full three-OS matrix below is a drift backstop, not a per-change
@@ -295,10 +299,8 @@ jobs:
     if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: k-Wave wheel (Ubuntu)
     runs-on: ubuntu-latest
-    # Same debug-on-pull-request split as `base-wheel` above: the release
-    # wheel build measured 11.9m here as well (run 37653455660), while the
-    # parity suites themselves run in under half a minute. The per-test
-    # `--timeout=60` (thread method) still bounds a debug-slowed case.
+    # PRs build the debug wheel; other events retain release construction.
+    # Installed-wheel scientific checks use their separate bounded consumer.
     timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
     outputs:
       identity: ${{ steps.wheel-identity.outputs.identity }}
@@ -427,11 +429,6 @@ jobs:
             xtask
           persist-credentials: false
 
-      - name: Set up Python 3.10
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
-        with:
-          python-version: "3.10"
-
       - name: Restore the complete built wheel
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
@@ -446,75 +443,14 @@ jobs:
           WHEEL_IDENTITY: ${{ needs.kwave-comparison.outputs.identity }}
         run: |
           set -euo pipefail
-          python source/scripts/wheel_handoff.py verify --repository source --directory dist
-
-      - name: Prepare Ubuntu package index
-        uses: ./source/.github/actions/install-system-dependencies
-
-      - name: Select the k-Wave HDF5 runtime packages
-        id: hdf5-runtime
-        run: |
-          set -euo pipefail
-          hdf5_runtime_packages=()
-          for hdf5_runtime in libhdf5-103-1 libhdf5-103-1t64; do
-            if apt-cache show "$hdf5_runtime" 2>/dev/null | grep -q '^Package:'; then
-              hdf5_runtime_packages+=("$hdf5_runtime")
-              break
-            fi
-          done
-          for hdf5_high_level_runtime in libhdf5-hl-100 libhdf5-hl-100t64; do
-            if apt-cache show "$hdf5_high_level_runtime" 2>/dev/null | grep -q '^Package:'; then
-              hdf5_runtime_packages+=("$hdf5_high_level_runtime")
-              break
-            fi
-          done
-          if ((${#hdf5_runtime_packages[@]} != 2)); then
-            echo "No Ubuntu packages provide libhdf5_serial.so.103 and libhdf5_serial_hl.so.100" >&2
-            exit 1
-          fi
-          printf 'packages=%s\n' "${hdf5_runtime_packages[*]}" >> "$GITHUB_OUTPUT"
-
-      - name: Install k-Wave HDF5 runtime
-        uses: ./source/.github/actions/install-system-dependencies
-        with:
-          packages: ${{ steps.hdf5-runtime.outputs.packages }}
-          refresh: "false"
+          python3 source/scripts/wheel_handoff.py verify --repository source --directory dist
 
       - name: Install wheel and k-Wave comparison dependency
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m venv wheel-smoke
-          source wheel-smoke/bin/activate
-          python -m pip install --disable-pip-version-check --upgrade pip
-          python -m pip install --disable-pip-version-check "pytest==8.4.2" "pytest-benchmark==5.2.3" "pytest-timeout==2.4.0"
-          python -m pip install --disable-pip-version-check dist/*.whl
-          python -m pip install --disable-pip-version-check "k-wave-python==0.6.2"
+        uses: ./source/.github/actions/setup-kwave
 
-      - name: Identify the k-Wave reference environment
+      - name: Restore and verify k-Wave reference results
         id: kwave-reference
-        shell: bash
-        run: |
-          set -euo pipefail
-          source wheel-smoke/bin/activate
-          python source/scripts/kwave_reference_cache.py identity --repository source --output "$GITHUB_OUTPUT"
-
-      - name: Restore k-Wave reference results
-        id: kwave-reference-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: kwave_cache
-          key: kwave-reference-${{ runner.os }}-${{ runner.arch }}-${{ steps.kwave-reference.outputs.identity }}
-
-      - name: Verify restored k-Wave reference results
-        if: steps.kwave-reference-cache.outputs.cache-hit == 'true'
-        shell: bash
-        env:
-          REFERENCE_IDENTITY: ${{ steps.kwave-reference.outputs.identity }}
-        run: |
-          set -euo pipefail
-          source wheel-smoke/bin/activate
-          python source/scripts/kwave_reference_cache.py verify --directory kwave_cache --identity "$REFERENCE_IDENTITY"
+        uses: ./source/.github/actions/restore-kwave-reference
 
       - name: Run the dimensioned-boundary suite against the installed wheel
         # The boundary accepts a base-unit float or a protocol quantity, and

@@ -36,6 +36,9 @@ The k-Wave wheel build and installed-wheel checks use separate bounded jobs.
 The consumer verifies the exact producer artifact's full SHA-256, source head
 and lockfile before installation; both Maturin build-script handoffs remain.
 
+Dedicated actions own the pinned comparison environment and reference restore;
+the exact reference identity includes both actions and the complete environment.
+
 The Python wheel workflow persists only k-Wave reference outputs across CI runs.
 Reference code, dependency records, CPU executable and runtime identities scope
 the cache; a sealed integrity manifest precedes reuse. Kwavers results and all
