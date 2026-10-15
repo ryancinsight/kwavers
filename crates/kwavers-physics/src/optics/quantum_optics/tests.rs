@@ -172,3 +172,31 @@ fn test_classical_bremsstrahlung_adequate_sbsl() {
         assessment.classical_accuracy_pct
     );
 }
+
+/// `K0` through the single eunomia core matches published reference values.
+///
+/// References are the DLMF Table 10.2 values (verified against
+/// `scipy.special.k0` on the authoring host, 2026-10-15): `k0(0.5) =
+/// 0.9244190712276656`, `k0(1.0) = 0.42102443824070823`, `k0(1.5) =
+/// 0.21380556264752565`, `k0(2.0) = 0.1138938727495334`, `k0(5.0) =
+/// 0.0036910983340425942`. The bound is the A&S 9.8.5/9.8.6 quoted branch
+/// error (~1.5e-7 relative) with rounding headroom — the same derivation the
+/// eunomia core's own reference test records; it is the branch's error model,
+/// not a tuned epsilon.
+#[test]
+fn gaunt_bessel_k0_matches_published_values() {
+    for (x, expected) in [
+        (0.5, 0.924_419_071_227_665_6_f64),
+        (1.0, 0.421_024_438_240_708_23_f64),
+        (1.5, 0.213_805_562_647_525_65_f64),
+        (2.0, 0.113_893_872_749_533_4_f64),
+        (5.0, 0.003_691_098_334_042_594_2_f64),
+    ] {
+        let value = <f64 as eunomia::RealField>::bessel_k0(x);
+        let rel = ((value - expected) / expected).abs();
+        assert!(
+            rel <= 2.2e-7,
+            "k0({x}) relative error {rel:e} exceeds the A&S 9.8.5/9.8.6 branch bound"
+        );
+    }
+}

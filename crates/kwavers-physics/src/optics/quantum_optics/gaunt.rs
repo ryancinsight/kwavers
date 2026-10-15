@@ -2,8 +2,9 @@
 
 use std::f64::consts::PI;
 
+use eunomia::RealField;
+
 use super::constants::{H_PLANCK, KB};
-use super::special::bessel_k0;
 
 /// Frequency- and temperature-dependent free-free Gaunt factor.
 ///
@@ -33,5 +34,5 @@ pub fn gaunt_factor_ff(freq_hz: f64, temperature_k: f64, _z: f64) -> f64 {
 
     let u = H_PLANCK * freq_hz / (KB * temperature_k);
     let x = 0.5 * u;
-    (3.0_f64.sqrt() / PI) * x.exp() * bessel_k0(x)
+    (3.0_f64.sqrt() / PI) * x.exp() * x.bessel_k0()
 }
