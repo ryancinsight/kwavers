@@ -28,8 +28,8 @@ impl CoreMedium for HomogeneousMedium {
         Dimensionless::from_base(self.nonlinearity)
     }
 
-    fn max_sound_speed(&self) -> f64 {
-        self.sound_speed
+    fn max_sound_speed(&self) -> Velocity<f64> {
+        Velocity::from_base(self.sound_speed)
     }
 
     fn is_homogeneous(&self) -> bool {

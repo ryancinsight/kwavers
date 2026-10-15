@@ -80,7 +80,7 @@ pub fn run(
         if let Some((ax, ay, az)) = pml.alpha_xyz {
             cpml_config = cpml_config.with_alpha_xyz(ax, ay, az);
         }
-        let max_c = req.medium.max_sound_speed();
+        let max_c = req.medium.max_sound_speed().into_base();
         solver.enable_cpml(cpml_config, req.dt, max_c)?;
     }
 

@@ -31,7 +31,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         )
     })?;
 
-    let c0 = req.medium.max_sound_speed();
+    let c0 = req.medium.max_sound_speed().into_base();
     let rho0 = req
         .medium
         .density(req.grid.nx / 2, req.grid.ny / 2, req.grid.nz / 2)

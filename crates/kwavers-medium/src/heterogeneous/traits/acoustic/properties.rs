@@ -38,8 +38,8 @@ impl CoreMedium for HeterogeneousMedium {
     }
 
     /// Get maximum sound speed in the medium
-    fn max_sound_speed(&self) -> f64 {
-        crate::max_sound_speed(&self.sound_speed)
+    fn max_sound_speed(&self) -> Velocity<f64> {
+        Velocity::from_base(crate::max_sound_speed(&self.sound_speed))
     }
 
     /// Get reference frequency for absorption calculations

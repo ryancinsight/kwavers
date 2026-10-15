@@ -62,7 +62,7 @@ impl Medium {
     /// Sound speed [m/s] (max for heterogeneous).
     #[getter]
     fn sound_speed(&self) -> f64 {
-        self.inner.as_medium().max_sound_speed()
+        self.inner.as_medium().max_sound_speed().into_base()
     }
 
     /// Density [kg/m³] (origin voxel for heterogeneous).
@@ -81,7 +81,7 @@ impl Medium {
         match &self.inner {
             MediumInner::Homogeneous(h) => format!(
                 "Medium.homogeneous(sound_speed={:.1}, density={:.1})",
-                h.max_sound_speed(),
+                h.max_sound_speed().into_base(),
                 h.density(0, 0, 0).into_base()
             ),
             MediumInner::Heterogeneous(h) => {
@@ -91,7 +91,7 @@ impl Medium {
                     shape[0],
                     shape[1],
                     shape[2],
-                    h.max_sound_speed()
+                    h.max_sound_speed().into_base()
                 )
             }
         }

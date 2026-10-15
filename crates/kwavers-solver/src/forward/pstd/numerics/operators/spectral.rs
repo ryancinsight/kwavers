@@ -51,7 +51,7 @@ pub fn initialize_spectral_operators(
     medium: &dyn Medium,
 ) -> KwaversResult<(SpectralOperators, Array3<f64>, f64, f64)> {
     let (mut k_ops, k_max) = compute_k_operators(grid);
-    let c_ref = medium.max_sound_speed();
+    let c_ref = medium.max_sound_speed().into_base();
 
     // Initialize anti-aliasing filter if enabled
     if config.anti_aliasing.enabled {

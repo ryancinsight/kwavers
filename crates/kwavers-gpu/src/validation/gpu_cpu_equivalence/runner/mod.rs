@@ -15,7 +15,7 @@ const FDTD_ROUNDING_OPERATIONS_PER_STEP: f64 = 24.0;
 /// pair. The 0.5 factor is the CFL margin before the explicit provider safety
 /// factor is applied by the caller.
 fn calculate_stable_dt(grid: &Grid, medium: &dyn Medium) -> Result<f64, KwaversError> {
-    let c_max = medium.max_sound_speed();
+    let c_max = medium.max_sound_speed().into_base();
     let dx_min = grid.dx.min(grid.dy).min(grid.dz);
     if !c_max.is_finite() || c_max <= 0.0 {
         return Err(KwaversError::InvalidInput(format!(
