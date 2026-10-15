@@ -38,8 +38,12 @@ Prepared spatial products share the same generic kernel with factored fields;
 requested expanded allocations are bounded to 8 MiB per inversion. Model weights
 and results remain recomputed, including source fitting and Hessian probes.
 Checked blocks retain voxel order and handle complete blocks and tails through
-one valid-prefix kernel with reused output storage. FWI
-uses the same two-product cubic voxel measure in every model evaluation.
+one valid-prefix kernel with reused output storage. Pressure integration reads
+spatial blocks immutably and keeps scalar local sums without storing an unused
+weighted block. Native weighting and projection keep weighted/derivative
+components in scalar temporaries without constructing those transient complex
+values. FWI uses the same two-product cubic voxel measure in every model
+evaluation.
 Forward prediction shares the prepared geometry and evaluates each distinct
 receiver Green field once per call. Receiver sweeps retain each gradient block
 locally with the original scalar

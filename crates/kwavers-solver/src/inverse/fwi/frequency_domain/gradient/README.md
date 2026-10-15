@@ -105,6 +105,18 @@ of two is 256. Correctness is independent of cache size and block capacity.
 For block b, `b*K <= V` and `b*K + len <= V`, so matching full field/model
 lengths bound every projection, including the final partial block.
 
+Pressure scratch retains spatial products `q_j = I_j G_j`. The scalar block
+reads them immutably and applies the original component-wise recurrence
+`S_(j+1) = S_j + q_j w_j`; it stores no weighted array that its consumer never
+reads. The exclusive sum borrow cannot alias fields or weights. Native scalar
+locals retain the same multiplication, addition and voxel order, then commit
+the final complex sum once. Per-voxel field values and weights use independent
+bindings; weighted and derivative components remain scalar locals, eliminating
+tuple and complex aggregate construction. Unoptimized Rust 1.97 MIR for `f64`
+retains primitive multiplication/addition order and every checked bound/overflow
+assertion. Checked prefix bounds exclude an intervening index panic. Contracts inspect every raw field, weighted sum, projection and spare
+lane, including nonzero incoming sums and native reduced precision.
+
 Each loop retains its immutable length and visits exactly `[0, len)` with a
 counter. A 180-second full-fixture diagnostic at `0250d5af` attributes 16.499
 inclusive seconds to 4,558,590 repeated slice-length queries. Hoisting metadata

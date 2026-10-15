@@ -1,5 +1,17 @@
 # Active correctness pass — physics, solver and facade 3.0.1
 
+Required final-head hosted acceptance uses [the current PR checks](https://github.com/ryancinsight/kwavers/pull/948/checks) as its authoritative status. All required workflows must pass. Merge, package publication and deployment remain excluded.
+
+- [x] [patch] Both wheel consumers retain and restore matching compiled build scripts before pinned Maturin cleanup; provenance, modes, container paths, dependencies and execution bounds remain verified.
+- [x] [patch] Cold/restored reference runs `38654130481`/`38656128739` verify exact cache identity and sealed contents; both installed wheels and all 26 boundary/three parity/13 export tests pass (three existing optional skips). Fresh Rust computations/assertions remain mandatory on every revision.
+- [x] [patch] Read-only native integration and scalar temporaries pass 75 focused FD, 1,121 solver (six existing ignores), 41 facade tests, strict solver Clippy and eleven artifact/generator regressions.
+- [x] [patch] All 17 isolated Linux Miri contracts and all three unchanged full fixtures pass with default checks: differential 868.72, localized 192.59 and hybrid 237.82 wall seconds, each below 900.
+- [x] [patch] All 54 solver/generator hashes agree across native and interpreter checks; both generated Miri variants match the canonical body. Physics and full facade FD/fusion fixtures remain byte-identical to `d0bc1f3c`.
+
+<details>
+<summary>Prior implementation checkpoints — historical results at the named revisions</summary>
+
+
 - [x] [patch] Reproduce the composed conductive sign defect and correct the shared energy balance with both callers covered by analytical regressions.
 - [x] [patch] Preserve outward-positive heat-transfer power, pressure-work signs and the thermal-disable path; run the full native physics suite.
 - [ ] [patch] Complete final-head hosted verification; retain the unchanged native core lint findings and hold merging for release/deployment decisions.
@@ -54,10 +66,12 @@
 - [x] [patch] All 17 isolated Linux Miri contracts pass for concrete checked block arithmetic with unchanged interpreter checks and exact matching Rust source hashes.
 
 - [x] [patch] Persist genuine k-Wave references across runs with exact environment/source/binary identity and a sealed integrity manifest; pin the already validated reference version 0.6.2. Seven cache and ten existing artifact regressions pass; workflow lint passes.
-- [ ] [patch] Verify actual installed-wheel comparisons on both a cold reference cache and a restored reference cache at the final PR source. Fresh Kwavers results and all existing tolerances/assertions remain mandatory.
+- [x] [patch] Verify actual cold/restored reference-cache comparisons: cold run `38654130481` generates/seals the genuine results; current-source `bdeafcc5` run `38656128739` restores/verifies the exact key, loads three references and runs zero reference simulations. Both fresh installed wheels pass; all 26 boundary/three parity/13 export tests pass with three existing optional skips.
 
 - [x] [patch] Expose only the requested immutable boxed spatial slice and fuse weighting with the original left fold. All 75 focused FD, 1,121 solver (six existing ignores), 41 facade cases and strict solver Clippy pass; primitive MIR retains the original operations.
 - [x] [patch] Embed the canonical arithmetic template in the generator's compiler inputs. The real-compiler dependency/output regression fails before correction and passes afterwards from two working directories; all eleven artifact/generator and seven reference-cache regressions pass.
-- [ ] [patch] Complete all three full reconstruction Miri cases, cold/restored reference-cache comparisons and required final-head hosted gates for the fused-fold implementation.
+- [ ] [patch] Close the remaining differential Miri gate and inspect all required checks on the [current PR revision](https://github.com/ryancinsight/kwavers/pull/948/checks). At `bdeafcc5`, localized/hybrid pass locally in 241.06/289.21 seconds; both differential attempts, including a dedicated run, reach 900.01 seconds. Hosted wheels/reference caching and all eight benchmark programs/234 cases pass. No input, tolerance, safety check or runtime bound changes.
 
-- [x] [patch] All 17 isolated Linux Miri contracts pass for the fused fold, selected immutable slices and embedded generator, with exact matching Rust source hashes and unchanged interpreter checks.
+- [x] [patch] Read-only native integration passes all 75 focused FD, 1,121 solver (six existing ignores), 41 facade tests, strict solver Clippy, eleven generator/artifact regressions and 17 isolated Linux Miri contracts. All private callers migrate; raw fields, weighted sums, projections and spare storage retain computed-value coverage. Exact source hashes and default interpreter checks bind the results.
+
+</details>

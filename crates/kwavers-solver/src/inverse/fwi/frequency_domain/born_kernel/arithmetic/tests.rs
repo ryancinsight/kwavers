@@ -26,12 +26,12 @@ fn native_arithmetic_preserves_the_original_expression_tree() {
         let expected_projection = (expected_weighted.conj() * residual).re;
         drop(arrange);
         for seed in [0.0, -0.0, 1.0 / 3.0] {
-            let (product, weighted, projected, accumulated, sum) = {
+            let (product, input, projected, accumulated, sum) = {
                 let _act = tracing::info_span!("act", seed).entered();
                 let product = <f64 as Arithmetic>::product(incident, green);
-                let mut weighted = [product];
+                let inputs = [product];
                 let mut sum = Complex::new(seed, -seed);
-                <f64 as Arithmetic>::weight_block(&mut weighted, &[weight], &mut sum);
+                <f64 as Arithmetic>::integrate_block(&inputs, &[weight], &mut sum);
                 let mut projected = [seed];
                 let mut accumulated = [seed];
                 <f64 as Arithmetic>::project_block::<1, false>(
@@ -46,13 +46,13 @@ fn native_arithmetic_preserves_the_original_expression_tree() {
                     residual,
                     &mut accumulated,
                 );
-                (product, weighted[0], projected[0], accumulated[0], sum)
+                (product, inputs[0], projected[0], accumulated[0], sum)
             };
             let _assert = tracing::info_span!("assert", seed).entered();
             assert_eq!(product.re.to_bits(), expected_product.re.to_bits());
             assert_eq!(product.im.to_bits(), expected_product.im.to_bits());
-            assert_eq!(weighted.re.to_bits(), expected_weighted.re.to_bits());
-            assert_eq!(weighted.im.to_bits(), expected_weighted.im.to_bits());
+            assert_eq!(input.re.to_bits(), expected_product.re.to_bits());
+            assert_eq!(input.im.to_bits(), expected_product.im.to_bits());
             assert_eq!(projected.to_bits(), expected_projection.to_bits());
             assert_eq!(
                 accumulated.to_bits(),

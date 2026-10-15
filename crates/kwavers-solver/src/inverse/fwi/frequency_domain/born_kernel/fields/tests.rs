@@ -1,7 +1,7 @@
 //! Native-precision equivalence of spatial-product representations.
 
 use super::super::arithmetic::Arithmetic;
-use super::super::{integrate, weighted_products};
+use super::super::{integrate, integrate_products};
 use super::*;
 
 /// The spatial coefficient is independent of model weights. Factored and
@@ -62,15 +62,12 @@ fn check_product_representations<T: Arithmetic>() {
         im: -T::ONE,
     };
     let mut sum = initial;
-    let prefix = weighted_products(&stored, 3..8, &weights[3..8], &mut output, &mut sum);
+    let prefix = integrate_products(&stored, 3..8, &weights[3..8], &mut output, &mut sum);
     assert_eq!(prefix.len(), 5);
     let mut expected_sum = initial;
     for lane in 0..5 {
         expected_sum += incident[lane + 3] * green[lane + 3] * weights[lane + 3];
-        assert_eq!(
-            prefix[lane],
-            incident[lane + 3] * green[lane + 3] * weights[lane + 3]
-        );
+        assert_eq!(prefix[lane], incident[lane + 3] * green[lane + 3]);
     }
     assert_eq!(sum, expected_sum);
     assert_eq!(

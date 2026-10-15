@@ -51,7 +51,7 @@ fn check_scalar_contract<T: Arithmetic>() {
             re: T::ZERO,
             im: T::ZERO,
         }];
-        weighted_products(
+        integrate_products(
             &FactoredProducts::new(&[incident], &[green]),
             0..1,
             &[weight],
@@ -65,7 +65,7 @@ fn check_scalar_contract<T: Arithmetic>() {
         project_adjoint::<_, _, 1, false>(
             &StoredProducts::new(&actual),
             0..actual.len(),
-            &[T::ONE; 1][..actual.len()],
+            &[weight; 1][..actual.len()],
             Complex {
                 re: two,
                 im: -T::ONE,
@@ -80,7 +80,7 @@ fn check_scalar_contract<T: Arithmetic>() {
         project_adjoint::<_, _, 1, true>(
             &StoredProducts::new(&actual),
             0..actual.len(),
-            &[T::ONE; 1][..actual.len()],
+            &[weight; 1][..actual.len()],
             Complex {
                 re: two,
                 im: -T::ONE,
@@ -103,7 +103,8 @@ fn check_scalar_contract<T: Arithmetic>() {
         )
     };
     let _assert = tracing::info_span!("assert").entered();
-    assert_eq!(actual, expected);
+    assert_eq!(actual, incident * green);
+    assert_eq!(actual * weight, expected);
     for integrated in [
         integrate::<_, _, 4>(
             &FactoredProducts::new(&[incident; 17], &[green; 17]),
@@ -174,37 +175,43 @@ fn check_block_expression<const K: usize>(
     });
     let weights: [_; K] = std::array::from_fn(|lane| if lane % 2 == 0 { weight } else { -weight });
     drop(_arrange);
-    let (actual, projected) = {
+    let (actual, projected, folded) = {
         let _act = tracing::info_span!("act_block", K).entered();
         let mut actual = [Complex::new(0.0, 0.0); K];
         let mut projected = [0.0; K];
-        weighted_products(
+        let mut folded = Complex::new(0.0, 0.0);
+        integrate_products(
             &FactoredProducts::new(&incidents, &greens),
             0..K,
             &weights,
             &mut actual,
-            &mut Complex::new(0.0, 0.0),
+            &mut folded,
         );
         project_adjoint::<_, _, K, false>(
             &StoredProducts::new(&actual),
             0..actual.len(),
-            &[1.0; K][..actual.len()],
+            &weights[..actual.len()],
             residual,
             &mut [Complex::new(0.0, 0.0); K],
             &mut projected,
         );
-        (actual, projected)
+        (actual, projected, folded)
     };
     let _assert = tracing::info_span!("assert_block", K).entered();
+    let mut expected_sum = Complex::new(0.0, 0.0);
     for lane in 0..K {
-        let expected = incidents[lane] * greens[lane] * weights[lane];
-        assert_eq!(actual[lane].re.to_bits(), expected.re.to_bits());
-        assert_eq!(actual[lane].im.to_bits(), expected.im.to_bits());
+        let product = incidents[lane] * greens[lane];
+        let expected = product * weights[lane];
+        assert_eq!(actual[lane].re.to_bits(), product.re.to_bits());
+        assert_eq!(actual[lane].im.to_bits(), product.im.to_bits());
         assert_eq!(
             projected[lane].to_bits(),
             (expected.conj() * residual).re.to_bits()
         );
+        expected_sum += expected;
     }
+    assert_eq!(folded.re.to_bits(), expected_sum.re.to_bits());
+    assert_eq!(folded.im.to_bits(), expected_sum.im.to_bits());
 }
 
 /// Bitwise differential checks include non-dyadic operands, signed zero and
@@ -230,30 +237,34 @@ fn weighted_product_and_projection_match_complex_operations() {
                 let reference = incident * green * weight;
                 let residual = Complex::new(-q, 1.0 / 3.0);
                 drop(arrange);
-                let (actual, projection) = {
+                let (actual, projection, folded) = {
                     let _act = tracing::info_span!("act").entered();
                     let mut actual = [Complex::new(0.0, 0.0)];
                     let mut projected = [0.0];
-                    weighted_products(
+                    let mut folded = Complex::new(0.0, 0.0);
+                    integrate_products(
                         &FactoredProducts::new(&[incident], &[green]),
                         0..1,
                         &[weight],
                         &mut actual,
-                        &mut Complex::new(0.0, 0.0),
+                        &mut folded,
                     );
                     project_adjoint::<_, _, 1, false>(
                         &StoredProducts::new(&actual),
                         0..actual.len(),
-                        &[1.0; 1][..actual.len()],
+                        &[weight; 1][..actual.len()],
                         residual,
                         &mut [Complex::new(0.0, 0.0); 1],
                         &mut projected,
                     );
-                    (actual[0], projected[0])
+                    (actual[0], projected[0], folded)
                 };
                 let _assert = tracing::info_span!("assert").entered();
-                assert_eq!(actual.re.to_bits(), reference.re.to_bits());
-                assert_eq!(actual.im.to_bits(), reference.im.to_bits());
+                assert_eq!(actual.re.to_bits(), (incident * green).re.to_bits());
+                assert_eq!(actual.im.to_bits(), (incident * green).im.to_bits());
+                let expected_sum = Complex::new(0.0, 0.0) + reference;
+                assert_eq!(folded.re.to_bits(), expected_sum.re.to_bits());
+                assert_eq!(folded.im.to_bits(), expected_sum.im.to_bits());
                 assert_eq!(
                     projection.to_bits(),
                     (reference.conj() * residual).re.to_bits()
@@ -284,18 +295,19 @@ fn check_partial_blocks<const K: usize>() {
     for len in [0, 1, K - 1, K] {
         let mut values = [spare; K];
         let mut projected = [13.0 / 8.0; K];
-        let valid = weighted_products(
+        let mut folded = Complex::new(0.0, 0.0);
+        let valid = integrate_products(
             &FactoredProducts::new(&incident[..len], &green[..len]),
             0..len,
             &weights[..len],
             &mut values,
-            &mut Complex::new(0.0, 0.0),
+            &mut folded,
         );
         assert_eq!(valid.len(), len);
         let projected_prefix = project_adjoint::<_, _, K, false>(
             &StoredProducts::new(valid),
             0..(valid).len(),
-            &[1.0; K][..(valid).len()],
+            &weights[..(valid).len()],
             residual,
             &mut [Complex::new(0.0, 0.0); K],
             &mut projected,
@@ -304,8 +316,14 @@ fn check_partial_blocks<const K: usize>() {
         let mut sum = Complex::new(0.0, 0.0);
         for lane in 0..len {
             let expected = incident[lane] * green[lane] * weights[lane];
-            assert_eq!(valid[lane].re.to_bits(), expected.re.to_bits());
-            assert_eq!(valid[lane].im.to_bits(), expected.im.to_bits());
+            assert_eq!(
+                valid[lane].re.to_bits(),
+                (incident[lane] * green[lane]).re.to_bits()
+            );
+            assert_eq!(
+                valid[lane].im.to_bits(),
+                (incident[lane] * green[lane]).im.to_bits()
+            );
             assert_eq!(
                 projected_prefix[lane].to_bits(),
                 (expected.conj() * residual).re.to_bits()
@@ -318,6 +336,8 @@ fn check_partial_blocks<const K: usize>() {
         );
         assert_eq!(integrated.re.to_bits(), sum.re.to_bits());
         assert_eq!(integrated.im.to_bits(), sum.im.to_bits());
+        assert_eq!(folded.re.to_bits(), sum.re.to_bits());
+        assert_eq!(folded.im.to_bits(), sum.im.to_bits());
         assert!(values[len..].iter().all(|&value| value == spare));
         assert!(projected[len..].iter().all(|&value| value == 13.0 / 8.0));
     }
@@ -336,12 +356,12 @@ fn checked_partial_blocks_preserve_values_and_spare_storage() {
 
 #[test]
 #[should_panic(expected = "Born field/Green lengths differ")]
-fn weighted_products_reject_mismatched_fields() {
+fn integrate_products_reject_mismatched_fields() {
     let _subscriber =
         tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
     let _span = tracing::info_span!("act_reject_mismatched_fields").entered();
     let mut output = [Complex::new(0.0, 0.0); 4];
-    weighted_products(
+    integrate_products(
         &FactoredProducts::new(&[Complex::new(1.0, 0.5)], &[]),
         0..1,
         &[0.5],
@@ -352,13 +372,13 @@ fn weighted_products_reject_mismatched_fields() {
 
 #[test]
 #[should_panic(expected = "Born field/weight lengths differ")]
-fn weighted_products_reject_mismatched_weights() {
+fn integrate_products_reject_mismatched_weights() {
     let _subscriber =
         tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
     let _span = tracing::info_span!("act_reject_mismatched_weights").entered();
     let field = [Complex::new(1.0, 0.5)];
     let mut output = [Complex::new(0.0, 0.0); 4];
-    weighted_products(
+    integrate_products(
         &FactoredProducts::new(&field, &field),
         0..1,
         &[],
@@ -369,12 +389,12 @@ fn weighted_products_reject_mismatched_weights() {
 
 #[test]
 #[should_panic(expected = "Born block exceeds output capacity")]
-fn weighted_products_reject_excess_capacity() {
+fn integrate_products_reject_excess_capacity() {
     let _subscriber =
         tracing::subscriber::set_default(super::super::gradient::test_support::subscriber());
     let _span = tracing::info_span!("act_reject_excess_capacity").entered();
     let field = [Complex::new(1.0, 0.5); 2];
-    weighted_products(
+    integrate_products(
         &FactoredProducts::new(&field, &field),
         0..2,
         &[0.5; 2],

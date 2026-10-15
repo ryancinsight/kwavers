@@ -56,7 +56,12 @@
 
 - [patch] Immutable Born products expose only the requested spatial slice.
   Pressure weighting and the original complex left fold share one checked
-  traversal, preserving every scalar expression and per-voxel addition order.
+  traversal. Scalar locals carry that fold; immutable spatial inputs replace
+  unused weighted-block stores. Every scalar expression and per-voxel addition
+  retains its original order, with all private call sites and computed-value
+  contracts updated to the read-only integration API. Native scalar temporaries
+  remove per-voxel tuple/complex construction from pressure and projection
+  without changing primitive operations or checked assertions.
 
 - [patch] The Born adjoint borrows dense gradient storage once per frequency,
   eliminating repeated coordinate projection without changing arithmetic,

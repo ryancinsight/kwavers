@@ -16,15 +16,14 @@ pub(super) fn cell_volume<T: FloatElement>(spacing: T) -> T {
     (spacing * spacing) * spacing
 }
 
-/// `(incident * green) * weight`, preserving the complex product's expression
-/// tree. The sealed scalar contract is Copy; reading its fields directly
-/// avoids Clone calls and temporary complex operations without widening,
-/// reassociation or a change to the resulting real/imaginary components.
+/// Integrates `(incident * green) * weight` in the original voxel order.
+/// Scratch retains only the immutable spatial products: the pressure consumer
+/// never reads weighted fields. The returned slice exposes the prepared prefix;
+/// spare lanes remain untouched. All weights and fold additions remain fresh
+/// and execute in native precision without reassociation or intermediate stores.
 /// Equal input lengths and output capacity are checked before computation.
-/// The returned slice exposes precisely the overwritten prefix; spare lanes
-/// are never read or written. This gives full and partial blocks one kernel.
 #[inline]
-pub(super) fn weighted_products<'out, T: Arithmetic, P: FieldProducts<T>, const K: usize>(
+pub(super) fn integrate_products<'out, T: Arithmetic, P: FieldProducts<T>, const K: usize>(
     fields: &P,
     range: Range<usize>,
     weights: &[T],
@@ -37,7 +36,7 @@ pub(super) fn weighted_products<'out, T: Arithmetic, P: FieldProducts<T>, const 
         .expect("Born block range is reversed");
     assert_eq!(len, weights.len(), "Born field/weight lengths differ");
     fields.write_products(range, output);
-    T::weight_block(output, weights, sum);
+    T::integrate_block(output, weights, sum);
     &output[..len]
 }
 
@@ -78,7 +77,7 @@ pub(super) fn integrate<T: Arithmetic, P: FieldProducts<T>, const K: usize>(
     }; K];
     for (block, weights) in weights.chunks(K).enumerate() {
         let start = block * K;
-        weighted_products(
+        integrate_products(
             fields,
             start..start + weights.len(),
             weights,

@@ -10,20 +10,30 @@ fn product(incident: Complex<Self>, green: Complex<Self>) -> Complex<Self> {
 }
 
 #[inline]
-fn weight_block<const K: usize>(
-    values: &mut [Complex<Self>; K], weights: &[Self], sum: &mut Complex<Self>,
+fn integrate_block<const K: usize>(
+    values: &[Complex<Self>; K], weights: &[Self], sum: &mut Complex<Self>,
 ) {
     let len = weights.len();
     assert!(len <= K, "Born block exceeds output capacity");
+    // The exclusive sum borrow cannot alias values or weights. Its real and
+    // imaginary left folds are independent: retaining scalar locals changes
+    // no operation or order and removes per-lane writes through that borrow.
+    // All checked accesses follow lane < len <= K, so no intervening panic
+    // can expose a partially updated accumulator.
+    let mut real = sum.re;
+    let mut imaginary = sum.im;
     let mut lane = 0;
     while lane < len {
-        let (value, weight) = (values[lane], weights[lane]);
-        let weighted = Complex { re: value.re * weight, im: value.im * weight };
-        values[lane] = weighted;
-        sum.re += weighted.re;
-        sum.im += weighted.im;
+        let value = values[lane];
+        let weight = weights[lane];
+        let weighted_real = value.re * weight;
+        let weighted_imaginary = value.im * weight;
+        real += weighted_real;
+        imaginary += weighted_imaginary;
         lane += 1;
     }
+    sum.re = real;
+    sum.im = imaginary;
 }
 
 #[inline]
@@ -35,9 +45,11 @@ fn project_block<const K: usize, const ACCUMULATE: bool>(
     assert!(len <= K, "Born block exceeds output capacity");
     let mut lane = 0;
     while lane < len {
-        let (value, weight) = (values[lane], weights[lane]);
-        let derivative = Complex { re: value.re * weight, im: value.im * weight };
-        let projection = derivative.re * residual.re - (-derivative.im) * residual.im;
+        let value = values[lane];
+        let weight = weights[lane];
+        let derivative_real = value.re * weight;
+        let derivative_imaginary = value.im * weight;
+        let projection = derivative_real * residual.re - (-derivative_imaginary) * residual.im;
         if ACCUMULATE {
             output[lane] += projection;
         } else {
