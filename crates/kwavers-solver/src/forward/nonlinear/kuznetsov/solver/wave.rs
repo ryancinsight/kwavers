@@ -79,7 +79,8 @@ impl KuznetsovWave {
         self.medium_properties.rho0 =
             kwavers_medium::density_at(medium, center_x, center_y, center_z, &self.grid);
         self.medium_properties.c0 =
-            kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid);
+            kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid)
+                .into_base();
 
         // ConservationDiagnostics trait is in scope — impl is in diagnostics_impl.rs
         let initial_energy = self.calculate_total_energy();

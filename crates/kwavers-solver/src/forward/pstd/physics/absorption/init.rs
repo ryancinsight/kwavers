@@ -118,7 +118,7 @@ pub(crate) fn initialize_absorption_operators(
                 for j in 0..grid.ny {
                     for i in 0..grid.nx {
                         let (x, y_coord, z) = grid.indices_to_coordinates(i, j, k);
-                        let c0 = medium.sound_speed(i, j, k);
+                        let c0 = medium.sound_speed(i, j, k).into_base();
                         let rho0 = medium.density(i, j, k);
                         let eta_s = medium.shear_viscosity(x, y_coord, z, grid).into_base();
                         let eta_b = medium.bulk_viscosity(x, y_coord, z, grid).into_base();
@@ -211,7 +211,7 @@ pub(crate) fn initialize_absorption_operators(
                             }
                         };
 
-                        let c0_val = medium.sound_speed(i, j, k);
+                        let c0_val = medium.sound_speed(i, j, k).into_base();
                         let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, y);
 
                         // Treeby & Cox (2010) Eqs. 19–20
@@ -322,7 +322,7 @@ fn build_relaxation_kernel(
     for k in 0..grid.nz {
         for j in 0..grid.ny {
             for i in 0..grid.nx {
-                let c0_val = medium.sound_speed(i, j, k);
+                let c0_val = medium.sound_speed(i, j, k).into_base();
                 let alpha_np_m =
                     causal_alpha_0.unwrap_or_else(|| relaxation.attenuation(omega_ref, c0_val));
                 let alpha_db_cm = np_m_to_power_law_db_cm(alpha_np_m, f_ref, y_eff);

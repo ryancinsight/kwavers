@@ -95,7 +95,7 @@ impl StreamingModel {
             |[i, j, k], v, &p| {
                 let (x, y, z) = grid.coords(i, j, k);
                 let rho = kwavers_medium::density_at(medium, x, y, z, grid);
-                let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
+                let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid).into_base();
                 let alpha = medium.absorption_coefficient(x, y, z, grid, REFERENCE_FREQUENCY_HZ);
                 let mu = medium.viscosity(x, y, z, grid).into_base();
                 if rho <= 0.0 || c <= 0.0 || mu <= 0.0 {

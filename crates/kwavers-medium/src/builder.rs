@@ -313,8 +313,8 @@ mod tests {
 
         let medium = MediumBuilder::build(&config, &grid).unwrap();
 
-        assert_eq!(medium.sound_speed(0, 0, 0), SOUND_SPEED_TISSUE);
-        assert_eq!(medium.sound_speed(2, 2, 2), SOUND_SPEED_TISSUE);
+        assert_eq!(medium.sound_speed(0, 0, 0).into_base(), SOUND_SPEED_TISSUE);
+        assert_eq!(medium.sound_speed(2, 2, 2).into_base(), SOUND_SPEED_TISSUE);
         assert_eq!(medium.density(1, 1, 1), DENSITY_BRAIN);
         assert_eq!(medium.absorption(2, 1, 0), 0.45);
         assert_eq!(medium.nonlinearity(0, 2, 1), B_OVER_A_SOFT_TISSUE);
@@ -366,23 +366,23 @@ mod tests {
 
         // x=0 (i=0) and x=1mm (i=1): layer 0 — water-like
         assert_eq!(
-            medium.sound_speed(0, 0, 0),
+            medium.sound_speed(0, 0, 0).into_base(),
             SOUND_SPEED_WATER_SIM,
             "x=0 must be layer-0 speed"
         );
         assert_eq!(
-            medium.sound_speed(1, 0, 0),
+            medium.sound_speed(1, 0, 0).into_base(),
             SOUND_SPEED_WATER_SIM,
             "x=1mm must be layer-0 speed"
         );
         // x=2mm (i=2) and x=3mm (i=3): layer 1 — tissue-like
         assert_eq!(
-            medium.sound_speed(2, 0, 0),
+            medium.sound_speed(2, 0, 0).into_base(),
             SOUND_SPEED_TISSUE,
             "x=2mm must be layer-1 speed"
         );
         assert_eq!(
-            medium.sound_speed(3, 0, 0),
+            medium.sound_speed(3, 0, 0).into_base(),
             SOUND_SPEED_TISSUE,
             "x=3mm must be layer-1 speed"
         );
@@ -422,7 +422,7 @@ mod tests {
 
         // At x = 3 mm (the boundary), tanh(0/σ) = 0, so t = 0.5
         // blended = SOUND_SPEED_WATER_SIM(1500) * 0.5 + 2800 * 0.5 = 2150
-        let at_boundary = medium.sound_speed(3, 0, 0);
+        let at_boundary = medium.sound_speed(3, 0, 0).into_base();
         assert!(
             (at_boundary - 2150.0).abs() < 1.0,
             "at boundary, smooth blend must be mid-point 2150 m/s; got {at_boundary:.1}"

@@ -1,6 +1,7 @@
 //! Continuous-coordinate access for [`CoreMedium`] properties.
 
 use crate::{continuous_to_discrete, CoreMedium};
+use aequitas::systems::si::quantities::Velocity;
 use kwavers_grid::Grid;
 
 /// Get density at continuous coordinates.
@@ -10,7 +11,7 @@ pub fn density_at<M: CoreMedium + ?Sized>(medium: &M, x: f64, y: f64, z: f64, gr
     medium.density(i, j, k)
 }
 
-/// Get sound speed at continuous coordinates.
+/// Get sound speed at continuous coordinates, in metres per second.
 #[inline]
 pub fn sound_speed_at<M: CoreMedium + ?Sized>(
     medium: &M,
@@ -18,7 +19,7 @@ pub fn sound_speed_at<M: CoreMedium + ?Sized>(
     y: f64,
     z: f64,
     grid: &Grid,
-) -> f64 {
+) -> Velocity<f64> {
     let (i, j, k) = continuous_to_discrete(x, y, z, grid);
     medium.sound_speed(i, j, k)
 }

@@ -115,7 +115,7 @@ impl WesterveltFdtd {
             let p_prev = pressure_prev[idx];
             let lap = laplacian[idx];
             let nl = nonlinear_term[idx];
-            let c = medium.sound_speed(i, j, k);
+            let c = medium.sound_speed(i, j, k).into_base();
             let rho = medium.density(i, j, k);
             let beta = 1.0 + medium.nonlinearity(i, j, k) / 2.0;
 

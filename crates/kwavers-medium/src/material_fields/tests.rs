@@ -34,7 +34,7 @@ fn sampling_reproduces_medium_properties() {
                 let (x, y, z) = grid.indices_to_coordinates(i, j, k);
                 let index = [i, j, k];
                 assert_eq!(fields.rho0[index], medium.density(i, j, k));
-                assert_eq!(fields.c0[index], medium.sound_speed(i, j, k));
+                assert_eq!(fields.c0[index], medium.sound_speed(i, j, k).into_base());
                 assert_eq!(
                     fields.alpha0_db[index],
                     medium.alpha_coefficient(x, y, z, &grid)

@@ -21,7 +21,7 @@ fn test_basic_initialization() {
     let j = grid.ny / 2;
     let k = grid.nz / 2;
     assert_eq!(medium.density(i, j, k), DENSITY_WATER);
-    assert_eq!(medium.sound_speed(i, j, k), SOUND_SPEED_WATER);
+    assert_eq!(medium.sound_speed(i, j, k).into_base(), SOUND_SPEED_WATER);
 }
 
 /// Test acoustic field propagation

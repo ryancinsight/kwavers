@@ -62,7 +62,7 @@ struct MediumDescriptor<'a, M: Medium> {
 
 impl<M: Medium> FactoryMediumParameters for MediumDescriptor<'_, M> {
     fn sound_speed(&self, x: f64, y: f64, z: f64) -> f64 {
-        sound_speed_at(self.medium, x, y, z, self.grid)
+        sound_speed_at(self.medium, x, y, z, self.grid).into_base()
     }
 
     fn density(&self, x: f64, y: f64, z: f64) -> f64 {

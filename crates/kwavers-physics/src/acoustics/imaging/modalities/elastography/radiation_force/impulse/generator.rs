@@ -41,7 +41,7 @@ impl AcousticRadiationForce {
         let cj = ny / 2;
         let ck = nz / 2;
 
-        let sound_speed = medium.sound_speed(ci, cj, ck);
+        let sound_speed = medium.sound_speed(ci, cj, ck).into_base();
         let density = medium.density(ci, cj, ck);
 
         // Soft-tissue power-law absorption α(f) = α₀·f^y from SSOT

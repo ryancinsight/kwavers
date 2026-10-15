@@ -36,7 +36,7 @@ pub fn compute_diffusivity_from_power_law_absorption<M: Medium + ?Sized>(
         medium, x, y, z, grid, frequency,
     );
     let (i, j, k) = kwavers_medium::continuous_to_discrete(x, y, z, grid);
-    let c = medium.sound_speed(i, j, k);
+    let c = medium.sound_speed(i, j, k).into_base();
     let omega = TWO_PI * frequency;
 
     POWER_LAW_ABSORPTION_TO_DIFFUSIVITY_FACTOR * alpha * c.powi(3) / (omega * omega)

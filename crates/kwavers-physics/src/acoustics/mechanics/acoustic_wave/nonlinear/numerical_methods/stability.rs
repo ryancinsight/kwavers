@@ -49,7 +49,7 @@ impl NonlinearWave {
             for j in 0..grid.ny {
                 for i in 0..grid.nx {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
+                    let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid).into_base();
                     max_c = max_c.max(c);
                 }
             }

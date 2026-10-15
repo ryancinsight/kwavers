@@ -3,6 +3,7 @@
 //! This module provides fundamental traits that all medium types must implement,
 //! establishing a Single Source of Truth (SSOT) for medium behaviors.
 
+use aequitas::systems::si::quantities::Velocity;
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::ComponentBase;
@@ -25,8 +26,11 @@ pub const MIN_PHYSICAL_SOUND_SPEED: f64 = 100.0;
 /// in a spatially-varying medium. Extends [`kwavers_core::ComponentBase`]
 /// so all implementations are `Debug + Send + Sync`.
 pub trait CoreMedium: ComponentBase {
-    /// Get sound speed at a specific grid point
-    fn sound_speed(&self, i: usize, j: usize, k: usize) -> f64;
+    /// Get sound speed at a specific grid point, in metres per second.
+    ///
+    /// The array-access fast paths (`sound_speed_array` etc.) stay raw
+    /// `ArrayView3<f64>` — the per-cell hot path is dimension-agnostic.
+    fn sound_speed(&self, i: usize, j: usize, k: usize) -> Velocity<f64>;
 
     /// Get density at a specific grid point
     fn density(&self, i: usize, j: usize, k: usize) -> f64;

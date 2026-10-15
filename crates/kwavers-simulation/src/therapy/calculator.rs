@@ -135,7 +135,7 @@ impl TherapyCalculator {
                 let (x, y, z) = grid.coords(i, j, k);
 
                 let rho = kwavers_medium::density_at(medium.as_ref(), x, y, z, grid);
-                let c = kwavers_medium::sound_speed_at(medium.as_ref(), x, y, z, grid);
+                let c = kwavers_medium::sound_speed_at(medium.as_ref(), x, y, z, grid).into_base();
                 let alpha = kwavers_medium::AcousticProperties::absorption_coefficient(
                     medium.as_ref(),
                     x,

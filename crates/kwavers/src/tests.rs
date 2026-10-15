@@ -60,7 +60,9 @@ fn test_medium_basic_properties() {
 
     assert!(medium.is_homogeneous());
     assert!(
-        (medium.sound_speed(0, 0, 0) - kwavers_core::constants::SOUND_SPEED_WATER).abs() < 1e-6
+        (medium.sound_speed(0, 0, 0).into_base() - kwavers_core::constants::SOUND_SPEED_WATER)
+            .abs()
+            < 1e-6
     );
     assert!((medium.density(0, 0, 0) - kwavers_core::constants::DENSITY_WATER).abs() < 1e-6);
 }

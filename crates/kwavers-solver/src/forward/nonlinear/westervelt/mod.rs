@@ -300,7 +300,8 @@ impl WesterveltFdtd {
         // Get representative medium properties (center point)
         let (center_x, center_y, center_z) = grid.center();
         let rho0 = kwavers_medium::density_at(medium, center_x, center_y, center_z, grid);
-        let c0 = kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, grid);
+        let c0 =
+            kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, grid).into_base();
 
         Self {
             config,

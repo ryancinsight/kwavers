@@ -336,10 +336,10 @@ mod tests {
 
         // Snapshots BEFORE shielding — exactly the per-voxel inputs the PSTD
         // pressure update and absorption operators are built from.
-        let c_before = medium.sound_speed(5, 0, 0);
+        let c_before = medium.sound_speed(5, 0, 0).into_base();
         let a_before = medium.absorption_array()[[5, 0, 0]];
         let rho5 = medium.density_array()[[5, 0, 0]];
-        let c_edge_before = medium.sound_speed(0, 0, 0);
+        let c_edge_before = medium.sound_speed(0, 0, 0).into_base();
 
         let mut beta = Array3::zeros((nx, 1, 1));
         for i in 4..7 {
@@ -355,13 +355,13 @@ mod tests {
         );
 
         // Sound speed collapses inside the gas band (Wood), unchanged outside.
-        let c_after = medium.sound_speed(5, 0, 0);
+        let c_after = medium.sound_speed(5, 0, 0).into_base();
         assert!(
             c_after < c_before && c_after < 1000.0,
             "Wood c-collapse: {c_before} -> {c_after}"
         );
         assert!(
-            (medium.sound_speed(0, 0, 0) - c_edge_before).abs() < 1e-9,
+            (medium.sound_speed(0, 0, 0).into_base() - c_edge_before).abs() < 1e-9,
             "voxel outside the gas band is untouched"
         );
 
@@ -408,7 +408,7 @@ mod tests {
         let grid = Grid::new(nx, 1, 1, 0.5e-3, 0.5e-3, 0.5e-3).expect("valid grid");
         let mut medium = HeterogeneousTissueMedium::new(grid, AbsorptionTissueType::Water);
         let a_before = medium.absorption_array()[[4, 0, 0]];
-        let c_before = medium.sound_speed(4, 0, 0);
+        let c_before = medium.sound_speed(4, 0, 0).into_base();
 
         let mut beta = Array3::zeros((nx, 1, 1));
         beta[[4, 0, 0]] = 1e-4;
@@ -420,7 +420,10 @@ mod tests {
             &props
         ));
         // Sound speed collapses; absorption is left for the broadband operator.
-        assert!(medium.sound_speed(4, 0, 0) < c_before && medium.sound_speed(4, 0, 0) < 1000.0);
+        assert!(
+            medium.sound_speed(4, 0, 0).into_base() < c_before
+                && medium.sound_speed(4, 0, 0).into_base() < 1000.0
+        );
         assert!((medium.absorption_array()[[4, 0, 0]] - a_before).abs() < 1e-12);
     }
 

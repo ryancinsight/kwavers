@@ -1,3 +1,4 @@
+use aequitas::systems::si::quantities::Velocity;
 use leto::{Array3, ArrayView3, ArrayViewMut3};
 
 use crate::core::{ArrayAccess, CoreMedium};
@@ -11,8 +12,8 @@ impl CoreMedium for HomogeneousMedium {
         self.density
     }
 
-    fn sound_speed(&self, _i: usize, _j: usize, _k: usize) -> f64 {
-        self.sound_speed
+    fn sound_speed(&self, _i: usize, _j: usize, _k: usize) -> Velocity<f64> {
+        Velocity::from_base(self.sound_speed)
     }
 
     fn reference_frequency(&self) -> f64 {

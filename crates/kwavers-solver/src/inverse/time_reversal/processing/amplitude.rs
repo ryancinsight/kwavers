@@ -40,7 +40,7 @@ impl AmplitudeCorrector {
         absorption_compensation: bool,
     ) -> KwaversResult<Vec<f64>> {
         let [sx, sy, sz] = sensor_position_meters;
-        let c0 = kwavers_medium::sound_speed_at(medium.as_ref(), sx, sy, sz, grid);
+        let c0 = kwavers_medium::sound_speed_at(medium.as_ref(), sx, sy, sz, grid).into_base();
         let alpha = kwavers_medium::AcousticProperties::absorption_coefficient(
             medium.as_ref(),
             sx,
@@ -104,7 +104,8 @@ impl AmplitudeCorrector {
         let cy = grid.ny as f64 / 2.0 * grid.dy;
         let cz = grid.nz as f64 / 2.0 * grid.dz;
 
-        let actual_speed = kwavers_medium::sound_speed_at(medium.as_ref(), cx, cy, cz, grid);
+        let actual_speed =
+            kwavers_medium::sound_speed_at(medium.as_ref(), cx, cy, cz, grid).into_base();
 
         // Calculate phase correction factor
         let phase_factor = reference_speed / actual_speed;

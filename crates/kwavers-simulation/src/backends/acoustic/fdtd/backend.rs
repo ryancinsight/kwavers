@@ -105,7 +105,7 @@ impl FdtdBackend {
             for j in (0..grid.ny).step_by(dj.max(1)) {
                 for i in (0..grid.nx).step_by(di.max(1)) {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
+                    let c = kwavers_medium::sound_speed_at(medium, x, y, z, grid).into_base();
                     if c > c_max {
                         c_max = c;
                     }
