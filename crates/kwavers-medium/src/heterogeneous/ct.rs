@@ -136,7 +136,9 @@ mod tests {
         // Soft-tissue voxel (HU=0) vs bone voxel (HU=1000), point access.
         assert_eq!(medium.density(0, 0, 0), m.density(0.0));
         assert_eq!(medium.density(3, 0, 0), m.density(1000.0));
-        assert!(medium.sound_speed(3, 0, 0) > medium.sound_speed(0, 0, 0));
+        assert!(
+            medium.sound_speed(3, 0, 0).into_base() > medium.sound_speed(0, 0, 0).into_base()
+        );
         assert!(medium.absorption(3, 0, 0) > medium.absorption(0, 0, 0));
         assert!(medium.nonlinearity(3, 0, 0) > medium.nonlinearity(0, 0, 0));
         assert!(!medium.is_homogeneous());
