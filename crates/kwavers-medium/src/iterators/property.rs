@@ -37,7 +37,7 @@ impl<'a> Iterator for MediumPropertyIterator<'a> {
 
         let properties = MediumProperties {
             density: crate::density_at(self.medium, x, y, z, self.grid),
-            sound_speed: crate::sound_speed_at(self.medium, x, y, z, self.grid),
+            sound_speed: crate::sound_speed_at(self.medium, x, y, z, self.grid).into_base(),
             absorption: AcousticProperties::absorption_coefficient(
                 self.medium,
                 x,

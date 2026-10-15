@@ -69,7 +69,11 @@ fn medium_evaluation_benchmark(c: &mut Criterion) {
     });
 
     group.bench_function("sound_speed_lookup", |b| {
-        b.iter(|| medium.sound_speed(black_box(32), black_box(32), black_box(32)));
+        b.iter(|| {
+            medium
+                .sound_speed(black_box(32), black_box(32), black_box(32))
+                .into_base()
+        });
     });
 
     group.finish();

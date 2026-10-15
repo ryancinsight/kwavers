@@ -57,7 +57,7 @@ impl PhasedArrayTransducer {
 
         // Get sound speed at array center
         let (cx, cy, cz) = config.center_position;
-        let sound_speed = kwavers_medium::sound_speed_at(medium, cx, cy, cz, grid);
+        let sound_speed = kwavers_medium::sound_speed_at(medium, cx, cy, cz, grid).into_base();
 
         // Create elements
         let elements = Self::create_elements(&config);

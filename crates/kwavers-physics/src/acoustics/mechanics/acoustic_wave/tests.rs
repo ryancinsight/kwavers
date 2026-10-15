@@ -187,10 +187,10 @@ fn test_heterogeneous_medium_position_dependence() {
     medium.set_tissue_region(&region).unwrap();
 
     let density1 = kwavers_medium::density_at(&medium, 0.0, 0.0, 0.0, &grid);
-    let speed1 = kwavers_medium::sound_speed_at(&medium, 0.0, 0.0, 0.0, &grid);
+    let speed1 = kwavers_medium::sound_speed_at(&medium, 0.0, 0.0, 0.0, &grid).into_base();
 
     let density2 = kwavers_medium::density_at(&medium, 0.01, 0.01, 0.01, &grid);
-    let speed2 = kwavers_medium::sound_speed_at(&medium, 0.01, 0.01, 0.01, &grid);
+    let speed2 = kwavers_medium::sound_speed_at(&medium, 0.01, 0.01, 0.01, &grid).into_base();
 
     assert_ne!(
         density1, density2,

@@ -30,7 +30,7 @@ fn test_plane_wave_analytical_solution() {
     let medium = HomogeneousMedium::new(DENSITY_WATER, c0, 0.0, 0.0, &grid);
 
     // Verify wave speed calculation
-    let actual_speed = medium.sound_speed(0, 0, 0);
+    let actual_speed = medium.sound_speed(0, 0, 0).into_base();
     assert!((actual_speed - c0).abs() < 1e-10, "Speed mismatch");
 
     // Verify wavelength-grid spacing relationship

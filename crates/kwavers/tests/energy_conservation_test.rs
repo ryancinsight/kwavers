@@ -77,7 +77,7 @@ fn seeded_pstd_solver(
     let mut solver = PSTDSolver::new(config, grid.clone(), medium, Default::default())?;
 
     let (cx, cy, cz) = (center.0 as f64, center.1 as f64, center.2 as f64);
-    let c0 = medium.sound_speed(0, 0, 0);
+    let c0 = medium.sound_speed(0, 0, 0).into_base();
     for i in 0..grid.nx {
         for j in 0..grid.ny {
             for k in 0..grid.nz {

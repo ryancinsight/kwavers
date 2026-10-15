@@ -328,7 +328,7 @@ fn run_fdtd_solver(problem: &TestProblem) -> KwaversResult<SolverResult> {
         problem.source.clone(),
     )?;
 
-    let _dt = solver.max_stable_dt(problem.medium.sound_speed(0, 0, 0)) / 2.0; // Conservative
+    let _dt = solver.max_stable_dt(problem.medium.sound_speed(0, 0, 0).into_base()) / 2.0; // Conservative
 
     // Run simulation
     for _step in 0..problem.time_steps {

@@ -109,7 +109,7 @@ fn validate_greens_function() -> KwaversResult<ValidationResult> {
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
 
     let medium = HomogeneousMedium::water(&grid);
-    let c0 = medium.sound_speed(0, 0, 0);
+    let c0 = medium.sound_speed(0, 0, 0).into_base();
 
     // Source parameters
     let source_strength = 1e-6; // Small point source
@@ -828,7 +828,7 @@ fn validate_absorption_attenuation() -> KwaversResult<ValidationResult> {
     // Initialize sinusoidal wave with absorption
     let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
     let omega = 2.0 * PI * frequency;
-    let k = omega / medium.sound_speed(0, 0, 0);
+    let k = omega / medium.sound_speed(0, 0, 0).into_base();
     let amplitude0 = 1e5; // 100 kPa
 
     // Apply analytical absorption solution using safe vectorization
@@ -945,7 +945,7 @@ fn validate_burgers_equation() -> KwaversResult<ValidationResult> {
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
 
     let medium = HomogeneousMedium::water(&grid);
-    let c0 = medium.sound_speed(0, 0, 0);
+    let c0 = medium.sound_speed(0, 0, 0).into_base();
     let frequency = 1e6; // 1 MHz
     let amplitude = 5e5; // 500 kPa (high amplitude for nonlinear effects)
     let beta = 3.5; // Water nonlinearity parameter

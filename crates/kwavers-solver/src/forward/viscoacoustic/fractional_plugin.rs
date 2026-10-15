@@ -62,7 +62,7 @@ impl Plugin for FractionalViscoacousticPlugin {
     }
 
     fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
-        let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+        let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid).into_base();
         self.operator = Some(FractionalAbsorptionOperator::new(
             grid.nx,
             grid.ny,

@@ -6,6 +6,7 @@ use crate::{
     absorption::{tissue::AbsorptionTissueProperties, TISSUE_PROPERTIES},
     core::{ArrayAccess, CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
 };
+use aequitas::systems::si::quantities::Velocity;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::error::{KwaversResult, ValidationError};
 use kwavers_grid::Grid;
@@ -153,8 +154,8 @@ impl CoreMedium for HeterogeneousTissueMedium {
         self.density[[i, j, k]]
     }
 
-    fn sound_speed(&self, i: usize, j: usize, k: usize) -> f64 {
-        self.sound_speed[[i, j, k]]
+    fn sound_speed(&self, i: usize, j: usize, k: usize) -> Velocity<f64> {
+        Velocity::from_base(self.sound_speed[[i, j, k]])
     }
 
     fn absorption(&self, i: usize, j: usize, k: usize) -> f64 {

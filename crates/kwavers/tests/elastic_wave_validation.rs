@@ -12,7 +12,7 @@
 use aequitas::systems::si::{
     quantities::{
         DynamicViscosity, ReciprocalLength, ReciprocalTemperature, SpecificHeatCapacity,
-        ThermalConductivity, ThermalDiffusivity,
+        ThermalConductivity, ThermalDiffusivity, Velocity,
     },
     units::PerMeter,
 };
@@ -110,9 +110,9 @@ impl CoreMedium for TestElasticMedium {
         self.density
     }
 
-    fn sound_speed(&self, _i: usize, _j: usize, _k: usize) -> f64 {
+    fn sound_speed(&self, _i: usize, _j: usize, _k: usize) -> Velocity<f64> {
         // P-wave speed approximation
-        ((self.lame_lambda + 2.0 * self.lame_mu) / self.density).sqrt()
+        Velocity::from_base(((self.lame_lambda + 2.0 * self.lame_mu) / self.density).sqrt())
     }
 
     fn absorption(&self, _i: usize, _j: usize, _k: usize) -> f64 {
@@ -124,7 +124,7 @@ impl CoreMedium for TestElasticMedium {
     }
 
     fn max_sound_speed(&self) -> f64 {
-        self.sound_speed(0, 0, 0)
+        self.sound_speed(0, 0, 0).into_base()
     }
 
     fn is_homogeneous(&self) -> bool {
@@ -190,7 +190,7 @@ impl AcousticProperties for TestElasticMedium {
         let i = (x / grid.dx) as usize;
         let j = (y / grid.dy) as usize;
         let k = (z / grid.dz) as usize;
-        let c = self.sound_speed(i, j, k);
+        let c = self.sound_speed(i, j, k).into_base();
         thermal_diff / (c * c)
     }
 }

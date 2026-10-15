@@ -117,7 +117,7 @@ impl KzkPlugin {
     /// Applies the coordinate mapping: KZK axial = therapy x, KZK transverse =
     /// therapy (y, z).
     fn build_config(grid: &Grid, medium: &dyn Medium) -> KZKConfig {
-        let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+        let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid).into_base();
         let rho0 = kwavers_medium::density_at(medium, 0.0, 0.0, 0.0, grid);
         let b_over_a = medium.nonlinearity_parameter(0.0, 0.0, 0.0, grid);
         let alpha0 = medium.alpha_coefficient(0.0, 0.0, 0.0, grid);

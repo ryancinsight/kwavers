@@ -47,8 +47,8 @@ fn test_fwi_forward_medium_sound_speed_matches_model() {
     let medium = HeterogeneousFactory::from_arrays(model.clone(), density, None, None, None, 20.0)
         .expect("medium construction must succeed");
 
-    let c_bg = medium.sound_speed(1, 1, 1);
-    let c_anom = medium.sound_speed(3, 3, 3);
+    let c_bg = medium.sound_speed(1, 1, 1).into_base();
+    let c_anom = medium.sound_speed(3, 3, 3).into_base();
     assert!((c_bg - 1800.0).abs() < 1.0, "background speed mismatch");
     assert!((c_anom - 3200.0).abs() < 1.0, "anomaly speed mismatch");
 }

@@ -47,7 +47,7 @@ fn test_medium_properties_basic() {
     assert!(medium.is_homogeneous());
 
     // Test property access
-    let sound_speed = medium.sound_speed(0, 0, 0);
+    let sound_speed = medium.sound_speed(0, 0, 0).into_base();
     let density = medium.density(0, 0, 0);
 
     assert!((sound_speed - SOUND_SPEED_WATER).abs() < 1e-10);
@@ -104,9 +104,9 @@ mod regression_tests {
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
 
         // Properties should be identical at all points for homogeneous medium
-        let speed_center = medium.sound_speed(5, 5, 5);
-        let speed_corner = medium.sound_speed(0, 0, 0);
-        let speed_edge = medium.sound_speed(9, 9, 9);
+        let speed_center = medium.sound_speed(5, 5, 5).into_base();
+        let speed_corner = medium.sound_speed(0, 0, 0).into_base();
+        let speed_edge = medium.sound_speed(9, 9, 9).into_base();
 
         assert!((speed_center - speed_corner).abs() < 1e-15);
         assert!((speed_corner - speed_edge).abs() < 1e-15);

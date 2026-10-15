@@ -14,7 +14,7 @@ fn test_basic_integration() {
     // Test basic integration functionality
     assert_eq!(grid.size(), 32_768);
     assert!(medium.is_homogeneous());
-    assert!((medium.sound_speed(0, 0, 0) - SOUND_SPEED_WATER).abs() < 1e-6);
+    assert!((medium.sound_speed(0, 0, 0).into_base() - SOUND_SPEED_WATER).abs() < 1e-6);
 }
 
 #[test]
@@ -33,10 +33,10 @@ fn test_medium_properties() {
 
     // Test at various points - use approximate equality for floating point
     assert!(
-        (medium.sound_speed(0, 0, 0) - SOUND_SPEED_WATER).abs() < 1e-6,
+        (medium.sound_speed(0, 0, 0).into_base() - SOUND_SPEED_WATER).abs() < 1e-6,
         "Sound speed mismatch: expected {}, got {}",
         SOUND_SPEED_WATER,
-        medium.sound_speed(0, 0, 0)
+        medium.sound_speed(0, 0, 0).into_base()
     );
     assert!(
         (medium.density(0, 0, 0) - DENSITY_WATER).abs() < 1e-6,

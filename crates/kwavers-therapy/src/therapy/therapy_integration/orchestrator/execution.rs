@@ -233,7 +233,7 @@ pub fn generate_kzk_acoustic_field(
     let beam_width_sq = 0.005_f64 * 0.005;
 
     // Medium properties at the source centre (homogeneous approximation).
-    let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+    let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid).into_base();
     let rho0 = kwavers_medium::density_at(medium, 0.0, 0.0, 0.0, grid);
     let b_over_a = medium.nonlinearity_parameter(0.0, 0.0, 0.0, grid);
     let alpha0 = medium.alpha_coefficient(0.0, 0.0, 0.0, grid);
@@ -335,7 +335,7 @@ fn generate_kzk_collimated(
     let (nx, ny, nz) = grid.dimensions();
     let beam_width_sq = 0.005_f64 * 0.005;
 
-    let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+    let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid).into_base();
     let rho0 = kwavers_medium::density_at(medium, 0.0, 0.0, 0.0, grid);
     let b_over_a = medium.nonlinearity_parameter(0.0, 0.0, 0.0, grid);
     let alpha0 = medium.alpha_coefficient(0.0, 0.0, 0.0, grid);

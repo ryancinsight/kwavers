@@ -174,7 +174,7 @@ impl PstdMediumSnapshot {
             for iy in 0..grid.ny {
                 for iz in 0..grid.nz {
                     let flat = c0_flat.len();
-                    let sound_speed = medium.sound_speed(ix, iy, iz);
+                    let sound_speed = medium.sound_speed(ix, iy, iz).into_base();
                     c_ref = c_ref.max(sound_speed);
                     c0_flat.push(sound_speed as f32);
                     rho0_flat.push(medium.density(ix, iy, iz) as f32);

@@ -83,7 +83,7 @@ impl DgSimulationSolver {
             )));
         }
 
-        let sound_speed = sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+        let sound_speed = sound_speed_at(medium, 0.0, 0.0, 0.0, grid).into_base();
         if !sound_speed.is_finite() || sound_speed <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
                 "DiscontinuousGalerkin sound speed must be finite and positive, got {sound_speed}"

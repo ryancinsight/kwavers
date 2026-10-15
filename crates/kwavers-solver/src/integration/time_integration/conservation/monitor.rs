@@ -257,7 +257,8 @@ impl ConservationMonitor {
                     let vz_val = vz[[i, j, k]];
 
                     let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
-                    let sound_speed = kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);
+                    let sound_speed =
+                        kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid).into_base();
 
                     // Potential energy density: Ep = p²/(2ρc²)
                     let potential_energy = p * p / (2.0 * density * sound_speed * sound_speed);
@@ -279,7 +280,8 @@ impl ConservationMonitor {
                 let p = pressure[[i, j, k]];
 
                 let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
-                let sound_speed = kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);
+                let sound_speed =
+                    kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid).into_base();
 
                 // Acoustic potential energy density: E = p²/(2ρc²)
                 let energy_density = p * p / (2.0 * density * sound_speed * sound_speed);

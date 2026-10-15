@@ -182,7 +182,7 @@ pub fn validate_all(
         for j in 0..grid.ny {
             for k in 0..grid.nz {
                 let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                let speed = kwavers_medium::sound_speed_at(medium, x, y, z, grid);
+                let speed = kwavers_medium::sound_speed_at(medium, x, y, z, grid).into_base();
                 if speed > c_max {
                     c_max = speed;
                 }
