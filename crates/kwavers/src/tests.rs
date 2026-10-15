@@ -64,7 +64,9 @@ fn test_medium_basic_properties() {
             .abs()
             < 1e-6
     );
-    assert!((medium.density(0, 0, 0) - kwavers_core::constants::DENSITY_WATER).abs() < 1e-6);
+    assert!(
+        (medium.density(0, 0, 0).into_base() - kwavers_core::constants::DENSITY_WATER).abs() < 1e-6
+    );
 }
 
 #[test]

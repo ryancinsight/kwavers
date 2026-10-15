@@ -315,7 +315,7 @@ mod tests {
 
         assert_eq!(medium.sound_speed(0, 0, 0).into_base(), SOUND_SPEED_TISSUE);
         assert_eq!(medium.sound_speed(2, 2, 2).into_base(), SOUND_SPEED_TISSUE);
-        assert_eq!(medium.density(1, 1, 1), DENSITY_BRAIN);
+        assert_eq!(medium.density(1, 1, 1).into_base(), DENSITY_BRAIN);
         assert_eq!(medium.absorption(2, 1, 0), 0.45);
         assert_eq!(medium.nonlinearity(0, 2, 1), B_OVER_A_SOFT_TISSUE);
     }
@@ -387,8 +387,8 @@ mod tests {
             "x=3mm must be layer-1 speed"
         );
         // Density follows the same step
-        assert_eq!(medium.density(0, 0, 0), DENSITY_WATER_NOMINAL);
-        assert_eq!(medium.density(3, 0, 0), DENSITY_TISSUE);
+        assert_eq!(medium.density(0, 0, 0).into_base(), DENSITY_WATER_NOMINAL);
+        assert_eq!(medium.density(3, 0, 0).into_base(), DENSITY_TISSUE);
     }
 
     /// **Invariant**: Sigmoid blend at the Sharp→Smooth boundary: at x = z_boundary

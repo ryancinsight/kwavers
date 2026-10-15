@@ -35,7 +35,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let cz = nz / 2;
 
     // Solid-phase properties from the Medium trait at the grid center.
-    let rho_solid = req.medium.density(cx, cy, cz);
+    let rho_solid = req.medium.density(cx, cy, cz).into_base();
     let lame_lambda_view = req.medium.lame_lambda_array();
     let lame_mu_view = req.medium.lame_mu_array();
     let lame_lambda = lame_lambda_view[[cx, cy, cz]];

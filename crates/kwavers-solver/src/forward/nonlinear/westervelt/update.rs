@@ -116,7 +116,7 @@ impl WesterveltFdtd {
             let lap = laplacian[idx];
             let nl = nonlinear_term[idx];
             let c = medium.sound_speed(i, j, k).into_base();
-            let rho = medium.density(i, j, k);
+            let rho = medium.density(i, j, k).into_base();
             let beta = 1.0 + medium.nonlinearity(i, j, k) / 2.0;
 
             // Linear wave + artificial viscosity share the precomputed Laplacian.

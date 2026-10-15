@@ -19,7 +19,7 @@ fn test_fwi_medium_density_not_water() {
     let medium = HeterogeneousFactory::from_arrays(sound_speed, density, None, None, None, 20.0)
         .expect("medium construction must succeed");
 
-    let rho_sample = medium.density(4, 4, 4);
+    let rho_sample = medium.density(4, 4, 4).into_base();
     assert!(
         (rho_sample - RHO_SEISMIC_REF).abs() < 1.0,
         "medium density {rho_sample} != RHO_SEISMIC_REF {RHO_SEISMIC_REF}"

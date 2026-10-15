@@ -66,7 +66,7 @@ impl<M: Medium> FactoryMediumParameters for MediumDescriptor<'_, M> {
     }
 
     fn density(&self, x: f64, y: f64, z: f64) -> f64 {
-        density_at(self.medium, x, y, z, self.grid)
+        density_at(self.medium, x, y, z, self.grid).into_base()
     }
 
     fn heterogeneity(&self) -> f64 {

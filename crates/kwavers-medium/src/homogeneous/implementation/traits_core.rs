@@ -1,4 +1,4 @@
-use aequitas::systems::si::quantities::Velocity;
+use aequitas::systems::si::quantities::{MassDensity, Velocity};
 use leto::{Array3, ArrayView3, ArrayViewMut3};
 
 use crate::core::{ArrayAccess, CoreMedium};
@@ -8,8 +8,8 @@ use kwavers_grid::Grid;
 use super::HomogeneousMedium;
 
 impl CoreMedium for HomogeneousMedium {
-    fn density(&self, _i: usize, _j: usize, _k: usize) -> f64 {
-        self.density
+    fn density(&self, _i: usize, _j: usize, _k: usize) -> MassDensity<f64> {
+        MassDensity::from_base(self.density)
     }
 
     fn sound_speed(&self, _i: usize, _j: usize, _k: usize) -> Velocity<f64> {

@@ -49,31 +49,31 @@ pub fn find_interfaces_pointwise<M: CoreMedium + ?Sized>(
         for j in 1..(grid.ny - 1) {
             for k in 1..(grid.nz - 1) {
                 let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                let center_density = crate::density_at(medium, x, y, z, grid);
+                let center_density = crate::density_at(medium, x, y, z, grid).into_base();
 
                 // Check one neighbor for efficiency
                 let (nx, ny, nz) = grid.indices_to_coordinates(i + 1, j, k);
-                let neighbor_density = crate::density_at(medium, nx, ny, nz, grid);
+                let neighbor_density = crate::density_at(medium, nx, ny, nz, grid).into_base();
 
                 if ((neighbor_density - center_density).abs() / center_density) > threshold {
                     // Calculate proper interface normal via central differences
                     // ∇ρ = (∂ρ/∂x, ∂ρ/∂y, ∂ρ/∂z)
                     let (xp, _, _) = grid.indices_to_coordinates(i + 1, j, k);
                     let (xm, _, _) = grid.indices_to_coordinates(i.saturating_sub(1), j, k);
-                    let rho_xp = crate::density_at(medium, xp, y, z, grid);
-                    let rho_xm = crate::density_at(medium, xm, y, z, grid);
+                    let rho_xp = crate::density_at(medium, xp, y, z, grid).into_base();
+                    let rho_xm = crate::density_at(medium, xm, y, z, grid).into_base();
                     let drhox = (rho_xp - rho_xm) / (xp - xm);
 
                     let (_, yp, _) = grid.indices_to_coordinates(i, j + 1, k);
                     let (_, ym, _) = grid.indices_to_coordinates(i, j.saturating_sub(1), k);
-                    let rho_yp = crate::density_at(medium, x, yp, z, grid);
-                    let rho_ym = crate::density_at(medium, x, ym, z, grid);
+                    let rho_yp = crate::density_at(medium, x, yp, z, grid).into_base();
+                    let rho_ym = crate::density_at(medium, x, ym, z, grid).into_base();
                     let drhoz = (rho_yp - rho_ym) / (yp - ym);
 
                     let (_, _, zp) = grid.indices_to_coordinates(i, j, k + 1);
                     let (_, _, zm) = grid.indices_to_coordinates(i, j, k.saturating_sub(1));
-                    let rho_zp = crate::density_at(medium, x, y, zp, grid);
-                    let rho_zm = crate::density_at(medium, x, y, zm, grid);
+                    let rho_zp = crate::density_at(medium, x, y, zp, grid).into_base();
+                    let rho_zm = crate::density_at(medium, x, y, zm, grid).into_base();
                     let drhoz_z = (rho_zp - rho_zm) / (zp - zm);
 
                     // Normalize gradient to unit normal

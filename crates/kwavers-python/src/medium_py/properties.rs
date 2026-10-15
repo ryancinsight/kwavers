@@ -17,7 +17,7 @@ impl Medium {
             MediumInner::Homogeneous(h) => h.lame_mu_value(),
             MediumInner::Heterogeneous(_) => 0.0,
         };
-        let rho = m.density(0, 0, 0);
+        let rho = m.density(0, 0, 0).into_base();
         if rho > 0.0 {
             ((lambda + 2.0 * mu) / rho).sqrt()
         } else {
@@ -33,7 +33,7 @@ impl Medium {
             MediumInner::Homogeneous(h) => h.lame_mu_value(),
             MediumInner::Heterogeneous(_) => 0.0,
         };
-        let rho = m.density(0, 0, 0);
+        let rho = m.density(0, 0, 0).into_base();
         if rho > 0.0 {
             (mu / rho).sqrt()
         } else {
@@ -68,7 +68,7 @@ impl Medium {
     /// Density [kg/m³] (origin voxel for heterogeneous).
     #[getter]
     fn density(&self) -> f64 {
-        self.inner.as_medium().density(0, 0, 0)
+        self.inner.as_medium().density(0, 0, 0).into_base()
     }
 
     /// Whether the medium is homogeneous.
@@ -82,7 +82,7 @@ impl Medium {
             MediumInner::Homogeneous(h) => format!(
                 "Medium.homogeneous(sound_speed={:.1}, density={:.1})",
                 h.max_sound_speed(),
-                h.density(0, 0, 0)
+                h.density(0, 0, 0).into_base()
             ),
             MediumInner::Heterogeneous(h) => {
                 let shape = h.sound_speed.shape();

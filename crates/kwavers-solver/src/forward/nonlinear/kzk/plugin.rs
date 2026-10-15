@@ -118,7 +118,7 @@ impl KzkPlugin {
     /// therapy (y, z).
     fn build_config(grid: &Grid, medium: &dyn Medium) -> KZKConfig {
         let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid).into_base();
-        let rho0 = kwavers_medium::density_at(medium, 0.0, 0.0, 0.0, grid);
+        let rho0 = kwavers_medium::density_at(medium, 0.0, 0.0, 0.0, grid).into_base();
         let b_over_a = medium.nonlinearity_parameter(0.0, 0.0, 0.0, grid);
         let alpha0 = medium.alpha_coefficient(0.0, 0.0, 0.0, grid);
         let alpha_power = medium.alpha_power(0.0, 0.0, 0.0, grid);

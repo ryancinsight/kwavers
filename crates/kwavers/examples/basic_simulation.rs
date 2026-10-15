@@ -105,7 +105,7 @@ fn main() -> KwaversResult<()> {
     let center_j = grid.ny / 2;
     let center_k = grid.nz / 2;
 
-    let density = medium.density(center_i, center_j, center_k);
+    let density = medium.density(center_i, center_j, center_k).into_base();
     let sound_speed = medium.sound_speed(center_i, center_j, center_k).into_base();
 
     let _ = writeln!(std::io::stdout().lock(), "\nMedium properties at center:");

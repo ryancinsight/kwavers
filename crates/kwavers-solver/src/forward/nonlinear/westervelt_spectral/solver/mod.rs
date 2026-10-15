@@ -139,7 +139,8 @@ impl WesterveltWave {
     ) {
         if let Some(ref grid) = self.grid_cache {
             let (center_x, center_y, center_z) = grid.center();
-            let rho0 = kwavers_medium::density_at(medium, center_x, center_y, center_z, grid);
+            let rho0 =
+                kwavers_medium::density_at(medium, center_x, center_y, center_z, grid).into_base();
             let c0 = kwavers_medium::sound_speed_at(medium, center_x, center_y, center_z, grid)
                 .into_base();
             self.medium_properties = Some(MediumProperties { rho0, c0 });

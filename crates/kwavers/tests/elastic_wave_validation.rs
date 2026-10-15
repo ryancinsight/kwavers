@@ -11,8 +11,8 @@
 
 use aequitas::systems::si::{
     quantities::{
-        DynamicViscosity, ReciprocalLength, ReciprocalTemperature, SpecificHeatCapacity,
-        ThermalConductivity, ThermalDiffusivity, Velocity,
+        DynamicViscosity, MassDensity, ReciprocalLength, ReciprocalTemperature,
+        SpecificHeatCapacity, ThermalConductivity, ThermalDiffusivity, Velocity,
     },
     units::PerMeter,
 };
@@ -106,8 +106,8 @@ use kwavers_medium::{
 };
 
 impl CoreMedium for TestElasticMedium {
-    fn density(&self, _i: usize, _j: usize, _k: usize) -> f64 {
-        self.density
+    fn density(&self, _i: usize, _j: usize, _k: usize) -> MassDensity<f64> {
+        MassDensity::from_base(self.density)
     }
 
     fn sound_speed(&self, _i: usize, _j: usize, _k: usize) -> Velocity<f64> {
@@ -231,7 +231,7 @@ impl ThermalProperties for TestElasticMedium {
         let i = (x / grid.dx) as usize;
         let j = (y / grid.dy) as usize;
         let k = (z / grid.dz) as usize;
-        let rho = self.density(i, j, k);
+        let rho = self.density(i, j, k).into_base();
         let cp = self.specific_heat(x, y, z, grid).into_base();
         ThermalDiffusivity::from_base(thermal_k / (rho * cp))
     }

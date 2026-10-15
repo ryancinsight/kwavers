@@ -34,7 +34,8 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let c0 = req.medium.max_sound_speed();
     let rho0 = req
         .medium
-        .density(req.grid.nx / 2, req.grid.ny / 2, req.grid.nz / 2);
+        .density(req.grid.nx / 2, req.grid.ny / 2, req.grid.nz / 2)
+        .into_base();
     let transducer_frequency_hz = transducer.frequency().in_unit::<Hertz>();
     let frequency = req.helmholtz.and_then(|h| h.frequency).unwrap_or_else(|| {
         if transducer_frequency_hz > 0.0 {

@@ -74,7 +74,7 @@ impl MaterialFields {
         if medium.is_homogeneous() {
             let (x, y, z) = grid.indices_to_coordinates(0, 0, 0);
             return Self {
-                rho0: Array3::from_elem(shape, medium.density(0, 0, 0)),
+                rho0: Array3::from_elem(shape, medium.density(0, 0, 0).into_base()),
                 c0: Array3::from_elem(shape, medium.sound_speed(0, 0, 0).into_base()),
                 alpha0_db: Array3::from_elem(shape, medium.alpha_coefficient(x, y, z, grid)),
                 alpha_power: Array3::from_elem(shape, medium.alpha_power(x, y, z, grid)),
@@ -88,7 +88,7 @@ impl MaterialFields {
                 for i in 0..grid.nx {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
                     let index = [i, j, k];
-                    fields.rho0[index] = medium.density(i, j, k);
+                    fields.rho0[index] = medium.density(i, j, k).into_base();
                     fields.c0[index] = medium.sound_speed(i, j, k).into_base();
                     fields.alpha0_db[index] = medium.alpha_coefficient(x, y, z, grid);
                     fields.alpha_power[index] = medium.alpha_power(x, y, z, grid);

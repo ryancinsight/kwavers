@@ -174,7 +174,7 @@ fn test_homogeneous_medium_properties() {
     ];
 
     for (i, j, k) in test_indices {
-        assert_eq!(medium.density(i, j, k), density);
+        assert_eq!(medium.density(i, j, k).into_base(), density);
         assert_eq!(medium.sound_speed(i, j, k).into_base(), sound_speed);
     }
 }

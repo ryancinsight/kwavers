@@ -89,7 +89,7 @@ impl DgSimulationSolver {
                 "DiscontinuousGalerkin sound speed must be finite and positive, got {sound_speed}"
             )));
         }
-        let density = density_at(medium, 0.0, 0.0, 0.0, grid);
+        let density = density_at(medium, 0.0, 0.0, 0.0, grid).into_base();
         if !density.is_finite() || density <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
                 "DiscontinuousGalerkin density must be finite and positive, got {density}"

@@ -158,7 +158,7 @@ impl CattaneoVernotte {
             |[i, j, k], t, &div| {
                 let (x, y, z) = grid.coords(i, j, k);
 
-                let rho = kwavers_medium::density_at(medium, x, y, z, grid);
+                let rho = kwavers_medium::density_at(medium, x, y, z, grid).into_base();
                 let cp = medium.specific_heat(x, y, z, grid).into_base();
 
                 *t -= dt_s * div / (rho * cp);
