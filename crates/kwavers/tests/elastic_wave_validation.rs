@@ -123,8 +123,8 @@ impl CoreMedium for TestElasticMedium {
         Dimensionless::from_base(3.5) // Default B/A for water-like media
     }
 
-    fn max_sound_speed(&self) -> f64 {
-        self.sound_speed(0, 0, 0).into_base()
+    fn max_sound_speed(&self) -> Velocity<f64> {
+        self.sound_speed(0, 0, 0)
     }
 
     fn is_homogeneous(&self) -> bool {

@@ -41,8 +41,8 @@ pub trait CoreMedium: ComponentBase {
     /// Get nonlinearity parameter B/A at a specific grid point (dimensionless).
     fn nonlinearity(&self, i: usize, j: usize, k: usize) -> Dimensionless<f64>;
 
-    /// Get maximum sound speed in the medium
-    fn max_sound_speed(&self) -> f64;
+    /// Get maximum sound speed in the medium, in metres per second.
+    fn max_sound_speed(&self) -> Velocity<f64>;
 
     /// Check if the medium is homogeneous
     fn is_homogeneous(&self) -> bool;

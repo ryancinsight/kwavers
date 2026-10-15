@@ -24,7 +24,7 @@ use kwavers_solver::forward::helmholtz::fem::{
 /// Panics if the requested simulation violates an internal solver or field
 /// shape invariant during dispatch.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
-    let c_max = req.medium.max_sound_speed();
+    let c_max = req.medium.max_sound_speed().into_base();
     let wavenumber = if let Some(freq) = req.helmholtz.and_then(|h| h.frequency) {
         TAU * freq / c_max
     } else {

@@ -27,7 +27,7 @@ impl Simulation {
                 "run_to_checkpoint only supports SolverType.PSTD",
             ));
         }
-        let c_max = self.medium.inner.as_medium().max_sound_speed();
+        let c_max = self.medium.inner.as_medium().max_sound_speed().into_base();
         let dx_min = self
             .grid
             .inner
@@ -93,7 +93,7 @@ impl Simulation {
                 "run_from_checkpoint only supports SolverType.PSTD",
             ));
         }
-        let c_max = self.medium.inner.as_medium().max_sound_speed();
+        let c_max = self.medium.inner.as_medium().max_sound_speed().into_base();
         let dx_min = self
             .grid
             .inner

@@ -117,7 +117,7 @@ pub mod medium_properties {
         }
 
         // Verify maximum sound speed is consistent
-        let max_speed = medium.max_sound_speed();
+        let max_speed = medium.max_sound_speed().into_base();
         if !max_speed.is_finite() || max_speed <= 0.0 {
             return Err(format!("Invalid maximum sound speed: {}", max_speed));
         }

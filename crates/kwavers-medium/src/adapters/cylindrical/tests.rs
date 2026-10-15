@@ -166,7 +166,7 @@ fn test_property_sound_speed_bounds() {
 
     let projection = CylindricalMediumProjection::new(&medium, &grid, &topology).unwrap();
 
-    let c_3d_max = medium.max_sound_speed();
+    let c_3d_max = medium.max_sound_speed().into_base();
     let c_2d_max = projection.max_sound_speed();
     let c_2d_min = projection.min_sound_speed();
 

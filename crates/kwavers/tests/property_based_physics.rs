@@ -126,7 +126,7 @@ proptest! {
             "Medium properties must be physically valid");
 
         // Additional invariant: max_sound_speed should equal sound_speed for homogeneous
-        prop_assert!((medium.max_sound_speed() - speed).abs() < 1e-10,
+        prop_assert!((medium.max_sound_speed().into_base() - speed).abs() < 1e-10,
             "Homogeneous medium max speed should equal constant speed");
     }
 }

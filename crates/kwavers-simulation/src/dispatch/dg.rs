@@ -26,7 +26,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         .sensor_mask
         .clone()
         .unwrap_or_else(|| Array3::from_elem((req.grid.nx, req.grid.ny, req.grid.nz), false));
-    let c = req.medium.max_sound_speed();
+    let c = req.medium.max_sound_speed().into_base();
     let config = HybridSpectralDGConfig::default();
     let grid_arc = Arc::new(req.grid.clone());
     let mut solver = HybridSpectralDGSolver::new(config, grid_arc);

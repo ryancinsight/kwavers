@@ -49,7 +49,7 @@ impl Simulation {
             .unwrap_or_default();
 
         // ── Compute dt from CFL condition when not provided ───────────────
-        let c_max = self.medium.inner.as_medium().max_sound_speed();
+        let c_max = self.medium.inner.as_medium().max_sound_speed().into_base();
         let dx_min = self
             .grid
             .inner
@@ -62,7 +62,7 @@ impl Simulation {
         let solver_type = prepare::solver_type(self.solver_type)?;
 
         // ── Process sources ─────────────────────────────────────────────────
-        let c_max = self.medium.inner.as_medium().max_sound_speed();
+        let c_max = self.medium.inner.as_medium().max_sound_speed().into_base();
         let mut grid_source = GridSource::new_empty();
         let mut dynamic_sources: Vec<Box<dyn kwavers_source::Source>> = Vec::new();
         let mut has_mask_source = false;

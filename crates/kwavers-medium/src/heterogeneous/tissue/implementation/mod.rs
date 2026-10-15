@@ -166,12 +166,14 @@ impl CoreMedium for HeterogeneousTissueMedium {
         Dimensionless::from_base(self.nonlinearity[[i, j, k]])
     }
 
-    fn max_sound_speed(&self) -> f64 {
-        self.sound_speed
-            .iter()
-            .copied()
-            .fold(f64::NAN, f64::max)
-            .max(MIN_PHYSICAL_SOUND_SPEED)
+    fn max_sound_speed(&self) -> Velocity<f64> {
+        Velocity::from_base(
+            self.sound_speed
+                .iter()
+                .copied()
+                .fold(f64::NAN, f64::max)
+                .max(MIN_PHYSICAL_SOUND_SPEED),
+        )
     }
 
     fn is_homogeneous(&self) -> bool {
