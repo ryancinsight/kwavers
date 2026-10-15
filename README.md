@@ -13,6 +13,9 @@ temperature-update paths follow this convention in `kwavers-physics` 3.0.1.
 
 CI transports the locked dependency graph in a checksum-verified source bundle.
 Miri requires nonempty passing harnesses and gates every inventoried case.
+Its jobs check out every workspace member and complete source/test tree, omit
+unread external datasets/rendered documentation, and reuse a compiler-keyed
+standard-library cache that Miri validates before execution.
 Compilation jobs reuse matching revision, lock, compiler and profile artifacts
 while retaining their existing time limits. Complete benchmark compilation and
 execution run in separate mandatory jobs. PAM and adjoint gradients retain

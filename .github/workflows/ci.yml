@@ -988,14 +988,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # Keep every workspace member and its complete test/include tree.
+          # Root-level files are included by cone mode; external datasets and
+          # rendered documentation are not inputs to these isolated harnesses.
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
 
       - name: Install Rust nightly with miri
         uses: dtolnay/rust-toolchain@7c8d7d138f5c09cef361f8214cf96882cd029cdb # nightly
         with:
           components: miri
 
-      - name: Setup miri
-        run: cargo +nightly miri setup
+      - name: Verify Miri preparation contracts
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/miri-setup-tests"
+          "$RUNNER_TEMP/miri-setup-tests/bin/python" -m pip install --disable-pip-version-check 'PyYAML==6.0.3'
+          "$RUNNER_TEMP/miri-setup-tests/bin/python" -m unittest discover -s scripts/tests -p test_miri_setup.py -v
+
+      - uses: ./.github/actions/setup-miri
 
       - uses: ./.github/actions/restore-cargo-sources
         with:
@@ -1029,11 +1045,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
       - uses: dtolnay/rust-toolchain@7c8d7d138f5c09cef361f8214cf96882cd029cdb
         with:
           components: miri
-      - name: Setup Miri
-        run: cargo +nightly miri setup
+      - uses: ./.github/actions/setup-miri
       - uses: ./.github/actions/restore-cargo-sources
         with:
           artifact: ci-cargo-sources-${{ github.sha }}

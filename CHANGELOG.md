@@ -30,6 +30,11 @@
 
 ### Fixed
 
+- [patch] Miri jobs retain complete workspace inputs in sparse checkout and
+  reuse a compiler/interpreter-keyed standard library with unconditional Miri
+  validation. Four regressions check Git object identities, workspace manifests,
+  compile-time includes, cache identity, complete inventory and unchanged bounds.
+
 - [patch] Embed the canonical scalar template as a compiler input of its
   generator. Shared build-directory reuse cannot read a checkout path captured
   in another compiled generator. A real-compiler regression verifies dependency

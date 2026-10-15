@@ -7,6 +7,8 @@ Required final-head hosted acceptance uses [the current PR checks](https://githu
 - [x] [patch] Read-only native integration and scalar temporaries pass 75 focused FD, 1,121 solver (six existing ignores), 41 facade tests, strict solver Clippy and eleven artifact/generator regressions.
 - [x] [patch] All 17 isolated Linux Miri contracts and all three unchanged full fixtures pass with default checks: differential 868.72, localized 192.59 and hybrid 237.82 wall seconds, each below 900.
 - [x] [patch] All 54 solver/generator hashes agree across native and interpreter checks; both generated Miri variants match the canonical body. Physics and full facade FD/fusion fixtures remain byte-identical to `d0bc1f3c`.
+- [x] [patch] Four Miri-preparation regressions pass: real sparse checkout preserves Git object identities for all workspace inputs/includes, and the real compiler/interpreter determine an exact sysroot cache key with mandatory Miri validation. All 18 existing wheel/reference regressions, workflow lint and locked-source checks pass.
+- [ ] [patch] Recheck hosted final-head CI after removing repeated checkout/sysroot setup. At `95482479`, both wheels, cold/restored k-Wave references, eight benchmark programs/234 cases and 40/41 Miri cases pass; differential reaches the unchanged 15-minute hosted cap on both attempts. Numerical source remains fixed.
 
 <details>
 <summary>Prior implementation checkpoints — historical results at the named revisions</summary>
