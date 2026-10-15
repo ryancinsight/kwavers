@@ -15,9 +15,12 @@ CI transports the locked dependency graph in a checksum-verified source bundle.
 Miri requires nonempty passing harnesses and gates every inventoried case.
 Its jobs check out every workspace member and complete source/test tree, omit
 unread external datasets/rendered documentation, and reuse a compiler-keyed
-standard-library cache that Miri validates before execution.
-Compilation jobs reuse matching revision, lock, compiler and profile artifacts
-while retaining their existing time limits. Complete benchmark compilation and
+standard-library cache with its matching Rust sources and timestamps. Miri
+validates that complete pair before execution.
+Compilation jobs retain their time limits and reuse matching revision, lock,
+compiler and profile artifacts. Miri restores the producer's original source
+timestamps only after Git and complete SHA-256 content checks, retaining Cargo's
+fingerprint validation. Complete benchmark compilation and
 execution run in separate mandatory jobs. PAM and adjoint gradients retain
 checked array borrows and sweep channels without changing numerical order or
 test scenarios. Checked chunks retain sample order and strided RF rows normalize

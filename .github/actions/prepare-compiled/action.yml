@@ -20,12 +20,16 @@ runs:
       run: |
         set -euo pipefail
         python3 - <<'PY'
-        import hashlib, json, os, pathlib, subprocess
+        import hashlib, json, os, pathlib, subprocess, sys
         repo = pathlib.Path(os.environ['SOURCE_REPOSITORY'])
         info = {'head': subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip(),
                 'lock': hashlib.sha256((repo / 'Cargo.lock').read_bytes()).hexdigest(),
                 'compiler': subprocess.check_output(['rustc', *(['+nightly'] if os.environ['BUILD_PROFILE'] == 'miri' else []), '-vV'], text=True),
                 'profile': os.environ['BUILD_PROFILE']}
+        if os.environ['BUILD_PROFILE'] == 'miri':
+            sys.path.insert(0, str(repo / 'scripts'))
+            from miri_source_times import record
+            info['source_times'] = record(repo)
         pathlib.Path('compiled-info.json').write_text(json.dumps(info))
         PY
         # Compress in parallel; the complete file tree and identity still

@@ -116,7 +116,7 @@ class MiriSetupTests(unittest.TestCase):
     def test_cache_is_exact_and_setup_always_validates_it(self) -> None:
         steps = load(ACTION)["runs"]["steps"]
         cache = next(step for step in steps if step.get("uses") == CACHE)
-        self.assertEqual(cache["with"]["path"], "~/.cache/miri")
+        self.assertEqual(cache["with"]["path"].splitlines(), ["~/.cache/miri", "${{ steps.identity.outputs.source }}"])
         self.assertNotIn("restore-keys", cache["with"])
         self.assertIn("steps.identity.outputs.digest", cache["with"]["key"])
         for path in ("Cargo.lock", ".cargo/config.toml", ACTION, ".github/workflows/ci.yml"):
@@ -137,7 +137,9 @@ class MiriSetupTests(unittest.TestCase):
             values = [subprocess.check_output(command, text=True, timeout=5) for command in (
                 ["rustc", "+nightly", "-vV"], ["cargo", "+nightly", "miri", "--version"],
             )]
-            self.assertEqual(output.read_text(), "digest=" + hashlib.sha256("".join(values).encode()).hexdigest() + "\n")
+            toolchain = Path(subprocess.check_output(["rustc", "+nightly", "--print", "sysroot"], text=True, timeout=5).strip())
+            self.assertEqual(output.read_text(), "digest=" + hashlib.sha256("".join(values).encode()).hexdigest()
+                             + "\nsource=" + str(toolchain / "lib/rustlib/src/rust/library") + "\n")
 
 
 if __name__ == "__main__":

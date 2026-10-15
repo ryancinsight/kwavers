@@ -36,6 +36,13 @@
   compile-time includes, cache identity, complete inventory and unchanged bounds.
   The checkout regression shares existing Git objects and the shallow boundary,
   so verification also works from the hosted shallow partial checkout.
+  The sysroot cache includes matching Rust sources: Miri validates their sizes
+  and timestamps, so retaining compiled std alone still triggers a rebuild.
+- [patch] Miri compiled artifacts retain actual source-file/directory timestamps
+  with full source digests. Restore requires the same revision, lock, compiler,
+  profile, tracked inventory and contents before writing timestamps. Five
+  regressions cover exact metadata/archive handoff and atomic mismatch rejection;
+  real Miri configuration tests reuse the artifacts without recompilation.
 
 - [patch] Embed the canonical scalar template as a compiler input of its
   generator. Shared build-directory reuse cannot read a checkout path captured

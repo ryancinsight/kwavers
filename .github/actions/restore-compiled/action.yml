@@ -25,12 +25,18 @@ runs:
         set -euo pipefail
         zstd -q -d -c "$RUNNER_TEMP/compiled-download/compiled-prerequisites.tar.zst" | tar -xf -
         python3 - <<'PY'
-        import hashlib, json, os, pathlib, subprocess
+        import hashlib, json, os, pathlib, subprocess, sys
         repo = pathlib.Path(os.environ['SOURCE_REPOSITORY'])
         actual = {'head': subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip(),
                   'lock': hashlib.sha256((repo / 'Cargo.lock').read_bytes()).hexdigest(),
                   'compiler': subprocess.check_output(['rustc', *(['+nightly'] if os.environ['BUILD_PROFILE'] == 'miri' else []), '-vV'], text=True),
                   'profile': os.environ['BUILD_PROFILE']}
-        if json.loads(pathlib.Path('compiled-info.json').read_text()) != actual:
+        retained = json.loads(pathlib.Path('compiled-info.json').read_text())
+        source_times = retained.pop('source_times') if os.environ['BUILD_PROFILE'] == 'miri' else None
+        if retained != actual:
             raise SystemExit('compiled prerequisites belong to another revision/compiler/profile')
+        if os.environ['BUILD_PROFILE'] == 'miri':
+            sys.path.insert(0, str(repo / 'scripts'))
+            from miri_source_times import restore
+            restore(repo, source_times)
         PY
