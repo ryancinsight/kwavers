@@ -19,6 +19,7 @@ on:
       - scripts/tests/test_python_wheel_artifacts.py
       - scripts/kwave_reference_cache.py
       - scripts/tests/test_kwave_reference_cache.py
+      - scripts/tests/test_compiler_checkouts.py
       - .github/workflows/python-wheel-smoke.yml
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
@@ -39,6 +40,7 @@ on:
       - scripts/tests/test_python_wheel_artifacts.py
       - scripts/kwave_reference_cache.py
       - scripts/tests/test_kwave_reference_cache.py
+      - scripts/tests/test_compiler_checkouts.py
       - .github/workflows/python-wheel-smoke.yml
   # The full three-OS matrix below is a drift backstop, not a per-change
   # signal: the Windows and macOS wheel builds do not depend on which lines
@@ -77,6 +79,13 @@ jobs:
         with:
           path: source
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
@@ -89,6 +98,7 @@ jobs:
           "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m pip install --disable-pip-version-check 'PyYAML==6.0.3'
           "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m unittest discover -s source/scripts/tests -p test_python_wheel_artifacts.py -v
           "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m unittest discover -s source/scripts/tests -p test_kwave_reference_cache.py -v
+          "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m unittest discover -s source/scripts/tests -p test_compiler_checkouts.py -v
       - uses: ./source/.github/actions/restore-cargo-sources
         with:
           repository: source
@@ -190,6 +200,13 @@ jobs:
         with:
           path: source
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
           persist-credentials: false
 
       - name: Set up Python 3.10
@@ -287,6 +304,13 @@ jobs:
         with:
           path: source
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
           persist-credentials: false
 
       - name: Set up Python 3.10

@@ -2,6 +2,8 @@
 
 Required final-head hosted acceptance uses [the current PR checks](https://github.com/ryancinsight/kwavers/pull/948/checks) as its authoritative status. All required workflows must pass. Merge, package publication and deployment remain excluded.
 
+- [x] [patch] Ten bounded native/wheel compiler jobs retain the same complete workspace input set used by Miri. The regression reproduces ten missing policies on `3b165ab0`; all 28 workflow/archive/reference regressions and workflow lint pass after correction. Structured comparison preserves all commands, features, prerequisite edges, permissions, selected tests and time limits.
+- [x] [patch] Recheck the unchanged full differential fixture using exact hosted nightly commit `7df81381d`: default Linux x86-64 Miri passes in 793.56 external wall seconds after explicit sysroot validation. Hosted completion remains unverified under the unchanged 15-minute bound.
 - [x] [patch] Both wheel consumers retain and restore matching compiled build scripts before pinned Maturin cleanup; provenance, modes, container paths, dependencies and execution bounds remain verified.
 - [x] [patch] Cold/restored reference runs `38654130481`/`38656128739` verify exact cache identity and sealed contents; both installed wheels and all 26 boundary/three parity/13 export tests pass (three existing optional skips). Fresh Rust computations/assertions remain mandatory on every revision.
 - [x] [patch] Read-only native integration and scalar temporaries pass 75 focused FD, 1,121 solver (six existing ignores), 41 facade tests, strict solver Clippy and eleven artifact/generator regressions.

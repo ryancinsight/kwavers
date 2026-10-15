@@ -462,6 +462,13 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        sparse-checkout: |
+          .cargo
+          .config
+          .github
+          crates
+          scripts
+          xtask
 
     - name: Install system dependencies
       uses: ./.github/actions/install-system-dependencies
@@ -1011,6 +1018,7 @@ jobs:
           "$RUNNER_TEMP/miri-setup-tests/bin/python" -m pip install --disable-pip-version-check 'PyYAML==6.0.3'
           "$RUNNER_TEMP/miri-setup-tests/bin/python" -m unittest discover -s scripts/tests -p test_miri_setup.py -v
           "$RUNNER_TEMP/miri-setup-tests/bin/python" -m unittest discover -s scripts/tests -p test_miri_source_times.py -v
+          "$RUNNER_TEMP/miri-setup-tests/bin/python" -m unittest discover -s scripts/tests -p test_compiler_checkouts.py -v
 
       - uses: ./.github/actions/setup-miri
 

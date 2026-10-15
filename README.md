@@ -12,6 +12,8 @@ bubble is subtracted from its internal energy. Both the complete-rate and
 temperature-update paths follow this convention in `kwavers-physics` 3.0.1.
 
 CI transports the locked dependency graph in a checksum-verified source bundle.
+Bounded compilation jobs retain every workspace member and complete source/test
+tree in checkout, omitting unused external datasets and rendered documentation.
 Miri requires nonempty passing harnesses and gates every inventoried case.
 Its jobs check out every workspace member and complete source/test tree, omit
 unread external datasets/rendered documentation, and reuse a compiler-keyed

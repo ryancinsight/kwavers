@@ -30,6 +30,10 @@
 
 ### Fixed
 
+- [patch] Ten bounded native/wheel compilation jobs use complete compiler-input
+  sparse checkout. Regression coverage checks every consumer and retains all
+  commands, prerequisite edges, features, permissions, selections and time limits.
+
 - [patch] Miri jobs retain complete workspace inputs in sparse checkout and
   reuse a compiler/interpreter-keyed standard library with unconditional Miri
   validation. Four regressions check Git object identities, workspace manifests,
