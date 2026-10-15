@@ -1,7 +1,7 @@
 //! Continuous-coordinate access for [`CoreMedium`] properties.
 
 use crate::{continuous_to_discrete, CoreMedium};
-use aequitas::systems::si::quantities::{MassDensity, Velocity};
+use aequitas::systems::si::quantities::{Dimensionless, MassDensity, ReciprocalLength, Velocity};
 use kwavers_grid::Grid;
 
 /// Get density at continuous coordinates, in kilograms per cubic metre.
@@ -30,7 +30,7 @@ pub fn sound_speed_at<M: CoreMedium + ?Sized>(
     medium.sound_speed(i, j, k)
 }
 
-/// Get absorption at continuous coordinates.
+/// Get absorption at continuous coordinates, in nepers per metre.
 #[inline]
 pub fn absorption_at<M: CoreMedium + ?Sized>(
     medium: &M,
@@ -38,12 +38,12 @@ pub fn absorption_at<M: CoreMedium + ?Sized>(
     y: f64,
     z: f64,
     grid: &Grid,
-) -> f64 {
+) -> ReciprocalLength<f64> {
     let (i, j, k) = continuous_to_discrete(x, y, z, grid);
     medium.absorption(i, j, k)
 }
 
-/// Get nonlinearity at continuous coordinates.
+/// Get nonlinearity at continuous coordinates (dimensionless B/A).
 #[inline]
 pub fn nonlinearity_at<M: CoreMedium + ?Sized>(
     medium: &M,
@@ -51,7 +51,7 @@ pub fn nonlinearity_at<M: CoreMedium + ?Sized>(
     y: f64,
     z: f64,
     grid: &Grid,
-) -> f64 {
+) -> Dimensionless<f64> {
     let (i, j, k) = continuous_to_discrete(x, y, z, grid);
     medium.nonlinearity(i, j, k)
 }

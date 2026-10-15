@@ -11,7 +11,7 @@
 
 use aequitas::systems::si::{
     quantities::{
-        DynamicViscosity, MassDensity, ReciprocalLength, ReciprocalTemperature,
+        Dimensionless, DynamicViscosity, MassDensity, ReciprocalLength, ReciprocalTemperature,
         SpecificHeatCapacity, ThermalConductivity, ThermalDiffusivity, Velocity,
     },
     units::PerMeter,
@@ -115,12 +115,12 @@ impl CoreMedium for TestElasticMedium {
         Velocity::from_base(((self.lame_lambda + 2.0 * self.lame_mu) / self.density).sqrt())
     }
 
-    fn absorption(&self, _i: usize, _j: usize, _k: usize) -> f64 {
-        0.0 // No absorption in test medium
+    fn absorption(&self, _i: usize, _j: usize, _k: usize) -> ReciprocalLength<f64> {
+        ReciprocalLength::from_base(0.0) // No absorption in test medium
     }
 
-    fn nonlinearity(&self, _i: usize, _j: usize, _k: usize) -> f64 {
-        3.5 // Default B/A for water-like media
+    fn nonlinearity(&self, _i: usize, _j: usize, _k: usize) -> Dimensionless<f64> {
+        Dimensionless::from_base(3.5) // Default B/A for water-like media
     }
 
     fn max_sound_speed(&self) -> f64 {

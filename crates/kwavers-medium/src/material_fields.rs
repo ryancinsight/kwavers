@@ -78,7 +78,7 @@ impl MaterialFields {
                 c0: Array3::from_elem(shape, medium.sound_speed(0, 0, 0).into_base()),
                 alpha0_db: Array3::from_elem(shape, medium.alpha_coefficient(x, y, z, grid)),
                 alpha_power: Array3::from_elem(shape, medium.alpha_power(x, y, z, grid)),
-                nonlinearity: Array3::from_elem(shape, medium.nonlinearity(0, 0, 0)),
+                nonlinearity: Array3::from_elem(shape, medium.nonlinearity(0, 0, 0).into_base()),
             };
         }
 
@@ -92,7 +92,7 @@ impl MaterialFields {
                     fields.c0[index] = medium.sound_speed(i, j, k).into_base();
                     fields.alpha0_db[index] = medium.alpha_coefficient(x, y, z, grid);
                     fields.alpha_power[index] = medium.alpha_power(x, y, z, grid);
-                    fields.nonlinearity[index] = medium.nonlinearity(i, j, k);
+                    fields.nonlinearity[index] = medium.nonlinearity(i, j, k).into_base();
                 }
             }
         }

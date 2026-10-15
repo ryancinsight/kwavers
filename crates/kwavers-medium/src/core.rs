@@ -3,7 +3,7 @@
 //! This module provides fundamental traits that all medium types must implement,
 //! establishing a Single Source of Truth (SSOT) for medium behaviors.
 
-use aequitas::systems::si::quantities::{MassDensity, Velocity};
+use aequitas::systems::si::quantities::{Dimensionless, MassDensity, ReciprocalLength, Velocity};
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::ComponentBase;
@@ -35,11 +35,11 @@ pub trait CoreMedium: ComponentBase {
     /// Get density at a specific grid point, in kilograms per cubic metre.
     fn density(&self, i: usize, j: usize, k: usize) -> MassDensity<f64>;
 
-    /// Get absorption coefficient at a specific grid point
-    fn absorption(&self, i: usize, j: usize, k: usize) -> f64;
+    /// Get absorption coefficient at a specific grid point, in nepers per metre.
+    fn absorption(&self, i: usize, j: usize, k: usize) -> ReciprocalLength<f64>;
 
-    /// Get nonlinearity parameter B/A at a specific grid point
-    fn nonlinearity(&self, i: usize, j: usize, k: usize) -> f64;
+    /// Get nonlinearity parameter B/A at a specific grid point (dimensionless).
+    fn nonlinearity(&self, i: usize, j: usize, k: usize) -> Dimensionless<f64>;
 
     /// Get maximum sound speed in the medium
     fn max_sound_speed(&self) -> f64;

@@ -316,8 +316,11 @@ mod tests {
         assert_eq!(medium.sound_speed(0, 0, 0).into_base(), SOUND_SPEED_TISSUE);
         assert_eq!(medium.sound_speed(2, 2, 2).into_base(), SOUND_SPEED_TISSUE);
         assert_eq!(medium.density(1, 1, 1).into_base(), DENSITY_BRAIN);
-        assert_eq!(medium.absorption(2, 1, 0), 0.45);
-        assert_eq!(medium.nonlinearity(0, 2, 1), B_OVER_A_SOFT_TISSUE);
+        assert_eq!(medium.absorption(2, 1, 0).into_base(), 0.45);
+        assert_eq!(
+            medium.nonlinearity(0, 2, 1).into_base(),
+            B_OVER_A_SOFT_TISSUE
+        );
     }
 
     #[test]
