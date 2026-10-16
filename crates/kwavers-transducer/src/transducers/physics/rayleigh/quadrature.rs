@@ -30,7 +30,7 @@ pub(super) fn gauss_legendre_unit(order: usize) -> KwaversResult<Vec<(f64, f64)>
         }
         if !converged {
             return Err(invalid(
-                "radial_order",
+                "quadrature_order",
                 order.to_string(),
                 "Gauss-Legendre roots converge",
             ));

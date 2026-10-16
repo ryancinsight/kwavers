@@ -273,6 +273,27 @@ fn rectangle_surface_rule_integrates_area() {
 }
 
 #[test]
+fn rectangle_surface_rule_assigns_primary_order_to_width() {
+    // One width node and three height nodes: the width coordinate is the
+    // single centre node, the height coordinates are three distinct roots.
+    let rule = surface_rule(
+        PlanarApertureShape::Rectangle {
+            width_m: 2.0e-3,
+            height_m: 1.0e-3,
+        },
+        1,
+        3,
+    )
+    .unwrap();
+    assert_eq!(rule.len(), 3);
+    assert!(rule.iter().all(|([u, _], _)| *u == 0.0));
+    let mut heights: Vec<f64> = rule.iter().map(|([_, v], _)| *v).collect();
+    heights.sort_by(f64::total_cmp);
+    assert!(heights[0] < 0.0 && heights[1] == 0.0 && heights[2] > 0.0);
+    assert_eq!(heights[0], -heights[2]);
+}
+
+#[test]
 fn rectangle_rejects_non_positive_dimensions() {
     let error = PlanarApertureGeometry::oriented(
         [0.0; 3],
@@ -294,19 +315,21 @@ fn rectangle_rejects_non_positive_dimensions() {
 fn rectangle_far_field_matches_fourier_pattern() {
     // Fraunhofer limit of a uniform rectangle with half-sides a, b:
     // |p(θ, φ)| / |p(0)| = |sinc(k a sinθ cosφ) · sinc(k b sinθ sinφ)|.
-    // At R = 10⁴ λ the quadratic Fresnel phase across the aperture,
-    // k·max(a, b)²/(2R), bounds the deviation from that pattern.
+    // At R = 10⁴ λ the neglected quadratic Fresnel phase k(x² + y²)/(2R) is
+    // at most k(a² + b²)/(2R) on the aperture. It perturbs the off-axis value
+    // and the on-axis normaliser, each by at most that phase (|e^{iφ} − 1| ≤ |φ|),
+    // so the normalised pattern deviates by at most k(a² + b²)/R.
     let wavelength = 0.75e-3;
     let k = TAU / wavelength;
     let (half_width, half_height) = (5.0 * wavelength, 1.5 * wavelength);
     let aperture = rectangle(2.0 * half_width, 2.0 * half_height);
     let spec = RayleighIntegralSpec::new(k, 0.0, 40, 40).unwrap();
     let range = 1.0e4 * wavelength;
-    let fresnel_bound = k * half_width * half_width / range;
+    let fresnel_bound = k * (half_width * half_width + half_height * half_height) / range;
     let on_axis = rayleigh_pressure(&[[0.0, 0.0, range]], &[aperture], &spec).unwrap()[0];
     for (sin_theta, phi) in [
-        (0.1_f64, 0.0_f64),
-        (0.2, 0.0),
+        (0.05_f64, 0.0_f64),
+        (0.15, 0.0),
         (0.35, 0.0),
         (0.15, PI / 2.0),
         (0.2, PI / 2.0),

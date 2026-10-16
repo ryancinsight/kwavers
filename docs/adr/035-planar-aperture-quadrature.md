@@ -5,8 +5,9 @@
 Accepted for the 4.0.0 transducer API.
 
 - Revision 2026-10-16: rectangles join the same kernel as a third shape,
-  because linear-array elements are rectangles. Evidence: KW-NEURO-001,
-  where the D2 array oracle matched a full-wave PSTD run to 3.3%.
+  because linear-array elements are rectangles. Evidence: the rectangle
+  tests under Verification and the `linear_array_neuromodulation`
+  example, which compares this oracle with a full-wave PSTD run.
 
 ## Context
 
