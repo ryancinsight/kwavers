@@ -25,6 +25,8 @@ mod interface;
 mod source;
 mod stepping;
 pub mod thermal;
+#[cfg(test)]
+mod thermal_tests;
 
 fn fill_rho_sum_dense(
     dest: &mut LetoArray3<f64>,

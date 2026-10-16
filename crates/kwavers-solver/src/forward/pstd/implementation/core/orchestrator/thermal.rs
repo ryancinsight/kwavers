@@ -263,7 +263,3 @@ impl PSTDSolver {
         Ok(self.sensor_recorder.extract_pressure_data())
     }
 }
-
-#[cfg(test)]
-#[path = "thermal_tests.rs"]
-mod tests;
