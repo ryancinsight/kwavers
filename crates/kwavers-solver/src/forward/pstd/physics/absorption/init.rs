@@ -28,7 +28,7 @@
 
 use super::kernel::AbsorptionKernel;
 use super::strata::build_exponent_strata;
-use crate::forward::pstd::config::PSTDConfig;
+use crate::forward::pstd::config::{PSTDConfig, PowerLawDispersion};
 use kwavers_core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
@@ -161,7 +161,8 @@ pub(crate) fn initialize_absorption_operators(
             alpha_power,
         } => {
             let y_config = *alpha_power;
-            if (y_config - 1.0).abs() < 1e-12 {
+            let dispersive = config.power_law_dispersion == PowerLawDispersion::Causal;
+            if dispersive && (y_config - 1.0).abs() < 1e-12 {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: "alpha_power must not be 1.0 for fractional Laplacian formulation"
@@ -216,10 +217,12 @@ pub(crate) fn initialize_absorption_operators(
 
                         // Treeby & Cox (2010) Eqs. 19–20
                         tau[[i, j, k]] = -2.0 * alpha_0_si * c0_val.powf(y - 1.0);
-                        eta[[i, j, k]] = 2.0
-                            * alpha_0_si
-                            * c0_val.powf(y)
-                            * (std::f64::consts::PI * y / 2.0).tan();
+                        if dispersive {
+                            eta[[i, j, k]] = 2.0
+                                * alpha_0_si
+                                * c0_val.powf(y)
+                                * (std::f64::consts::PI * y / 2.0).tan();
+                        }
                         alpha_si_field[[i, j, k]] = alpha_0_si;
                         y_field[[i, j, k]] = y;
                     }

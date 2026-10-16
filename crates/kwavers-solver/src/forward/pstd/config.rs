@@ -9,6 +9,23 @@ use serde::{Deserialize, Serialize};
 
 use kwavers_boundary::{CPMLConfig, DomainPmlConfig};
 
+/// Whether a power-law absorption carries its causal dispersion term.
+///
+/// Mirrors k-Wave's `medium.alpha_mode`: `Causal` is k-Wave's default
+/// (Treeby & Cox 2010, Eqs. 19–20, with `η ∝ tan(πy/2)`), and `Omitted` is
+/// `alpha_mode = 'no_dispersion'`, which keeps the absorption term `τ` and
+/// drops `η`. `η` diverges as `y → 1`, so the causal form rejects `y = 1` and
+/// distorts the phase speed near it; tissues tabulated with `y ≈ 1` use
+/// `Omitted`, exactly as k-Wave requires.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum PowerLawDispersion {
+    /// Absorption with its Kramers–Kronig dispersion (k-Wave default).
+    #[default]
+    Causal,
+    /// Absorption without dispersion (k-Wave `alpha_mode = 'no_dispersion'`).
+    Omitted,
+}
+
 /// Compatibility modes for the spectral solver
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CompatibilityMode {
@@ -65,6 +82,8 @@ pub struct PSTDConfig {
     pub spectral_correction: SpectralCorrectionConfig,
     /// Absorption mode
     pub absorption_mode: AbsorptionMode,
+    /// Dispersion of a power-law absorption (k-Wave `alpha_mode`)
+    pub power_law_dispersion: PowerLawDispersion,
     /// Enable nonlinear acoustics
     pub nonlinearity: bool,
     /// Boundary condition configuration
@@ -91,6 +110,7 @@ impl Default for PSTDConfig {
             compatibility_mode: CompatibilityMode::Optimal,
             spectral_correction: SpectralCorrectionConfig::default(),
             absorption_mode: AbsorptionMode::Lossless,
+            power_law_dispersion: PowerLawDispersion::Causal,
             nonlinearity: false,
             boundary: BoundaryConfig::CPML(CPMLConfig {
                 thickness: 20,

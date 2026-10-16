@@ -1,5 +1,5 @@
 use super::{test_k_mag, zeros_k_mag};
-use crate::forward::pstd::config::PSTDConfig;
+use crate::forward::pstd::config::{PSTDConfig, PowerLawDispersion};
 use crate::forward::pstd::physics::absorption::init::initialize_absorption_operators;
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
@@ -7,7 +7,9 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
+use kwavers_physics::acoustics::mechanics::absorption::{
+    power_law_db_cm_to_np_omega_m, AbsorptionMode,
+};
 
 #[test]
 fn test_power_law_initialization() {
@@ -262,4 +264,58 @@ fn test_stokes_absorption_tau_matches_classical_formula() {
         kernel.nabla2[[1, 0, 0]],
         expected_n2
     );
+}
+
+/// k-Wave `alpha_mode = 'no_dispersion'`: the absorption term `τ` is unchanged,
+/// the dispersion term `η` vanishes, and `y = 1` (rejected by the causal form,
+/// where `tan(πy/2)` diverges) becomes admissible.
+#[test]
+fn omitted_dispersion_keeps_tau_and_zeroes_eta() {
+    let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
+    let k_mag = test_k_mag(8, 8, 8, 1e-3);
+    let kernel_for = |alpha_power: f64, dispersion: PowerLawDispersion| {
+        let config = PSTDConfig {
+            absorption_mode: AbsorptionMode::PowerLaw {
+                alpha_coeff: Some(0.7),
+                alpha_power,
+            },
+            power_law_dispersion: dispersion,
+            ..PSTDConfig::default()
+        };
+        initialize_absorption_operators(
+            &config,
+            &grid,
+            &medium,
+            &k_mag,
+            MHZ_TO_HZ,
+            SOUND_SPEED_WATER_SIM,
+        )
+    };
+
+    let causal = kernel_for(1.5, PowerLawDispersion::Causal)
+        .unwrap()
+        .unwrap();
+    let omitted = kernel_for(1.5, PowerLawDispersion::Omitted)
+        .unwrap()
+        .unwrap();
+    assert_eq!(omitted.tau[[3, 4, 5]], causal.tau[[3, 4, 5]]);
+    assert_ne!(causal.eta[[3, 4, 5]], 0.0);
+    assert!(omitted.eta.iter().all(|&value| value == 0.0));
+
+    assert!(kernel_for(1.0, PowerLawDispersion::Causal)
+        .is_err_and(|error| matches!(error, kwavers_core::error::KwaversError::Validation(_))));
+    let unit = kernel_for(1.0, PowerLawDispersion::Omitted)
+        .unwrap()
+        .unwrap();
+    // y = 1: τ = −2 α₀ c₀^(y−1) = −2 α₀, exact in floating point because c₀⁰ = 1.
+    let alpha_0_si = power_law_db_cm_to_np_omega_m(0.7, 1.0);
+    assert!(unit.tau.iter().all(|&value| value == -2.0 * alpha_0_si));
+    assert!(unit.eta.iter().all(|&value| value == 0.0));
 }
