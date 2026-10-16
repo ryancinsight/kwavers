@@ -59,9 +59,9 @@ pub fn wavelength_m() -> f64 {
 
 /// Element pitch that avoids grating lobes up to the steering limit.
 ///
-/// A linear array of pitch `p` produces its first grating lobe at
-/// `sin θ = λ/p − 1` for broadside steering. Requiring no grating lobe within
-/// `|θ| ≤ θ_max` at full steering gives `p ≤ λ / (1 + sin θ_max)`.
+/// Steered to `θ_s`, a linear array of pitch `p` has grating lobes where
+/// `sin θ = sin θ_s ± m λ/p`. Keeping the nearest one, `sin θ_s − λ/p`, out of
+/// real space (`≤ −1`) at the full steering limit gives `p ≤ λ / (1 + sin θ_max)`.
 #[must_use]
 pub fn pitch_m() -> f64 {
     wavelength_m() / (1.0 + STEERING_LIMIT_RAD.sin())

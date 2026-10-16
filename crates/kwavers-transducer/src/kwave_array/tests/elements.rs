@@ -312,29 +312,44 @@ fn planar_rectangle_conserves_area_and_stays_in_its_footprint() {
     let grid = Grid::new(41, 41, 9, dx, dx, dx).expect("grid");
     let center = [20.0 * dx, 20.0 * dx, 4.0 * dx];
     let (width, height) = (0.46e-3, 1.5e-3);
-    let mut array = KWaveArray::new();
-    array.add_planar_aperture_element(
-        PlanarApertureGeometry::oriented(
-            center,
-            [0.0, 0.0, 1.0],
-            [0.0, 1.0, 0.0],
-            PlanarApertureShape::Rectangle {
-                width_m: width,
-                height_m: height,
-            },
-        )
-        .expect("valid rectangle"),
+    let geometry = PlanarApertureGeometry::oriented(
+        center,
+        [0.0, 0.0, 1.0],
+        [0.0, 1.0, 0.0],
+        PlanarApertureShape::Rectangle {
+            width_m: width,
+            height_m: height,
+        },
+    )
+    .expect("valid rectangle");
+
+    // Every sample carries mass / N for N samples, one rounding each; summing
+    // the N values adds N − 1 more, and the rasterizer's mass w·h/(dx·dy) and
+    // this test's w·h/dx² carry three roundings apiece. To first order the
+    // total differs from w·h/dx² by at most (N + 6)·u·mass, with u = ε/2.
+    let expected_mass = width * height / (dx * dx);
+    let (mut samples, mut total) = (0_usize, 0.0);
+    let mut inside = true;
+    KWaveArray::rasterize_planar_aperture_points(&grid, geometry, |point, scale| {
+        samples += 1;
+        total += scale;
+        // Width along the first axis (y), height along normal × first (−x).
+        inside &= (point[1] - center[1]).abs() < 0.5 * width
+            && (point[0] - center[0]).abs() < 0.5 * height
+            && point[2] == center[2];
+    });
+    assert!(inside, "a sample left the rectangle");
+    let rounding_bound = f64::from_count(samples + 6) * 0.5 * f64::EPSILON * expected_mass;
+    assert!(
+        (total - expected_mass).abs() <= rounding_bound,
+        "sample mass {total}, expected {expected_mass}"
     );
-    let (mask, per_cell) = array
+
+    let mut array = KWaveArray::new();
+    array.add_planar_aperture_element(geometry);
+    let (mask, _) = array
         .build_per_element_source(&grid, &Array2::<f64>::ones((1, 1)))
         .expect("rectangle source");
-    let expected_mass = width * height / (dx * dx);
-    let realized: f64 = (0..per_cell.shape()[0]).map(|row| per_cell[[row, 0]]).sum();
-    let operation_bound = 64.0 * f64::EPSILON * f64::from_count(per_cell.shape()[0]);
-    assert!(
-        (realized - expected_mass).abs() <= operation_bound * expected_mass.max(1.0),
-        "realized {realized}, expected {expected_mass}"
-    );
     // The first axis, and so the 0.46 mm width, runs along y: the footprint in
     // the source plane must be longer in x, along the 1.5 mm height.
     let (mut x_extent, mut y_extent) = (0_usize, 0_usize);

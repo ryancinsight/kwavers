@@ -264,9 +264,20 @@ fn rectangle_surface_rule_integrates_area() {
     .unwrap();
     assert_eq!(rule.len(), 63);
     let area: f64 = rule.iter().map(|(_, weight)| weight).sum();
-    // Each unit-interval Gauss-Legendre weight set sums to 1 up to one rounding
-    // per weight; 63 products and sums bound the error by 64 ε.
-    assert!((area - width * height).abs() <= 64.0 * f64::EPSILON * width * height);
+    // The rule's weights are w·wᵢ·h·hⱼ over the 1D Gauss-Legendre weights, so
+    // the area is w·h·(Σwᵢ)(Σhⱼ) up to rounding: three products per weight, 62
+    // additions, and for the reference three products plus the 6 and 8
+    // additions of its 1D sums, 82 roundings of at most u = ε/2 each to first
+    // order. That the 1D sums are 1 is the 1D rule's own test.
+    let weight_sum = |order| -> f64 {
+        gauss_legendre_unit(order)
+            .unwrap()
+            .iter()
+            .map(|(_, weight)| weight)
+            .sum()
+    };
+    let reference = width * height * weight_sum(7) * weight_sum(9);
+    assert!((area - reference).abs() <= 41.0 * f64::EPSILON * reference);
     assert!(rule
         .iter()
         .all(|([u, v], _)| u.abs() < 0.5 * width && v.abs() < 0.5 * height));
@@ -399,9 +410,13 @@ fn rectangle_halves_superpose_to_the_whole() {
     // Two abutting half-width rectangles carrying the same phasor are the
     // whole rectangle. The n-node Gauss-Legendre remainder on an edge of length
     // L scales as (kL)^2n (n!)^4 / ((2n)!)^3; the longer edge has kL = 12.2,
-    // and with n = 24 the remainder is below 1e-30, so the sums differ only
-    // by rounding over the 2 x 24 x 24
-    // terms, each carrying a few ulps.
+    // and with n = 24 the remainder is below 1e-30, so the sums differ only by
+    // rounding. Per term, with u = ε/2: the range carries 4u·R + 2u·L and the
+    // phase k·R one more rounding, so the phase is off by at most 6·k·R_max·u
+    // (L ≪ R); weight, attenuation, 1/R, the polar form and the prefactor add
+    // 8u to the magnitude; and summing the 2 × 24 × 24 terms adds 1152u of the
+    // absolute sum, which Σ weight / R ≤ w·h / z bounds. Both evaluations err,
+    // so they may differ by twice that.
     let wavelength = 0.77e-3;
     let k = TAU / wavelength;
     let (width, height) = (0.9e-3, 1.5e-3);
@@ -434,11 +449,13 @@ fn rectangle_halves_superpose_to_the_whole() {
     let split =
         rayleigh_pressure(&points, &[half(-0.25 * width), half(0.25 * width)], &spec).unwrap();
     let joined = rayleigh_pressure(&points, &[whole], &spec).unwrap();
-    for (a, b) in split.iter().zip(&joined) {
-        let rounding_bound = 4.0 * (2.0 * 24.0 * 24.0) * f64::EPSILON;
-        assert!(
-            (a - b).norm() <= rounding_bound * b.norm(),
-            "{a} against {b}"
-        );
+    let scale = k / TAU * Complex64::new(0.3, -0.7).norm() * width * height;
+    for ((a, b), point) in split.iter().zip(&joined).zip(&points) {
+        let farthest = (point[0].abs() + 0.5 * width)
+            .hypot(point[1].abs() + 0.5 * height)
+            .hypot(point[2]);
+        let roundings = 6.0 * k * farthest + 8.0 + 2.0 * 24.0 * 24.0;
+        let rounding_bound = 2.0 * roundings * 0.5 * f64::EPSILON * scale / point[2];
+        assert!((a - b).norm() <= rounding_bound, "{a} against {b}");
     }
 }
