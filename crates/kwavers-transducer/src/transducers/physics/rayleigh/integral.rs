@@ -35,7 +35,7 @@ impl RayleighIntegralSpec {
     ///
     /// Returns `KwaversError::Config` unless the wavenumber is finite and
     /// positive, attenuation is finite and non-negative, the primary order is
-    /// positive, and the secondary order is at least three.
+    /// positive, and the secondary order is positive.
     pub fn new(
         wavenumber_rad_m: f64,
         attenuation_np_m: f64,
@@ -85,11 +85,11 @@ impl RayleighIntegralSpec {
         if primary_order == 0 {
             return Err(invalid("primary_order", primary_order.to_string(), "> 0"));
         }
-        if secondary_order < 3 {
+        if secondary_order == 0 {
             return Err(invalid(
                 "secondary_order",
                 secondary_order.to_string(),
-                ">= 3",
+                "> 0",
             ));
         }
         let surface_samples = primary_order.checked_mul(secondary_order).ok_or_else(|| {
@@ -133,8 +133,9 @@ impl RayleighIntegralSpec {
 ///
 /// # Errors
 ///
-/// Returns `KwaversError::Config` if an observation coordinate is non-finite
-/// or the quadrature root solver fails to converge.
+/// Returns `KwaversError::Config` if an observation coordinate is non-finite,
+/// a polar aperture meets a secondary order below three, or the quadrature
+/// root solver fails to converge.
 pub fn rayleigh_pressure(
     points_m: &[[f64; 3]],
     apertures: &[PlanarAperture],

@@ -294,6 +294,27 @@ fn rectangle_surface_rule_assigns_primary_order_to_width() {
 }
 
 #[test]
+fn secondary_order_below_three_is_rejected_only_for_polar_shapes() {
+    let k = TAU / 0.75e-3;
+    let spec = RayleighIntegralSpec::new(k, 0.0, 8, 1).unwrap();
+    let observation = [[0.0, 0.0, 0.05]];
+    let rectangle_value =
+        rayleigh_pressure(&observation, &[rectangle(1.0e-3, 1.0e-3)], &spec).unwrap()[0];
+    assert!(rectangle_value.norm() > 0.0);
+    let disk =
+        PlanarAperture::disk([0.0; 3], [0.0, 0.0, 1.0], 1.0e-3, Complex64::new(1.0, 0.0)).unwrap();
+    let error = rayleigh_pressure(&observation, &[disk], &spec).unwrap_err();
+    assert!(matches!(
+        error,
+        KwaversError::Config(ConfigError::InvalidValue { ref parameter, .. }) if parameter == "secondary_order"
+    ));
+    assert!(RayleighIntegralSpec::new(k, 0.0, 8, 0).is_err_and(|error| matches!(
+        error,
+        KwaversError::Config(ConfigError::InvalidValue { ref parameter, .. }) if parameter == "secondary_order"
+    )));
+}
+
+#[test]
 fn rectangle_rejects_non_positive_dimensions() {
     let error = PlanarApertureGeometry::oriented(
         [0.0; 3],
@@ -363,7 +384,9 @@ fn rectangle_on_axis_far_field_is_area_weighted() {
     let range = 1.0e4 * wavelength;
     let value = rayleigh_pressure(&[[0.0, 0.0, range]], &[aperture], &spec).unwrap()[0];
     let expected = 2.0 * k * half_width * half_height / (PI * range);
-    let fresnel_bound = k * half_width * half_width / range;
+    // On axis the neglected Fresnel phase k(x² + y²)/(2R) is at most
+    // k(a² + b²)/(2R), and |e^{iφ} − 1| ≤ |φ| bounds the relative deviation.
+    let fresnel_bound = k * (half_width * half_width + half_height * half_height) / (2.0 * range);
     assert!(
         (value.norm() - expected).abs() <= fresnel_bound * expected,
         "|p| {} against {expected}",
@@ -375,8 +398,9 @@ fn rectangle_on_axis_far_field_is_area_weighted() {
 fn rectangle_halves_superpose_to_the_whole() {
     // Two abutting half-width rectangles carrying the same phasor are the
     // whole rectangle. The n-node Gauss-Legendre remainder on an edge of length
-    // L scales as (kL)^2n (n!)^4 / ((2n)!)^3; with kL <= 7.4 and n = 24 it is
-    // below 1e-40, so the sums differ only by rounding over the 2 x 24 x 24
+    // L scales as (kL)^2n (n!)^4 / ((2n)!)^3; the longer edge has kL = 12.2,
+    // and with n = 24 the remainder is below 1e-30, so the sums differ only
+    // by rounding over the 2 x 24 x 24
     // terms, each carrying a few ulps.
     let wavelength = 0.77e-3;
     let k = TAU / wavelength;

@@ -95,6 +95,15 @@ pub(super) fn surface_rule(
         }
         return Ok(nodes);
     }
+    // Fewer than three midpoint nodes cannot resolve the first angular
+    // harmonic of a ring's phase; a rectangle has no angular rule.
+    if secondary_order < 3 {
+        return Err(invalid(
+            "secondary_order",
+            secondary_order.to_string(),
+            ">= 3 for a polar aperture",
+        ));
+    }
     let (inner, outer, start, span) = shape
         .polar_bounds()
         .expect("invariant: every non-rectangular shape is polar");
