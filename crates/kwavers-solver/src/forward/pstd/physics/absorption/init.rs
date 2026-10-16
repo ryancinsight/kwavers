@@ -202,12 +202,10 @@ pub(crate) fn initialize_absorption_operators(
                             Some(requested) => (*requested, y_config),
                             None => {
                                 let y_medium = medium.alpha_power(x, y_coord, z, grid);
-                                let y = if y_medium.abs() > 1e-12 && (y_medium - 1.0).abs() > 1e-12
-                                {
-                                    y_medium
-                                } else {
-                                    y_config
-                                };
+                                // y = 1 is degenerate only for the causal form.
+                                let degenerate = y_medium.abs() <= 1e-12
+                                    || (dispersive && (y_medium - 1.0).abs() <= 1e-12);
+                                let y = if !degenerate { y_medium } else { y_config };
                                 (medium.alpha_coefficient(x, y_coord, z, grid), y)
                             }
                         };

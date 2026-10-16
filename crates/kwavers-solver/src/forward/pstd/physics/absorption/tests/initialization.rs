@@ -319,3 +319,56 @@ fn omitted_dispersion_keeps_tau_and_zeroes_eta() {
     assert!(unit.tau.iter().all(|&value| value == -2.0 * alpha_0_si));
     assert!(unit.eta.iter().all(|&value| value == 0.0));
 }
+
+/// A medium-supplied `y = 1` is a valid exponent once dispersion is omitted;
+/// only the causal form treats it as degenerate and falls back to the
+/// configured exponent.
+#[test]
+fn omitted_dispersion_takes_unit_exponent_from_the_medium() {
+    let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+    let mut medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
+    medium.set_acoustic_properties(0.7, 1.0, 5.0).unwrap();
+    let config = PSTDConfig {
+        absorption_mode: AbsorptionMode::PowerLaw {
+            alpha_coeff: None,
+            alpha_power: 1.5,
+        },
+        power_law_dispersion: PowerLawDispersion::Omitted,
+        ..PSTDConfig::default()
+    };
+    let kernel = initialize_absorption_operators(
+        &config,
+        &grid,
+        &medium,
+        &test_k_mag(8, 8, 8, 1e-3),
+        MHZ_TO_HZ,
+        SOUND_SPEED_WATER_SIM,
+    )
+    .unwrap()
+    .unwrap();
+    // y = 1 from the medium: τ = −2 α₀ c₀⁰ = −2 α₀ exactly. The configured
+    // y = 1.5 would instead give −2 α₀(1.5) c₀^0.5.
+    let alpha_0_si = power_law_db_cm_to_np_omega_m(0.7, 1.0);
+    assert!(kernel.tau.iter().all(|&value| value == -2.0 * alpha_0_si));
+    assert!(kernel.eta.iter().all(|&value| value == 0.0));
+}
+
+/// Configurations saved before the dispersion option existed still load, as
+/// the causal default.
+#[test]
+fn config_without_dispersion_field_deserializes_as_causal() {
+    let mut value = serde_json::to_value(PSTDConfig::default()).unwrap();
+    value
+        .as_object_mut()
+        .unwrap()
+        .remove("power_law_dispersion")
+        .unwrap();
+    let config: PSTDConfig = serde_json::from_value(value).unwrap();
+    assert_eq!(config.power_law_dispersion, PowerLawDispersion::Causal);
+}
