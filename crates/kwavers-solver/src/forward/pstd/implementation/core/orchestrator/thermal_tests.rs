@@ -39,3 +39,46 @@ fn absorption_at_frequency_uses_the_resolved_exponent() {
     let alpha = solver.alpha_np_m().unwrap();
     assert!(alpha.iter().all(|&value| value == expected));
 }
+
+/// With a per-voxel exponent each voxel scales by its own `ω^y(r)`.
+#[test]
+fn absorption_at_frequency_scales_each_voxel_by_its_exponent() {
+    use kwavers_medium::heterogeneous::HeterogeneousMedium;
+
+    let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+    let background = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
+    let mut medium = HeterogeneousMedium::from_homogeneous(&background, &grid).unwrap();
+    medium.use_trilinear_interpolation = false;
+    medium.absorption.fill(0.7);
+    medium.alpha0.fill(0.7);
+    let exponent_at = |i: usize| if i < 4 { 1.3 } else { 1.7 };
+    for ([i, _, _], value) in medium.alpha_power.indexed_iter_mut().unwrap() {
+        *value = exponent_at(i);
+    }
+    let config = PSTDConfig {
+        nt: 2,
+        absorption_mode: AbsorptionMode::PowerLaw {
+            alpha_coeff: None,
+            alpha_power: 1.3,
+        },
+        ..PSTDConfig::default()
+    };
+    let mut solver = PSTDSolver::new(config, grid, &medium, GridSource::new_empty()).unwrap();
+    assert!(solver.absorption.as_ref().unwrap().strata.is_some());
+    let omega = TAU * 2.0e6;
+    solver.populate_alpha_np_m_at_frequency(omega);
+    // α_SI and ω^y are formed by the same operations as in the solver, so each
+    // voxel matches bit for bit; a configured-exponent scaling would put
+    // ω^1.3 on the y = 1.7 half.
+    let alpha = solver.alpha_np_m().unwrap();
+    for ([i, _, _], &value) in alpha.indexed_iter() {
+        let y = exponent_at(i);
+        assert_eq!(value, power_law_db_cm_to_np_omega_m(0.7, y) * omega.powf(y));
+    }
+}
