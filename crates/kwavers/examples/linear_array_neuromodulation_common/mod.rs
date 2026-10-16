@@ -9,8 +9,10 @@ pub mod metrics;
 pub mod plots;
 pub mod simulate;
 
+use anyhow::{anyhow, Result};
 use eunomia::convert::IntegerTarget;
 use eunomia::FloatElement;
+use kwavers_transducer::transducers::physics::{PlanarApertureGeometry, PlanarApertureShape};
 use kwavers_transducer::KWaveArray;
 use leto::Array2;
 use std::f64::consts::PI;
@@ -63,16 +65,6 @@ pub fn wavelength_m() -> f64 {
 #[must_use]
 pub fn pitch_m() -> f64 {
     wavelength_m() / (1.0 + STEERING_LIMIT_RAD.sin())
-}
-
-/// Element thickness along propagation: one grid cell (`λ / POINTS_PER_WAVELENGTH`).
-///
-/// The k-Wave rectangle rasterizes as a planar surface in its own x–y plane and
-/// does not read this extent; it records the element as a single source plane at
-/// the array depth, the aperture model the Rayleigh oracle assumes.
-#[must_use]
-pub fn element_thickness_m() -> f64 {
-    wavelength_m() / POINTS_PER_WAVELENGTH
 }
 
 /// Number of whole elements that fit a given linear aperture at the given pitch.
@@ -184,27 +176,48 @@ impl LinearArraySpec {
         ]
     }
 
-    /// k-Wave-compatible rectangular element model for the full-wave solver.
-    #[must_use]
-    pub fn kwave_array(&self) -> KWaveArray {
+    /// Rectangular element model for the full-wave solver, rasterized from the
+    /// same planar apertures the Rayleigh oracle integrates.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if an element geometry is invalid.
+    pub fn kwave_array(&self) -> Result<KWaveArray> {
         let mut array = KWaveArray::with_params(FREQUENCY_HZ, SOUND_SPEED_M_S);
-        let thickness_m = element_thickness_m();
         for &x in &self.x_m {
-            array.add_rect_element(
-                (x, self.y_m, self.z_m),
-                self.element_width_m,
-                self.element_height_m,
-                thickness_m,
-            );
+            let geometry = PlanarApertureGeometry::oriented(
+                [x, self.y_m, self.z_m],
+                [0.0, 0.0, 1.0],
+                [1.0, 0.0, 0.0],
+                PlanarApertureShape::Rectangle {
+                    width_m: self.element_width_m,
+                    height_m: self.element_height_m,
+                },
+            )
+            .map_err(|error| anyhow!("{error:?}"))?;
+            array.add_planar_aperture_element(geometry);
         }
-        array
+        Ok(array)
     }
 
-    /// Per-element focusing delays (s), zero for the farthest element.
+    /// Per-element focusing delays (s), zero for the farthest element:
+    /// `τ_i = (max_j d_j − d_i) / c` with `d_i` the centre-to-focus distance.
     #[must_use]
     pub fn focus_delays_s(&self, focus: [f64; 3]) -> Vec<f64> {
-        self.kwave_array()
-            .get_element_delays((focus[0], focus[1], focus[2]))
+        let distances: Vec<f64> = self
+            .x_m
+            .iter()
+            .map(|&x| {
+                (x - focus[0])
+                    .hypot(self.y_m - focus[1])
+                    .hypot(self.z_m - focus[2])
+            })
+            .collect();
+        let farthest = distances.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        distances
+            .iter()
+            .map(|&distance| (farthest - distance) / SOUND_SPEED_M_S)
+            .collect()
     }
 }
 

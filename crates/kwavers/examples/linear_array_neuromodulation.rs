@@ -229,7 +229,7 @@ fn stage_focus(out: &Path) -> Result<()> {
     let mut results = Vec::new();
     for focal_mm in FOCUS_FOCI_MM {
         let r = run_focus(&grid, &array, focal_mm)?;
-        let label = format!("d2_{focal_mm:.0}mm");
+        let label = format!("{focal_mm:.0}mm");
         write_plane_csv(&out.join(format!("sim_xz_{label}.csv")), &r.sim_plane)?;
         write_plane_csv(&out.join(format!("oracle_xz_{label}.csv")), &r.oracle_plane)?;
         let surface = metrics::required_surface_pa(PROPOSAL_TARGET_PA, r.sim_gain);
@@ -270,7 +270,7 @@ fn stage_focus(out: &Path) -> Result<()> {
     let fi = cell(grid.lateral_center_m(), grid.dx);
     if let Some(first) = results.first() {
         plots::write_db_maps(
-            &out.join("fig1_d2_xz_70mm_sim_vs_oracle.png"),
+            &out.join("fig1_xz_70mm_sim_vs_oracle.png"),
             &[
                 ("kwavers full-wave (dB re focus)", &first.sim_plane),
                 ("Rayleigh oracle (dB re focus)", &first.oracle_plane),
@@ -284,7 +284,7 @@ fn stage_focus(out: &Path) -> Result<()> {
             .map(|i| (f64::from_count(i) - f64::from_count(fi)) * dx_mm)
             .collect();
         plots::write_profiles(
-            &out.join("fig3_d2_focal_lateral_70mm.png"),
+            &out.join("fig3_focal_lateral_70mm.png"),
             "Lateral profile at the 70 mm focus",
             "lateral position (mm)",
             "pressure gain (Pa/Pa)",
@@ -334,7 +334,7 @@ fn stage_focus(out: &Path) -> Result<()> {
         .map(|(name, colour, values)| (name.as_str(), *colour, values.clone()))
         .collect();
     plots::write_profiles(
-        &out.join("fig2_d2_axial_gain.png"),
+        &out.join("fig2_axial_gain.png"),
         "On-axis pressure gain in brain: kwavers vs oracle",
         "depth from array (mm)",
         "pressure gain (Pa/Pa)",
@@ -460,7 +460,7 @@ fn stage_gain(out: &Path) -> Result<f64> {
     let apertures = analytic::element_apertures(&array, [0.0, 0.0, 0.07], 1.0)?;
     let gains = analytic::amplitudes_at(&points, &apertures)?;
     plots::write_profiles(
-        &out.join("fig4_d2_axial_gain.png"),
+        &out.join("fig4_oracle_axial_gain.png"),
         "Array axial gain (oracle, 70 mm focus, broadside)",
         "depth z (mm)",
         "pressure gain (Pa/Pa)",
@@ -502,7 +502,7 @@ fn stage_gain(out: &Path) -> Result<f64> {
         }
         if (focal_mm - 70.0).abs() < f64::EPSILON {
             plots::write_profiles(
-                &out.join("fig7_d2_focal_spot_70mm.png"),
+                &out.join("fig7_focal_spot_70mm.png"),
                 "Focal spot at 70 mm (oracle): narrow along the array, wide in elevation",
                 "offset from axis (mm)",
                 "pressure gain (Pa/Pa)",

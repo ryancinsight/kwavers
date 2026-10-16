@@ -7,26 +7,31 @@ use leto::Array2;
 use plotters::coord::Shift;
 use plotters::prelude::*;
 use plotters::style::{register_font, FontStyle};
-use std::path::{Path, PathBuf};
+use std::borrow::Cow;
+use std::path::Path;
 
-/// Register Arial under the `sans-serif` family for the text-capable bitmap backend.
+/// Register epaint's embedded font under the `sans-serif` family.
 ///
-/// The ab_glyph backend resolves text by registered font bytes, not by system name,
-/// so the font file is read from the Windows font directory and must exist.
+/// The ab_glyph text backend resolves text from registered font bytes, not by
+/// system font name; the embedded font makes figures identical on every host.
 ///
 /// # Errors
 ///
-/// Returns an error if `%SystemRoot%\Fontsrial.ttf` is missing or invalid.
+/// Returns an error if the embedded font is unavailable or invalid.
 pub fn init_fonts() -> Result<()> {
-    let root = std::env::var_os("SystemRoot")
-        .ok_or_else(|| anyhow!("SystemRoot is not set; cannot locate a font"))?;
-    let path: PathBuf = PathBuf::from(root).join("Fonts").join("arial.ttf");
-    let bytes =
-        std::fs::read(&path).map_err(|error| anyhow!("reading {}: {error}", path.display()))?;
-    let leaked: &'static [u8] = Box::leak(bytes.into_boxed_slice());
-    register_font("sans-serif", FontStyle::Normal, leaked)
-        .map_err(|_| anyhow!("{} is not a valid OpenType font", path.display()))?;
-    Ok(())
+    const FONT_NAME: &str = "Ubuntu-Light";
+    let mut definitions = epaint::text::FontDefinitions::default();
+    let font = definitions
+        .font_data
+        .remove(FONT_NAME)
+        .ok_or_else(|| anyhow!("embedded font {FONT_NAME} is unavailable"))?;
+    let Cow::Borrowed(bytes) = font.font else {
+        return Err(anyhow!(
+            "embedded font {FONT_NAME} must have static storage"
+        ));
+    };
+    register_font("sans-serif", FontStyle::Normal, bytes)
+        .map_err(|_| anyhow!("embedded font {FONT_NAME} is not a valid OpenType font"))
 }
 
 /// Five-stop perceptual colour ramp (viridis) for heat maps, `t` in `[0, 1]`.

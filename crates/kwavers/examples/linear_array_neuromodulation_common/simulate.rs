@@ -158,7 +158,7 @@ pub fn run_focused(
     let dt = time_step_s(grid.dx);
     let delays = array.focus_delays_s(focus_m);
     let signals = element_drive(&delays, amplitude_pa, options.steps, dt);
-    let kwave = array.kwave_array();
+    let kwave = array.kwave_array()?;
 
     let cells = new_grid(grid)?;
     let (mask, per_cell) = kwave
