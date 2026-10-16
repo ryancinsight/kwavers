@@ -82,7 +82,8 @@ pub struct PSTDConfig {
     pub spectral_correction: SpectralCorrectionConfig,
     /// Absorption mode
     pub absorption_mode: AbsorptionMode,
-    /// Dispersion of a power-law absorption (k-Wave `alpha_mode`)
+    /// Dispersion of a power-law absorption (k-Wave `alpha_mode`); read only
+    /// when `absorption_mode` is `PowerLaw`.
     #[serde(default)]
     pub power_law_dispersion: PowerLawDispersion,
     /// Enable nonlinear acoustics
