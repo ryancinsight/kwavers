@@ -241,7 +241,8 @@ impl PlanarAperture {
         )
     }
 
-    /// Construct an oriented aperture with an explicit angular origin.
+    /// Construct an oriented aperture with an explicit in-plane first axis: the
+    /// angular origin of a polar shape, the width direction of a rectangle.
     ///
     /// # Errors
     ///

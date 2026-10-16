@@ -588,9 +588,12 @@ $$
 
 **Remarks.**  *(i)* The dispersion coefficient $\eta \propto \tan(\pi y/2)$
 *vanishes at $y = 2$*: viscothermal absorption ($\alpha \propto \omega^2$, e.g.
-water) is exactly non-dispersive, $c_\mathrm{ph} = c_0$.  *(ii)* $y = 1$ is the
-removable singularity of $\tan(\pi y/2)$ and is handled by the logarithmic
-dispersion limit (Treeby & Cox 2010, §III).  *(iii)* The correction in (1.24) is
+water) is exactly non-dispersive, $c_\mathrm{ph} = c_0$.  *(ii)* $\tan(\pi y/2)$
+diverges at $y = 1$, where the dispersion relation takes a logarithmic limit
+(Treeby & Cox 2010, §III). The PSTD solver does not implement that limit: its
+causal form rejects $y = 1$, and `PowerLawDispersion::Omitted` (k-Wave's
+`alpha_mode = 'no_dispersion'`) sets $\eta = 0$, keeping the absorption term
+$\tau$, for any $y$ including 1.  *(iii)* The correction in (1.24) is
 *algebraic* — added once per step to the EOS with **no** $\Delta t$ factor —
 because the fractional-Laplacian terms belong to the constitutive relation, not
 to a time integral.

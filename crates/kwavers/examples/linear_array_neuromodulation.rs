@@ -31,7 +31,7 @@ use common::plots;
 use common::simulate::{self, RunOptions};
 use common::{
     attenuation_np_m, time_step_s, wavelength_m, GridSpec, LinearArraySpec, ALPHA_POWER,
-    FREQUENCY_HZ, POINTS_PER_WAVELENGTH, SOURCE_AMPLITUDE_PA,
+    FREQUENCY_HZ, POINTS_PER_WAVELENGTH, SOUND_SPEED_M_S, SOURCE_AMPLITUDE_PA,
 };
 use eunomia::convert::IntegerTarget;
 use eunomia::FloatElement;
@@ -599,7 +599,8 @@ fn main() -> Result<()> {
     plots::init_fonts()?;
     println!("output: {}", out.display());
     println!(
-        "brain: c = 1546 m/s, f = {} MHz, lambda = {:.4} mm, attenuation = {:.2} Np/m (power {})",
+        "brain: c = {} m/s, f = {} MHz, lambda = {:.4} mm, attenuation = {:.2} Np/m (power {})",
+        SOUND_SPEED_M_S,
         FREQUENCY_HZ / 1.0e6,
         wavelength_m() * 1.0e3,
         attenuation_np_m(),
