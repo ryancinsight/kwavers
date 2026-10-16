@@ -6,8 +6,13 @@ use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
 use std::f64::consts::TAU;
 
-/// Radial bounds and angular span of a planar aperture.
+/// Outline of a planar aperture in its local frame.
+///
+/// Polar shapes are measured from the aperture centre counter-clockwise from
+/// the first axis; a rectangle is centred on the aperture centre with its
+/// width along the first axis and its height along `normal × first_axis`.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
 pub enum PlanarApertureShape {
     /// Complete disk from the origin to `radius_m`.
     Disk { radius_m: f64 },
@@ -18,35 +23,62 @@ pub enum PlanarApertureShape {
         start_angle_rad: f64,
         span_angle_rad: f64,
     },
+    /// Rectangle of `width_m` along the first axis and `height_m` across it,
+    /// the element outline of a linear or matrix array.
+    Rectangle { width_m: f64, height_m: f64 },
 }
 
 impl PlanarApertureShape {
-    pub(crate) fn radial_and_angular_bounds(self) -> (f64, f64, f64, f64) {
+    /// Inner radius, outer radius, start angle and angular span of a polar
+    /// shape; `None` for a rectangle.
+    pub(crate) fn polar_bounds(self) -> Option<(f64, f64, f64, f64)> {
         match self {
-            Self::Disk { radius_m } => (0.0, radius_m, 0.0, TAU),
+            Self::Disk { radius_m } => Some((0.0, radius_m, 0.0, TAU)),
             Self::AnnularSector {
                 inner_radius_m,
                 outer_radius_m,
                 start_angle_rad,
                 span_angle_rad,
-            } => (
+            } => Some((
                 inner_radius_m,
                 outer_radius_m,
                 start_angle_rad,
                 span_angle_rad,
-            ),
+            )),
+            Self::Rectangle { .. } => None,
         }
     }
 
     /// Exact planar area in square metres.
     #[must_use]
     pub fn area_m2(self) -> f64 {
-        let (inner, outer, _, span) = self.radial_and_angular_bounds();
-        0.5 * (outer * outer - inner * inner) * span
+        match self {
+            Self::Disk { radius_m } => 0.5 * radius_m * radius_m * TAU,
+            Self::AnnularSector {
+                inner_radius_m,
+                outer_radius_m,
+                span_angle_rad,
+                ..
+            } => {
+                0.5 * (outer_radius_m * outer_radius_m - inner_radius_m * inner_radius_m)
+                    * span_angle_rad
+            }
+            Self::Rectangle { width_m, height_m } => width_m * height_m,
+        }
+    }
+
+    /// Radius of the smallest centred disk that contains the aperture, metres.
+    #[must_use]
+    pub fn outer_radius_m(self) -> f64 {
+        match self {
+            Self::Disk { radius_m } => radius_m,
+            Self::AnnularSector { outer_radius_m, .. } => outer_radius_m,
+            Self::Rectangle { width_m, height_m } => 0.5 * width_m.hypot(height_m),
+        }
     }
 }
 
-/// Validated position, orientation, and radial/angular bounds of a planar aperture.
+/// Validated position, orientation, and outline of a planar aperture.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlanarApertureGeometry {
     center_m: [f64; 3],
@@ -73,7 +105,8 @@ impl PlanarApertureGeometry {
         )
     }
 
-    /// Construct a planar aperture with an explicit in-plane angular origin.
+    /// Construct a planar aperture with an explicit in-plane first axis: the
+    /// angular origin of a polar shape, the width direction of a rectangle.
     ///
     /// # Errors
     ///
@@ -138,6 +171,10 @@ impl PlanarApertureGeometry {
                     ));
                 }
             }
+            PlanarApertureShape::Rectangle { width_m, height_m } => {
+                validate_positive("width_m", width_m)?;
+                validate_positive("height_m", height_m)?;
+            }
         }
         Ok(Self {
             center_m,
@@ -159,7 +196,8 @@ impl PlanarApertureGeometry {
         self.normal
     }
 
-    /// Unit in-plane axis from which positive aperture angles are measured.
+    /// Unit in-plane axis: the angular origin of a polar shape, the width
+    /// direction of a rectangle.
     #[must_use]
     pub const fn first_axis(&self) -> [f64; 3] {
         self.first_axis
@@ -171,10 +209,10 @@ impl PlanarApertureGeometry {
         self.shape
     }
 
-    /// Outer aperture radius in metres.
+    /// Radius of the smallest centred disk that contains the aperture, metres.
     #[must_use]
     pub fn outer_radius_m(&self) -> f64 {
-        self.shape.radial_and_angular_bounds().1
+        self.shape.outer_radius_m()
     }
 }
 
@@ -267,7 +305,7 @@ impl PlanarAperture {
         self.geometry.shape()
     }
 
-    /// Outer aperture radius in metres.
+    /// Radius of the smallest centred disk that contains the aperture, metres.
     #[must_use]
     pub fn outer_radius_m(&self) -> f64 {
         self.geometry.outer_radius_m()

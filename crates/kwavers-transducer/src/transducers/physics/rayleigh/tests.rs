@@ -57,10 +57,10 @@ fn independently_driven_sectors_superpose_to_complete_annulus_on_axis() {
         .unwrap()
     };
     let complete = aperture(0.0, TAU);
-    let sectors: Vec<_> = (0..4)
+    let sectors: Vec<_> = (0..4_u8)
         .map(|sector| {
             aperture(
-                sector as f64 * std::f64::consts::FRAC_PI_2,
+                f64::from(sector) * std::f64::consts::FRAC_PI_2,
                 std::f64::consts::FRAC_PI_2,
             )
         })
@@ -218,5 +218,180 @@ fn propagation_terms_reject_invalid_range() {
             }
             other => panic!("expected invalid range configuration error, got {other:?}"),
         }
+    }
+}
+
+fn rectangle(width_m: f64, height_m: f64) -> PlanarAperture {
+    PlanarAperture::oriented(
+        [0.0; 3],
+        [0.0, 0.0, 1.0],
+        [1.0, 0.0, 0.0],
+        PlanarApertureShape::Rectangle { width_m, height_m },
+        Complex64::new(1.0, 0.0),
+    )
+    .unwrap()
+}
+
+fn sinc(argument: f64) -> f64 {
+    if argument == 0.0 {
+        1.0
+    } else {
+        argument.sin() / argument
+    }
+}
+
+#[test]
+fn rectangle_area_and_enclosing_radius_are_exact() {
+    let shape = PlanarApertureShape::Rectangle {
+        width_m: 3.0e-3,
+        height_m: 4.0e-3,
+    };
+    assert_eq!(shape.area_m2(), 3.0e-3 * 4.0e-3);
+    assert_eq!(shape.outer_radius_m(), 2.5e-3);
+}
+
+#[test]
+fn rectangle_surface_rule_integrates_area() {
+    let (width, height) = (0.46e-3, 1.5e-3);
+    let rule = surface_rule(
+        PlanarApertureShape::Rectangle {
+            width_m: width,
+            height_m: height,
+        },
+        7,
+        9,
+    )
+    .unwrap();
+    assert_eq!(rule.len(), 63);
+    let area: f64 = rule.iter().map(|(_, weight)| weight).sum();
+    // Each unit-interval Gauss-Legendre weight set sums to 1 up to one rounding
+    // per weight; 63 products and sums bound the error by 64 ε.
+    assert!((area - width * height).abs() <= 64.0 * f64::EPSILON * width * height);
+    assert!(rule
+        .iter()
+        .all(|([u, v], _)| u.abs() < 0.5 * width && v.abs() < 0.5 * height));
+}
+
+#[test]
+fn rectangle_rejects_non_positive_dimensions() {
+    let error = PlanarApertureGeometry::oriented(
+        [0.0; 3],
+        [0.0, 0.0, 1.0],
+        [1.0, 0.0, 0.0],
+        PlanarApertureShape::Rectangle {
+            width_m: 1.0e-3,
+            height_m: 0.0,
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(
+        error,
+        KwaversError::Config(ConfigError::InvalidValue { ref parameter, .. }) if parameter == "height_m"
+    ));
+}
+
+#[test]
+fn rectangle_far_field_matches_fourier_pattern() {
+    // Fraunhofer limit of a uniform rectangle with half-sides a, b:
+    // |p(θ, φ)| / |p(0)| = |sinc(k a sinθ cosφ) · sinc(k b sinθ sinφ)|.
+    // At R = 10⁴ λ the quadratic Fresnel phase across the aperture,
+    // k·max(a, b)²/(2R), bounds the deviation from that pattern.
+    let wavelength = 0.75e-3;
+    let k = TAU / wavelength;
+    let (half_width, half_height) = (5.0 * wavelength, 1.5 * wavelength);
+    let aperture = rectangle(2.0 * half_width, 2.0 * half_height);
+    let spec = RayleighIntegralSpec::new(k, 0.0, 40, 40).unwrap();
+    let range = 1.0e4 * wavelength;
+    let fresnel_bound = k * half_width * half_width / range;
+    let on_axis = rayleigh_pressure(&[[0.0, 0.0, range]], &[aperture], &spec).unwrap()[0];
+    for (sin_theta, phi) in [
+        (0.1_f64, 0.0_f64),
+        (0.2, 0.0),
+        (0.35, 0.0),
+        (0.15, PI / 2.0),
+        (0.2, PI / 2.0),
+    ] {
+        let cos_theta = (1.0 - sin_theta * sin_theta).sqrt();
+        let point = [
+            range * sin_theta * phi.cos(),
+            range * sin_theta * phi.sin(),
+            range * cos_theta,
+        ];
+        let value = rayleigh_pressure(&[point], &[aperture], &spec).unwrap()[0];
+        let expected = (sinc(k * half_width * sin_theta * phi.cos())
+            * sinc(k * half_height * sin_theta * phi.sin()))
+        .abs();
+        let ratio = value.norm() / on_axis.norm();
+        assert!(
+            (ratio - expected).abs() <= fresnel_bound,
+            "sinθ {sin_theta}, φ {phi}: ratio {ratio} against {expected}"
+        );
+    }
+}
+
+#[test]
+fn rectangle_on_axis_far_field_is_area_weighted() {
+    // Far on axis every surface element is in phase: |p| = k·A/(2πR), A = 4ab.
+    let wavelength = 0.75e-3;
+    let k = TAU / wavelength;
+    let (half_width, half_height) = (4.0 * wavelength, 2.0 * wavelength);
+    let aperture = rectangle(2.0 * half_width, 2.0 * half_height);
+    let spec = RayleighIntegralSpec::new(k, 0.0, 40, 40).unwrap();
+    let range = 1.0e4 * wavelength;
+    let value = rayleigh_pressure(&[[0.0, 0.0, range]], &[aperture], &spec).unwrap()[0];
+    let expected = 2.0 * k * half_width * half_height / (PI * range);
+    let fresnel_bound = k * half_width * half_width / range;
+    assert!(
+        (value.norm() - expected).abs() <= fresnel_bound * expected,
+        "|p| {} against {expected}",
+        value.norm()
+    );
+}
+
+#[test]
+fn rectangle_halves_superpose_to_the_whole() {
+    // Two abutting half-width rectangles carrying the same phasor are the
+    // whole rectangle. The n-node Gauss-Legendre remainder on an edge of length
+    // L scales as (kL)^2n (n!)^4 / ((2n)!)^3; with kL <= 7.4 and n = 24 it is
+    // below 1e-40, so the sums differ only by rounding over the 2 x 24 x 24
+    // terms, each carrying a few ulps.
+    let wavelength = 0.77e-3;
+    let k = TAU / wavelength;
+    let (width, height) = (0.9e-3, 1.5e-3);
+    let half = |center_x: f64| {
+        PlanarAperture::oriented(
+            [center_x, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 0.0],
+            PlanarApertureShape::Rectangle {
+                width_m: 0.5 * width,
+                height_m: height,
+            },
+            Complex64::new(0.3, -0.7),
+        )
+        .unwrap()
+    };
+    let whole = PlanarAperture::oriented(
+        [0.0; 3],
+        [0.0, 0.0, 1.0],
+        [1.0, 0.0, 0.0],
+        PlanarApertureShape::Rectangle {
+            width_m: width,
+            height_m: height,
+        },
+        Complex64::new(0.3, -0.7),
+    )
+    .unwrap();
+    let spec = RayleighIntegralSpec::new(k, 16.1, 24, 24).unwrap();
+    let points = [[0.4e-3, 0.2e-3, 10.0e-3], [3.0e-3, -1.0e-3, 40.0e-3]];
+    let split =
+        rayleigh_pressure(&points, &[half(-0.25 * width), half(0.25 * width)], &spec).unwrap();
+    let joined = rayleigh_pressure(&points, &[whole], &spec).unwrap();
+    for (a, b) in split.iter().zip(&joined) {
+        let rounding_bound = 4.0 * (2.0 * 24.0 * 24.0) * f64::EPSILON;
+        assert!(
+            (a - b).norm() <= rounding_bound * b.norm(),
+            "{a} against {b}"
+        );
     }
 }

@@ -3,7 +3,7 @@
 use super::aperture::PlanarAperture;
 use super::input::{invalid, validate_point};
 use super::path::{RayleighLayer, RayleighPropagationPath};
-use super::quadrature::gauss_legendre_unit;
+use super::quadrature::surface_rule;
 use super::vector::{add, cross, dot, norm, scale, subtract};
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
@@ -11,35 +11,41 @@ use std::f64::consts::TAU;
 
 pub(super) const MAX_SURFACE_SAMPLES: usize = 1 << 16;
 
-/// Disk-quadrature parameters coupled to a validated propagation path.
+/// Surface-quadrature orders coupled to a validated propagation path.
+///
+/// The two orders resolve the aperture surface in the directions its shape
+/// defines (see [`super::PlanarApertureShape`]): radius and angle for a disk
+/// or annular sector, width and height for a rectangle.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RayleighIntegralSpec {
     path: RayleighPropagationPath,
-    radial_order: usize,
-    azimuthal_order: usize,
+    primary_order: usize,
+    secondary_order: usize,
 }
 
 impl RayleighIntegralSpec {
     /// Construct a propagation specification.
     ///
-    /// `radial_order` is the Gauss-Legendre order in normalized squared radius;
-    /// `azimuthal_order` is the periodic trapezoidal order around each ring.
+    /// For a polar shape `primary_order` is the Gauss-Legendre order in
+    /// normalized squared radius and `secondary_order` the periodic midpoint
+    /// order around each ring. For a rectangle they are the Gauss-Legendre
+    /// orders across its width and its height.
     ///
     /// # Errors
     ///
     /// Returns `KwaversError::Config` unless the wavenumber is finite and
-    /// positive, attenuation is finite and non-negative, radial order is
-    /// positive, and azimuthal order is at least three.
+    /// positive, attenuation is finite and non-negative, the primary order is
+    /// positive, and the secondary order is at least three.
     pub fn new(
         wavenumber_rad_m: f64,
         attenuation_np_m: f64,
-        radial_order: usize,
-        azimuthal_order: usize,
+        primary_order: usize,
+        secondary_order: usize,
     ) -> KwaversResult<Self> {
         Self::from_path(
             RayleighPropagationPath::homogeneous(wavenumber_rad_m, attenuation_np_m)?,
-            radial_order,
-            azimuthal_order,
+            primary_order,
+            secondary_order,
         )
     }
 
@@ -55,13 +61,13 @@ impl RayleighIntegralSpec {
     /// layer sequence, or invalid quadrature work.
     pub fn layered(
         layers: Vec<RayleighLayer>,
-        radial_order: usize,
-        azimuthal_order: usize,
+        primary_order: usize,
+        secondary_order: usize,
     ) -> KwaversResult<Self> {
         Self::from_path(
             RayleighPropagationPath::layered(layers)?,
-            radial_order,
-            azimuthal_order,
+            primary_order,
+            secondary_order,
         )
     }
 
@@ -73,23 +79,23 @@ impl RayleighIntegralSpec {
     /// work.
     pub fn from_path(
         path: RayleighPropagationPath,
-        radial_order: usize,
-        azimuthal_order: usize,
+        primary_order: usize,
+        secondary_order: usize,
     ) -> KwaversResult<Self> {
-        if radial_order == 0 {
-            return Err(invalid("radial_order", radial_order.to_string(), "> 0"));
+        if primary_order == 0 {
+            return Err(invalid("primary_order", primary_order.to_string(), "> 0"));
         }
-        if azimuthal_order < 3 {
+        if secondary_order < 3 {
             return Err(invalid(
-                "azimuthal_order",
-                azimuthal_order.to_string(),
+                "secondary_order",
+                secondary_order.to_string(),
                 ">= 3",
             ));
         }
-        let surface_samples = radial_order.checked_mul(azimuthal_order).ok_or_else(|| {
+        let surface_samples = primary_order.checked_mul(secondary_order).ok_or_else(|| {
             invalid(
                 "quadrature_surface_samples",
-                format!("{radial_order} * {azimuthal_order}"),
+                format!("{primary_order} * {secondary_order}"),
                 "product representable as usize",
             )
         })?;
@@ -102,8 +108,8 @@ impl RayleighIntegralSpec {
         }
         Ok(Self {
             path,
-            radial_order,
-            azimuthal_order,
+            primary_order,
+            secondary_order,
         })
     }
 
@@ -122,7 +128,7 @@ impl RayleighIntegralSpec {
 
 /// Evaluate the coherent complex pressure at every observation point.
 ///
-/// Contributions are zero for a point on or behind a piston's baffle plane.
+/// Contributions are zero for a point on or behind an aperture's baffle plane.
 /// Attenuation is applied per source-to-observation path as `exp(-αR)`.
 ///
 /// # Errors
@@ -137,7 +143,6 @@ pub fn rayleigh_pressure(
     for &point in points_m {
         validate_point("observation_point_m", point)?;
     }
-    let radial_rule = gauss_legendre_unit(spec.radial_order)?;
     let prefactor = Complex64::new(0.0, -spec.wavenumber_rad_m() / TAU);
     let mut pressure = vec![Complex64::new(0.0, 0.0); points_m.len()];
 
@@ -146,39 +151,26 @@ pub fn rayleigh_pressure(
             continue;
         }
         let geometry = aperture.geometry();
-        let bitangent = cross(geometry.normal(), geometry.first_axis());
-        let (inner_radius, outer_radius, start_angle, span_angle) =
-            geometry.shape().radial_and_angular_bounds();
-        let squared_radius_span = outer_radius * outer_radius - inner_radius * inner_radius;
-        let azimuthal_weight = 0.5 * squared_radius_span * span_angle / spec.azimuthal_order as f64;
+        let first_axis = geometry.first_axis();
+        let bitangent = cross(geometry.normal(), first_axis);
+        let surface: Vec<([f64; 3], f64)> =
+            surface_rule(geometry.shape(), spec.primary_order, spec.secondary_order)?
+                .into_iter()
+                .map(|([u, v], weight)| {
+                    let offset = add(scale(first_axis, u), scale(bitangent, v));
+                    (add(geometry.center_m(), offset), weight)
+                })
+                .collect();
         for (&point, total) in points_m.iter().zip(&mut pressure) {
             let center_offset = subtract(point, geometry.center_m());
             if dot(center_offset, geometry.normal()) <= 0.0 {
                 continue;
             }
             let mut integral = Complex64::new(0.0, 0.0);
-            for &(radial_fraction, radial_weight) in &radial_rule {
-                let radius =
-                    (inner_radius * inner_radius + radial_fraction * squared_radius_span).sqrt();
-                let area_weight = azimuthal_weight * radial_weight;
-                for azimuth_index in 0..spec.azimuthal_order {
-                    let azimuth = start_angle
-                        + span_angle * (azimuth_index as f64 + 0.5) / spec.azimuthal_order as f64;
-                    let surface_point = add(
-                        geometry.center_m(),
-                        scale(
-                            add(
-                                scale(geometry.first_axis(), azimuth.cos()),
-                                scale(bitangent, azimuth.sin()),
-                            ),
-                            radius,
-                        ),
-                    );
-                    let range = norm(subtract(point, surface_point));
-                    let (phase, attenuation) = spec.path.propagation_terms(range)?;
-                    let amplitude = area_weight * (-attenuation).exp() / range;
-                    integral += Complex64::from_polar(amplitude, phase);
-                }
+            for &(surface_point, weight) in &surface {
+                let range = norm(subtract(point, surface_point));
+                let (phase, attenuation) = spec.path.propagation_terms(range)?;
+                integral += Complex64::from_polar(weight * (-attenuation).exp() / range, phase);
             }
             *total += prefactor * aperture.surface_pressure_pa() * integral;
         }

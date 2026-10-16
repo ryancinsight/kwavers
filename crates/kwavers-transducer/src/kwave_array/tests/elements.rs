@@ -2,6 +2,7 @@
 
 use super::super::{DiscSourceProfile, KWaveArray};
 use crate::transducers::physics::{PlanarApertureGeometry, PlanarApertureShape};
+use eunomia::FloatElement;
 
 /// Annulus has strictly fewer active cells than the full bowl of the same
 /// outer diameter, and the surface-area formula satisfies the closed form:
@@ -285,7 +286,7 @@ fn planar_quadrants_conserve_area_and_keep_signals_independent() {
         .build_per_element_source(&grid, &signals)
         .expect("sector source");
     let expected_quadrant_mass = 0.5 * (outer * outer - inner * inner) * span / (dx * dx);
-    let operation_bound = 64.0 * f64::EPSILON * per_cell.shape()[0] as f64;
+    let operation_bound = 64.0 * f64::EPSILON * f64::from_count(per_cell.shape()[0]);
     for quadrant in 0..4 {
         let realized: f64 = (0..per_cell.shape()[0])
             .map(|row| per_cell[[row, quadrant]])
@@ -300,4 +301,54 @@ fn planar_quadrants_conserve_area_and_keep_signals_independent() {
         (array.compute_total_surface_area() - 4.0 * expected_quadrant_mass * dx * dx).abs()
             <= 16.0 * f64::EPSILON * (outer * outer).max(1.0)
     );
+}
+
+#[test]
+fn planar_rectangle_conserves_area_and_stays_in_its_footprint() {
+    use kwavers_grid::Grid;
+    use leto::Array2;
+
+    let dx = 2.5e-4;
+    let grid = Grid::new(41, 41, 9, dx, dx, dx).expect("grid");
+    let center = [20.0 * dx, 20.0 * dx, 4.0 * dx];
+    let (width, height) = (0.46e-3, 1.5e-3);
+    let mut array = KWaveArray::new();
+    array.add_planar_aperture_element(
+        PlanarApertureGeometry::oriented(
+            center,
+            [0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0],
+            PlanarApertureShape::Rectangle {
+                width_m: width,
+                height_m: height,
+            },
+        )
+        .expect("valid rectangle"),
+    );
+    let (mask, per_cell) = array
+        .build_per_element_source(&grid, &Array2::<f64>::ones((1, 1)))
+        .expect("rectangle source");
+    let expected_mass = width * height / (dx * dx);
+    let realized: f64 = (0..per_cell.shape()[0]).map(|row| per_cell[[row, 0]]).sum();
+    let operation_bound = 64.0 * f64::EPSILON * f64::from_count(per_cell.shape()[0]);
+    assert!(
+        (realized - expected_mass).abs() <= operation_bound * expected_mass.max(1.0),
+        "realized {realized}, expected {expected_mass}"
+    );
+    // The first axis, and so the 0.46 mm width, runs along y: the footprint in
+    // the source plane must be longer in x, along the 1.5 mm height.
+    let (mut x_extent, mut y_extent) = (0_usize, 0_usize);
+    for i in 0..41 {
+        for j in 0..41 {
+            if mask[[i, j, 4]] != 0.0 {
+                x_extent = x_extent.max(i.abs_diff(20));
+                y_extent = y_extent.max(j.abs_diff(20));
+            }
+        }
+    }
+    assert!(
+        x_extent > y_extent,
+        "x extent {x_extent}, y extent {y_extent}"
+    );
+    assert_eq!(array.compute_total_surface_area(), width * height,);
 }
