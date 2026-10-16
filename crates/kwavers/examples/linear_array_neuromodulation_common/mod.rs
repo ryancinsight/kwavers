@@ -17,8 +17,8 @@ use kwavers_transducer::KWaveArray;
 use leto::Array2;
 use std::f64::consts::PI;
 
-/// Brain gray-matter sound speed in m/s (`kwavers_core` tissue constant).
-pub const SOUND_SPEED_M_S: f64 = 1546.0;
+/// Brain gray-matter sound speed in m/s.
+pub const SOUND_SPEED_M_S: f64 = kwavers_core::constants::tissue_acoustics::SOUND_SPEED_BRAIN;
 /// Brain density in kg/m³.
 pub const DENSITY_KG_M3: f64 = 1040.0;
 /// Brain B/A nonlinearity parameter (Duck 1990 Table 4.16 brain mean).
@@ -252,7 +252,7 @@ pub fn time_step_s(dx: f64) -> f64 {
 #[must_use]
 pub fn attenuation_np_m() -> f64 {
     let db_per_m = ALPHA_DB_CM_MHZ * 100.0 * (FREQUENCY_HZ / 1.0e6).powf(ALPHA_POWER);
-    db_per_m / 8.685_889_638_065_035
+    db_per_m / kwavers_core::constants::acoustic_parameters::NP_TO_DB
 }
 
 /// Forward-wave factor of the solver's additive pressure source relative to the

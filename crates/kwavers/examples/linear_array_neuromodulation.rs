@@ -44,10 +44,10 @@ use std::path::{Path, PathBuf};
 /// Array aperture and elevation, metres.
 const ARRAY_APERTURE_M: f64 = 30.0e-3;
 const ARRAY_ELEVATION_M: f64 = 1.5e-3;
-/// Proposal acceptance pressure at 6–8 cm for 30 Vp, pascals.
-const PROPOSAL_TARGET_PA: f64 = 120.0e3;
-/// Proposal drive voltage for the acceptance pressure, volts peak.
-const PROPOSAL_VP: f64 = 30.0;
+/// Focal pressure target at 6–8 cm, pascals.
+const TARGET_PRESSURE_PA: f64 = 120.0e3;
+/// Drive voltage at which the target is to be reached, volts peak.
+const TARGET_DRIVE_VP: f64 = 30.0;
 /// Focal depths in question, millimetres.
 const FOCUS_FOCI_MM: [f64; 2] = [70.0, 80.0];
 /// Simulated time: arrival from the farthest element at 80 mm (53 µs), the
@@ -232,7 +232,7 @@ fn stage_focus(out: &Path) -> Result<()> {
         let label = format!("{focal_mm:.0}mm");
         write_plane_csv(&out.join(format!("sim_xz_{label}.csv")), &r.sim_plane)?;
         write_plane_csv(&out.join(format!("oracle_xz_{label}.csv")), &r.oracle_plane)?;
-        let surface = metrics::required_surface_pa(PROPOSAL_TARGET_PA, r.sim_gain);
+        let surface = metrics::required_surface_pa(TARGET_PRESSURE_PA, r.sim_gain);
         writeln!(
             summary,
             "{},{:.4},{:.4},{:.4},{:.4},{:.2},{:.4},{:.2},{:.3},{:.3},{:.4},{:.1},{:.4}",
@@ -248,7 +248,7 @@ fn stage_focus(out: &Path) -> Result<()> {
             r.oracle_fwhm_lateral_mm,
             r.axial_relative_error,
             surface * 1.0e-3,
-            mechanical_index(PROPOSAL_TARGET_PA, FREQUENCY_HZ)
+            mechanical_index(TARGET_PRESSURE_PA, FREQUENCY_HZ)
         )?;
         println!(
             "  focal gain sim {:.4} / oracle {:.4}; axial peak sim {:.4} at {:.1} mm / oracle {:.4} at {:.1} mm; axial error {:.3}; lateral FWHM sim {:.2} mm / oracle {:.2} mm",
@@ -438,12 +438,12 @@ fn stage_gain(out: &Path) -> Result<f64> {
         if (focal_mm - 70.0).abs() < f64::EPSILON {
             gain_70 = gain;
         }
-        let required = metrics::required_surface_pa(PROPOSAL_TARGET_PA, gain);
+        let required = metrics::required_surface_pa(TARGET_PRESSURE_PA, gain);
         writeln!(
             csv,
             "{focal_mm},{gain:.6},{:.2},{:.4}",
             required * 1.0e-3,
-            mechanical_index(PROPOSAL_TARGET_PA, FREQUENCY_HZ)
+            mechanical_index(TARGET_PRESSURE_PA, FREQUENCY_HZ)
         )?;
         println!(
             "  focus {focal_mm} mm: gain {gain:.4} Pa/Pa, surface for 120 kPa {:.1} kPa",
@@ -519,7 +519,7 @@ fn stage_gain(out: &Path) -> Result<f64> {
 }
 
 fn stage_vp(out: &Path, gain_70: f64) -> Result<()> {
-    let implied_sensitivity = PROPOSAL_TARGET_PA / (gain_70 * PROPOSAL_VP);
+    let implied_sensitivity = TARGET_PRESSURE_PA / (gain_70 * TARGET_DRIVE_VP);
     println!(
         "implied surface sensitivity of the 120 kPa target at 70 mm and 30 Vp: {implied_sensitivity:.1} Pa/V"
     );
