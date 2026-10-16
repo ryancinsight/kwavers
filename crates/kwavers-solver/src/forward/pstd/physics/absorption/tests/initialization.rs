@@ -1,5 +1,5 @@
 use super::{test_k_mag, zeros_k_mag};
-use crate::forward::pstd::config::PSTDConfig;
+use crate::forward::pstd::config::{PSTDConfig, PowerLawDispersion};
 use crate::forward::pstd::physics::absorption::init::initialize_absorption_operators;
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
@@ -7,7 +7,9 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
+use kwavers_physics::acoustics::mechanics::absorption::{
+    power_law_db_cm_to_np_omega_m, AbsorptionMode,
+};
 
 #[test]
 fn test_power_law_initialization() {
@@ -262,4 +264,117 @@ fn test_stokes_absorption_tau_matches_classical_formula() {
         kernel.nabla2[[1, 0, 0]],
         expected_n2
     );
+}
+
+/// k-Wave `alpha_mode = 'no_dispersion'`: the absorption term `τ` is unchanged,
+/// the dispersion term `η` vanishes, and `y = 1` (rejected by the causal form,
+/// where `tan(πy/2)` diverges) becomes admissible.
+#[test]
+fn omitted_dispersion_keeps_tau_and_zeroes_eta() {
+    let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
+    let k_mag = test_k_mag(8, 8, 8, 1e-3);
+    let kernel_for = |alpha_power: f64, dispersion: PowerLawDispersion| {
+        let config = PSTDConfig {
+            absorption_mode: AbsorptionMode::PowerLaw {
+                alpha_coeff: Some(0.7),
+                alpha_power,
+            },
+            power_law_dispersion: dispersion,
+            ..PSTDConfig::default()
+        };
+        initialize_absorption_operators(
+            &config,
+            &grid,
+            &medium,
+            &k_mag,
+            MHZ_TO_HZ,
+            SOUND_SPEED_WATER_SIM,
+        )
+    };
+
+    let causal = kernel_for(1.5, PowerLawDispersion::Causal)
+        .unwrap()
+        .unwrap();
+    let omitted = kernel_for(1.5, PowerLawDispersion::Omitted)
+        .unwrap()
+        .unwrap();
+    assert_eq!(omitted.tau[[3, 4, 5]], causal.tau[[3, 4, 5]]);
+    assert_ne!(causal.eta[[3, 4, 5]], 0.0);
+    assert!(omitted.eta.iter().all(|&value| value == 0.0));
+
+    assert!(kernel_for(1.0, PowerLawDispersion::Causal)
+        .is_err_and(|error| matches!(error, kwavers_core::error::KwaversError::Validation(_))));
+    let unit = kernel_for(1.0, PowerLawDispersion::Omitted)
+        .unwrap()
+        .unwrap();
+    // y = 1: τ = −2 α₀ c₀^(y−1) = −2 α₀, exact in floating point because c₀⁰ = 1.
+    let alpha_0_si = power_law_db_cm_to_np_omega_m(0.7, 1.0);
+    assert!(unit.tau.iter().all(|&value| value == -2.0 * alpha_0_si));
+    assert!(unit.eta.iter().all(|&value| value == 0.0));
+}
+
+/// A medium-supplied `y = 1` is a valid exponent once dispersion is omitted;
+/// only the causal form treats it as degenerate and falls back to the
+/// configured exponent.
+#[test]
+fn omitted_dispersion_takes_unit_exponent_from_the_medium() {
+    let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+    let mut medium = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
+    medium.set_acoustic_properties(0.7, 1.0, 5.0).unwrap();
+    let config = PSTDConfig {
+        absorption_mode: AbsorptionMode::PowerLaw {
+            alpha_coeff: None,
+            alpha_power: 1.5,
+        },
+        power_law_dispersion: PowerLawDispersion::Omitted,
+        ..PSTDConfig::default()
+    };
+    let k_mag = test_k_mag(8, 8, 8, 1e-3);
+    let kernel = initialize_absorption_operators(
+        &config,
+        &grid,
+        &medium,
+        &k_mag,
+        MHZ_TO_HZ,
+        SOUND_SPEED_WATER_SIM,
+    )
+    .unwrap()
+    .unwrap();
+    // The operators carry the same y = 1: ∇₂ = |k|⁰ = 1 and ∇₁ = |k|⁻¹ off the
+    // DC bin, where the configured y = 1.5 would give |k|^0.5 and |k|^-0.5.
+    assert!(kernel.strata.is_none());
+    assert_eq!(kernel.nabla2[[1, 0, 0]], 1.0);
+    assert_eq!(kernel.nabla1[[1, 0, 0]], k_mag[[1, 0, 0]].powf(-1.0));
+    // y = 1 from the medium: τ = −2 α₀ c₀⁰ = −2 α₀ exactly. The configured
+    // y = 1.5 would instead give −2 α₀(1.5) c₀^0.5.
+    let alpha_0_si = power_law_db_cm_to_np_omega_m(0.7, 1.0);
+    assert!(kernel.tau.iter().all(|&value| value == -2.0 * alpha_0_si));
+    assert!(kernel.eta.iter().all(|&value| value == 0.0));
+}
+
+/// Configurations saved before the dispersion option existed still load, as
+/// the causal default.
+#[test]
+fn config_without_dispersion_field_deserializes_as_causal() {
+    let mut value = serde_json::to_value(PSTDConfig::default()).unwrap();
+    value
+        .as_object_mut()
+        .unwrap()
+        .remove("power_law_dispersion")
+        .unwrap();
+    let config: PSTDConfig = serde_json::from_value(value).unwrap();
+    assert_eq!(config.power_law_dispersion, PowerLawDispersion::Causal);
 }

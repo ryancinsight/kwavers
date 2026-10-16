@@ -6,4 +6,4 @@ mod strata;
 mod tests;
 
 pub(crate) use init::initialize_absorption_operators;
-pub(crate) use kernel::AbsorptionKernel;
+pub(crate) use kernel::{AbsorptionExponent, AbsorptionKernel};

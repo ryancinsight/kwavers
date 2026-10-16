@@ -200,18 +200,21 @@ For lossless simulations (absorption coefficient α = 0 everywhere), the PSTD ab
 
 ```rust,ignore
 // crates/kwavers-solver/src/forward/pstd/physics/absorption/kernel.rs
-pub struct AbsorptionKernel {
+pub(crate) struct AbsorptionKernel {
     pub tau: Array3<f64>,     // N³  absorption proportionality
-    pub eta: Array3<f64>,     // N³  dispersion proportionality
-    pub nabla1: Array3<f64>,  // N³  |k|^{y-1} fractional-Laplacian operator
-    pub nabla2: Array3<f64>,  // N³  |k|^{y}  fractional-Laplacian operator
+    pub eta: Array3<f64>,     // N³  dispersion proportionality (0 without dispersion)
+    pub nabla1: Array3<f64>,  // N³  |k|^{y-2} fractional-Laplacian operator
+    pub nabla2: Array3<f64>,  // N³  |k|^{y-1} fractional-Laplacian operator
     pub alpha_si: Array3<f64>,// N³  absorption coefficient (SI)
+    pub strata: Option<ExponentStrata>, // per-voxel y only: blended operators
+    pub exponent: AbsorptionExponent,   // Uniform(y), or Field(N³) when y varies
 }
 // The orchestrator stores `Option<AbsorptionKernel>` — None for lossless media.
 ```
 
 Memory saving for lossless: 5 × N³ × 8 B (f64) = 5 × 256³ × 8 = **670 MB** for N=256 (the
-entire kernel is elided, not just a subset). The struct is monomorphic `f64`; there is no
+entire kernel is elided, not just a subset; a spatially varying exponent adds the
+`strata` operators and one more N³ exponent field). The struct is monomorphic `f64`; there is no
 `Scalar` generic (see §20.10.3).
 
 An earlier formulation carried an extra cross-axis coupling array; auditing the Treeby & Cox

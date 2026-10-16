@@ -38,6 +38,7 @@
 //! ```
 
 use super::PSTDSolver;
+use crate::forward::pstd::physics::absorption::AbsorptionExponent;
 use crate::forward::thermal_diffusion::ThermalDiffusionSolver;
 use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
@@ -116,49 +117,42 @@ impl PSTDSolver {
     /// Scale the stored `α_SI` coefficients to physical Np/m at center frequency `omega_c`.
     ///
     /// ## Formula
-    /// For `PowerLaw { y }`: `α(ω_c) = α_SI · ω_c^y`
+    /// For `PowerLaw`:        `α(ω_c) = α_SI · ω_c^y(r)`, with `y(r)` the exponent
+    ///                        the absorption kernel resolved per voxel
     /// For `Stokes (y = 2)`:  `α(ω_c) = α_SI · ω_c²`
-    /// For `Lossless`:        `α(ω_c) = 0`
+    /// Otherwise:             `α(ω_c) = 0`
     ///
     /// Call once after `PSTDSolver::new()` and before the first call to
     /// `compute_acoustic_heat_source()`. The result is stored in `alpha_np_m`
     /// and reused every acoustic step without further allocation.
     pub fn populate_alpha_np_m_at_frequency(&mut self, omega_c: f64) {
-        // Extract the power-law exponent without holding a borrow on self.config.
-        enum Mode {
-            Lossless,
-            Stokes,
-            PowerLaw(f64),
-        }
-        let mode = match &self.config.absorption_mode {
-            AbsorptionMode::Lossless => Mode::Lossless,
-            AbsorptionMode::Stokes => Mode::Stokes,
-            AbsorptionMode::PowerLaw { alpha_power, .. } => Mode::PowerLaw(*alpha_power),
-            _ => Mode::Lossless,
+        let heats = matches!(
+            self.config.absorption_mode,
+            AbsorptionMode::Stokes | AbsorptionMode::PowerLaw { .. }
+        );
+        let Some(kernel) = self.absorption.as_ref().filter(|_| heats) else {
+            // No Stokes or power-law absorption ⟹ no thermal heating; release
+            // memory if previously allocated.
+            self.alpha_np_m = None;
+            return;
         };
-
-        match mode {
-            Mode::Lossless => {
-                // Lossless ⟹ no thermal heating; release memory if previously allocated.
-                self.alpha_np_m = None;
+        let alpha_si = &kernel.alpha_si;
+        let shape = alpha_si.shape();
+        let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
+        // α(ω_c) = α_SI · ω_c^y with the exponent the coefficients were built
+        // for, which is the medium's per-voxel y when it supplies the power law.
+        match &kernel.exponent {
+            AbsorptionExponent::Uniform(y) => {
+                copy_scaled_absorption_field(buf, alpha_si, omega_c.powf(*y));
             }
-            Mode::Stokes => {
-                // y = 2: α(ω_c) = α_SI · ω_c²
-                if let Some(ref kernel) = self.absorption {
-                    let omega_sq = omega_c * omega_c;
-                    let alpha_si = &kernel.alpha_si;
-                    let shape = alpha_si.shape();
-                    let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
-                    copy_scaled_absorption_field(buf, alpha_si, omega_sq);
-                }
-            }
-            Mode::PowerLaw(y) => {
-                if let Some(ref kernel) = self.absorption {
-                    let omega_y = omega_c.powf(y);
-                    let alpha_si = &kernel.alpha_si;
-                    let shape = alpha_si.shape();
-                    let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
-                    copy_scaled_absorption_field(buf, alpha_si, omega_y);
+            AbsorptionExponent::Field(y) => {
+                let [nx, ny, nz] = shape;
+                for k in 0..nz {
+                    for j in 0..ny {
+                        for i in 0..nx {
+                            buf[[i, j, k]] = alpha_si[[i, j, k]] * omega_c.powf(y[[i, j, k]]);
+                        }
+                    }
                 }
             }
         }

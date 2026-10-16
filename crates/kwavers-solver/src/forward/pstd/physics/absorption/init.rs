@@ -26,9 +26,9 @@
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314. Eqs. 9–10, 19–21.
 //! - Caputo (1967). Geophys. J. Int. 13(5), 529–539. (fractional calculus)
 
-use super::kernel::AbsorptionKernel;
+use super::kernel::{AbsorptionExponent, AbsorptionKernel};
 use super::strata::build_exponent_strata;
-use crate::forward::pstd::config::PSTDConfig;
+use crate::forward::pstd::config::{PSTDConfig, PowerLawDispersion};
 use kwavers_core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
@@ -58,14 +58,19 @@ fn map_real_field(input: &Array3<f64>, mut map: impl FnMut(f64) -> f64) -> Array
 /// ```text
 ///   α_SI(r) = power_law_db_cm_to_np_omega_m(α_dB(r), y(r))
 ///   τ(r)    = −2 α_SI(r) · c₀(r)^(y(r)−1)
-///   η(r)    =  2 α_SI(r) · c₀(r)^y(r) · tan(π y(r) / 2)
+///   η(r)    =  2 α_SI(r) · c₀(r)^y(r) · tan(π y(r) / 2)   (causal dispersion)
+///   η(r)    =  0                                         (dispersion omitted)
 /// ```
+/// `y(r)` is the explicit exponent when the configuration gives a
+/// coefficient, otherwise the medium's.
 ///
-/// **Spectral operators** (global, using config alpha_power for k-space precomputation):
+/// **Spectral operators**, from the same resolved exponent: when `y(r)` is
+/// uniform, with `y` its value,
 /// ```text
-///   nabla1[i,j,k] = |k|^(y_config − 2),  set 0 when |k| < ABSORPTION_SINGULARITY_THRESHOLD
-///   nabla2[i,j,k] = |k|^(y_config − 1),  set 0 when |k| < ABSORPTION_SINGULARITY_THRESHOLD
+///   nabla1[i,j,k] = |k|^(y − 2),  set 0 when |k| < ABSORPTION_SINGULARITY_THRESHOLD
+///   nabla2[i,j,k] = |k|^(y − 1),  set 0 when |k| < ABSORPTION_SINGULARITY_THRESHOLD
 /// ```
+/// and otherwise stratified operators blended per voxel.
 ///
 /// ## Returns
 /// `Some(AbsorptionKernel)` for `PowerLaw` mode; `None` for `Lossless` (saves 4 × N³ × 8 bytes).
@@ -154,6 +159,7 @@ pub(crate) fn initialize_absorption_operators(
                 nabla2,
                 alpha_si: alpha_si_stokes,
                 strata: None, // Stokes ⇒ y = 2 everywhere (uniform exponent)
+                exponent: AbsorptionExponent::Uniform(2.0),
             }))
         }
         AbsorptionMode::PowerLaw {
@@ -161,7 +167,8 @@ pub(crate) fn initialize_absorption_operators(
             alpha_power,
         } => {
             let y_config = *alpha_power;
-            if (y_config - 1.0).abs() < 1e-12 {
+            let dispersive = config.power_law_dispersion == PowerLawDispersion::Causal;
+            if dispersive && (y_config - 1.0).abs() < 1e-12 {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: "alpha_power must not be 1.0 for fractional Laplacian formulation"
@@ -201,12 +208,10 @@ pub(crate) fn initialize_absorption_operators(
                             Some(requested) => (*requested, y_config),
                             None => {
                                 let y_medium = medium.alpha_power(x, y_coord, z, grid);
-                                let y = if y_medium.abs() > 1e-12 && (y_medium - 1.0).abs() > 1e-12
-                                {
-                                    y_medium
-                                } else {
-                                    y_config
-                                };
+                                // y = 1 is degenerate only for the causal form.
+                                let degenerate = y_medium.abs() <= 1e-12
+                                    || (dispersive && (y_medium - 1.0).abs() <= 1e-12);
+                                let y = if !degenerate { y_medium } else { y_config };
                                 (medium.alpha_coefficient(x, y_coord, z, grid), y)
                             }
                         };
@@ -216,10 +221,12 @@ pub(crate) fn initialize_absorption_operators(
 
                         // Treeby & Cox (2010) Eqs. 19–20
                         tau[[i, j, k]] = -2.0 * alpha_0_si * c0_val.powf(y - 1.0);
-                        eta[[i, j, k]] = 2.0
-                            * alpha_0_si
-                            * c0_val.powf(y)
-                            * (std::f64::consts::PI * y / 2.0).tan();
+                        if dispersive {
+                            eta[[i, j, k]] = 2.0
+                                * alpha_0_si
+                                * c0_val.powf(y)
+                                * (std::f64::consts::PI * y / 2.0).tan();
+                        }
                         alpha_si_field[[i, j, k]] = alpha_0_si;
                         y_field[[i, j, k]] = y;
                     }
@@ -229,20 +236,29 @@ pub(crate) fn initialize_absorption_operators(
             // Stratified spectral operators when y(x) is non-uniform; `None`
             // collapses to the cheaper single-symbol nabla1/nabla2 path below.
             let strata = build_exponent_strata(&y_field, k_mag);
+            // The uniform path's exponent is the one every voxel resolved to,
+            // so τ, η and the operators share it; it differs from `y_config`
+            // when the medium supplies the power law.
+            let (y_uniform, exponent) = if strata.is_some() {
+                (y_config, AbsorptionExponent::Field(y_field))
+            } else {
+                let y = y_field[[0, 0, 0]];
+                (y, AbsorptionExponent::Uniform(y))
+            };
 
             // Spectral nabla operators — precomputed in FFT wavenumber order.
-            // nabla1 = |k|^(y_config − 2),  nabla2 = |k|^(y_config − 1)
+            // nabla1 = |k|^(y − 2),  nabla2 = |k|^(y − 1)
             // Treeby & Cox (2010) Eq. 10; DC bin → 0 to avoid singularity.
             let nabla1 = map_real_field(k_mag, |k| {
                 if k > ABSORPTION_SINGULARITY_THRESHOLD {
-                    k.powf(y_config - 2.0)
+                    k.powf(y_uniform - 2.0)
                 } else {
                     0.0
                 }
             });
             let nabla2 = map_real_field(k_mag, |k| {
                 if k > ABSORPTION_SINGULARITY_THRESHOLD {
-                    k.powf(y_config - 1.0)
+                    k.powf(y_uniform - 1.0)
                 } else {
                     0.0
                 }
@@ -255,6 +271,7 @@ pub(crate) fn initialize_absorption_operators(
                 nabla2,
                 alpha_si: alpha_si_field,
                 strata,
+                exponent,
             }))
         }
         AbsorptionMode::MultiRelaxation { tau, weights } => {
@@ -360,5 +377,6 @@ fn build_relaxation_kernel(
         nabla2,
         alpha_si: alpha_si_field,
         strata: None, // y_eff is c₀-independent ⇒ spatially uniform exponent
+        exponent: AbsorptionExponent::Uniform(y_eff),
     }))
 }

@@ -304,8 +304,9 @@ and Treeby & Cox (2010) cast the causal power-law absorbing equations exactly in
 two **fractional-Laplacian** operators $(-\nabla^2)^s$ (Fourier symbol $|\mathbf k|^{2s}$),
 with absorption coefficient $\tau = -2\alpha_0 c_0^{y-1}$ and dispersion coefficient
 $\eta = 2\alpha_0 c_0^{y}\tan(\pi y/2)$. The $\tan(\pi y/2)$ factor vanishes at $y = 2$
-(viscothermal media — e.g. water — are exactly non-dispersive) and is handled by a
-logarithmic limit at $y = 1$ (soft tissue shows negligible MHz-band dispersion). The full
+(viscothermal media — e.g. water — are exactly non-dispersive) and diverges at $y = 1$; there
+the solver omits dispersion (`PowerLawDispersion::Omitted`, k-Wave's `no_dispersion`), and
+soft tissue shows negligible MHz-band dispersion anyway. The full
 operator form, the power-law correspondence proof, and the k-space evaluation are derived
 in **Foundations §1.9.3 (Theorem 1.7)** — the canonical home for the absorption model — so
 they are not repeated here.
@@ -888,9 +889,11 @@ time-stepping family, and they are not interchangeable:
 
 One further restriction decides the choice outright in a common case: the
 fractional-Laplacian dispersion coefficient is $\eta = 2\alpha_0 c_0^y\tan(\pi y/2)$, which
-**diverges at $y = 1$**, and the PSTD solver rejects that configuration. The relaxation paths have
-no singularity there. Linear frequency dependence — the textbook soft-tissue idealization — is
-available only through relaxation.
+**diverges at $y = 1$**, so the causal PSTD form rejects that configuration. PSTD still runs
+linear frequency dependence — the textbook soft-tissue idealization — with dispersion omitted
+(`PowerLawDispersion::Omitted`, k-Wave's `alpha_mode = 'no_dispersion'`), which keeps the
+absorption and drops only the phase-speed dispersion. A causal linear law, with its
+dispersion, is available only through relaxation, whose paths have no singularity there.
 
 The split is forced by the mathematics, not by taste. The fractional Laplacian's symbol
 $\lvert k\rvert^{y-s}$ is global in $k$, so a spectral solver can only carry one exponent per

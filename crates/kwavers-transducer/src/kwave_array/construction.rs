@@ -281,7 +281,8 @@ impl KWaveArray {
         self
     }
 
-    /// Add validated oriented planar disk or annular-sector geometry.
+    /// Add validated oriented planar geometry: a disk, an annular sector, or a
+    /// rectangle.
     pub fn add_planar_aperture_element(&mut self, geometry: PlanarApertureGeometry) -> &mut Self {
         self.elements.push(KWaveElement::PlanarAperture(geometry));
         self

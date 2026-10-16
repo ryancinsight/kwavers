@@ -1,4 +1,5 @@
-//! Rasterizers for planar elements: rect and disc; plus the per-element dispatcher.
+//! Rasterizers for planar elements: rect, disc and validated planar apertures;
+//! plus the per-element dispatcher.
 //!
 //! # Algorithm — Rectangle (sampled lattice + Euler rotation)
 //!
@@ -22,7 +23,9 @@
 
 use super::math::{apply_matrix, euler_xyz_rotation_matrix, DISC_SAMPLE_UPSAMPLING_RATE};
 use super::{DiscSourceProfile, ElementShape, KWaveArray, KWaveElement};
-use crate::transducers::physics::PlanarApertureGeometry;
+use crate::transducers::physics::{PlanarApertureGeometry, PlanarApertureShape};
+use eunomia::convert::IntegerTarget;
+use eunomia::FloatElement;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
 
@@ -376,7 +379,9 @@ impl KWaveArray {
         );
     }
 
-    /// Emit equal-area polar samples whose total BLI mass is `area / dx^2`.
+    /// Emit equal-area surface samples whose total BLI mass is `area / dx^2`:
+    /// a polar lattice for disks and annular sectors, a rectangular midpoint
+    /// lattice with near-square cells for rectangles.
     pub(super) fn rasterize_planar_aperture_points<F>(
         grid: &kwavers_grid::Grid,
         geometry: PlanarApertureGeometry,
@@ -384,11 +389,50 @@ impl KWaveArray {
     ) where
         F: FnMut([f64; 3], f64),
     {
-        let (inner, outer, start, span) = geometry.shape().radial_and_angular_bounds();
-        let area = geometry.shape().area_m2();
-        let grid_area = grid.dx * grid.dy;
-        let mass = area / grid_area;
+        let shape = geometry.shape();
+        let mass = shape.area_m2() / (grid.dx * grid.dy);
         let target = (mass * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0) as usize;
+        let center = geometry.center_m();
+        let first = geometry.first_axis();
+        let normal = geometry.normal();
+        let second = [
+            normal[1].mul_add(first[2], -(normal[2] * first[1])),
+            normal[2].mul_add(first[0], -(normal[0] * first[2])),
+            normal[0].mul_add(first[1], -(normal[1] * first[0])),
+        ];
+        let mut emit = |x: f64, y: f64, scale: f64| {
+            visit(
+                [
+                    y.mul_add(second[0], x.mul_add(first[0], center[0])),
+                    y.mul_add(second[1], x.mul_add(first[1], center[1])),
+                    y.mul_add(second[2], x.mul_add(first[2], center[2])),
+                ],
+                scale,
+            );
+        };
+
+        if let PlanarApertureShape::Rectangle { width_m, height_m } = shape {
+            let width_count =
+                usize::from_truncated((f64::from_count(target) * width_m / height_m).sqrt().ceil())
+                    .clamp(1, target);
+            let height_count = target.div_ceil(width_count);
+            let scale = mass / f64::from_count(width_count * height_count);
+            for width_index in 0..width_count {
+                let x = width_m
+                    * ((f64::from_count(width_index) + 0.5) / f64::from_count(width_count) - 0.5);
+                for height_index in 0..height_count {
+                    let y = height_m
+                        * ((f64::from_count(height_index) + 0.5) / f64::from_count(height_count)
+                            - 0.5);
+                    emit(x, y, scale);
+                }
+            }
+            return;
+        }
+
+        let (inner, outer, start, span) = shape
+            .polar_bounds()
+            .expect("invariant: every non-rectangular planar shape is polar");
         let radial_width = outer - inner;
         let mean_radius =
             2.0 * (outer.powi(3) - inner.powi(3)) / (3.0 * (outer * outer - inner * inner));
@@ -398,33 +442,14 @@ impl KWaveArray {
             .ceil() as usize)
             .clamp(1, target);
         let angular_count = target.div_ceil(radial_count);
-        let sample_count = radial_count * angular_count;
-        let scale = mass / sample_count as f64;
+        let scale = mass / f64::from_count(radial_count * angular_count);
         let squared_span = outer * outer - inner * inner;
-        let center = geometry.center_m();
-        let first = geometry.first_axis();
-        let normal = geometry.normal();
-        let second = [
-            normal[1].mul_add(first[2], -(normal[2] * first[1])),
-            normal[2].mul_add(first[0], -(normal[0] * first[2])),
-            normal[0].mul_add(first[1], -(normal[1] * first[0])),
-        ];
-
         for radial_index in 0..radial_count {
             let radial_fraction = (radial_index as f64 + 0.5) / radial_count as f64;
             let radius = (inner * inner + radial_fraction * squared_span).sqrt();
             for angular_index in 0..angular_count {
                 let angle = start + span * (angular_index as f64 + 0.5) / angular_count as f64;
-                let x = radius * angle.cos();
-                let y = radius * angle.sin();
-                visit(
-                    [
-                        y.mul_add(second[0], x.mul_add(first[0], center[0])),
-                        y.mul_add(second[1], x.mul_add(first[1], center[1])),
-                        y.mul_add(second[2], x.mul_add(first[2], center[2])),
-                    ],
-                    scale,
-                );
+                emit(radius * angle.cos(), radius * angle.sin(), scale);
             }
         }
     }
