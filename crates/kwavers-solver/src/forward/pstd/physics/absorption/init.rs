@@ -230,20 +230,28 @@ pub(crate) fn initialize_absorption_operators(
             // Stratified spectral operators when y(x) is non-uniform; `None`
             // collapses to the cheaper single-symbol nabla1/nabla2 path below.
             let strata = build_exponent_strata(&y_field, k_mag);
+            // The uniform path's exponent is the one every voxel resolved to,
+            // so τ, η and the operators share it; it differs from `y_config`
+            // when the medium supplies the power law.
+            let y_uniform = if strata.is_some() {
+                y_config
+            } else {
+                y_field[[0, 0, 0]]
+            };
 
             // Spectral nabla operators — precomputed in FFT wavenumber order.
-            // nabla1 = |k|^(y_config − 2),  nabla2 = |k|^(y_config − 1)
+            // nabla1 = |k|^(y − 2),  nabla2 = |k|^(y − 1)
             // Treeby & Cox (2010) Eq. 10; DC bin → 0 to avoid singularity.
             let nabla1 = map_real_field(k_mag, |k| {
                 if k > ABSORPTION_SINGULARITY_THRESHOLD {
-                    k.powf(y_config - 2.0)
+                    k.powf(y_uniform - 2.0)
                 } else {
                     0.0
                 }
             });
             let nabla2 = map_real_field(k_mag, |k| {
                 if k > ABSORPTION_SINGULARITY_THRESHOLD {
-                    k.powf(y_config - 1.0)
+                    k.powf(y_uniform - 1.0)
                 } else {
                     0.0
                 }

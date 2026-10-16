@@ -342,16 +342,22 @@ fn omitted_dispersion_takes_unit_exponent_from_the_medium() {
         power_law_dispersion: PowerLawDispersion::Omitted,
         ..PSTDConfig::default()
     };
+    let k_mag = test_k_mag(8, 8, 8, 1e-3);
     let kernel = initialize_absorption_operators(
         &config,
         &grid,
         &medium,
-        &test_k_mag(8, 8, 8, 1e-3),
+        &k_mag,
         MHZ_TO_HZ,
         SOUND_SPEED_WATER_SIM,
     )
     .unwrap()
     .unwrap();
+    // The operators carry the same y = 1: ∇₂ = |k|⁰ = 1 and ∇₁ = |k|⁻¹ off the
+    // DC bin, where the configured y = 1.5 would give |k|^0.5 and |k|^-0.5.
+    assert!(kernel.strata.is_none());
+    assert_eq!(kernel.nabla2[[1, 0, 0]], 1.0);
+    assert_eq!(kernel.nabla1[[1, 0, 0]], k_mag[[1, 0, 0]].powf(-1.0));
     // y = 1 from the medium: τ = −2 α₀ c₀⁰ = −2 α₀ exactly. The configured
     // y = 1.5 would instead give −2 α₀(1.5) c₀^0.5.
     let alpha_0_si = power_law_db_cm_to_np_omega_m(0.7, 1.0);
