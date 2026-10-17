@@ -2725,7 +2725,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -3065,7 +3065,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-physics"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -3095,6 +3095,8 @@ dependencies = [
  "ritk-registration",
  "serde",
  "thiserror 2.0.21",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3203,7 +3205,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-solver"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -3246,6 +3248,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.21",
  "tracing",
+ "tracing-subscriber",
  "tyche-core",
 ]
 
@@ -5840,7 +5843,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

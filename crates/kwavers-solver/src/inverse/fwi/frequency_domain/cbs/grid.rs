@@ -1,5 +1,6 @@
 //! CBS grid and bandlimited point projection.
 
+use super::super::born_kernel::cell_volume;
 use aequitas::systems::si::quantities::Length;
 use aequitas::systems::si::units::Meter;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -53,7 +54,7 @@ impl GridSpec {
 
     #[must_use]
     pub fn cell_volume_m3(self) -> f64 {
-        self.spacing_m.powi(3)
+        cell_volume(self.spacing_m)
     }
 
     #[must_use]

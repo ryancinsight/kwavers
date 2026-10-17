@@ -1,0 +1,34 @@
+name: Prepare matching Miri standard library
+description: Cache the Linux sysroot by compiler/interpreter identity and always validate it with Miri.
+runs:
+  using: composite
+  steps:
+    - name: Identify the installed compiler and interpreter
+      id: identity
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 - <<'PY'
+        import hashlib, os, pathlib, subprocess
+        versions = b''.join(subprocess.check_output(command) for command in (
+            ['rustc', '+nightly', '-vV'], ['cargo', '+nightly', 'miri', '--version']))
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+            output.write('digest=' + hashlib.sha256(versions).hexdigest() + '\n')
+            toolchain = pathlib.Path(subprocess.check_output(
+                ['rustc', '+nightly', '--print', 'sysroot'], text=True).strip())
+            output.write('source=' + str(toolchain / 'lib/rustlib/src/rust/library') + '\n')
+        PY
+    - name: Restore the matching Miri standard library
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+      with:
+        # Miri's validation hashes source paths, sizes and mtimes. Transport
+        # matching sources and compiled std together, retaining tar timestamps.
+        path: |
+          ~/.cache/miri
+          ${{ steps.identity.outputs.source }}
+        key: miri-sysroot-${{ runner.os }}-${{ runner.arch }}-${{ steps.identity.outputs.digest }}-${{ hashFiles('Cargo.lock', '.cargo/config.toml', '.github/actions/setup-miri/action.yml', '.github/workflows/ci.yml') }}
+    # Miri checks its standard-library configuration even after a cache hit.
+    # Do not set MIRI_SYSROOT: that would bypass its automatic validation.
+    - name: Validate or build the Miri standard library
+      shell: bash
+      run: cargo +nightly miri setup

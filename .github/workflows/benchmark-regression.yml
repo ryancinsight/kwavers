@@ -10,6 +10,14 @@ on:
       - crates/**
       - '!crates/kwavers-python/**'
       - .github/actions/install-system-dependencies/**
+      - .github/actions/prepare-cargo-sources/**
+      - .github/actions/restore-cargo-sources/**
+      - .github/workflows/cargo-sources.yml
+      - .github/actions/prepare-compiled/**
+      - .github/actions/restore-compiled/**
+      - .github/workflows/bounded-compile.yml
+      - scripts/prepare_foundation.py
+      - scripts/benchmark_artifacts.py
       - .github/workflows/benchmark-regression.yml
   workflow_dispatch:
 
@@ -38,26 +46,58 @@ concurrency:
 # baseline revision on every pull request bought no additional gate, only
 # wall time. It now runs on demand via `workflow_dispatch`.
 jobs:
-  benchmark-smoke:
+  sources:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
-    name: complete benchmark smoke
+    uses: ./.github/workflows/cargo-sources.yml
+    with:
+      artifact: benchmark-cargo-sources-${{ github.sha }}
+
+  prerequisites:
+    needs: sources
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    uses: ./.github/workflows/bounded-compile.yml
+    with:
+      sources: benchmark-cargo-sources-${{ github.sha }}
+      artifact: benchmark-prerequisites-${{ github.sha }}
+      profile: dev
+      features: default,plotting
+
+  benchmark-compile:
+    needs: [sources, prerequisites]
+    if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    name: compile complete benchmark smoke
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
     env:
       BENCH_TARGET_DIR: ${{ github.workspace }}/target
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
+      # Installing sccache alone does not route Cargo through it: the bounded
+      # smoke recorded zero compiler requests in run 38524672045.
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
       PR_BENCH_TARGETS: performance_baseline critical_path_benchmarks simd_field_ops
     steps:
+      - name: Require successful source preparation
+        env:
+          SOURCE_RESULT: ${{ needs.sources.result }}
+        run: test "$SOURCE_RESULT" = success
+
       - name: Checkout candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          path: kwavers-candidate
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
           persist-credentials: false
 
       - name: Install system dependencies
-        uses: ./kwavers-candidate/.github/actions/install-system-dependencies
+        uses: ./.github/actions/install-system-dependencies
         with:
           packages: libfontconfig1-dev
 
@@ -75,20 +115,22 @@ jobs:
       # once per job.
       - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
 
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      - uses: ./.github/actions/restore-cargo-sources
         with:
-          shared-key: kwavers-bench
-          # The checkout is a child of the runner workspace, while both
-          # revisions intentionally compile into the retained root target.
-          workspaces: kwavers-candidate -> ../target
-          # Write the cache from the default branch only. A pull request
-          # restores it but does not save, so concurrent branches cannot
-          # evict each other's entries.
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          artifact: benchmark-cargo-sources-${{ github.sha }}
+
+      - name: Require successful compilation prerequisites
+        env:
+          BUILD_RESULT: ${{ needs.prerequisites.result }}
+        run: test "$BUILD_RESULT" = success
+
+      - uses: ./.github/actions/restore-compiled
+        with:
+          profile: dev
+          artifact: benchmark-prerequisites-${{ github.sha }}
 
       - name: Verify the candidate lockfile
-        shell: bash
-        run: python3 kwavers-candidate/scripts/lockfile.py --check
+        run: python3 scripts/lockfile.py --check
 
       - name: Validate complete benchmark registry
         shell: bash
@@ -158,44 +200,72 @@ jobs:
             fi
           }
 
-          validate_registry kwavers-candidate
+          validate_registry .
 
           if grep --recursive --line-number --extended-regexp \
             'fn[[:space:]]+main[[:space:]]*\(\)[[:space:]]*\{[[:space:]]*\}' \
-            kwavers-candidate/crates/kwavers/benches; then
+            crates/kwavers/benches; then
             echo "::error::empty benchmark entry point"
             exit 1
           fi
 
           for target in $PR_BENCH_TARGETS; do
-            if [[ ! -f "kwavers-candidate/crates/kwavers/benches/$target.rs" ]]; then
+            if [[ ! -f "crates/kwavers/benches/$target.rs" ]]; then
               echo "::error::missing merge-critical benchmark target: $target"
               exit 1
             fi
           done
 
-      - name: Execute every benchmark once
+      - name: Compile every eligible benchmark
         shell: bash
         run: |
           set -euo pipefail
-          mv kwavers-candidate kwavers-measurement
-          status=0
-          cargo bench \
-            --manifest-path kwavers-measurement/Cargo.toml \
-            --target-dir "$BENCH_TARGET_DIR" \
-            --locked \
-            --profile dev \
-            --package kwavers \
-            --features plotting \
-            --benches \
-            -- \
-            --test || status=$?
-          mv kwavers-measurement kwavers-candidate
-          exit "$status"
+          cargo bench --manifest-path Cargo.toml --target-dir "$BENCH_TARGET_DIR" \
+            --locked --profile dev --package kwavers --features plotting --benches \
+            --no-run --message-format=json > "$RUNNER_TEMP/benchmark-artifacts.jsonl"
+          python3 scripts/benchmark_artifacts.py pack \
+            --artifacts "$RUNNER_TEMP/benchmark-artifacts.jsonl" \
+            --output "$RUNNER_TEMP/benchmarks.tar.gz"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: complete-benchmarks-${{ github.sha }}
+          path: ${{ runner.temp }}/benchmarks.tar.gz
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
 
       - name: sccache stats
         if: always()
         run: sccache --show-stats
+
+  benchmark-smoke:
+    needs: benchmark-compile
+    if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    name: complete benchmark smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    steps:
+      - name: Require complete successful compilation
+        env:
+          BUILD_RESULT: ${{ needs.benchmark-compile.result }}
+        run: test "$BUILD_RESULT" = success
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: libfontconfig1-dev
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: complete-benchmarks-${{ github.sha }}
+          path: ${{ runner.temp }}/benchmarks
+      - name: Execute every compiled target once
+        run: python3 scripts/benchmark_artifacts.py run --archive "$RUNNER_TEMP/benchmarks/benchmarks.tar.gz"
 
   # The double-checkout, double-compile diagnostic this workflow used to run
   # on every pull request (see the header comment). It never fails: its only

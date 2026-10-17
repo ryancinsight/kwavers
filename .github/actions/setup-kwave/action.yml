@@ -1,0 +1,53 @@
+name: Prepare k-Wave installed-wheel environment
+description: Install the pinned Python comparison dependencies and required HDF5 runtime.
+runs:
+  using: composite
+  steps:
+    - name: Set up Python 3.10
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+      with:
+        python-version: "3.10"
+
+    - name: Prepare Ubuntu package index
+      uses: ./source/.github/actions/install-system-dependencies
+
+    - name: Select the k-Wave HDF5 runtime packages
+      id: hdf5-runtime
+      shell: bash
+      run: |
+        set -euo pipefail
+        hdf5_runtime_packages=()
+        for hdf5_runtime in libhdf5-103-1 libhdf5-103-1t64; do
+          if apt-cache show "$hdf5_runtime" 2>/dev/null | grep -q '^Package:'; then
+            hdf5_runtime_packages+=("$hdf5_runtime")
+            break
+          fi
+        done
+        for hdf5_high_level_runtime in libhdf5-hl-100 libhdf5-hl-100t64; do
+          if apt-cache show "$hdf5_high_level_runtime" 2>/dev/null | grep -q '^Package:'; then
+            hdf5_runtime_packages+=("$hdf5_high_level_runtime")
+            break
+          fi
+        done
+        if ((${#hdf5_runtime_packages[@]} != 2)); then
+          echo "No Ubuntu packages provide libhdf5_serial.so.103 and libhdf5_serial_hl.so.100" >&2
+          exit 1
+        fi
+        printf 'packages=%s\n' "${hdf5_runtime_packages[*]}" >> "$GITHUB_OUTPUT"
+
+    - name: Install k-Wave HDF5 runtime
+      uses: ./source/.github/actions/install-system-dependencies
+      with:
+        packages: ${{ steps.hdf5-runtime.outputs.packages }}
+        refresh: "false"
+
+    - name: Install wheel and k-Wave comparison dependency
+      shell: bash
+      run: |
+        set -euo pipefail
+        python -m venv wheel-smoke
+        source wheel-smoke/bin/activate
+        python -m pip install --disable-pip-version-check --upgrade pip
+        python -m pip install --disable-pip-version-check "pytest==8.4.2" "pytest-benchmark==5.2.3" "pytest-timeout==2.4.0"
+        python -m pip install --disable-pip-version-check dist/*.whl
+        python -m pip install --disable-pip-version-check "k-wave-python==0.6.2"

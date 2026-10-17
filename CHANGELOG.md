@@ -1,8 +1,148 @@
 # Changelog
 
-## Unreleased
+## kwavers-physics 3.0.1
+
+### Fixed
+
+- [patch] Bubble energy balance subtracts outward-positive conductive power.
+  A stationary hot bubble now cools instead of heating; both the complete-rate
+  and temperature-update callers use the corrected first-law sign. The heat
+  transfer API's existing outward-positive convention is preserved.
+
+## kwavers and kwavers-solver 3.0.1
 
 ### Changed
+
+- [patch] PAM computes unchanged per-pixel sample delays once and retains
+  checked contiguous or strided row borrows; a channel sweep preserves each
+  sample's addition order, checked eight-sample chunks amortize access overhead,
+  and emission synthesis retains checked writes. Contiguous rows remain
+  borrowed; strided rows normalize once in logical order. Exact
+  delayed-Gaussian (documented intrinsic precision) and integer-energy regressions
+  cover geometry and both layouts; localization fixtures and tolerances are unchanged.
+- [patch] Frequency-domain adjoint gradients retain a checked mutable view
+  instead of reborrowing the complete backing allocation per voxel. Arithmetic,
+  accumulation order and public operator contracts are unchanged. Unscaled Born
+  prediction and adjoint share each receiver's Green terms in linear scratch
+  space; source fitting retains the complete coupled prediction row.
+
+## Unreleased
+
+### Fixed
+
+- [patch] Separate k-Wave wheel construction from installed-wheel validation,
+  retaining each original time limit, both Maturin build-script handoffs and
+  all boundary/parity/export assertions. The immutable artifact ID, full wheel
+  digest, source revision and lockfile bind the complete cross-job handoff.
+  Five focused regressions cover transport integrity and workflow dependencies.
+  The real-wheel fixture honors Python's configured system or bundled source.
+  Environment preparation and reference restoration use dedicated local actions;
+  both actions belong to the exact cache source identity. The workflow retains
+  its complete checks within 500 lines.
+
+- [patch] Ten bounded native/wheel compilation jobs use complete compiler-input
+  sparse checkout. Regression coverage checks every consumer and retains all
+  commands, prerequisite edges, features, permissions, selections and time limits.
+
+- [patch] Miri jobs retain complete workspace inputs in sparse checkout and
+  reuse a compiler/interpreter-keyed standard library with unconditional Miri
+  validation. Four regressions check Git object identities, workspace manifests,
+  compile-time includes, cache identity, complete inventory and unchanged bounds.
+  The checkout regression shares existing Git objects and the shallow boundary,
+  so verification also works from the hosted shallow partial checkout.
+  The sysroot cache includes matching Rust sources: Miri validates their sizes
+  and timestamps, so retaining compiled std alone still triggers a rebuild.
+- [patch] Miri compiled artifacts retain actual source-file/directory timestamps
+  with full source digests. Restore requires the same revision, lock, compiler,
+  profile, tracked inventory and contents before writing timestamps. Five
+  regressions cover exact metadata/archive handoff and atomic mismatch rejection;
+  real Miri configuration tests reuse the artifacts without recompilation.
+
+- [patch] Embed the canonical scalar template as a compiler input of its
+  generator. Shared build-directory reuse cannot read a checkout path captured
+  in another compiled generator. A real-compiler regression verifies dependency
+  tracking and exact output from two working directories.
+
+- [patch] Reuse genuine k-Wave reference results across CI runs with exact
+  source/environment/binary identity and sealed content checks. Pin the
+  previously validated k-wave-python 0.6.2; retain fresh Kwavers computations,
+  complete installed-wheel comparisons and unchanged numerical tolerances.
+
+- [patch] Both Python wheel consumers retain verified compiled build scripts
+  before Maturin deletes their original directory. A required five-test wheel
+  preflight verifies retention/restoration order, compiled contents, executable
+  modes, symlinks and missing-artifact rejection. Existing compiler/container
+  pins, provenance checks, numerical tolerances and execution limits remain.
+- [patch] Rustls 0.23.46 resolves four security advisories while retaining
+  first-party source identities. Remove the obsolete rkyv 0.7 advisory exemption.
+- [patch] Compiled prerequisites use parallel lossless Zstandard compression.
+  Foundation compilation previously completed before archive compression
+  reached the unchanged five-minute job cap. Ten artifact regressions exercise
+  executable contents, modes, symlinks, corruption and all provenance fields.
+
+### Changed
+
+- [patch] Immutable Born products expose only the requested spatial slice.
+  Pressure weighting and the original complex left fold share one checked
+  traversal. Scalar locals carry that fold; immutable spatial inputs replace
+  unused weighted-block stores. Every scalar expression and per-voxel addition
+  retains its original order, with all private call sites and computed-value
+  contracts updated to the read-only integration API. Native scalar temporaries
+  remove per-voxel tuple/complex construction from pressure and projection
+  without changing primitive operations or checked assertions.
+
+- [patch] The Born adjoint borrows dense gradient storage once per frequency,
+  eliminating repeated coordinate projection without changing arithmetic,
+  update order, numerical tolerances or linear scratch-space requirements.
+  An exact dyadic coordinate oracle covers asymmetric shapes and source gains.
+- [patch] Each inversion prepares model-independent Born geometry once and
+  reevaluates every model/Hessian probe through a shared native-precision
+  weighted field kernel. Ring/rotating geometry and scalar arithmetic have
+  bitwise differential coverage; source fitting, finite-difference steps,
+  convergence criteria and complete reconstruction fixtures remain unchanged.
+  The immutable geometry workspace has documented acquisition-dependent size;
+  model-dependent scratch remains linear in the voxel count.
+- [patch] FWI consumers share the explicit two-product cubic voxel volume,
+  replacing an unspecified-precision general power call. A repeatability
+  regression reproduces the original four-ULP discrepancy under isolated Miri;
+  the mathematical volume and numerical tolerances remain unchanged.
+- [patch] The Born adjoint sweeps receivers within each local gradient block,
+  preserving every scalar expression and per-voxel addition order. Identical
+  projected Born Hessian probes use the exact finite-gradient difference
+  identity; changed models and other operators retain full evaluation.
+- [patch] Stateless forward Born prediction uses the same prepared geometry
+  as inversion. Distinct receiver Green fields are computed once per call,
+  reducing TRV Green evaluations to UV with the documented geometry workspace.
+  Ring and rotating heterogeneous pressures match the uncached equations bitwise.
+- [patch] Fixed-bound Born lane counters preserve the complete checked
+  traversal and bitwise reduction while removing profiled Range dispatch.
+  Full reconstruction inputs, numerical tolerances and execution caps remain.
+- [patch] One arithmetic specification generates native scalar operation
+  implementations through a dependency-free build script. Primitive MIR
+  arithmetic removes operator forwarding; checked block methods remove
+  per-voxel arithmetic dispatch, and fused adjoint traversal preserves
+  expression order and all floating-point operations with default Miri checks.
+- [patch] Born inversion prepares immutable spatial products under an 8 MiB
+  requested-allocation budget. One sealed generic field interface serves both
+  complete factored and prepared representations; model-dependent weights and
+  results remain recomputed. Separate unit-source expression trees preserve
+  signed zero, and source fitting retains its full factored calculation.
+- [patch] Born kernels retain fixed slice lengths outside lane loops. Const
+  projection accumulation removes its intermediate buffer and second traversal
+  while preserving the exact projection expression and each gradient addition.
+  Assignment/accumulation modes have bitwise value and spare-storage coverage.
+- [patch] Weighted field products and adjoint projections borrow checked slices
+  and reuse caller-owned const-capacity output buffers. Full and partial blocks
+  use one valid-prefix kernel. A 32 KiB working-set budget bounds block capacity;
+  scalar expression trees, every voxel and reduction order remain unchanged.
+  Computed-value contracts cover empty/partial/full blocks, spare storage and
+  input/capacity rejection in addition to the existing native-precision oracles.
+
+- CI shares checksum-verified locked crate sources within a workflow run;
+  compile jobs retain their five-minute pull-request bounds and full selections.
+  Miri executes current configuration and all facade tests, rejects empty
+  selections, and propagates errors. Slow cases receive independent gates,
+  and compile prerequisites require matching revision/lock/compiler/profile.
 
 - **[patch] The lossless staggered FDTD pressure update is one pass.** On a
   Cartesian grid without a CPML or absorption, the three velocity

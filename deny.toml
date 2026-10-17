@@ -7,8 +7,6 @@ all-features = true
 [advisories]
 unmaintained = "workspace"
 yanked = "warn"
-ignore = [
-]
 
 [licenses]
 allow = [

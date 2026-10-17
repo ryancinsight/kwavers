@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-solver"
-version = "3.0.0"
+version = "3.0.1"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -86,6 +86,7 @@ required-features = ["clinical-imaging"]
 kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 kwavers-alloc-probe = { path = "../kwavers-alloc-probe" }
 proteus = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [[test]]
 name = "allocation_contracts"

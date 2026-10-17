@@ -31,12 +31,13 @@ fn dense_cbs_adjoint_gradient_matches_finite_difference() {
     let mut current_speed = Array3::from_elem([3, 3, 1], 1501.0);
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
-    let (_, gradient) = objective_and_gradient(
+    let (_, gradient) = Objective::new(
         &current_slowness,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
+    .and_then(|objective| objective.evaluate(&current_slowness))
     .expect("dense objective gradient");
 
     let epsilon = 1.0e-8;
@@ -45,14 +46,16 @@ fn dense_cbs_adjoint_gradient_matches_finite_difference() {
     plus[[1, 1, 0]] += epsilon;
     minus[[1, 1, 0]] -= epsilon;
     let (objective_plus, _) =
-        objective_and_gradient(&plus, &observations, &RingAcquisition::new(&array), &config)
+        Objective::new(&plus, &observations, &RingAcquisition::new(&array), &config)
+            .and_then(|objective| objective.evaluate(&plus))
             .expect("plus");
-    let (objective_minus, _) = objective_and_gradient(
+    let (objective_minus, _) = Objective::new(
         &minus,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
+    .and_then(|objective| objective.evaluate(&minus))
     .expect("minus");
     let finite_difference = (objective_plus - objective_minus) / (2.0 * epsilon);
 
@@ -95,12 +98,13 @@ fn spectral_cbs_adjoint_gradient_matches_finite_difference() {
     let mut current_speed = Array3::from_elem([3, 3, 1], 1501.0);
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
-    let (_, gradient) = objective_and_gradient(
+    let (_, gradient) = Objective::new(
         &current_slowness,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
+    .and_then(|objective| objective.evaluate(&current_slowness))
     .expect("spectral objective gradient");
 
     let epsilon = 1.0e-8;
@@ -109,14 +113,16 @@ fn spectral_cbs_adjoint_gradient_matches_finite_difference() {
     plus[[1, 1, 0]] += epsilon;
     minus[[1, 1, 0]] -= epsilon;
     let (objective_plus, _) =
-        objective_and_gradient(&plus, &observations, &RingAcquisition::new(&array), &config)
+        Objective::new(&plus, &observations, &RingAcquisition::new(&array), &config)
+            .and_then(|objective| objective.evaluate(&plus))
             .expect("plus");
-    let (objective_minus, _) = objective_and_gradient(
+    let (objective_minus, _) = Objective::new(
         &minus,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
+    .and_then(|objective| objective.evaluate(&minus))
     .expect("minus");
     let finite_difference = (objective_plus - objective_minus) / (2.0 * epsilon);
 
@@ -161,12 +167,13 @@ fn pstd_spectral_cbs_adjoint_gradient_matches_finite_difference() {
     let mut current_speed = Array3::from_elem([3, 3, 1], 1501.0);
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
-    let (_, gradient) = objective_and_gradient(
+    let (_, gradient) = Objective::new(
         &current_slowness,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
+    .and_then(|objective| objective.evaluate(&current_slowness))
     .expect("PSTD spectral objective gradient");
 
     let epsilon = 1.0e-8;
@@ -175,14 +182,16 @@ fn pstd_spectral_cbs_adjoint_gradient_matches_finite_difference() {
     plus[[1, 1, 0]] += epsilon;
     minus[[1, 1, 0]] -= epsilon;
     let (objective_plus, _) =
-        objective_and_gradient(&plus, &observations, &RingAcquisition::new(&array), &config)
+        Objective::new(&plus, &observations, &RingAcquisition::new(&array), &config)
+            .and_then(|objective| objective.evaluate(&plus))
             .expect("plus");
-    let (objective_minus, _) = objective_and_gradient(
+    let (objective_minus, _) = Objective::new(
         &minus,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
+    .and_then(|objective| objective.evaluate(&minus))
     .expect("minus");
     let finite_difference = (objective_plus - objective_minus) / (2.0 * epsilon);
 
@@ -209,12 +218,13 @@ fn adjoint_gradient_matches_finite_difference() {
     )];
     let current_speed = Array3::from_elem([2, 2, 2], 1502.0);
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
-    let (objective, gradient) = objective_and_gradient(
+    let (objective, gradient) = Objective::new(
         &current_slowness,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
+    .and_then(|objective| objective.evaluate(&current_slowness))
     .expect("objective gradient");
 
     let epsilon = 1.0e-8;
@@ -223,14 +233,16 @@ fn adjoint_gradient_matches_finite_difference() {
     plus[[1, 0, 1]] += epsilon;
     minus[[1, 0, 1]] -= epsilon;
     let (objective_plus, _) =
-        objective_and_gradient(&plus, &observations, &RingAcquisition::new(&array), &config)
+        Objective::new(&plus, &observations, &RingAcquisition::new(&array), &config)
+            .and_then(|objective| objective.evaluate(&plus))
             .expect("plus");
-    let (objective_minus, _) = objective_and_gradient(
+    let (objective_minus, _) = Objective::new(
         &minus,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
+    .and_then(|objective| objective.evaluate(&minus))
     .expect("minus");
     let finite_difference = (objective_plus - objective_minus) / (2.0 * epsilon);
 
@@ -283,12 +295,13 @@ fn pstd_finite_window_born_adjoint_gradient_matches_finite_difference() {
     let mut current_speed = Array3::from_elem([3, 3, 1], 1501.0);
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
-    let (_, gradient) = objective_and_gradient(
+    let (_, gradient) = Objective::new(
         &current_slowness,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
+    .and_then(|objective| objective.evaluate(&current_slowness))
     .expect("finite-window objective gradient");
 
     let epsilon = 1.0e-8;
@@ -297,14 +310,16 @@ fn pstd_finite_window_born_adjoint_gradient_matches_finite_difference() {
     plus[[1, 1, 0]] += epsilon;
     minus[[1, 1, 0]] -= epsilon;
     let (objective_plus, _) =
-        objective_and_gradient(&plus, &observations, &RingAcquisition::new(&array), &config)
+        Objective::new(&plus, &observations, &RingAcquisition::new(&array), &config)
+            .and_then(|objective| objective.evaluate(&plus))
             .expect("plus");
-    let (objective_minus, _) = objective_and_gradient(
+    let (objective_minus, _) = Objective::new(
         &minus,
         &observations,
         &RingAcquisition::new(&array),
         &config,
     )
+    .and_then(|objective| objective.evaluate(&minus))
     .expect("minus");
     let finite_difference = (objective_plus - objective_minus) / (2.0 * epsilon);
 

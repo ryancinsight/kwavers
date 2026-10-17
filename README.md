@@ -1,11 +1,70 @@
 # Kwavers 🌀
 
-[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-3.0.1-blue.svg)](https://github.com/kwavers/kwavers)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-available-blue.svg)](https://docs.rs/kwavers)
 [![Rust](https://img.shields.io/badge/rust-2021+-orange.svg)](https://www.rust-lang.org/)
 
 **An interdisciplinary ultrasound-light physics simulation library.** Kwavers models acoustic wave propagation, cavitation dynamics, and sonoluminescence for multi-modal imaging research and physics studies.
+
+Bubble energy balances use outward-positive conductive power: heat leaving a
+bubble is subtracted from its internal energy. Both the complete-rate and
+temperature-update paths follow this convention in `kwavers-physics` 3.0.1.
+
+CI transports the locked dependency graph in a checksum-verified source bundle.
+Bounded compilation jobs retain every workspace member and complete source/test
+tree in checkout, omitting unused external datasets and rendered documentation.
+Miri requires nonempty passing harnesses and gates every inventoried case.
+Its jobs check out every workspace member and complete source/test tree, omit
+unread external datasets/rendered documentation, and reuse a compiler-keyed
+standard-library cache with its matching Rust sources and timestamps. Miri
+validates that complete pair before execution.
+Compilation jobs retain their time limits and reuse matching revision, lock,
+compiler and profile artifacts. Miri restores the producer's original source
+timestamps only after Git and complete SHA-256 content checks, retaining Cargo's
+fingerprint validation. Complete benchmark compilation and
+execution run in separate mandatory jobs. PAM and adjoint gradients retain
+checked array borrows and sweep channels without changing numerical order or
+test scenarios. Checked chunks retain sample order and strided RF rows normalize
+once; emission synthesis retains a checked mutable view. Unscaled FD prediction
+and adjoint reuse per-receiver Green terms within the current stateless operator
+contract, retaining linear scratch space and the established objective reduction.
+The Born adjoint checks and borrows dense gradient storage once per frequency;
+an exact coordinate oracle verifies its row-major projection. The dependency
+lock uses Rustls 0.23.46 and retains the first-party Git source identities.
+The k-Wave wheel build and installed-wheel checks use separate bounded jobs.
+The consumer verifies the exact producer artifact's full SHA-256, source head
+and lockfile before installation; both Maturin build-script handoffs remain.
+
+Dedicated actions own the pinned comparison environment and reference restore;
+the exact reference identity includes both actions and the complete environment.
+
+The Python wheel workflow persists only k-Wave reference outputs across CI runs.
+Reference code, dependency records, CPU executable and runtime identities scope
+the cache; a sealed integrity manifest precedes reuse. Kwavers results and all
+comparison assertions execute against the freshly installed wheel.
+
+Inversions retain model-independent Born geometry in a private workspace and
+recompute model-dependent pressures, source fits, gradients and Hessian probes.
+Forward pressure and the adjoint share a native-precision weighted field kernel;
+the [workspace contract](crates/kwavers-solver/src/inverse/fwi/frequency_domain/gradient/README.md)
+records its storage bound and differential verification.
+Prepared spatial products share the same generic kernel with factored fields;
+requested expanded allocations are bounded to 8 MiB per inversion. Model weights
+and results remain recomputed, including source fitting and Hessian probes.
+Checked blocks retain voxel order and handle complete blocks and tails through
+one valid-prefix kernel with reused output storage. Pressure integration reads
+spatial blocks immutably and keeps scalar local sums without storing an unused
+weighted block. Native weighting and projection keep weighted/derivative
+components in scalar temporaries without constructing those transient complex
+values. FWI uses the same two-product cubic voxel measure in every model
+evaluation.
+Forward prediction shares the prepared geometry and evaluates each distinct
+receiver Green field once per call. Receiver sweeps retain each gradient block
+locally with the original scalar
+addition order. Exact projected Born probes use the zero-gradient-difference
+identity. Compiled prerequisite archives use parallel lossless Zstandard;
+the wheel preflight verifies artifact round trips and all provenance fields.
 
 ![Theranostic feedback loop](docs/book/figures/theranostics_feedback_loop.svg)
 

@@ -1,0 +1,156 @@
+name: Bounded compiled prerequisites
+on:
+  workflow_call:
+    inputs:
+      sources:
+        type: string
+        required: true
+      artifact:
+        type: string
+        required: true
+      profile:
+        type: string
+        required: true
+      features:
+        type: string
+        required: true
+permissions:
+  contents: read
+env:
+  CARGO_INCREMENTAL: '0'
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target
+  RUSTC_WRAPPER: sccache
+  SCCACHE_GHA_ENABLED: 'true'
+jobs:
+  native:
+    name: Native TLS prerequisite
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba
+      - uses: ./.github/actions/restore-cargo-sources
+        with:
+          artifact: ${{ inputs.sources }}
+      - name: Compile the real native TLS dependency
+        run: cargo build --locked --manifest-path Cargo.toml --profile '${{ inputs.profile }}' -p aws-lc-sys
+      - uses: ./.github/actions/prepare-compiled
+        with:
+          profile: ${{ inputs.profile }}
+          artifact: ${{ inputs.artifact }}-native
+  foundation:
+    name: Foundation prerequisite
+    needs: native
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba
+      - uses: ./.github/actions/restore-cargo-sources
+        with:
+          artifact: ${{ inputs.sources }}
+      - uses: ./.github/actions/restore-compiled
+        with:
+          profile: ${{ inputs.profile }}
+          artifact: ${{ inputs.artifact }}-native
+      - name: Compile matching foundation libraries
+        run: python3 scripts/prepare_foundation.py --manifest Cargo.toml --profile '${{ inputs.profile }}' --features '${{ inputs.features }}' --packages kwavers-core kwavers-math kwavers-grid
+      - uses: ./.github/actions/prepare-compiled
+        with:
+          profile: ${{ inputs.profile }}
+          artifact: ${{ inputs.artifact }}-foundation
+  medium:
+    name: Medium prerequisite
+    needs: foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba
+      - uses: ./.github/actions/restore-cargo-sources
+        with:
+          artifact: ${{ inputs.sources }}
+      - uses: ./.github/actions/restore-compiled
+        with:
+          profile: ${{ inputs.profile }}
+          artifact: ${{ inputs.artifact }}-foundation
+      - name: Compile matching medium library
+        run: python3 scripts/prepare_foundation.py --manifest Cargo.toml --profile '${{ inputs.profile }}' --features '${{ inputs.features }}' --packages kwavers-medium
+      - uses: ./.github/actions/prepare-compiled
+        with:
+          profile: ${{ inputs.profile }}
+          artifact: ${{ inputs.artifact }}-medium
+
+  graphics:
+    name: Matching GPU prerequisite
+    needs: medium
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba
+      - uses: ./.github/actions/restore-cargo-sources
+        with:
+          artifact: ${{ inputs.sources }}
+      - uses: ./.github/actions/restore-compiled
+        with:
+          profile: ${{ inputs.profile }}
+          artifact: ${{ inputs.artifact }}-medium
+      - name: Compile the matching GPU dependency graph
+        run: python3 scripts/prepare_foundation.py --manifest Cargo.toml --profile '${{ inputs.profile }}' --features '${{ inputs.features }}' --packages kwavers-gpu
+      - uses: ./.github/actions/prepare-compiled
+        with:
+          profile: ${{ inputs.profile }}
+          artifact: ${{ inputs.artifact }}

@@ -1,0 +1,44 @@
+name: Retain compiled prerequisites
+description: Retain exact-revision Cargo fingerprints and artifacts for a matching compiler/profile.
+inputs:
+  repository:
+    default: .
+    description: Repository path.
+  artifact:
+    required: true
+    description: Exact-run artifact name.
+  profile:
+    required: true
+    description: Validated Cargo profile.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        SOURCE_REPOSITORY: ${{ inputs.repository }}
+        BUILD_PROFILE: ${{ inputs.profile }}
+      run: |
+        set -euo pipefail
+        python3 - <<'PY'
+        import hashlib, json, os, pathlib, subprocess, sys
+        repo = pathlib.Path(os.environ['SOURCE_REPOSITORY'])
+        info = {'head': subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip(),
+                'lock': hashlib.sha256((repo / 'Cargo.lock').read_bytes()).hexdigest(),
+                'compiler': subprocess.check_output(['rustc', *(['+nightly'] if os.environ['BUILD_PROFILE'] == 'miri' else []), '-vV'], text=True),
+                'profile': os.environ['BUILD_PROFILE']}
+        if os.environ['BUILD_PROFILE'] == 'miri':
+            sys.path.insert(0, str(repo / 'scripts'))
+            from miri_source_times import record
+            info['source_times'] = record(repo)
+        pathlib.Path('compiled-info.json').write_text(json.dumps(info))
+        PY
+        # Compress in parallel; the complete file tree and identity still
+        # travel together. Do not spend the compile budget on serial gzip.
+        tar -cf - target compiled-info.json | zstd -q -T0 -1 > "$RUNNER_TEMP/compiled-prerequisites.tar.zst"
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: ${{ inputs.artifact }}
+        path: ${{ runner.temp }}/compiled-prerequisites.tar.zst
+        compression-level: 0
+        retention-days: 1
+        if-no-files-found: error

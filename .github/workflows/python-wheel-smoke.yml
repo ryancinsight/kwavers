@@ -8,6 +8,23 @@ on:
       - Cargo.toml
       - crates/kwavers-python/**
       - .github/actions/install-system-dependencies/**
+      - .github/actions/prepare-cargo-sources/**
+      - .github/actions/restore-cargo-sources/**
+      - .github/workflows/cargo-sources.yml
+      - .github/actions/prepare-compiled/**
+      - .github/actions/restore-compiled/**
+      - .github/workflows/bounded-compile.yml
+      - .github/workflows/bounded-wheel-compile.yml
+      - scripts/prepare_foundation.py
+      - scripts/tests/test_python_wheel_artifacts.py
+      - scripts/kwave_reference_cache.py
+      - scripts/tests/test_kwave_reference_cache.py
+      - scripts/tests/test_compiler_checkouts.py
+      - scripts/tests/test_wheel_validation_workflow.py
+      - scripts/tests/test_wheel_handoff.py
+      - .github/actions/setup-kwave/action.yml
+      - .github/actions/restore-kwave-reference/action.yml
+      - scripts/wheel_handoff.py
       - .github/workflows/python-wheel-smoke.yml
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
@@ -17,6 +34,23 @@ on:
       - Cargo.toml
       - crates/kwavers-python/**
       - .github/actions/install-system-dependencies/**
+      - .github/actions/prepare-cargo-sources/**
+      - .github/actions/restore-cargo-sources/**
+      - .github/workflows/cargo-sources.yml
+      - .github/actions/prepare-compiled/**
+      - .github/actions/restore-compiled/**
+      - .github/workflows/bounded-compile.yml
+      - .github/workflows/bounded-wheel-compile.yml
+      - scripts/prepare_foundation.py
+      - scripts/tests/test_python_wheel_artifacts.py
+      - scripts/kwave_reference_cache.py
+      - scripts/tests/test_kwave_reference_cache.py
+      - scripts/tests/test_compiler_checkouts.py
+      - scripts/tests/test_wheel_validation_workflow.py
+      - scripts/tests/test_wheel_handoff.py
+      - .github/actions/setup-kwave/action.yml
+      - .github/actions/restore-kwave-reference/action.yml
+      - scripts/wheel_handoff.py
       - .github/workflows/python-wheel-smoke.yml
   # The full three-OS matrix below is a drift backstop, not a per-change
   # signal: the Windows and macOS wheel builds do not depend on which lines
@@ -38,7 +72,114 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
+  sources:
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    uses: ./.github/workflows/cargo-sources.yml
+    with:
+      artifact: wheel-cargo-sources-${{ github.sha }}
+
+  native-prerequisites:
+    needs: sources
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    name: Manylinux native TLS prerequisite
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: source
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.0
+      - name: Verify wheel build-script handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/wheel-handoff-tests"
+          "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m pip install --disable-pip-version-check 'PyYAML==6.0.3'
+          "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m unittest discover -s source/scripts/tests -p test_python_wheel_artifacts.py -v
+          "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m unittest discover -s source/scripts/tests -p test_kwave_reference_cache.py -v
+          "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m unittest discover -s source/scripts/tests -p test_compiler_checkouts.py -v
+          "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m unittest discover -s source/scripts/tests -p test_wheel_handoff.py -v
+          "$RUNNER_TEMP/wheel-handoff-tests/bin/python" -m unittest discover -s source/scripts/tests -p test_wheel_validation_workflow.py -v
+      - uses: ./source/.github/actions/restore-cargo-sources
+        with:
+          repository: source
+          artifact: wheel-cargo-sources-${{ github.sha }}
+      - name: Compile the real TLS prerequisite in the wheel's ABI image
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b
+        with:
+          maturin-version: v1.14.1
+          rust-toolchain: 1.97.0
+          target: x86_64
+          manylinux: '2_17'
+          container: quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5
+          docker-options: -e CARGO_HOME=/root/.cargo
+          # The action selects Docker only for build/publish. --help runs
+          # after the mandatory real prerequisite command; this is not a wheel.
+          command: build
+          args: --help --target-dir ${{ github.workspace }}/.ci-cargo/helper-target
+          sccache: true
+          before-script-linux: |
+            set -euo pipefail
+            # Maturin installs its cache wrapper after before-script. Real
+            # Cargo commands here require the same wrapper first.
+            uv tool install 'sccache==0.16.0'
+            sccache --version
+            cp "$GITHUB_WORKSPACE/.ci-cargo/home/config.toml" /root/.cargo/config.toml
+            cargo build --locked --profile dev --target x86_64-unknown-linux-gnu               --target-dir "$GITHUB_WORKSPACE/target"               --manifest-path source/Cargo.toml -p aws-lc-sys
+      # The Docker helper uses a separate target-dir to preserve build scripts.
+      # Its automatic ownership repair therefore covers only that helper path.
+      - name: Restore runner ownership of actual compiled artifacts
+        shell: bash
+        run: sudo chown -R "$(id -u):$(id -g)" target
+      - uses: ./source/.github/actions/prepare-compiled
+        with:
+          repository: source
+          profile: wheel-dev
+          artifact: wheel-native-prerequisites-${{ github.sha }}
+
+  core-prerequisites:
+    needs: [sources, native-prerequisites]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    uses: ./.github/workflows/bounded-wheel-compile.yml
+    with:
+      sources: wheel-cargo-sources-${{ github.sha }}
+      previous: wheel-native-prerequisites-${{ github.sha }}
+      artifact: wheel-core-prerequisites-${{ github.sha }}
+      packages: kwavers-core
+
+  foundation-prerequisites:
+    needs: [sources, core-prerequisites]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    uses: ./.github/workflows/bounded-wheel-compile.yml
+    with:
+      sources: wheel-cargo-sources-${{ github.sha }}
+      previous: wheel-core-prerequisites-${{ github.sha }}
+      artifact: wheel-foundation-prerequisites-${{ github.sha }}
+      packages: kwavers-math kwavers-grid
+
+  medium-prerequisites:
+    needs: [sources, foundation-prerequisites]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    uses: ./.github/workflows/bounded-wheel-compile.yml
+    with:
+      sources: wheel-cargo-sources-${{ github.sha }}
+      previous: wheel-foundation-prerequisites-${{ github.sha }}
+      artifact: wheel-prerequisites-${{ github.sha }}
+      packages: kwavers-medium
+
   base-wheel:
+    needs: [sources, medium-prerequisites]
     # Per-pull-request coverage is Ubuntu only; the Windows and macOS legs run
     # on push to main, on the nightly schedule, and on manual dispatch. A
     # platform-specific wheel regression that only a non-Ubuntu leg would
@@ -49,7 +190,7 @@ jobs:
     # pull-request budget, while the smoke's contract is build-plus-import,
     # not ship-ready optimization. Pushes, the schedule, and the release
     # pipeline keep the release build.
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: Base wheel (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 45 }}
@@ -60,10 +201,24 @@ jobs:
         # narrowing is the row list itself.
         os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest", "windows-latest", "macos-latest"]') }}
     steps:
+      - name: Require successful pull-request source preparation
+        if: github.event_name == 'pull_request'
+        env:
+          SOURCE_RESULT: ${{ needs.sources.result }}
+        run: test "$SOURCE_RESULT" = success
+
       - name: Checkout candidate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: source
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
           persist-credentials: false
 
       - name: Set up Python 3.10
@@ -71,10 +226,48 @@ jobs:
         with:
           python-version: "3.10"
 
+      - uses: ./source/.github/actions/restore-cargo-sources
+        if: github.event_name == 'pull_request'
+        with:
+          repository: source
+          artifact: wheel-cargo-sources-${{ github.sha }}
+
+      - name: Require successful native preparation
+        if: github.event_name == 'pull_request'
+        env:
+          BUILD_RESULT: ${{ needs.medium-prerequisites.result }}
+        run: test "$BUILD_RESULT" = success
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        if: github.event_name == 'pull_request'
+        with:
+          toolchain: 1.97.0
+      - uses: ./source/.github/actions/restore-compiled
+        if: github.event_name == 'pull_request'
+        with:
+          repository: source
+          profile: wheel-dev
+          artifact: wheel-prerequisites-${{ github.sha }}
+
+      # Maturin deletes target/debug/build before entering its container.
+      # Preserve the exact restored build-script binaries so their deletion
+      # cannot trigger another cold native dependency build.
+      - name: Retain matching compiled build scripts
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -a target/debug/build .ci-cargo/wheel-build-scripts
+
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           maturin-version: v1.14.1
+          rust-toolchain: 1.97.0
+          # Rustup's container bootstrap expects its default bin directory.
+          # Install normally, then configure the restored sources before Cargo.
+          docker-options: ${{ github.event_name == 'pull_request' && '-e CARGO_HOME=/root/.cargo' || '' }}
+          before-script-linux: ${{ github.event_name == 'pull_request' && format('set -e; cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml; mkdir -p "{0}/target/debug/build"; cp -a "{0}/.ci-cargo/wheel-build-scripts/." "{0}/target/debug/build/"', github.workspace) || '' }}
+          container: ${{ github.event_name == 'pull_request' && 'quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5' || '' }}
           target: ${{ matrix.os == 'macos-latest' && 'universal2-apple-darwin' || 'x86_64' }}
           manylinux: ${{ matrix.os == 'ubuntu-latest' && '2_17' || 'off' }}
           sccache: true
@@ -83,6 +276,7 @@ jobs:
             --locked
             --compatibility pypi
             --manifest-path source/crates/kwavers-python/Cargo.toml
+            ${{ github.event_name == 'pull_request' && format('--target-dir {0}/target', github.workspace) || '' }}
             --out dist
             -i ${{ matrix.os == 'ubuntu-latest' && 'python3.10' || 'python' }}
 
@@ -101,19 +295,35 @@ jobs:
           "$smoke_python" source/crates/kwavers-python/tests/optional_submodule_contract.py access
 
   kwave-comparison:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
-    name: k-Wave comparison (Ubuntu)
+    needs: [sources, medium-prerequisites]
+    if: ${{ always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    name: k-Wave wheel (Ubuntu)
     runs-on: ubuntu-latest
-    # Same debug-on-pull-request split as `base-wheel` above: the release
-    # wheel build measured 11.9m here as well (run 37653455660), while the
-    # parity suites themselves run in under half a minute. The per-test
-    # `--timeout=60` (thread method) still bounds a debug-slowed case.
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 30 }}
+    # PRs build the debug wheel; other events retain release construction.
+    # Installed-wheel scientific checks use their separate bounded consumer.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    outputs:
+      identity: ${{ steps.wheel-identity.outputs.identity }}
+      artifact-id: ${{ steps.wheel-upload.outputs.artifact-id }}
     steps:
+      - name: Require successful pull-request source preparation
+        if: github.event_name == 'pull_request'
+        env:
+          SOURCE_RESULT: ${{ needs.sources.result }}
+        run: test "$SOURCE_RESULT" = success
+
       - name: Checkout candidate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: source
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
           persist-credentials: false
 
       - name: Set up Python 3.10
@@ -121,42 +331,43 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Prepare Ubuntu package index
-        uses: ./source/.github/actions/install-system-dependencies
+      - uses: ./source/.github/actions/restore-cargo-sources
+        if: github.event_name == 'pull_request'
+        with:
+          repository: source
+          artifact: wheel-cargo-sources-${{ github.sha }}
 
-      - name: Select the k-Wave HDF5 runtime packages
-        id: hdf5-runtime
+      - name: Require successful native preparation
+        if: github.event_name == 'pull_request'
+        env:
+          BUILD_RESULT: ${{ needs.medium-prerequisites.result }}
+        run: test "$BUILD_RESULT" = success
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        if: github.event_name == 'pull_request'
+        with:
+          toolchain: 1.97.0
+      - uses: ./source/.github/actions/restore-compiled
+        if: github.event_name == 'pull_request'
+        with:
+          repository: source
+          profile: wheel-dev
+          artifact: wheel-prerequisites-${{ github.sha }}
+
+      - name: Retain matching compiled build scripts
+        if: github.event_name == 'pull_request'
+        shell: bash
         run: |
           set -euo pipefail
-          hdf5_runtime_packages=()
-          for hdf5_runtime in libhdf5-103-1 libhdf5-103-1t64; do
-            if apt-cache show "$hdf5_runtime" 2>/dev/null | grep -q '^Package:'; then
-              hdf5_runtime_packages+=("$hdf5_runtime")
-              break
-            fi
-          done
-          for hdf5_high_level_runtime in libhdf5-hl-100 libhdf5-hl-100t64; do
-            if apt-cache show "$hdf5_high_level_runtime" 2>/dev/null | grep -q '^Package:'; then
-              hdf5_runtime_packages+=("$hdf5_high_level_runtime")
-              break
-            fi
-          done
-          if ((${#hdf5_runtime_packages[@]} != 2)); then
-            echo "No Ubuntu packages provide libhdf5_serial.so.103 and libhdf5_serial_hl.so.100" >&2
-            exit 1
-          fi
-          printf 'packages=%s\n' "${hdf5_runtime_packages[*]}" >> "$GITHUB_OUTPUT"
-
-      - name: Install k-Wave HDF5 runtime
-        uses: ./source/.github/actions/install-system-dependencies
-        with:
-          packages: ${{ steps.hdf5-runtime.outputs.packages }}
-          refresh: "false"
+          cp -a target/debug/build .ci-cargo/wheel-build-scripts
 
       - name: Build stable-ABI wheel
         uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
         with:
           maturin-version: v1.14.1
+          rust-toolchain: 1.97.0
+          docker-options: ${{ github.event_name == 'pull_request' && '-e CARGO_HOME=/root/.cargo' || '' }}
+          before-script-linux: ${{ github.event_name == 'pull_request' && format('set -e; cp "{0}/.ci-cargo/home/config.toml" /root/.cargo/config.toml; mkdir -p "{0}/target/debug/build"; cp -a "{0}/.ci-cargo/wheel-build-scripts/." "{0}/target/debug/build/"', github.workspace) || '' }}
+          container: ${{ github.event_name == 'pull_request' && 'quay.io/pypa/manylinux2014_x86_64@sha256:f6a6f153c9cf45470507ebbc27013e5db14ce21331b62fd2c540561f25e5f0a5' || '' }}
           target: x86_64
           manylinux: "2_17"
           sccache: true
@@ -165,19 +376,81 @@ jobs:
             --locked
             --compatibility pypi
             --manifest-path source/crates/kwavers-python/Cargo.toml
+            ${{ github.event_name == 'pull_request' && format('--target-dir {0}/target', github.workspace) || '' }}
             --out dist
             -i python3.10
 
-      - name: Install wheel and k-Wave comparison dependency
+      - name: Identify the complete built wheel
+        id: wheel-identity
         shell: bash
         run: |
           set -euo pipefail
-          python -m venv wheel-smoke
-          source wheel-smoke/bin/activate
-          python -m pip install --disable-pip-version-check --upgrade pip
-          python -m pip install --disable-pip-version-check "pytest==8.4.2" "pytest-benchmark==5.2.3" "pytest-timeout==2.4.0"
-          python -m pip install --disable-pip-version-check dist/*.whl
-          python -m pip install --disable-pip-version-check "k-wave-python>=0.4.1,<0.7"
+          python source/scripts/wheel_handoff.py describe --repository source --directory dist >> "$GITHUB_OUTPUT"
+
+      - name: Retain the complete built wheel
+        id: wheel-upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: kwave-wheel-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_attempt }}
+          path: dist/*.whl
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  kwave-validation:
+    needs: kwave-comparison
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    name: k-Wave installed-wheel comparison (Ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    steps:
+      - name: Require successful wheel construction
+        env:
+          WHEEL_RESULT: ${{ needs.kwave-comparison.result }}
+          WHEEL_ARTIFACT_ID: ${{ needs.kwave-comparison.outputs.artifact-id }}
+          WHEEL_IDENTITY: ${{ needs.kwave-comparison.outputs.identity }}
+        run: |
+          set -euo pipefail
+          test "$WHEEL_RESULT" = success
+          [[ "$WHEEL_ARTIFACT_ID" =~ ^[0-9]+$ ]]
+          test -n "$WHEEL_IDENTITY"
+
+      - name: Checkout matching candidate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: source
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
+          persist-credentials: false
+
+      - name: Restore the complete built wheel
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ needs.kwave-comparison.outputs.artifact-id }}
+          path: dist
+          merge-multiple: true
+          digest-mismatch: error
+
+      - name: Verify the complete built wheel
+        shell: bash
+        env:
+          WHEEL_IDENTITY: ${{ needs.kwave-comparison.outputs.identity }}
+        run: |
+          set -euo pipefail
+          python3 source/scripts/wheel_handoff.py verify --repository source --directory dist
+
+      - name: Install wheel and k-Wave comparison dependency
+        uses: ./source/.github/actions/setup-kwave
+
+      - name: Restore and verify k-Wave reference results
+        id: kwave-reference
+        uses: ./source/.github/actions/restore-kwave-reference
 
       - name: Run the dimensioned-boundary suite against the installed wheel
         # The boundary accepts a base-unit float or a protocol quantity, and
@@ -201,7 +474,7 @@ jobs:
         run: |
           set -euo pipefail
           source wheel-smoke/bin/activate
-          python -m pytest --import-mode=importlib --disable-warnings --maxfail=1 -q \
+          python -m pytest --import-mode=importlib --capture=tee-sys --disable-warnings --maxfail=1 -q \
             source/crates/kwavers-python/tests/test_kwave_comparison.py
 
       - name: Run runtime export-inventory oracle against the installed wheel
@@ -215,3 +488,12 @@ jobs:
           source wheel-smoke/bin/activate
           python -m pytest --import-mode=importlib --disable-warnings --maxfail=1 -q \
             source/crates/kwavers-python/tests/test_runtime_export_inventory.py
+
+      - name: Seal validated k-Wave reference results
+        shell: bash
+        env:
+          REFERENCE_IDENTITY: ${{ steps.kwave-reference.outputs.identity }}
+        run: |
+          set -euo pipefail
+          source wheel-smoke/bin/activate
+          python source/scripts/kwave_reference_cache.py seal --directory kwave_cache --identity "$REFERENCE_IDENTITY"

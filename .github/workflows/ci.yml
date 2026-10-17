@@ -160,8 +160,11 @@ jobs:
           cache-targets: false
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - name: Verify Cargo.lock resolves under --locked
-        run: python3 scripts/lockfile.py --check
+      # The complete graph is verified once and bundled without repository
+      # fixture trees, instead of refetching pinned Git sources in each job.
+      - uses: ./.github/actions/prepare-cargo-sources
+        with:
+          artifact: ci-cargo-sources-${{ github.sha }}
 
   # Folded from the former standalone `architecture-validation.yml`
   # (KWAVERS-CI-PIPELINE-001): same job, same `changes`-gated `if`, now
@@ -190,9 +193,10 @@ jobs:
   # together they are ~18m sequential (strict 3.3m + ratchet 2.0m + lib suite
   # 12.8m, run 37653456632), which no single pull-request job can carry under
   # the 5-minute budget. What remains here is the script-fast preflight
-  # (layering, fmt, xtask audits), the rustdoc build, and the full-feature
-  # doctests; the feature-combination builds and the integration script run on
-  # pushes to main only, where the budget does not apply.
+  # (layering, fmt, xtask audits) and the rustdoc build; full-feature doctests
+  # have their own equally bounded job below. The feature-combination builds
+  # and the integration script run on pushes to main only, where the budget
+  # does not apply.
   architecture-checks:
     needs: changes
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
@@ -200,7 +204,7 @@ jobs:
     runs-on: ubuntu-latest
     # Pull requests carry only the fast preflight; pushes to main additionally
     # run the five feature-combination builds and the integration script.
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 90 }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 90 }}
     env:
       RUSTC_WRAPPER: sccache
       SCCACHE_GHA_ENABLED: "true"
@@ -294,12 +298,21 @@ jobs:
       run: cargo fmt -- --check
 
     - name: Audit per-crate READMEs
+      # The filesystem auditor is not a numerical kernel. Its cold optimized
+      # build cost 76s before scanning 24 READMEs, leaving too little of the
+      # unchanged five-minute job for full-feature doctest compilation.
+      # Scope this to the tool command; simulation/test optimization stays at
+      # the committed profile, and the complete audit still runs.
+      env:
+        CARGO_PROFILE_DEV_OPT_LEVEL: "0"
       run: cargo run --locked -p xtask -- check-readmes
 
     # A file walk, so it costs a second and rides the job that already built
     # xtask. It fails only when the count of `# Errors` sections on infallible
     # functions rises above its baseline.
     - name: Audit `# Errors` sections against their signatures
+      env:
+        CARGO_PROFILE_DEV_OPT_LEVEL: "0"
       run: cargo run --locked -p xtask -- audit-errors-docs
 
     # Clippy lives in the dedicated `clippy` job below: strict (3.3m) plus
@@ -417,10 +430,67 @@ jobs:
         cargo doc --locked --workspace --exclude kwavers-python --no-deps
         RUSTDOCFLAGS="-D warnings" cargo doc --locked -p kwavers --no-default-features --features full --no-deps
 
-    # Default-feature doctests already run in CI's stable Build & Test job.
-    # Keeping the full-feature variant beside the full-feature rustdoc build
-    # avoids rebuilding that disjoint feature graph after the 5,759-test
-    # coverage suite while preserving both doctest configurations.
+    - name: sccache stats
+      if: always()
+      run: sccache --show-stats
+
+  # The audit-tool build, two rustdoc configurations and full-feature doctest
+  # compilation exceeded the five-minute preflight together (run 38524672691).
+  # Keep the exact doctest command and its own five-minute pull-request bound;
+  # the Architecture gate requires both jobs, including cancellation failures.
+  doctest-prerequisites:
+    needs: [changes, lockfile]
+    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
+    uses: ./.github/workflows/bounded-compile.yml
+    with:
+      sources: ci-cargo-sources-${{ github.sha }}
+      artifact: full-doctest-prerequisites-${{ github.sha }}
+      profile: test
+      features: full
+
+  full-feature-doctests:
+    needs: [changes, lockfile, doctest-prerequisites]
+    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
+    name: Full-feature doc tests
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 90 }}
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        sparse-checkout: |
+          .cargo
+          .config
+          .github
+          crates
+          scripts
+          xtask
+
+    - name: Install system dependencies
+      uses: ./.github/actions/install-system-dependencies
+      with:
+        packages: libfontconfig1-dev
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+      with:
+        toolchain: 1.97.0
+
+    - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+
+    - uses: ./.github/actions/restore-cargo-sources
+      with:
+        artifact: ci-cargo-sources-${{ github.sha }}
+
+    - uses: ./.github/actions/restore-compiled
+      with:
+        profile: test
+        artifact: full-doctest-prerequisites-${{ github.sha }}
+
     - name: Run full-feature doc tests
       run: cargo test --locked -p kwavers --doc --no-default-features --features full
 
@@ -914,29 +984,100 @@ jobs:
       - name: Run security audit
         run: cargo deny --config deny.toml --manifest-path crates/kwavers/Cargo.toml check
 
-  memory-safety:
-    name: Memory Safety (Miri)
+  miri-preparation:
+    name: Prepare real Miri harnesses
     needs: lockfile
     runs-on: ubuntu-latest
     timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 30 }}
+    outputs:
+      matrix: ${{ steps.inventory.outputs.matrix }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # Keep every workspace member and its complete test/include tree.
+          # Root-level files are included by cone mode; external datasets and
+          # rendered documentation are not inputs to these isolated harnesses.
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
 
       - name: Install Rust nightly with miri
         uses: dtolnay/rust-toolchain@7c8d7d138f5c09cef361f8214cf96882cd029cdb # nightly
         with:
           components: miri
 
-      - name: Setup miri
-        run: cargo +nightly miri setup
+      - name: Verify Miri preparation contracts
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/miri-setup-tests"
+          "$RUNNER_TEMP/miri-setup-tests/bin/python" -m pip install --disable-pip-version-check 'PyYAML==6.0.3'
+          "$RUNNER_TEMP/miri-setup-tests/bin/python" -m unittest discover -s scripts/tests -p test_miri_setup.py -v
+          "$RUNNER_TEMP/miri-setup-tests/bin/python" -m unittest discover -s scripts/tests -p test_miri_source_times.py -v
+          "$RUNNER_TEMP/miri-setup-tests/bin/python" -m unittest discover -s scripts/tests -p test_compiler_checkouts.py -v
 
-      - name: Run miri on configuration tests
-        run: cargo +nightly miri test --locked -p kwavers --lib configuration::builder::tests
-        continue-on-error: true # Allow to continue while fixing UB
+      - uses: ./.github/actions/setup-miri
 
-      - name: Run miri on other safe tests
-        run: cargo +nightly miri test --locked -p kwavers --lib --exclude configuration::builder::tests
-        continue-on-error: true
+      - uses: ./.github/actions/restore-cargo-sources
+        with:
+          artifact: ci-cargo-sources-${{ github.sha }}
+
+      # Configuration moved to kwavers-simulation; the old facade filter
+      # selected zero tests. Every command failure and empty harness now fails.
+      - name: Run Miri on current configuration tests
+        run: python3 scripts/miri_gate.py --package kwavers-simulation --filter configuration::tests
+
+      - name: Compile and inventory the complete facade harness
+        id: inventory
+        run: |
+          python3 scripts/miri_gate.py --package kwavers --prepare-matrix miri-matrix.json
+          echo "matrix=$(cat miri-matrix.json)" >> "$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/prepare-compiled
+        with:
+          profile: miri
+          artifact: miri-prerequisites-${{ github.sha }}
+
+  memory-safety:
+    name: Memory Safety (Miri, ${{ matrix.case }})
+    needs: [lockfile, miri-preparation]
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 30 }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.miri-preparation.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          sparse-checkout: |
+            .cargo
+            .config
+            .github
+            crates
+            scripts
+            xtask
+      - uses: dtolnay/rust-toolchain@7c8d7d138f5c09cef361f8214cf96882cd029cdb
+        with:
+          components: miri
+      - uses: ./.github/actions/setup-miri
+      - uses: ./.github/actions/restore-cargo-sources
+        with:
+          artifact: ci-cargo-sources-${{ github.sha }}
+      - uses: ./.github/actions/restore-compiled
+        with:
+          profile: miri
+          artifact: miri-prerequisites-${{ github.sha }}
+      # Every inventoried case gets its own unchanged bound. No test is
+      # excluded: matrix failure/cancellation is required by the CI gate.
+      - name: Execute the exact inventoried test
+        env:
+          MIRI_CASE: ${{ matrix.case }}
+        run: python3 scripts/miri_gate.py --package kwavers --filter "$MIRI_CASE" --exact
 
   coverage:
     name: Code Coverage
@@ -1278,6 +1419,7 @@ jobs:
       - toolchain-roll
       - security
       - memory-safety
+      - miri-preparation
       - coverage
       - validation
       - lib-tests
@@ -1312,6 +1454,9 @@ jobs:
       - changes
       - integration-runner-windows
       - architecture-checks
+      - lockfile
+      - full-feature-doctests
+      - doctest-prerequisites
       - clippy
       - cuda-runtime-build
     runs-on: ubuntu-latest

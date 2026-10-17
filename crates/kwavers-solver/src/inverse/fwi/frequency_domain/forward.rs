@@ -1,19 +1,19 @@
 //! Matrix-free frequency-domain forward model.
 
 use super::acquisition::TransmissionAcquisition;
+use super::born_geometry::BornGeometry;
+use super::born_kernel::fields::FactoredProducts;
+use super::born_kernel::{cell_volume, integrate, VOXELS_PER_BLOCK};
 use super::cbs::{
     real_scattering_potential, real_scattering_potential_for_operator, sample_array_for_operator,
     solve_volume_field_with_operator, source_density_for_operator, CbsConfig, GreenOperatorKind,
     GridSpec,
 };
 use super::types::{Config, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};
-use aequitas::systems::si::quantities::Length;
-use aequitas::systems::si::units::Meter;
-use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::sound_speed_to_slowness;
-use kwavers_transducer::transducers::ElementPosition;
 use leto::{Array2, Array3};
 
 /// Simulate complex receiver pressure for all cylindrical-wave transmits.
@@ -68,33 +68,23 @@ pub(super) fn predict_born_rows(
     transmissions: usize,
 ) -> KwaversResult<Array2<Complex64>> {
     let shape = slowness_s_per_m.shape();
-    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-    let cell_volume = config.spacing_m.powi(3);
+    let cell_volume = cell_volume(config.spacing_m);
     let omega = TWO_PI * frequency_hz;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
-    let reference_wavenumber = omega * reference_slowness;
-    let min_distance = 0.5 * config.spacing_m;
-    let centers = voxel_centers((nx, ny, nz), config.spacing_m);
-    let potential = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?;
+    let potential_volume = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?
+        .into_iter()
+        .map(|value| value * cell_volume)
+        .collect::<Vec<_>>();
+    let geometry = BornGeometry::new(shape, frequency_hz, acquisition, config, transmissions);
 
     let mut output = Array2::zeros([transmissions, acquisition.receiver_count()]);
-    for transmit in 0..transmissions {
-        let sources = acquisition.sources(transmit);
-        let incident = incident_field(sources, &centers, reference_wavenumber, min_distance);
-        for (receiver_index, &receiver) in acquisition.receivers(transmit).iter().enumerate() {
-            let direct = sources
-                .iter()
-                .map(|&source| outgoing_green(source, receiver, reference_wavenumber, min_distance))
-                .sum::<Complex64>();
-            let mut scattered = Complex64::new(0.0, 0.0);
-            for ((_, point), (&potential_value, &incident_value)) in
-                centers.iter().zip(potential.iter().zip(incident.iter()))
-            {
-                let receiver_green =
-                    outgoing_green(*point, receiver, reference_wavenumber, min_distance);
-                scattered += incident_value * receiver_green * (potential_value * cell_volume);
-            }
-            output[[transmit, receiver_index]] = direct + scattered;
+    for (transmit, row) in geometry.transmits.iter().enumerate() {
+        for (receiver_index, &field) in row.receivers.iter().enumerate() {
+            let scattered = integrate::<_, _, VOXELS_PER_BLOCK>(
+                &FactoredProducts::new(&row.incident, &geometry.fields[field]),
+                &potential_volume,
+            );
+            output[[transmit, receiver_index]] = row.direct[receiver_index] + scattered;
         }
     }
 
@@ -151,62 +141,6 @@ pub(super) fn predict_cbs_rows(
         }
     }
     Ok(output)
-}
-
-pub(super) fn incident_field(
-    sources: &[ElementPosition],
-    centers: &[(usize, ElementPosition)],
-    wavenumber: f64,
-    min_distance: f64,
-) -> Vec<Complex64> {
-    centers
-        .iter()
-        .map(|(_, point)| {
-            sources
-                .iter()
-                .map(|&source| outgoing_green(source, *point, wavenumber, min_distance))
-                .sum()
-        })
-        .collect()
-}
-
-pub(super) fn outgoing_green(
-    source: ElementPosition,
-    receiver: ElementPosition,
-    wavenumber: f64,
-    min_distance: f64,
-) -> Complex64 {
-    let dx = source.x.in_unit::<Meter>() - receiver.x.in_unit::<Meter>();
-    let dy = source.y.in_unit::<Meter>() - receiver.y.in_unit::<Meter>();
-    let dz = source.z.in_unit::<Meter>() - receiver.z.in_unit::<Meter>();
-    let distance = (dx * dx + dy * dy + dz * dz).sqrt().max(min_distance);
-    Complex64::from_polar(1.0 / (FOUR_PI * distance), wavenumber * distance)
-}
-
-pub(super) fn voxel_centers(
-    dimensions: (usize, usize, usize),
-    spacing_m: f64,
-) -> Vec<(usize, ElementPosition)> {
-    let (nx, ny, nz) = dimensions;
-    let cx = 0.5 * nx as f64;
-    let cy = 0.5 * ny as f64;
-    let cz = 0.5 * nz as f64;
-    let mut centers = Vec::with_capacity(nx * ny * nz);
-    for ix in 0..nx {
-        for iy in 0..ny {
-            for iz in 0..nz {
-                centers.push((
-                    ix * ny * nz + iy * nz + iz,
-                    ElementPosition {
-                        x: Length::from_unit::<Meter>((ix as f64 + 0.5 - cx) * spacing_m),
-                        y: Length::from_unit::<Meter>((iy as f64 + 0.5 - cy) * spacing_m),
-                        z: Length::from_unit::<Meter>((iz as f64 + 0.5 - cz) * spacing_m),
-                    },
-                ));
-            }
-        }
-    }
-    centers
 }
 
 pub(super) fn validate_forward_inputs(

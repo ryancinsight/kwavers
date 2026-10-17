@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-physics"
-version = "3.0.0"
+version = "3.0.1"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -48,6 +48,8 @@ clinical-imaging = [
 ]
 
 [dev-dependencies]
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 kwavers-alloc-probe = { path = "../kwavers-alloc-probe" }
 # Rejection assertions shared across the workspace's test modules.
 kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
