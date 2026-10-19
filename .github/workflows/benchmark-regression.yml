@@ -11,14 +11,31 @@ on:
       - '!crates/kwavers-python/**'
       - .github/actions/install-system-dependencies/**
       - .github/workflows/benchmark-regression.yml
+  # The landing run is the only one that may write the caches a pull request
+  # restores: rust-cache saves from main only and sccache's GitHub cache is
+  # scoped to the ref that wrote it, so without this trigger every pull
+  # request compiled the whole dependency graph cold ("No cache found") and
+  # was cancelled at its 5-minute budget.
+  push:
+    branches: [main]
+    paths:
+      - Cargo.lock
+      - Cargo.toml
+      - .cargo/**
+      - crates/**
+      - '!crates/kwavers-python/**'
+      - .github/actions/install-system-dependencies/**
+      - .github/workflows/benchmark-regression.yml
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# Pull requests cancel superseded runs; main gets one group per commit so a
+# landing never supersedes the cache-writing run of the previous one.
 concurrency:
-  group: benchmark-regression-${{ github.ref }}
-  cancel-in-progress: true
+  group: benchmark-regression-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Pull-request CI executes every benchmark once (`benchmark-smoke`) and proves
 # merge-critical registry completeness against the candidate alone. It runs no
@@ -47,6 +64,12 @@ jobs:
       BENCH_TARGET_DIR: ${{ github.workspace }}/target
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
+      # The sccache action installs the binary but does not route rustc
+      # through it; these two do. Without them the "sccache stats" step
+      # reported zero compile requests, and workspace crates, which
+      # rust-cache excludes, recompiled on every run.
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
       PR_BENCH_TARGETS: performance_baseline critical_path_benchmarks simd_field_ops
     steps:
       - name: Checkout candidate
