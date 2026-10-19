@@ -93,18 +93,51 @@ fn rectangle_surface_rule_assigns_primary_order_to_width() {
 #[test]
 fn secondary_order_below_three_is_rejected_only_for_polar_shapes() {
     let k = TAU / 0.75e-3;
+    let (side, range) = (1.0e-3, 0.05);
     let spec = RayleighIntegralSpec::new(k, 0.0, 8, 1).unwrap();
-    let observation = [[0.0, 0.0, 0.05]];
-    let rectangle_value =
-        rayleigh_pressure(&observation, &[rectangle(1.0e-3, 1.0e-3)], &spec).unwrap()[0];
-    assert!(rectangle_value.norm() > 0.0);
+    let observation = [[0.0, 0.0, range]];
+    let one_node = rayleigh_pressure(&observation, &[rectangle(side, side)], &spec).unwrap()[0];
+    // Eight Gauss-Legendre nodes across a phase excursion of at most
+    // k(h/2)²/(2R) = 0.021 rad are exact far below the bound below.
+    let reference_spec = RayleighIntegralSpec::new(k, 0.0, 8, 8).unwrap();
+    let reference =
+        rayleigh_pressure(&observation, &[rectangle(side, side)], &reference_spec).unwrap()[0];
+    // One height node is the midpoint rule: per height line its error is
+    // (h³/24)·g''(ξ), g(v) = e^{ikr}/r. With r′ ≤ h/(2R) and r″ ≤ 1/R,
+    // |g''|·r₀ ≤ (k r′)² + k r″ + 2k r′²/R + 1/R² + 2r′²/R², relative to h·g(0)
+    // times h²/24. Line phases agree to k(h/2)²/(2R), so the lines add with
+    // cos(k h²/(4R)) to spare. The leading term (h²/24)·k/R is the curvature
+    // phase, so the error is also at least that term less the others.
+    let slope = side / (2.0 * range);
+    let leading = side * side / 24.0 * (k / range);
+    let rest = side * side / 24.0
+        * ((k * slope).powi(2)
+            + 2.0 * k * slope * slope / range
+            + 1.0 / (range * range)
+            + 2.0 * slope * slope / (range * range));
+    let alignment = (k * side * side / (4.0 * range)).cos();
+    let relative_error = (one_node - reference).norm() / reference.norm();
+    assert!(
+        relative_error <= (leading + rest) / alignment,
+        "one height node: relative error {relative_error:.3e}"
+    );
+    assert!(
+        relative_error >= leading - rest,
+        "one height node must be the midpoint rule: relative error {relative_error:.3e}"
+    );
+
     let disk =
         PlanarAperture::disk([0.0; 3], [0.0, 0.0, 1.0], 1.0e-3, Complex64::new(1.0, 0.0)).unwrap();
-    let error = rayleigh_pressure(&observation, &[disk], &spec).unwrap_err();
-    assert!(matches!(
-        error,
-        KwaversError::Config(ConfigError::InvalidValue { ref parameter, .. }) if parameter == "secondary_order"
-    ));
+    let silent =
+        PlanarAperture::disk([0.0; 3], [0.0, 0.0, 1.0], 1.0e-3, Complex64::new(0.0, 0.0)).unwrap();
+    // A disk is rejected whether or not it radiates in this call.
+    for aperture in [disk, silent] {
+        let error = rayleigh_pressure(&observation, &[aperture], &spec).unwrap_err();
+        assert!(matches!(
+            error,
+            KwaversError::Config(ConfigError::InvalidValue { ref parameter, .. }) if parameter == "secondary_order"
+        ));
+    }
     assert!(RayleighIntegralSpec::new(k, 0.0, 8, 0).is_err_and(|error| matches!(
         error,
         KwaversError::Config(ConfigError::InvalidValue { ref parameter, .. }) if parameter == "secondary_order"
