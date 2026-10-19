@@ -129,6 +129,8 @@ pub fn run_with_thermal(
 mod gpu;
 #[cfg(feature = "gpu")]
 pub use gpu::run_gpu;
+#[cfg(test)]
+mod tests;
 
 // ── Solver preparation ────────────────────────────────────────────────────────
 
@@ -261,15 +263,6 @@ pub(crate) fn prepare_solver(
         req.medium.alpha_coefficient(0.0, 0.0, 0.0, req.grid)
     };
 
-    let effective_alpha_power = {
-        let y_medium = req.medium.alpha_power(0.0, 0.0, 0.0, req.grid);
-        if nl.alpha_coeff <= 0.0 && y_medium > 0.0 && (y_medium - 1.0).abs() > 1e-12 {
-            y_medium
-        } else {
-            nl.alpha_power
-        }
-    };
-
     let absorption_mode = if effective_alpha_db > 0.0 {
         AbsorptionMode::PowerLaw {
             // Only a coefficient the caller actually supplied is passed on. The
@@ -277,7 +270,10 @@ pub(crate) fn prepare_solver(
             // voxel; forwarding a single origin sample here would flatten a
             // heterogeneous medium to one number (ADR 120).
             alpha_coeff: (nl.alpha_coeff > 0.0).then_some(nl.alpha_coeff),
-            alpha_power: effective_alpha_power,
+            // With the coefficient left to the medium the solver reads the
+            // medium's exponent per voxel and uses this one only where the
+            // medium leaves it unset; the solver owns the y = 1 rule.
+            alpha_power: nl.alpha_power,
         }
     } else {
         AbsorptionMode::Lossless
@@ -297,6 +293,7 @@ pub(crate) fn prepare_solver(
         boundary,
         pml_inside: effective_pml_inside,
         absorption_mode,
+        power_law_dispersion: nl.power_law_dispersion,
         nonlinearity: nl.enabled,
         geometry,
         ..Default::default()

@@ -55,6 +55,7 @@ pub fn run_gpu(
             nonlinear: nonlinear.enabled,
             alpha_coeff_db: nonlinear.alpha_coeff,
             alpha_power: nonlinear.alpha_power,
+            power_law_dispersion: nonlinear.power_law_dispersion,
             cpml: Some(cpml),
             pml_inside: pml.inside,
         },

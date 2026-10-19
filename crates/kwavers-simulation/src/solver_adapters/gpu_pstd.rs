@@ -46,6 +46,7 @@ use kwavers_medium::Medium;
 use kwavers_receiver::GridSensorSet;
 use kwavers_solver::config::SolverConfiguration;
 use kwavers_solver::feature::SolverFeature;
+use kwavers_solver::forward::pstd::config::PowerLawDispersion;
 use kwavers_solver::interface::{Solver, SolverStatistics};
 use kwavers_source::{GridSource, Source};
 use leto::{Array2, Array3};
@@ -106,7 +107,8 @@ impl GpuPstdSimulationAdapter {
             .unwrap_or_else(|| CPMLConfig::with_thickness(20));
         let pml_inside = true; // canonical default; matches run_gpu_pstd
 
-        let medium_snap = PstdMediumSnapshot::from_medium(grid, medium, 0.0, 1.5)?;
+        let medium_snap =
+            PstdMediumSnapshot::from_medium(grid, medium, 0.0, 1.5, PowerLawDispersion::Causal)?;
         let shape = (nx, ny, nz);
 
         Ok(Self {
@@ -292,6 +294,7 @@ impl GpuPstdSimulationAdapter {
                 nonlinear: true,
                 alpha_coeff_db: 0.0,
                 alpha_power: 1.5,
+                power_law_dispersion: PowerLawDispersion::Causal,
                 cpml: Some(self.cpml_config.clone()),
                 pml_inside: self.pml_inside,
             },
