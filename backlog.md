@@ -50,7 +50,11 @@
 <a id="kwavers-coupling-contract-001"></a>- [KWAVERS-COUPLING-CONTRACT-001](backlog/kwavers-coupling-contract-001.md) — Medium-aware field-coupling inputs [minor] — todo
 <a id="kw-cbr-selection-direction"></a>- [KW-CBR-SELECTION-DIRECTION](backlog/kw-cbr-selection-direction.md) — CBR-based clutter rank selection compares in a direction its estimate cannot satisfy [patch] [fix] — todo
 <a id="kw-clippy-pinn-gpu"></a>- [KW-CLIPPY-PINN-GPU](backlog/kw-clippy-pinn-gpu.md) — `cargo clippy --features pinn,gpu` is not warning-clean outside the solver [patch] — todo
+<a id="kw-dep-zip-advisory"></a>- [KW-DEP-ZIP-ADVISORY](backlog/kw-dep-zip-advisory.md) — The Security Audit fails on zip < 9 through gaia-mesh and consus-npy [patch] — todo
 <a id="kw-examples-oversized-923"></a>- [KW-EXAMPLES-OVERSIZED-923](backlog/kw-examples-oversized-923.md) — Examples and tests grown or touched by #923 stay over the 500-line target [patch] — todo
+<a id="kw-gpu-host-tests-unrun"></a>- [KW-GPU-HOST-TESTS-UNRUN](backlog/kw-gpu-host-tests-unrun.md) — CI runs no kwavers-gpu test, including the host-only ones [patch] — todo
+<a id="kw-py-gpu-absorption"></a>- [KW-PY-GPU-ABSORPTION](backlog/kw-py-gpu-absorption.md) — Python PSTD bindings keep a second absorption construction and the origin-sampled exponent [patch] — todo
+<a id="kw-rect-planar-consolidation"></a>- [KW-RECT-PLANAR-CONSOLIDATION](backlog/kw-rect-planar-consolidation.md) — One rectangle element in the k-Wave array [arch] [major] — todo
 <a id="kw-subspace-jacobi-eigen"></a>- [KW-SUBSPACE-JACOBI-EIGEN](backlog/kw-subspace-jacobi-eigen.md) — MUSIC and ESMV beamformers still use the classical Jacobi Hermitian eigensolver [patch] [perf] — todo
 <a id="kw-test-cpml-thicknesses-budget"></a>- [KW-TEST-CPML-THICKNESSES-BUDGET](backlog/kw-test-cpml-thicknesses-budget.md) — `test_cpml_stable_across_thicknesses` runs 45 s against a 10 s slow bound [patch] [perf] — todo
 <a id="kw-wallclock-test-assertions"></a>- [KW-WALLCLOCK-TEST-ASSERTIONS](backlog/kw-wallclock-test-assertions.md) — Three test files still assert on elapsed time and sleep to synchronize [patch] — todo
