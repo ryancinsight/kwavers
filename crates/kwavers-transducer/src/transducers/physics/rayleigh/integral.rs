@@ -3,7 +3,7 @@
 use super::aperture::PlanarAperture;
 use super::input::{invalid, validate_point};
 use super::path::{RayleighLayer, RayleighPropagationPath};
-use super::quadrature::surface_rule;
+use super::quadrature::{surface_rule, validate_secondary_order};
 use super::vector::{add, cross, dot, norm, scale, subtract};
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
@@ -143,6 +143,11 @@ pub fn rayleigh_pressure(
 ) -> KwaversResult<Vec<Complex64>> {
     for &point in points_m {
         validate_point("observation_point_m", point)?;
+    }
+    // The specification must suit every aperture, including one that does
+    // not radiate in this call; skipping it below must not skip the check.
+    for aperture in apertures {
+        validate_secondary_order(aperture.geometry().shape(), spec.secondary_order)?;
     }
     let prefactor = Complex64::new(0.0, -spec.wavenumber_rad_m() / TAU);
     let mut pressure = vec![Complex64::new(0.0, 0.0); points_m.len()];
