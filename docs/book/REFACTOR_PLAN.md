@@ -671,7 +671,8 @@ in Rust where a real computation applies, embedded with a descriptive caption.
    monomorphic `f64`, GPU is `f32`. Rewrote §18.10.3, the §18.5 kernel, and §18.7.4 to the real
    types. (5) `AbsorptionKernel<S>`/`AbsorptionKernelInner` with `absorb_*` fields → real
    non-generic `AbsorptionKernel { tau, eta, nabla1, nabla2, alpha_si: Array3<f64> }`, held as
-   `Option` at the orchestrator (lossless elides all 5 → ~670 MB, was mis-stated 536+134). (6)
+   `Option` at the orchestrator (lossless elides all 5 → ~670 MB at the time, was mis-stated 536+134; ~538 MB since the
+   uniform symbols moved to the half spectrum). (6)
    `CpmlUpdater` `TILE_SIZE` const-generic tiling → marked **not shipped** (real `CPMLUpdater` is a
    stateless axis-wise updater). (7) GPU TDR loop: `BATCH_SIZE=64`/`Maintain::Poll`/wrong file →
    real `STEP_BATCH=32`/`PollType::Wait` in `kwavers_gpu::pstd_gpu::time_loop::run`. (8) Figures:

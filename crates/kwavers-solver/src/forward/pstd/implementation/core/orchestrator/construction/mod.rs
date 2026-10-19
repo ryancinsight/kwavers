@@ -25,10 +25,6 @@ use std::sync::Arc;
 
 const DENSE_CONSTRUCTION_CHUNK: usize = 4096;
 
-fn clone_field(input: &Array3<f64>) -> leto::Array3<f64> {
-    input.to_contiguous()
-}
-
 fn apply_kappa_cosine_transform(k_mag: &mut Array3<f64>, scale: f64) {
     if let Some(values) = k_mag.as_slice_mut() {
         enumerate_mut_with::<Adaptive, _, _>(values, |_index, value| {
@@ -164,30 +160,10 @@ impl PSTDSolver {
         // Populated once here; zero per-step allocation; `None` for non-CPML boundaries.
         let pml_exp = boundary.as_ref().and_then(|b| b.pml_exp_factors_owned());
 
-        let k_mag_absorption = clone_field(&k_mag);
-        let mut absorption = initialize_absorption_operators(
-            &config,
-            &grid,
-            medium,
-            &k_mag_absorption,
-            k_max,
-            c_ref,
-        )?;
-        // Truncate spectral nabla operators to the r2c half-spectrum (z-axis: nz_c = nz/2+1).
-        // nabla1 = |k|^(y-2) and nabla2 = |k|^(y-1) are symmetric under kz sign flip,
-        // so the first nz_c z-values are the complete independent set for real-input fields.
-        if let Some(ref mut abs) = absorption {
-            abs.nabla1 = abs
-                .nabla1
-                .slice_with(&s![.., .., ..nz_c])
-                .unwrap()
-                .to_contiguous();
-            abs.nabla2 = abs
-                .nabla2
-                .slice_with(&s![.., .., ..nz_c])
-                .unwrap()
-                .to_contiguous();
-        }
+        // The operators are built on the r2c half spectrum (z-axis: nz_c = nz/2+1);
+        // |k| is even in kz, so those z-values are the complete independent set.
+        let absorption =
+            initialize_absorption_operators(&config, &grid, medium, &k_mag, k_max, c_ref)?;
         // Capture the raw |k| half-spectrum (r2c z-axis: nz_c = nz/2+1) BEFORE the
         // kappa cosine transform overwrites k_mag. Needed to build the broadband
         // residual-gas absorption spectral shape ĝ(c·|k|) on demand.

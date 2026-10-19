@@ -1,7 +1,16 @@
 mod initialization;
 mod pressure_correction;
 
+use super::{AbsorptionKernel, ExponentSpectrum};
 use leto::Array3;
+
+/// The uniform path's `(|k|^(y−2), |k|^(y−1))`; panics on a stratified kernel.
+pub(super) fn uniform_symbols(kernel: &AbsorptionKernel) -> (&Array3<f64>, &Array3<f64>) {
+    match &kernel.spectrum {
+        ExponentSpectrum::Uniform { nabla1, nabla2, .. } => (nabla1, nabla2),
+        ExponentSpectrum::Stratified(_) => panic!("expected the uniform spectrum"),
+    }
+}
 
 pub(super) fn zeros_k_mag(nx: usize, ny: usize, nz: usize) -> Array3<f64> {
     Array3::zeros((nx, ny, nz))

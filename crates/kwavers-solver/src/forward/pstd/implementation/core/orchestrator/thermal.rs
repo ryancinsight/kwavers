@@ -38,7 +38,7 @@
 //! ```
 
 use super::PSTDSolver;
-use crate::forward::pstd::physics::absorption::AbsorptionExponent;
+use crate::forward::pstd::physics::absorption::ExponentSpectrum;
 use crate::forward::thermal_diffusion::ThermalDiffusionSolver;
 use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::KwaversResult;
@@ -141,16 +141,17 @@ impl PSTDSolver {
         let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
         // α(ω_c) = α_SI · ω_c^y with the exponent the coefficients were built
         // for, which is the medium's per-voxel y when it supplies the power law.
-        match &kernel.exponent {
-            AbsorptionExponent::Uniform(y) => {
+        match &kernel.spectrum {
+            ExponentSpectrum::Uniform { exponent: y, .. } => {
                 copy_scaled_absorption_field(buf, alpha_si, omega_c.powf(*y));
             }
-            AbsorptionExponent::Field(y) => {
+            ExponentSpectrum::Stratified(strata) => {
                 let [nx, ny, nz] = shape;
                 for k in 0..nz {
                     for j in 0..ny {
                         for i in 0..nx {
-                            buf[[i, j, k]] = alpha_si[[i, j, k]] * omega_c.powf(y[[i, j, k]]);
+                            buf[[i, j, k]] =
+                                alpha_si[[i, j, k]] * omega_c.powf(strata.exponent_at([i, j, k]));
                         }
                     }
                 }
