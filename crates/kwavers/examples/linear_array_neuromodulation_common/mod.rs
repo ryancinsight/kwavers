@@ -5,6 +5,7 @@
 //! simulation and the analytical oracle consume the same element list.
 
 pub mod analytic;
+pub mod drive;
 pub mod metrics;
 pub mod plots;
 pub mod simulate;
@@ -50,6 +51,17 @@ pub const SOURCE_AMPLITUDE_PA: f64 = 1.0e5;
 pub const KERF_FRACTION: f64 = 0.1;
 /// Grating-lobe-free steering limit for a 30° steering requirement, in radians.
 pub const STEERING_LIMIT_RAD: f64 = PI / 6.0;
+
+/// Array aperture, metres.
+pub const ARRAY_APERTURE_M: f64 = 30.0e-3;
+/// Array elevation, metres.
+pub const ARRAY_ELEVATION_M: f64 = 1.5e-3;
+/// Focal pressure target at 6–8 cm, pascals.
+pub const TARGET_PRESSURE_PA: f64 = 120.0e3;
+/// Drive voltage at which the target is to be reached, volts peak.
+pub const TARGET_DRIVE_VP: f64 = 30.0;
+/// Focal depths in question, millimetres.
+pub const FOCUS_FOCI_MM: [f64; 2] = [70.0, 80.0];
 
 /// Wavelength in brain tissue, metres.
 #[must_use]
@@ -251,8 +263,11 @@ pub fn time_step_s(dx: f64) -> f64 {
 /// Power-law absorption coefficient in Np/m at the drive frequency.
 #[must_use]
 pub fn attenuation_np_m() -> f64 {
-    let db_per_m = ALPHA_DB_CM_MHZ * 100.0 * (FREQUENCY_HZ / 1.0e6).powf(ALPHA_POWER);
-    db_per_m / kwavers_core::constants::acoustic_parameters::NP_TO_DB
+    kwavers_core::units::alpha_db_per_mhz_cm_to_np_per_m(
+        ALPHA_DB_CM_MHZ,
+        FREQUENCY_HZ / kwavers_core::constants::numerical::MHZ_TO_HZ,
+        ALPHA_POWER,
+    )
 }
 
 /// Forward-wave factor of the solver's additive pressure source relative to the
