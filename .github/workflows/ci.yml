@@ -1092,8 +1092,13 @@ jobs:
       - name: Physics benchmarks
         run: cargo nextest run --locked -p kwavers-solver --lib validation::physics_benchmarks
 
-      - name: GPU/CPU equivalence build check
-        run: cargo check --locked -p kwavers-gpu --features gpu --lib
+      # The workspace library shards exclude kwavers-gpu, whose modules all
+      # sit behind the `gpu` feature. This runs its library tests with the
+      # feature: host-only tests (medium snapshot, absorption operators,
+      # shader text, buffer layout) execute, and device tests return early
+      # on the adapter-less runner, so this also proves the GPU build.
+      - name: GPU crate library tests (host-only on hosted runners)
+        run: cargo nextest run --locked -p kwavers-gpu --features gpu --lib
 
       - name: sccache stats
         if: always()
