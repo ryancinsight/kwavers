@@ -68,8 +68,8 @@ mod tests {
     /// stored `LN_10`, the product and the division by 20: three. To first
     /// order the two agree within five units of rounding of the result.
     /// That bound admits a constant one ULP off, so the conversion is also
-    /// pinned bit for bit to the correctly rounded constant, whose own
-    /// value `acoustic_parameters` tests.
+    /// pinned bit for bit to `NP_TO_DB`, whose correctly rounded bits
+    /// `acoustic_parameters` asserts.
     #[test]
     fn absorption_conversion_matches_the_neper_definition() {
         const ROUNDINGS: f64 = 5.0;

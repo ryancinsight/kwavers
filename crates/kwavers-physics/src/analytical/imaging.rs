@@ -3,6 +3,7 @@
 //! Covers: lateral and axial PSF models, Doppler frequency shift,
 //! plane-wave compounding PSF, and resolution limits.
 
+use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use leto::Array1;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -946,7 +947,7 @@ pub fn ivus_therapy_response(
                 "attenuation_db_cm_mhz[{index}] must be finite and non-negative, got {attenuation}"
             ));
         }
-        let alpha = attenuation * 100.0 / 8.686 * frequency_mhz;
+        let alpha = attenuation * 100.0 * DB_TO_NP * frequency_mhz;
         let range = (radius - catheter_radius_m).max(0.0);
         let wall = eel_mask[index] && !lumen_mask[index];
         let target = fibrous_cap_mask[index] || lipid_mask[index];
@@ -1253,7 +1254,7 @@ pub fn ivus_polar_bmode_rf(input: IvusPolarBmodeRfInput<'_>) -> Result<Vec<f64>,
             let row = nearest_grid_index(x, x0, dx, n);
             let col = nearest_grid_index(y, y0, dy, n);
             let idx = row * n + col;
-            let alpha_np_m_mhz = attenuation_db_cm_mhz[idx] * 100.0 / 8.686;
+            let alpha_np_m_mhz = attenuation_db_cm_mhz[idx] * 100.0 * DB_TO_NP;
             let attenuation = (-2.0 * alpha_np_m_mhz * frequency_mhz * range).exp();
             rf.push(backscatter[idx] * attenuation + ring);
         }
@@ -2051,7 +2052,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(rf[0], 4.0 + 0.10);
-        let alpha = 3.0 * 100.0 / 8.686;
+        let alpha = 3.0 * 100.0 * std::f64::consts::LN_10 / 20.0;
         let expected = 4.0 * (-2.0_f64 * alpha * 20.0 * 0.55e-3).exp()
             + 0.10 * (-(0.55e-3_f64 / 0.22e-3_f64).powi(2)).exp();
         assert!((rf[1] - expected).abs() < 1.0e-12);
@@ -2279,7 +2280,7 @@ mod tests {
         .unwrap();
 
         let intensity = 1.0e12 / (2.0 * 1000.0 * 1500.0);
-        let alpha_eff = 1.0 * 100.0 / 8.686 * 2.0;
+        let alpha_eff = 1.0 * 100.0 * std::f64::consts::LN_10 / 20.0 * 2.0;
         let expected_delta_t = 2.0 * alpha_eff * intensity * 0.25 * 0.50 / (1000.0 * 4000.0);
         let off_deposition = 1.0 - (-0.6_f64).exp();
         let target_deposition = 1.0 - (-3.0_f64).exp();

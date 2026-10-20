@@ -106,9 +106,9 @@ def test_thermal_coupling_temperature_rise():
     assert dT_peak > 0.0, f"No temperature rise detected (peak ΔT={dT_peak:.6f} °C)"
 
     # 3. Short-time upper bound: ΔT_peak ≤ 20 × Q_peak/(ρ·cp) · t_total
-    #    α_np = alpha_db [dB/(MHz·cm)] × 0.1151292546 [Np/m per dB/(cm·MHz)] × f^y
+    #    α_np [Np/m] = db2neper(alpha_db [dB/(MHz^y·cm)], y) [Np/((rad/s)^y·m)] × ω0^y
     alpha_power = 1.1
-    alpha_np = alpha_db * 0.1151292546 * (f0 / 1.0e6) ** alpha_power  # Np/m
+    alpha_np = kw.db2neper(alpha_db, alpha_power) * (2.0 * np.pi * f0) ** alpha_power
     P_peak = 1e5          # Pa (source amplitude)
     Q_peak_est = 2.0 * alpha_np * P_peak ** 2 / (rho * c0)   # W/m³
     t_total   = n_acoustic * dt

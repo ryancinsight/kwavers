@@ -7,6 +7,8 @@
 //! - Francois & Garrison (1982): Absorption model
 //! - Pinkerton (1949): Simplified absorption model
 
+use super::acoustic_parameters::DB_TO_NP;
+
 /// Water properties and attenuation models
 #[derive(Debug)]
 pub struct WaterProperties;
@@ -209,6 +211,6 @@ impl WaterProperties {
 
         // Total absorption in dB/km, convert to Np/m
         let alpha_db_per_km = boric + magnesium + water;
-        alpha_db_per_km * 0.1151 / 1e3 // Convert to Np/m
+        alpha_db_per_km * DB_TO_NP / 1e3 // Convert to Np/m
     }
 }
