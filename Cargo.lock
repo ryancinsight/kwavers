@@ -2793,13 +2793,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kwavers-alloc-probe"
-version = "0.1.0"
-dependencies = [
- "mnemosyne-memory",
-]
-
-[[package]]
 name = "kwavers-analysis"
 version = "3.0.0"
 dependencies = [
@@ -2937,7 +2930,6 @@ dependencies = [
  "hephaestus-core",
  "hephaestus-cuda",
  "hephaestus-wgpu",
- "kwavers-alloc-probe",
  "kwavers-analysis",
  "kwavers-boundary",
  "kwavers-core",
@@ -2951,6 +2943,7 @@ dependencies = [
  "kwavers-source",
  "leto",
  "log",
+ "mnemosyne-memory",
  "moirai-parallel",
  "once_cell",
  "pollster",
@@ -2964,11 +2957,11 @@ name = "kwavers-grid"
 version = "3.0.0"
 dependencies = [
  "eunomia",
- "kwavers-alloc-probe",
  "kwavers-core",
  "kwavers-math",
  "leto",
  "log",
+ "mnemosyne-memory",
  "moirai-parallel",
  "proptest",
  "serde",
@@ -3067,7 +3060,6 @@ dependencies = [
  "consus-npy",
  "eunomia",
  "hyperion",
- "kwavers-alloc-probe",
  "kwavers-core",
  "kwavers-field",
  "kwavers-grid",
@@ -3079,6 +3071,7 @@ dependencies = [
  "kwavers-transducer",
  "leto",
  "log",
+ "mnemosyne-memory",
  "moirai-parallel",
  "proteus-mat",
  "rand 0.8.8",
@@ -3213,7 +3206,6 @@ dependencies = [
  "eunomia",
  "hermes-simd",
  "hyperion",
- "kwavers-alloc-probe",
  "kwavers-boundary",
  "kwavers-core",
  "kwavers-field",
@@ -3230,6 +3222,7 @@ dependencies = [
  "leto",
  "leto-ops",
  "log",
+ "mnemosyne-memory",
  "moirai-parallel",
  "parking_lot",
  "proteus-mat",

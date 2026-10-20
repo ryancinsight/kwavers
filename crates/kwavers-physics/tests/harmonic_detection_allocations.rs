@@ -1,13 +1,14 @@
 #![cfg(feature = "clinical-imaging")]
 
-use kwavers_alloc_probe::{ThreadScopedAllocator, Window};
 use kwavers_physics::acoustics::imaging::modalities::elastography::harmonic_detection::{
     HarmonicDetectionConfig, HarmonicDetector,
 };
 use leto::Array4;
+use mnemosyne::counting::{measure, AllocationDelta, CountingAllocator};
+use mnemosyne::Mnemosyne;
 
 #[global_allocator]
-static GLOBAL: ThreadScopedAllocator = ThreadScopedAllocator;
+static GLOBAL: CountingAllocator<Mnemosyne> = CountingAllocator::new(Mnemosyne);
 
 #[test]
 fn harmonic_workspace_allocation_count_is_independent_of_spatial_extent() {
@@ -22,13 +23,13 @@ fn harmonic_workspace_allocation_count_is_independent_of_spatial_extent() {
             .expect("valid warmup input"),
     );
 
-    let single_change = measure(&detector, &single_point);
-    let many_change = measure(&detector, &many_points);
+    let single_change = measure_harmonics(&detector, &single_point);
+    let many_change = measure_harmonics(&detector, &many_points);
     // The counts are the oracle: 14 result-field allocations plus the Hann,
     // FFT-input, and FFT-output workspaces, none of which depend on the number
     // of spatial points. The bytes do — every result field holds one value per
-    // point — so the whole `Change` cannot be compared once the probe reports
-    // byte volumes.
+    // point — so the whole delta cannot be compared once the instrument
+    // reports byte volumes.
     assert_eq!(single_change.allocations, many_change.allocations);
     assert_eq!(single_change.reallocations, many_change.reallocations);
     assert_eq!(single_change.allocations, 17);
@@ -41,12 +42,12 @@ fn harmonic_workspace_allocation_count_is_independent_of_spatial_extent() {
     );
 }
 
-fn measure(detector: &HarmonicDetector, samples: &Array4<f64>) -> kwavers_alloc_probe::Change {
-    let window = Window::open();
-    let result = detector
-        .analyze_harmonics(samples, 1_000.0)
-        .expect("valid measured input");
-    let change = window.change();
+fn measure_harmonics(detector: &HarmonicDetector, samples: &Array4<f64>) -> AllocationDelta {
+    let (result, change) = measure(|| {
+        detector
+            .analyze_harmonics(samples, 1_000.0)
+            .expect("valid measured input")
+    });
     std::hint::black_box(result);
     change
 }

@@ -423,16 +423,14 @@ mod tests {
         validate_run_inputs,
     };
     use crate::pstd_gpu::{state::WgpuPstdRunCache, PstdOutputRequest, PstdRunInputs};
-    use kwavers_alloc_probe::{ThreadScopedAllocator, Window};
+    use mnemosyne::counting::{measure, CountingAllocator};
+    use mnemosyne::Mnemosyne;
 
     #[global_allocator]
-    static GLOBAL: ThreadScopedAllocator = ThreadScopedAllocator;
+    static GLOBAL: CountingAllocator<Mnemosyne> = CountingAllocator::new(Mnemosyne);
 
     fn assert_allocation_free(operation: impl FnOnce()) {
-        let window = Window::open();
-        operation();
-        let change = window.change();
-        drop(window);
+        let ((), change) = measure(operation);
         assert_eq!(change.allocations, 0);
         assert_eq!(change.reallocations, 0);
     }
