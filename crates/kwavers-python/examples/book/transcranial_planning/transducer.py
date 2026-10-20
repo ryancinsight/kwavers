@@ -206,7 +206,8 @@ def acoustic_properties_from_hu(
     else:
         bone_fraction = float(np.clip((hu - 300.0) / 1700.0, 0.0, 1.0))
         attenuation_db_cm_mhz = 8.0 + 12.0 * bone_fraction
-    alpha_np_m = attenuation_db_cm_mhz * 100.0 / 8.686 * (frequency_hz / 1.0e6)
+    # dB/(MHz cm) → Np/((rad/s) m), then × ω for the y = 1 power law.
+    alpha_np_m = kw.db2neper(attenuation_db_cm_mhz, 1.0) * (2.0 * np.pi * frequency_hz)
     return sound_speed, density, alpha_np_m
 
 

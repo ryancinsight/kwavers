@@ -12,12 +12,10 @@ fn water_density(temp_celsius: f64) -> f64 {
 
 #[pyfunction]
 fn water_absorption(frequency: f64, temp_celsius: f64) -> f64 {
-    let freq_mhz = frequency / 1e6;
-    let db_per_cm = kwavers_core::constants::water::WaterProperties::absorption_pinkerton(
-        freq_mhz,
+    kwavers_core::constants::water::WaterProperties::absorption_pinkerton_np_per_m(
+        frequency,
         temp_celsius,
-    );
-    db_per_cm / 8.686 * 100.0
+    )
 }
 
 #[pyfunction]

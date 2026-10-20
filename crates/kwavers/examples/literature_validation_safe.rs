@@ -811,7 +811,8 @@ fn validate_absorption_attenuation() -> KwaversResult<ValidationResult> {
 
     let medium = HomogeneousMedium::water(&grid);
     let frequency = 1e6f64; // 1 MHz
-    let alpha_theoretical = 0.0022 * (frequency / 1e6).powi(2) * 0.1151; // Convert dB/cm to Np/m
+    let db_cm_to_np_m = 100.0 * kwavers_core::constants::DB_TO_NP; // 100 cm/m · ln(10)/20 Np/dB
+    let alpha_theoretical = 0.0022 * (frequency / 1e6).powi(2) * db_cm_to_np_m;
 
     let _ = writeln!(std::io::stdout().lock(), "   Grid: {} points", nx);
     let _ = writeln!(
