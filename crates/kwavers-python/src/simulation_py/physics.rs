@@ -45,6 +45,23 @@ impl Simulation {
         }
     }
 
+    /// Select causal dispersion or absorption without it.
+    ///
+    /// ``PowerLawDispersion.Omitted`` is k-Wave's `alpha_mode = 'no_dispersion'`
+    /// and admits ``alpha_power = 1``; ``Causal`` (default) rejects it.
+    fn set_power_law_dispersion(&mut self, dispersion: PyPowerLawDispersion) {
+        self.power_law_dispersion = dispersion.into();
+        if let Some(ref mut cfg) = self.nonlinear_config {
+            cfg.power_law_dispersion = dispersion.into();
+        }
+    }
+
+    /// Get the power-law dispersion mode.
+    #[getter]
+    fn power_law_dispersion(&self) -> PyPowerLawDispersion {
+        self.power_law_dispersion.into()
+    }
+
     /// Get medium absorption coefficient [dB/(MHz^y·cm)].
     #[getter]
     fn alpha_coeff(&self) -> f64 {

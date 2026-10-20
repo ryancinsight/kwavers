@@ -50,6 +50,7 @@ impl Simulation {
         let enable_nonlinear = self.enable_nonlinear;
         let alpha_coeff = self.alpha_coeff;
         let alpha_power = self.alpha_power;
+        let power_law_dispersion = self.power_law_dispersion;
         let path = std::path::PathBuf::from(checkpoint_path);
 
         py.detach(move || {
@@ -63,6 +64,7 @@ impl Simulation {
                 enable_nonlinear,
                 alpha_coeff,
                 alpha_power,
+                power_law_dispersion,
                 grid_source,
                 dynamic_sources,
                 sensor_opt.as_ref(),
@@ -116,6 +118,7 @@ impl Simulation {
         let enable_nonlinear = self.enable_nonlinear;
         let alpha_coeff = self.alpha_coeff;
         let alpha_power = self.alpha_power;
+        let power_law_dispersion = self.power_law_dispersion;
         let path = std::path::PathBuf::from(checkpoint_path);
         let sensor_record_modes: Vec<String> = sensor_opt
             .as_ref()
@@ -153,6 +156,7 @@ impl Simulation {
                     enable_nonlinear,
                     alpha_coeff,
                     alpha_power,
+                    power_law_dispersion,
                     grid_source,
                     dynamic_sources,
                     sensor_opt.as_ref(),

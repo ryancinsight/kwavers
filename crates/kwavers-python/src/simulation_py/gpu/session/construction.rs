@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use super::GpuPstdSession;
 #[cfg(feature = "gpu")]
 use super::{absorption::build_absorption_kernels, pml::build_pml_arrays};
+use crate::solver_type_bindings::PyPowerLawDispersion;
 
 #[pymethods]
 impl GpuPstdSession {
@@ -14,7 +15,8 @@ impl GpuPstdSession {
         grid, sound_speed, density,
         dt, time_steps,
         absorption=None, nonlinearity=None,
-        pml_size_xyz=None, alpha_power=1.5
+        pml_size_xyz=None, alpha_power=1.5,
+        power_law_dispersion=PyPowerLawDispersion::Causal
     ))]
     ///
     /// # Errors
@@ -33,6 +35,7 @@ impl GpuPstdSession {
         nonlinearity: Option<PyReadonlyArray3<f64>>,
         pml_size_xyz: Option<(usize, usize, usize)>,
         alpha_power: f64,
+        power_law_dispersion: PyPowerLawDispersion,
     ) -> PyResult<Self> {
         #[cfg(not(feature = "gpu"))]
         {
@@ -47,6 +50,7 @@ impl GpuPstdSession {
                 nonlinearity,
                 pml_size_xyz,
                 alpha_power,
+                power_law_dispersion,
             );
             Err(PyRuntimeError::new_err(
                 "GpuPstdSession requires the 'gpu' feature.  \
@@ -59,7 +63,6 @@ impl GpuPstdSession {
             use kwavers_gpu::pstd_gpu::{
                 AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams,
             };
-            use kwavers_solver::forward::pstd::config::PowerLawDispersion;
 
             let kgrid = &grid.inner;
             let nx = kgrid.nx;
@@ -87,15 +90,12 @@ impl GpuPstdSession {
             };
 
             let has_absorption = absorption.is_some();
-            // The CPU PSTD path takes `PSTDConfig`'s default, causal dispersion;
-            // the session matches it, so `alpha_power = 1` is rejected here
-            // exactly where the CPU solver rejects it.
             let absorb = build_absorption_kernels(
                 kgrid,
                 absorption.as_ref().map(|field| field.as_array()),
                 &c0_flat,
                 alpha_power,
-                PowerLawDispersion::default(),
+                power_law_dispersion.into(),
             )?;
 
             let (pml_x_3d, pml_y_3d, pml_z_3d, pml_sgx_3d, pml_sgy_3d, pml_sgz_3d) =

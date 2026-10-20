@@ -1,5 +1,6 @@
-//! Solver-method and FFT-backend Python selection enums.
+//! Solver-method, FFT-backend and power-law dispersion Python selection enums.
 
+use kwavers_solver::forward::pstd::config::PowerLawDispersion;
 use pyo3::prelude::*;
 
 /// Solver type selection.
@@ -164,6 +165,64 @@ impl FftBackend {
         match self {
             Self::Leto => "Leto".to_owned(),
             Self::Hephaestus => "Hephaestus".to_owned(),
+        }
+    }
+
+    /// Equality comparison.
+    #[expect(
+        clippy::trivially_copy_pass_by_ref,
+        reason = "PyO3 equality method requires borrowed Python class operands"
+    )]
+    fn __eq__(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
+/// Whether a power-law absorption carries its causal dispersion.
+///
+/// ``Causal`` is k-Wave's default and requires `alpha_power != 1`, where
+/// `tan(pi*y/2)` is singular. ``Omitted``
+/// is k-Wave's `alpha_mode = 'no_dispersion'`: the absorption term is kept,
+/// the dispersive term is dropped, and `alpha_power = 1` is admitted.
+#[pyclass(name = "PowerLawDispersion", from_py_object)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PyPowerLawDispersion {
+    /// Absorption with its Kramers-Kronig dispersion.
+    #[default]
+    Causal,
+    /// Absorption without dispersion.
+    Omitted,
+}
+
+impl From<PyPowerLawDispersion> for PowerLawDispersion {
+    fn from(mode: PyPowerLawDispersion) -> Self {
+        match mode {
+            PyPowerLawDispersion::Causal => Self::Causal,
+            PyPowerLawDispersion::Omitted => Self::Omitted,
+        }
+    }
+}
+
+impl From<PowerLawDispersion> for PyPowerLawDispersion {
+    fn from(mode: PowerLawDispersion) -> Self {
+        match mode {
+            PowerLawDispersion::Causal => Self::Causal,
+            PowerLawDispersion::Omitted => Self::Omitted,
+        }
+    }
+}
+
+#[pymethods]
+impl PyPowerLawDispersion {
+    /// String representation.
+    #[expect(
+        clippy::trivially_copy_pass_by_ref,
+        reason = "PyO3 magic methods require borrowed Python class receivers"
+    )]
+    fn __repr__(&self) -> String {
+        match self {
+            Self::Causal => "PowerLawDispersion.Causal".to_owned(),
+            Self::Omitted => "PowerLawDispersion.Omitted".to_owned(),
         }
     }
 

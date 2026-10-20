@@ -31,6 +31,41 @@ fn embed_leto3(
     out
 }
 
+/// The PSTD absorption model for a caller's coefficient and a medium.
+///
+/// A medium absorbs when any voxel carries a positive coefficient, so a
+/// heterogeneous medium that is zero at the origin is not read as lossless.
+/// Only a coefficient the caller supplied (`alpha_coeff_db > 0`) is passed
+/// on; otherwise the solver reads the medium's coefficient and exponent per
+/// voxel (ADR 120), and `alpha_power` serves only an explicit coefficient or
+/// a voxel whose medium exponent is degenerate. The solver owns the `y = 1`
+/// rule, which depends on the dispersion mode.
+#[must_use]
+pub fn power_law_absorption_mode(
+    medium: &dyn kwavers_medium::Medium,
+    grid: &Grid,
+    alpha_coeff_db: f64,
+    alpha_power: f64,
+) -> AbsorptionMode {
+    let absorbs = alpha_coeff_db > 0.0
+        || (0..grid.nx).any(|i| {
+            (0..grid.ny).any(|j| {
+                (0..grid.nz).any(|k| {
+                    let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+                    medium.alpha_coefficient(x, y, z, grid) > 0.0
+                })
+            })
+        });
+    if absorbs {
+        AbsorptionMode::PowerLaw {
+            alpha_coeff: (alpha_coeff_db > 0.0).then_some(alpha_coeff_db),
+            alpha_power,
+        }
+    } else {
+        AbsorptionMode::Lossless
+    }
+}
+
 // ── PSTD (acoustic-only) ──────────────────────────────────────────────────────
 
 /// Run a PSTD (acoustic-only) simulation.
@@ -257,27 +292,8 @@ pub(crate) fn prepare_solver(
     };
 
     let nl = req.nonlinear.cloned().unwrap_or_default();
-    let effective_alpha_db = if nl.alpha_coeff > 0.0 {
-        nl.alpha_coeff
-    } else {
-        req.medium.alpha_coefficient(0.0, 0.0, 0.0, req.grid)
-    };
-
-    let absorption_mode = if effective_alpha_db > 0.0 {
-        AbsorptionMode::PowerLaw {
-            // Only a coefficient the caller actually supplied is passed on. The
-            // medium's own value is left to the solver, which reads it per
-            // voxel; forwarding a single origin sample here would flatten a
-            // heterogeneous medium to one number (ADR 120).
-            alpha_coeff: (nl.alpha_coeff > 0.0).then_some(nl.alpha_coeff),
-            // With the coefficient left to the medium the solver reads the
-            // medium's exponent per voxel and uses this one only where the
-            // medium leaves it unset; the solver owns the y = 1 rule.
-            alpha_power: nl.alpha_power,
-        }
-    } else {
-        AbsorptionMode::Lossless
-    };
+    let absorption_mode =
+        power_law_absorption_mode(req.medium, req.grid, nl.alpha_coeff, nl.alpha_power);
 
     let geometry = if req.axisymmetric {
         SolverGeometry::CylindricalAS

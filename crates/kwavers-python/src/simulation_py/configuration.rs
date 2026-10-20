@@ -48,6 +48,7 @@ impl Simulation {
         self.enable_nonlinear = config.inner.enabled;
         self.alpha_coeff = config.inner.alpha_coeff;
         self.alpha_power = config.inner.alpha_power;
+        self.power_law_dispersion = config.inner.power_law_dispersion;
         self.nonlinear_config = Some(config.inner);
     }
 

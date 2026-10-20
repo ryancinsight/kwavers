@@ -1,9 +1,11 @@
-use super::prepare_solver;
+use super::{power_law_absorption_mode, prepare_solver};
 use crate::configs::NonlinearConfig;
 use crate::types::SimulationRunRequest;
 use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_grid::Grid;
+use kwavers_medium::heterogeneous::HeterogeneousMedium;
 use kwavers_medium::homogeneous::HomogeneousMedium;
+use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers_solver::config::SolverType;
 use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
 use kwavers_solver::forward::pstd::config::{CompatibilityMode, PowerLawDispersion};
@@ -69,5 +71,55 @@ fn power_law_dispersion_reaches_the_pstd_solver() {
     assert_eq!(
         (solver_grid.nx, solver_grid.ny, solver_grid.nz),
         (16, 16, 16)
+    );
+}
+
+fn heterogeneous_medium(absorbing_voxel: Option<[usize; 3]>) -> HeterogeneousMedium {
+    const N: usize = 4;
+    let mut medium = HeterogeneousMedium::new_acoustic_only(N, N, N, true);
+    medium.sound_speed = leto::Array3::from_elem((N, N, N), 1500.0);
+    medium.density = leto::Array3::from_elem((N, N, N), 1000.0);
+    if let Some(index) = absorbing_voxel {
+        medium.absorption[index] = 0.5;
+    }
+    medium
+}
+
+/// Absorption that is zero at the origin and positive elsewhere is
+/// absorption: the solver is told to read the medium per voxel.
+#[test]
+fn a_medium_absorbing_away_from_the_origin_is_not_lossless() {
+    let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).expect("grid");
+    let medium = heterogeneous_medium(Some([2, 1, 3]));
+    assert_eq!(medium.absorption[[0, 0, 0]], 0.0);
+    assert_eq!(
+        power_law_absorption_mode(&medium, &grid, 0.0, 1.5),
+        AbsorptionMode::PowerLaw {
+            alpha_coeff: None,
+            alpha_power: 1.5
+        }
+    );
+}
+
+#[test]
+fn a_medium_without_absorption_is_lossless() {
+    let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).expect("grid");
+    let medium = heterogeneous_medium(None);
+    assert_eq!(
+        power_law_absorption_mode(&medium, &grid, 0.0, 1.5),
+        AbsorptionMode::Lossless
+    );
+}
+
+#[test]
+fn an_explicit_coefficient_outranks_the_medium() {
+    let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).expect("grid");
+    let medium = heterogeneous_medium(None);
+    assert_eq!(
+        power_law_absorption_mode(&medium, &grid, 0.75, 1.1),
+        AbsorptionMode::PowerLaw {
+            alpha_coeff: Some(0.75),
+            alpha_power: 1.1
+        }
     );
 }

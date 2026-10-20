@@ -38,7 +38,7 @@ use kwavers_simulation::{
     SimulationRunRequest, SimulationRunner, ThermalConfig as KwaversThermalConfig,
 };
 use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
-use kwavers_solver::forward::pstd::config::CompatibilityMode;
+use kwavers_solver::forward::pstd::config::{CompatibilityMode, PowerLawDispersion};
 use kwavers_source::GridSource;
 
 use crate::config_builders::{
@@ -49,7 +49,7 @@ use crate::config_builders::{
 use crate::grid_py::Grid;
 use crate::medium_py::Medium;
 use crate::sensor_py::Sensor;
-use crate::solver_type_bindings::{FftBackend, SolverType};
+use crate::solver_type_bindings::{FftBackend, PyPowerLawDispersion, SolverType};
 use crate::source_py::Source;
 use crate::transducer_array_py::TransducerArray2D;
 
@@ -88,6 +88,8 @@ pub struct Simulation {
     pub(crate) alpha_coeff: f64,
     /// Medium absorption power law exponent (k-Wave default: 1.5 for tissue)
     pub(crate) alpha_power: f64,
+    /// Whether the power-law absorption carries its causal dispersion.
+    pub(crate) power_law_dispersion: PowerLawDispersion,
     /// Axisymmetric (CylindricalAS) geometry: 2-D simulation in the (axial, radial) plane.
     /// Grid convention: nx=Nz_axial, ny=1, nz=Nr_radial. Only valid for PSTD and FDTD solvers.
     pub(crate) axisymmetric: bool,
@@ -222,6 +224,7 @@ impl Simulation {
             enable_nonlinear: false,
             alpha_coeff: 0.0,
             alpha_power: 1.5,
+            power_law_dispersion: PowerLawDispersion::Causal,
             axisymmetric: false,
             thermal: None,
             helmholtz_frequency: None,

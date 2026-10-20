@@ -9,6 +9,7 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+use crate::solver_type_bindings::PyPowerLawDispersion;
 use kwavers_simulation::{
     HelmholtzConfig as KwaversHelmholtzConfig, NonlinearConfig as KwaversNonlinearConfig,
     PmlConfig as KwaversPmlConfig, PoroelasticConfig as KwaversPoroelasticConfig,
@@ -216,10 +217,29 @@ impl NonlinearConfig {
         slf
     }
 
+    /// Select causal dispersion or absorption without it.
+    ///
+    /// Parameters
+    /// ----------
+    /// dispersion : PowerLawDispersion
+    ///     ``PowerLawDispersion.Causal`` (default, k-Wave's) or
+    ///     ``PowerLawDispersion.Omitted`` (k-Wave `alpha_mode = 'no_dispersion'`),
+    ///     which also admits ``alpha_power = 1``.
+    fn with_power_law_dispersion(
+        mut slf: PyRefMut<'_, Self>,
+        dispersion: PyPowerLawDispersion,
+    ) -> PyRefMut<'_, Self> {
+        slf.inner.power_law_dispersion = dispersion.into();
+        slf
+    }
+
     fn __repr__(&self) -> String {
         format!(
-            "NonlinearConfig(enabled={}, alpha_coeff={}, alpha_power={})",
-            self.inner.enabled, self.inner.alpha_coeff, self.inner.alpha_power
+            "NonlinearConfig(enabled={}, alpha_coeff={}, alpha_power={}, power_law_dispersion={:?})",
+            self.inner.enabled,
+            self.inner.alpha_coeff,
+            self.inner.alpha_power,
+            self.inner.power_law_dispersion
         )
     }
 }
