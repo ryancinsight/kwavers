@@ -62,8 +62,9 @@ use kwavers_grid::Grid;
 pub use medium::PstdMediumSnapshot;
 pub use pipeline::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 pub use runner::{
-    cpml_thickness_limits, run_gpu_pstd, run_gpu_pstd_with_outputs, run_gpu_pstd_with_provider,
-    run_gpu_pstd_with_provider_outputs, run_gpu_pstd_with_snapshot_outputs, GpuPstdRunConfig,
+    cpml_thickness_limits, power_law_operators, run_gpu_pstd, run_gpu_pstd_with_outputs,
+    run_gpu_pstd_with_provider, run_gpu_pstd_with_provider_outputs,
+    run_gpu_pstd_with_snapshot_outputs, GpuPstdRunConfig, PowerLawOperators,
 };
 pub use source::{prepare_pstd_pressure_source, PstdPressureSourceSchedule};
 pub use state::{

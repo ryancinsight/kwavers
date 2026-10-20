@@ -59,6 +59,7 @@ impl GpuPstdSession {
             use kwavers_gpu::pstd_gpu::{
                 AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams,
             };
+            use kwavers_solver::forward::pstd::config::PowerLawDispersion;
 
             let kgrid = &grid.inner;
             let nx = kgrid.nx;
@@ -86,19 +87,16 @@ impl GpuPstdSession {
             };
 
             let has_absorption = absorption.is_some();
-            let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
-                build_absorption_kernels(
-                    has_absorption,
-                    absorption.as_ref(),
-                    &c0_flat,
-                    nx,
-                    ny,
-                    nz,
-                    kgrid.dx,
-                    kgrid.dy,
-                    kgrid.dz,
-                    alpha_power,
-                )?;
+            // The CPU PSTD path takes `PSTDConfig`'s default, causal dispersion;
+            // the session matches it, so `alpha_power = 1` is rejected here
+            // exactly where the CPU solver rejects it.
+            let absorb = build_absorption_kernels(
+                kgrid,
+                absorption.as_ref().map(|field| field.as_array()),
+                &c0_flat,
+                alpha_power,
+                PowerLawDispersion::default(),
+            )?;
 
             let (pml_x_3d, pml_y_3d, pml_z_3d, pml_sgx_3d, pml_sgy_3d, pml_sgz_3d) =
                 build_pml_arrays(pml_size_xyz, kgrid, c_ref, dt, nx, ny, nz)?;
@@ -126,10 +124,10 @@ impl GpuPstdSession {
                 },
                 AbsorptionArrays {
                     bon_a_flat: &bon_a_flat,
-                    nabla1: &absorb_nabla1_flat,
-                    nabla2: &absorb_nabla2_flat,
-                    tau: &absorb_tau_flat,
-                    eta: &absorb_eta_flat,
+                    nabla1: &absorb.nabla1,
+                    nabla2: &absorb.nabla2,
+                    tau: &absorb.tau,
+                    eta: &absorb.eta,
                 },
             )
             .map_err(|e| PyRuntimeError::new_err(format!("GPU solver init failed: {e}")))?;

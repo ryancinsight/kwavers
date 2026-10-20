@@ -147,15 +147,6 @@ impl Simulation {
             medium.as_medium().alpha_coefficient(0.0, 0.0, 0.0, grid)
         };
 
-        let effective_alpha_power = {
-            let y_medium = medium.as_medium().alpha_power(0.0, 0.0, 0.0, grid);
-            if alpha_coeff_db <= 0.0 && y_medium > 0.0 && (y_medium - 1.0).abs() > 1e-12 {
-                y_medium
-            } else {
-                alpha_power
-            }
-        };
-
         let absorption_mode = if effective_alpha_db > 0.0 {
             AbsorptionMode::PowerLaw {
                 // Only a coefficient the caller actually supplied is passed on. The
@@ -163,7 +154,11 @@ impl Simulation {
                 // voxel; forwarding a single origin sample here would flatten a
                 // heterogeneous medium to one number (ADR 120).
                 alpha_coeff: (alpha_coeff_db > 0.0).then_some(alpha_coeff_db),
-                alpha_power: effective_alpha_power,
+                // The solver reads the medium's exponent per voxel when no
+                // coefficient is given and uses this value only for an explicit
+                // coefficient or a degenerate medium exponent; it rejects
+                // `y = 1` here only with causal dispersion.
+                alpha_power,
             }
         } else {
             AbsorptionMode::Lossless

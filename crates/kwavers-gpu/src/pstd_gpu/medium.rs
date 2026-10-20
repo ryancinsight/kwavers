@@ -258,7 +258,7 @@ impl PstdMediumSnapshot {
     }
 }
 
-fn validate_active_power_law_exponent(
+pub(super) fn validate_active_power_law_exponent(
     alpha_power: f64,
     dispersion: PowerLawDispersion,
 ) -> KwaversResult<()> {
