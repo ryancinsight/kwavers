@@ -355,8 +355,7 @@ where
     let has_absorption = medium.absorption.is_some();
     let has_nonlinear = nonlinear && has_nonlinear_coefficient(&medium.bon_a_flat);
 
-    let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
-        absorption::absorption_operators(grid, medium, total);
+    let absorption = absorption::absorption_operators(grid, medium)?;
 
     let mut solver = GpuPstdSolver::<P>::with_auto_device(
         grid,
@@ -381,10 +380,10 @@ where
         },
         AbsorptionArrays {
             bon_a_flat: &medium.bon_a_flat,
-            nabla1: &absorb_nabla1_flat,
-            nabla2: &absorb_nabla2_flat,
-            tau: &absorb_tau_flat,
-            eta: &absorb_eta_flat,
+            nabla1: &absorption.nabla1,
+            nabla2: &absorption.nabla2,
+            tau: &absorption.tau,
+            eta: &absorption.eta,
         },
     )?;
 
@@ -452,5 +451,7 @@ pub fn cpml_thickness_limits(nx: usize, ny: usize, nz: usize) -> (usize, usize) 
 }
 
 mod absorption;
+
+pub use absorption::{power_law_operators, PowerLawOperators};
 #[cfg(test)]
 mod tests;

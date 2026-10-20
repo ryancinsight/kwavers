@@ -56,11 +56,7 @@ impl PowerLawResolver {
         dispersion: PowerLawDispersion,
         total: usize,
     ) -> KwaversResult<Self> {
-        if !alpha_coeff_db.is_finite() || alpha_coeff_db < 0.0 {
-            return Err(KwaversError::InvalidInput(format!(
-                "GPU PSTD alpha_coeff_db must be finite and non-negative; got {alpha_coeff_db}"
-            )));
-        }
+        validate_absorption_coefficient(alpha_coeff_db, "alpha_coeff_db")?;
         if alpha_coeff_db > 0.0 {
             validate_active_power_law_exponent(alpha_power, dispersion)?;
             return Ok(Self {
@@ -94,11 +90,10 @@ impl PowerLawResolver {
             .coefficients
             .as_mut()
             .expect("invariant: medium pairs are pushed only for delegated absorption");
-        if !coefficient.is_finite() || coefficient < 0.0 {
-            return Err(KwaversError::InvalidInput(format!(
-                "GPU PSTD medium alpha coefficient must be finite and non-negative at flat index {index}; got {coefficient}"
-            )));
-        }
+        validate_absorption_coefficient(
+            coefficient,
+            format_args!("medium alpha coefficient at flat index {index}"),
+        )?;
         coefficients.push(coefficient);
         if coefficient == 0.0 {
             return Ok(());
@@ -258,7 +253,21 @@ impl PstdMediumSnapshot {
     }
 }
 
-fn validate_active_power_law_exponent(
+/// Rejects a power-law coefficient that is not a finite, non-negative
+/// dB/(MHz^y cm) value; `what` names it in the error.
+pub(super) fn validate_absorption_coefficient(
+    coefficient: f64,
+    what: impl std::fmt::Display,
+) -> KwaversResult<()> {
+    if !coefficient.is_finite() || coefficient < 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "GPU PSTD {what} must be finite and non-negative; got {coefficient}"
+        )));
+    }
+    Ok(())
+}
+
+pub(super) fn validate_active_power_law_exponent(
     alpha_power: f64,
     dispersion: PowerLawDispersion,
 ) -> KwaversResult<()> {

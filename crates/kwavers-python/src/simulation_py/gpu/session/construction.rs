@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use super::GpuPstdSession;
 #[cfg(feature = "gpu")]
 use super::{absorption::build_absorption_kernels, pml::build_pml_arrays};
+use crate::solver_type_bindings::PyPowerLawDispersion;
 
 #[pymethods]
 impl GpuPstdSession {
@@ -14,7 +15,8 @@ impl GpuPstdSession {
         grid, sound_speed, density,
         dt, time_steps,
         absorption=None, nonlinearity=None,
-        pml_size_xyz=None, alpha_power=1.5
+        pml_size_xyz=None, alpha_power=1.5,
+        power_law_dispersion=PyPowerLawDispersion::Causal
     ))]
     ///
     /// # Errors
@@ -33,6 +35,7 @@ impl GpuPstdSession {
         nonlinearity: Option<PyReadonlyArray3<f64>>,
         pml_size_xyz: Option<(usize, usize, usize)>,
         alpha_power: f64,
+        power_law_dispersion: PyPowerLawDispersion,
     ) -> PyResult<Self> {
         #[cfg(not(feature = "gpu"))]
         {
@@ -47,6 +50,7 @@ impl GpuPstdSession {
                 nonlinearity,
                 pml_size_xyz,
                 alpha_power,
+                power_law_dispersion,
             );
             Err(PyRuntimeError::new_err(
                 "GpuPstdSession requires the 'gpu' feature.  \
@@ -86,19 +90,13 @@ impl GpuPstdSession {
             };
 
             let has_absorption = absorption.is_some();
-            let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
-                build_absorption_kernels(
-                    has_absorption,
-                    absorption.as_ref(),
-                    &c0_flat,
-                    nx,
-                    ny,
-                    nz,
-                    kgrid.dx,
-                    kgrid.dy,
-                    kgrid.dz,
-                    alpha_power,
-                )?;
+            let absorb = build_absorption_kernels(
+                kgrid,
+                absorption.as_ref().map(|field| field.as_array()),
+                &c0_flat,
+                alpha_power,
+                power_law_dispersion.into(),
+            )?;
 
             let (pml_x_3d, pml_y_3d, pml_z_3d, pml_sgx_3d, pml_sgy_3d, pml_sgz_3d) =
                 build_pml_arrays(pml_size_xyz, kgrid, c_ref, dt, nx, ny, nz)?;
@@ -126,10 +124,10 @@ impl GpuPstdSession {
                 },
                 AbsorptionArrays {
                     bon_a_flat: &bon_a_flat,
-                    nabla1: &absorb_nabla1_flat,
-                    nabla2: &absorb_nabla2_flat,
-                    tau: &absorb_tau_flat,
-                    eta: &absorb_eta_flat,
+                    nabla1: &absorb.nabla1,
+                    nabla2: &absorb.nabla2,
+                    tau: &absorb.tau,
+                    eta: &absorb.eta,
                 },
             )
             .map_err(|e| PyRuntimeError::new_err(format!("GPU solver init failed: {e}")))?;
