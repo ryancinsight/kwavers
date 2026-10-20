@@ -180,10 +180,12 @@ impl FftBackend {
 
 /// Whether a power-law absorption carries its causal dispersion.
 ///
-/// ``Causal`` is k-Wave's default and requires `alpha_power != 1`, where
-/// `tan(pi*y/2)` is singular. ``Omitted``
-/// is k-Wave's `alpha_mode = 'no_dispersion'`: the absorption term is kept,
-/// the dispersive term is dropped, and `alpha_power = 1` is admitted.
+/// ``Causal`` is k-Wave's default. A configured `alpha_power = 1` is an
+/// error, where `tan(pi*y/2)` is singular; a medium that supplies a degenerate
+/// exponent (`y = 1` or `0`) is given the configured `alpha_power` instead.
+/// ``Omitted`` is k-Wave's `alpha_mode = 'no_dispersion'`: the absorption term
+/// is kept, the dispersive term is dropped, and `y = 1` is used as given, from
+/// the medium or the configuration.
 #[pyclass(name = "PowerLawDispersion", from_py_object)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum PyPowerLawDispersion {

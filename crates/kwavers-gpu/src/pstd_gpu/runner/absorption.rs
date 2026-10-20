@@ -1,6 +1,8 @@
 //! Host construction of the GPU PSTD power-law absorption operators.
 
-use crate::pstd_gpu::medium::{validate_active_power_law_exponent, PstdMediumSnapshot};
+use crate::pstd_gpu::medium::{
+    validate_absorption_coefficient, validate_active_power_law_exponent, PstdMediumSnapshot,
+};
 use eunomia::FloatElement;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -48,9 +50,13 @@ impl PowerLawOperators {
 /// `τ = −2 α₀ c₀^(y−1)` and `η = 2 α₀ c₀^y tan(πy/2)` (Treeby & Cox 2010,
 /// Eqs. 19–20); without dispersion `η = 0`, which admits `y = 1`.
 ///
+/// The exponent is validated only when some voxel absorbs, as the runner does
+/// for a medium: an all-zero field is lossless whatever `y` is.
+///
 /// # Errors
 /// Returns [`KwaversError::InvalidInput`] when `c0_flat` does not hold one
-/// sound speed per voxel, `y` is not finite, or `y = 1` with causal
+/// sound speed per voxel, a coefficient is not finite and non-negative, or,
+/// with some absorbing voxel, `y` is not finite or `y = 1` with causal
 /// dispersion, where `tan(πy/2)` is singular.
 pub fn power_law_operators(
     grid: &Grid,
@@ -66,9 +72,21 @@ pub fn power_law_operators(
             "GPU PSTD absorption needs one sound speed per voxel of the {nx}x{ny}x{nz} grid; got {total}"
         )));
     }
+    let mut absorbs = false;
+    for flat in 0..total {
+        let coefficient = coefficient_db_at(flat);
+        validate_absorption_coefficient(
+            coefficient,
+            format_args!("absorption coefficient at flat index {flat}"),
+        )?;
+        absorbs |= coefficient > 0.0;
+    }
+    let mut operators = PowerLawOperators::lossless(total);
+    if !absorbs {
+        return Ok(operators);
+    }
     validate_active_power_law_exponent(exponent, dispersion)?;
 
-    let mut operators = PowerLawOperators::lossless(total);
     let (lx, ly, lz) = grid.physical_size();
     let (dk_x, dk_y, dk_z) = (TWO_PI / lx, TWO_PI / ly, TWO_PI / lz);
     let y = exponent;
@@ -124,9 +142,11 @@ pub(super) fn absorption_operators(
 mod tests {
     use super::{absorption_operators, power_law_operators, PowerLawOperators};
     use crate::pstd_gpu::medium::PstdMediumSnapshot;
+    use eunomia::FloatElement;
     use kwavers_core::error::KwaversError;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
+    use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
     use kwavers_solver::forward::pstd::config::PowerLawDispersion::{self, Causal, Omitted};
 
     fn grid() -> Grid {
@@ -172,10 +192,13 @@ mod tests {
     fn unit_exponent_without_dispersion_absorbs_finitely() {
         let unit = operators(1.0, Omitted);
         assert!(unit.eta.iter().all(|&value| value == 0.0));
-        assert!(unit
-            .tau
-            .iter()
-            .all(|&value| value.is_finite() && value < 0.0));
+        // τ = −2 α₀ c₀^(y−1) = −2 α₀ at y = 1, since c₀^0 = 1 exactly; the
+        // medium's 0.5 dB/(MHz cm) is converted once, so the f32 store is the
+        // same rounding of the same f64.
+        let alpha_0 = power_law_db_cm_to_np_omega_m(0.5, 1.0);
+        assert!(alpha_0 > 0.0);
+        let expected_tau = f32::from_f64(-2.0 * alpha_0);
+        assert!(unit.tau.iter().all(|&value| value == expected_tau));
         // |k|^(y−1) = |k|^0 = 1 away from the DC bin.
         assert_eq!(unit.nabla2[0], 0.0);
         assert!(unit.nabla2[1..].iter().all(|&value| value == 1.0));
@@ -215,5 +238,36 @@ mod tests {
             matches!(&short, KwaversError::InvalidInput(message) if message.contains("got 63")),
             "{short:?}"
         );
+    }
+
+    /// An all-zero field is lossless whatever the exponent, as for a medium in
+    /// the runner; a negative or non-finite coefficient is rejected.
+    #[test]
+    fn exponent_is_validated_only_where_something_absorbs() {
+        let c0 = vec![1500.0_f32; 64];
+        let lossless =
+            power_law_operators(&grid(), 1.0, Causal, &c0, |_| 0.0).expect("lossless field");
+        assert_eq!(lossless, PowerLawOperators::lossless(64));
+        for bad in [-0.1, f64::NAN, f64::INFINITY] {
+            let error =
+                power_law_operators(
+                    &grid(),
+                    1.5,
+                    Causal,
+                    &c0,
+                    |flat| {
+                        if flat == 7 {
+                            bad
+                        } else {
+                            0.5
+                        }
+                    },
+                )
+                .unwrap_err();
+            assert!(
+                matches!(&error, KwaversError::InvalidInput(message) if message.contains("flat index 7") && message.contains("finite and non-negative")),
+                "{error:?}"
+            );
+        }
     }
 }

@@ -2,6 +2,11 @@
 
 Status: Accepted
 
+Revision 2026-10-20: the Python bindings now use the seam (typed dispersion,
+shared GPU operator builder, whole-medium absorption decision) instead of their
+own operator construction and origin-sampled exponent; KW-PY-GPU-ABSORPTION,
+ryancinsight/kwavers#966.
+
 ## Context
 
 The CPU PSTD solver has offered `PowerLawDispersion::Omitted` (k-Wave's
@@ -55,9 +60,13 @@ stratified ones.
 This is a breaking change for `kwavers-gpu` and `kwavers-simulation` struct
 literals and for `from_medium` callers. Adding
 `power_law_dispersion: PowerLawDispersion::Causal` keeps the previous
-behaviour. The Python bindings still carry their own GPU operator construction
-and the origin-sampled exponent. KW-PY-GPU-ABSORPTION tracks moving them onto
-this seam.
+behaviour. The Python bindings take the same seam: the GPU session builds its
+operators with the runner's `power_law_operators`, `Simulation`,
+`NonlinearConfig` and `GpuPstdSession` carry a typed `PowerLawDispersion`, and
+`Simulation.run()` always forwards the nonlinear configuration so the exponent
+and the dispersion reach the dispatch. The PSTD dispatch and the Python
+checkpoint path decide absorption from every voxel of the medium
+(`power_law_absorption_mode`), not from its value at the origin.
 
 Overturning evidence: a dispersion form other than these two that a consumer
 needs. That would turn the enum into a model trait.

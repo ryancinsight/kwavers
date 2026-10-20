@@ -9,7 +9,7 @@ use pyo3::prelude::*;
 
 /// The session's operators: all zero without an absorption field, otherwise
 /// the construction the Rust GPU runner uses, so both entry points accept and
-/// reject the same exponents.
+/// reject the same exponents and coefficients.
 ///
 /// `absorption` is dB/(MHz^y cm) per voxel, shaped like `grid`; its logical
 /// (C) order is the `[ix][iy][iz]` flat order of `c0_flat`, whatever the
@@ -17,8 +17,9 @@ use pyo3::prelude::*;
 ///
 /// # Errors
 /// Raises `ValueError` when the field shape differs from the grid or the
-/// builder rejects the exponent (non-finite, or `y = 1` with causal
-/// dispersion).
+/// builder rejects it: a coefficient that is not finite and non-negative, or,
+/// where some voxel absorbs, an exponent that is non-finite or `y = 1` with
+/// causal dispersion.
 pub(super) fn build_absorption_kernels(
     grid: &Grid,
     absorption: Option<ArrayView3<'_, f64>>,
@@ -46,8 +47,10 @@ pub(super) fn build_absorption_kernels(
 #[cfg(test)]
 mod tests {
     use super::build_absorption_kernels;
-    use kwavers_gpu::pstd_gpu::power_law_operators;
+    use eunomia::FloatElement;
+    use kwavers_gpu::pstd_gpu::{power_law_operators, PowerLawOperators};
     use kwavers_grid::Grid;
+    use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
     use kwavers_solver::forward::pstd::config::PowerLawDispersion::{Causal, Omitted};
     use numpy::ndarray::Array3;
     use pyo3::exceptions::PyValueError;
@@ -102,13 +105,32 @@ mod tests {
         assert_eq!(c_order, fortran);
     }
 
+    /// τ = −2 α₀ c₀^(y−1) = −2 α₀ at y = 1, where c₀^0 = 1 exactly, and
+    /// η = 0 without dispersion. α₀ is the shared dB-to-neper conversion of
+    /// each voxel's own coefficient, so the f32 store is the same rounding of
+    /// the same f64.
     #[test]
-    fn unit_exponent_without_dispersion_is_finite_with_zero_eta() {
+    fn unit_exponent_without_dispersion_has_the_closed_form_tau_and_zero_eta() {
         let (grid, field, c0) = (grid(), field(), sound_speed());
         let built =
             build_absorption_kernels(&grid, Some(field.view()), &c0, 1.0, Omitted).expect("built");
-        assert!(built.tau.iter().all(|&tau| tau.is_finite() && tau < 0.0));
         assert!(built.eta.iter().all(|&eta| eta == 0.0));
+        for (flat, (&tau, &coefficient)) in built.tau.iter().zip(field.iter()).enumerate() {
+            let alpha_0 = power_law_db_cm_to_np_omega_m(coefficient, 1.0);
+            assert!(alpha_0 > 0.0);
+            assert_eq!(tau, f32::from_f64(-2.0 * alpha_0), "voxel {flat}");
+        }
+    }
+
+    /// An all-zero field is lossless whatever the exponent, as for a medium
+    /// in the Rust runner.
+    #[test]
+    fn an_all_zero_field_is_lossless_at_a_causal_unit_exponent() {
+        let (grid, c0) = (grid(), sound_speed());
+        let zeros = Array3::<f64>::zeros(SHAPE);
+        let built = build_absorption_kernels(&grid, Some(zeros.view()), &c0, 1.0, Causal)
+            .expect("lossless");
+        assert_eq!(built, PowerLawOperators::lossless(c0.len()));
     }
 
     #[test]
