@@ -9,14 +9,12 @@
 //! merely happened to clear a threshold would not do.
 
 use super::*;
-
-/// 1 dB = 1/8.685889638 Np, and cm⁻¹ → m⁻¹ multiplies by 100.
-const NEPER_PER_DB: f64 = 1.0 / 8.685_889_638_065_035;
+use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 
 /// `α₀` in dB·cm⁻¹·MHz⁻ᵞ (the clinical literature convention) as the amplitude
-/// absorption in Np·m⁻¹ at 1 MHz.
+/// absorption in Np·m⁻¹ at 1 MHz; cm⁻¹ → m⁻¹ multiplies by 100.
 fn alpha_np_m(alpha_db_cm_mhz: f64) -> f64 {
-    alpha_db_cm_mhz * NEPER_PER_DB * 100.0
+    alpha_db_cm_mhz * DB_TO_NP * 100.0
 }
 
 const F_REF: f64 = 1.0e6;

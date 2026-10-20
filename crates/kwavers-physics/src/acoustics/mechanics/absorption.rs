@@ -138,7 +138,9 @@ mod tests {
         // At the reference frequency the exponent drops out and the conversion
         // is exactly dB/cm -> Np/m.
         let at_ref = power_law_db_cm_to_np_m(1.0, 1.7, 1.0e6);
-        assert!((at_ref - 100.0 / 8.685_889_638_065_035).abs() < 1e-12);
+        assert!(
+            (at_ref - 100.0 / kwavers_core::constants::acoustic_parameters::NP_TO_DB).abs() < 1e-12
+        );
         assert_eq!(power_law_db_cm_to_np_m(1.0, 1.0, 0.0), 0.0);
     }
 

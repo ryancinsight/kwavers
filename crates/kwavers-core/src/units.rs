@@ -1,17 +1,16 @@
 //! Unit conversion helpers shared across Rust crates and PyO3 bindings.
 
+use crate::constants::acoustic_parameters::{DB_TO_NP, NP_TO_DB};
 use crate::constants::numerical::TWO_PI;
 use crate::error::{KwaversError, KwaversResult};
 
-const NP_PER_DB: f64 = std::f64::consts::LN_10 / 20.0;
-const DB_PER_NP: f64 = 20.0 / std::f64::consts::LN_10;
 const CENTIMETERS_PER_METER: f64 = 100.0;
 const REFERENCE_ANGULAR_FREQUENCY_RAD_S: f64 = TWO_PI * 1.0e6;
 
 /// Convert dB/(MHz^y cm) to Np/(rad/s)^y m.
 #[must_use]
 pub fn db_per_mhz_cm_to_neper_per_rad_s_m(db: f64, power_law_exponent: f64) -> f64 {
-    db * (CENTIMETERS_PER_METER * NP_PER_DB)
+    db * (CENTIMETERS_PER_METER * DB_TO_NP)
         / REFERENCE_ANGULAR_FREQUENCY_RAD_S.powf(power_law_exponent)
 }
 
@@ -19,7 +18,7 @@ pub fn db_per_mhz_cm_to_neper_per_rad_s_m(db: f64, power_law_exponent: f64) -> f
 #[must_use]
 pub fn neper_per_rad_s_m_to_db_per_mhz_cm(neper: f64, power_law_exponent: f64) -> f64 {
     neper
-        * (DB_PER_NP / CENTIMETERS_PER_METER)
+        * (NP_TO_DB / CENTIMETERS_PER_METER)
         * REFERENCE_ANGULAR_FREQUENCY_RAD_S.powf(power_law_exponent)
 }
 
@@ -50,7 +49,7 @@ pub fn alpha_db_per_mhz_cm_to_np_per_m(
     frequency_mhz: f64,
     power_law_exponent: f64,
 ) -> f64 {
-    alpha_db_cm * frequency_mhz.powf(power_law_exponent) * CENTIMETERS_PER_METER / DB_PER_NP
+    alpha_db_cm * frequency_mhz.powf(power_law_exponent) * CENTIMETERS_PER_METER / NP_TO_DB
 }
 
 #[cfg(test)]
@@ -61,6 +60,27 @@ mod tests {
     )]
 
     use super::*;
+
+    /// 1 dB/(MHz cm) at 1 MHz is 100 dB/m, which is 100·ln(10)/20 Np/m.
+    ///
+    /// The conversion's `1^y·100` is exact, so it carries the stored
+    /// `NP_TO_DB` and the division: two roundings. The reference carries the
+    /// stored `LN_10`, the product and the division by 20: three. To first
+    /// order the two agree within five units of rounding of the result.
+    /// That bound admits a constant one ULP off, so the conversion is also
+    /// pinned bit for bit to the correctly rounded constant, whose own
+    /// value `acoustic_parameters` tests.
+    #[test]
+    fn absorption_conversion_matches_the_neper_definition() {
+        const ROUNDINGS: f64 = 5.0;
+        let converted = alpha_db_per_mhz_cm_to_np_per_m(1.0, 1.0, 1.1);
+        let reference = 100.0 * std::f64::consts::LN_10 / 20.0;
+        assert!(
+            (converted - reference).abs() <= ROUNDINGS * 0.5 * f64::EPSILON * reference,
+            "{converted} against {reference}"
+        );
+        assert_eq!(converted, CENTIMETERS_PER_METER / NP_TO_DB);
+    }
 
     #[test]
     fn db_neper_round_trip_preserves_value() {
