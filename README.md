@@ -64,7 +64,6 @@ nothing.
 | [`kwavers-diagnostics`](crates/kwavers-diagnostics) | Reconstruction, multi-modal fusion, Doppler, spectroscopy, decision support |
 | [`kwavers-therapy`](crates/kwavers-therapy) | HIFU / histotripsy / lithotripsy planning, theranostic guidance, dose & safety |
 | [`kwavers-driver`](crates/kwavers-driver) | Physics-guided, manufacturing-aware driver-electronics (PCB) design |
-| [`kwavers-alloc-probe`](crates/kwavers-alloc-probe) | Thread-scoped allocation counting for allocation-contract tests |
 | [`kwavers`](crates/kwavers) | Thin top-level app/integration crate: binary + cross-cutting tests/examples/benches (no re-exports) |
 | [`kwavers-python`](crates/kwavers-python) | PyO3 bindings (`pykwavers`); depends on the layer crates directly; no domain logic |
 

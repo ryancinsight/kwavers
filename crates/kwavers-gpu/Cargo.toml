@@ -81,5 +81,5 @@ cuda-runtime = ["cuda-provider", "hephaestus-cuda/cuda"]
 
 [dev-dependencies]
 eunomia = { workspace = true }
-kwavers-alloc-probe = { path = "../kwavers-alloc-probe" }
+mnemosyne = { workspace = true }
 kwavers-solver = { path = "../kwavers-solver", features = ["test-util"], version = "3.0.0" }

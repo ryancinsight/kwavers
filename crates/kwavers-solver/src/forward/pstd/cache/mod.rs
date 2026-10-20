@@ -130,7 +130,7 @@ pub struct KSpaceOperators {
 // added and then removed the expectation in 02eee237a / c3cdef9f6. Gating on the
 // emitting host keeps `expect` fulfilled where the lint fires and absent where
 // it does not, so the suppression still expires once upstream fixes the match.
-// Same treatment as `kwavers-alloc-probe`'s `OPEN_WINDOWS` and `kwavers-gpu`'s
+// Same treatment as Mnemosyne's `counting::COUNTERS` and `kwavers-gpu`'s
 // `HILBERT_SPECTRUM`.
 thread_local! {
     #[cfg_attr(
