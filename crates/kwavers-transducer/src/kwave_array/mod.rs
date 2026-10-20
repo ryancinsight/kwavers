@@ -12,7 +12,8 @@
 //! - `geometry`: surface-area and arc-length formulae.
 //! - `bli_kernel`: BLI stencil, disc basis, and nearest-index helpers.
 //! - `rasterizer_curved`: arc, bowl, and annulus element rasterizers.
-//! - `rasterizer_planar`: rect, disc, and per-element rasterizers.
+//! - `rasterizer_planar`: disc, planar-aperture (rectangle, disk, annular
+//!   sector), and per-element rasterizers.
 //! - `accessors`: public query methods (masks, delays, apodization, etc.).
 
 mod accessors;
@@ -122,17 +123,6 @@ pub enum ElementShape {
         start_angle: f64,
         end_angle: f64,
     },
-    /// Rectangular element
-    Rect {
-        position: (f64, f64, f64),
-        width: f64,
-        height: f64,
-        /// Retained for API compatibility.
-        length: f64,
-        /// Intrinsic X-Y-Z Euler rotation in degrees applied about the element
-        /// center. `(0.0, 0.0, 0.0)` keeps the rectangle axis-aligned.
-        euler_xyz_deg: (f64, f64, f64),
-    },
     /// Disc/circular element
     Disc {
         position: (f64, f64, f64),
@@ -163,10 +153,34 @@ pub enum ElementShape {
     },
 }
 
+/// Deposition and array-transform contract of a planar element (ADR 136).
+///
+/// The two conventions describe the same lattice of surface samples and
+/// differ in how a sample enters the grid and how
+/// [`KWaveArray::set_array_position`] moves the element. The binary mask is
+/// identical under both, because it deposits no weights.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum SurfaceConvention {
+    /// k-wave-python's rectangle: each sample adds `scale` times the
+    /// unnormalised band-limited-interpolation (BLI) stencil, so the weighted
+    /// mass overshoots the exact area by the stencil truncation error. The
+    /// array transform moves the element centre only and keeps its
+    /// orientation.
+    KWave,
+    /// The Rayleigh kernel's aperture contract (ADR 035): each sample
+    /// deposits exactly `scale`, with the stencil normalised to unit sum, so
+    /// the weighted mass is `area / dx^2` up to rounding. The array transform
+    /// is the full rigid transform of the centre, normal and first axis.
+    AreaConserving,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) enum KWaveElement {
     Shape(ElementShape),
-    PlanarAperture(PlanarApertureGeometry),
+    PlanarAperture {
+        geometry: PlanarApertureGeometry,
+        convention: SurfaceConvention,
+    },
 }
 
 impl From<ElementShape> for KWaveElement {

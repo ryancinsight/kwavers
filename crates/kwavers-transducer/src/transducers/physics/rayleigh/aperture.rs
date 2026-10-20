@@ -184,6 +184,27 @@ impl PlanarApertureGeometry {
         })
     }
 
+    /// The aperture re-posed on a frame that is the image of its own frame
+    /// under a rigid map: same outline, new centre, normal and first axis.
+    ///
+    /// The frame is not re-validated. A rigid map preserves the unit normal,
+    /// the in-plane first axis and the shape bounds that `oriented` already
+    /// established, so the caller passes only such an image.
+    #[must_use]
+    pub(crate) const fn with_frame(
+        self,
+        center_m: [f64; 3],
+        normal: [f64; 3],
+        first_axis: [f64; 3],
+    ) -> Self {
+        Self {
+            center_m,
+            normal,
+            first_axis,
+            shape: self.shape,
+        }
+    }
+
     /// Piston centre in metres.
     #[must_use]
     pub const fn center_m(&self) -> [f64; 3] {

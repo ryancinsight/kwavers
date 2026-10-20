@@ -138,7 +138,7 @@ def run_pykwavers_mask() -> np.ndarray:
     for x_pos in element_x_positions():
         arr.add_rect_rot_element(
             (float(x_pos), 0.0, z_local_kwave),
-            (ELEMENT_WIDTH, ELEMENT_LENGTH, DX),  # single-cell thickness
+            (ELEMENT_WIDTH, ELEMENT_LENGTH),
             tuple(ROTATION_DEG.tolist()),
         )
     arr.set_array_position(

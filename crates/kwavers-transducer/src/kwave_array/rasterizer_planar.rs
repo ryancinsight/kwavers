@@ -1,12 +1,15 @@
-//! Rasterizers for planar elements: rect, disc and validated planar apertures;
-//! plus the per-element dispatcher.
+//! Rasterizers for planar elements: discs and validated planar apertures
+//! (rectangle, disk, annular sector); plus the per-element dispatcher.
 //!
-//! # Algorithm — Rectangle (sampled lattice + Euler rotation)
+//! # Algorithm — Planar aperture (equal-area midpoint lattice)
 //!
-//! The rectangle is treated as a planar surface element, matching the
-//! upstream k-wave-python `make_cart_rect` contract. An evenly spaced lattice
-//! on the canonical `[−1,1]² × {0}` rectangle is sampled, rotated by the
-//! intrinsic X-Y-Z Euler angles, and mapped through the BLI stencil.
+//! Every rectangle, including the k-Wave-named `add_rect_*` elements, is a
+//! planar aperture (ADR 136). A rectangle is sampled on a midpoint lattice of
+//! `ceil(10·A/dx²)` points split by aspect ratio, placed on the aperture's
+//! first axis and `normal × first_axis`; a single sample along an axis sits at
+//! the centre. A sample deposits either the unnormalised BLI stencil
+//! ([`SurfaceConvention::KWave`], k-wave-python's contract) or the stencil
+//! normalised to unit sum ([`SurfaceConvention::AreaConserving`]).
 //!
 //! # Algorithm — Disc (oriented Fibonacci/Archimedean sampling)
 //!
@@ -21,8 +24,8 @@
 //! occupancy (binary) or a constant BLI weight (weighted), so that the total
 //! discrete mass equals `A / dx²` up to round-off.
 
-use super::math::{apply_matrix, euler_xyz_rotation_matrix, DISC_SAMPLE_UPSAMPLING_RATE};
-use super::{DiscSourceProfile, ElementShape, KWaveArray, KWaveElement};
+use super::math::DISC_SAMPLE_UPSAMPLING_RATE;
+use super::{DiscSourceProfile, ElementShape, KWaveArray, KWaveElement, SurfaceConvention};
 use crate::transducers::physics::{PlanarApertureGeometry, PlanarApertureShape};
 use eunomia::convert::IntegerTarget;
 use eunomia::FloatElement;
@@ -30,119 +33,6 @@ use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
 
 impl KWaveArray {
-    // ─── Rect ──────────────────────────────────────────────────────────────
-
-    pub(super) fn rasterize_rect(
-        mask: &mut Array3<bool>,
-        grid: &kwavers_grid::Grid,
-        center: (f64, f64, f64),
-        width: f64,
-        height: f64,
-        euler_xyz_deg: (f64, f64, f64),
-    ) {
-        let x_vec = grid.x_coordinates();
-        let y_vec = grid.y_coordinates();
-        let z_vec = grid.z_coordinates();
-        Self::rasterize_rect_points(
-            grid,
-            center,
-            width,
-            height,
-            euler_xyz_deg,
-            |point, scale| {
-                Self::map_surface_sample(
-                    grid,
-                    &x_vec,
-                    &y_vec,
-                    &z_vec,
-                    point,
-                    scale,
-                    true,
-                    |ix, iy, iz, _| {
-                        mask[[ix, iy, iz]] = true;
-                    },
-                );
-            },
-        );
-    }
-
-    pub(super) fn rasterize_rect_weighted(
-        mask: &mut Array3<f64>,
-        grid: &kwavers_grid::Grid,
-        center: (f64, f64, f64),
-        width: f64,
-        height: f64,
-        euler_xyz_deg: (f64, f64, f64),
-    ) {
-        let x_vec = grid.x_coordinates();
-        let y_vec = grid.y_coordinates();
-        let z_vec = grid.z_coordinates();
-        Self::rasterize_rect_points(
-            grid,
-            center,
-            width,
-            height,
-            euler_xyz_deg,
-            |point, scale| {
-                Self::map_surface_sample(
-                    grid,
-                    &x_vec,
-                    &y_vec,
-                    &z_vec,
-                    point,
-                    scale,
-                    false,
-                    |ix, iy, iz, weight| {
-                        mask[[ix, iy, iz]] += weight;
-                    },
-                );
-            },
-        );
-    }
-
-    /// Emit the canonical rectangle integration lattice used by k-wave-python.
-    pub(super) fn rasterize_rect_points<F>(
-        grid: &kwavers_grid::Grid,
-        center: (f64, f64, f64),
-        width: f64,
-        height: f64,
-        euler_xyz_deg: (f64, f64, f64),
-        mut visit: F,
-    ) where
-        F: FnMut([f64; 3], f64),
-    {
-        let area = width * height;
-        let m_grid = area / (grid.dx * grid.dx);
-        let target_points = (m_grid * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0) as usize;
-        let npts_x = ((target_points as f64 * width / height).sqrt().ceil() as usize).max(1);
-        let npts_y = ((target_points as f64 / npts_x as f64).ceil() as usize).max(1);
-        let num_points = npts_x * npts_y;
-        let scale = m_grid / num_points as f64;
-        let rot = euler_xyz_rotation_matrix(euler_xyz_deg);
-
-        let dx = if npts_x <= 1 {
-            0.0
-        } else {
-            2.0 / npts_x as f64
-        };
-        let dy = if npts_y <= 1 {
-            0.0
-        } else {
-            2.0 / npts_y as f64
-        };
-
-        for ix in 0..npts_x {
-            let ux = -1.0 + dx / 2.0 + dx * ix as f64;
-            let lx = ux * width / 2.0;
-            for iy in 0..npts_y {
-                let uy = -1.0 + dy / 2.0 + dy * iy as f64;
-                let ly = uy * height / 2.0;
-                let (rx, ry, rz) = apply_matrix(&rot, (lx, ly, 0.0));
-                visit([center.0 + rx, center.1 + ry, center.2 + rz], scale);
-            }
-        }
-    }
-
     // ─── Disc ──────────────────────────────────────────────────────────────
 
     pub(super) fn rasterize_disc(
@@ -324,21 +214,45 @@ impl KWaveArray {
         mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         geometry: PlanarApertureGeometry,
+        convention: SurfaceConvention,
     ) {
+        Self::visit_planar_aperture_weighted_cells(
+            grid,
+            geometry,
+            convention,
+            |i, j, k, weight| mask[[i, j, k]] += weight,
+        );
+    }
+
+    /// Visit every weighted grid-cell contribution of one planar aperture,
+    /// depositing each sample under its [`SurfaceConvention`].
+    pub(super) fn visit_planar_aperture_weighted_cells<F>(
+        grid: &kwavers_grid::Grid,
+        geometry: PlanarApertureGeometry,
+        convention: SurfaceConvention,
+        mut visit: F,
+    ) where
+        F: FnMut(usize, usize, usize, f64),
+    {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
-        Self::rasterize_planar_aperture_points(grid, geometry, |point, scale| {
-            Self::map_area_conserving_surface_sample(
-                grid,
-                &x_vec,
-                &y_vec,
-                &z_vec,
-                point,
-                scale,
-                |i, j, k, weight| mask[[i, j, k]] += weight,
-            );
-        });
+        match convention {
+            SurfaceConvention::KWave => {
+                Self::rasterize_planar_aperture_points(grid, geometry, |point, scale| {
+                    Self::map_surface_sample(
+                        grid, &x_vec, &y_vec, &z_vec, point, scale, false, &mut visit,
+                    );
+                });
+            }
+            SurfaceConvention::AreaConserving => {
+                Self::rasterize_planar_aperture_points(grid, geometry, |point, scale| {
+                    Self::map_area_conserving_surface_sample(
+                        grid, &x_vec, &y_vec, &z_vec, point, scale, &mut visit,
+                    );
+                });
+            }
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -468,20 +382,21 @@ impl KWaveArray {
     ) where
         F: FnMut(usize, usize, usize, f64),
     {
-        let x_vec = grid.x_coordinates();
-        let y_vec = grid.y_coordinates();
-        let z_vec = grid.z_coordinates();
-        if let KWaveElement::PlanarAperture(geometry) = element {
-            Self::rasterize_planar_aperture_points(grid, *geometry, |point, scale| {
-                Self::map_area_conserving_surface_sample(
-                    grid, &x_vec, &y_vec, &z_vec, point, scale, &mut visit,
-                );
-            });
+        if let KWaveElement::PlanarAperture {
+            geometry,
+            convention,
+        } = element
+        {
+            let geometry = self.apply_transform_planar(*geometry, *convention);
+            Self::visit_planar_aperture_weighted_cells(grid, geometry, *convention, visit);
             return;
         }
         let KWaveElement::Shape(element) = element else {
             unreachable!("invariant: planar apertures return before shape dispatch")
         };
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
         let mut visit_point = |point, scale| {
             Self::map_surface_sample(
                 grid,
@@ -546,23 +461,6 @@ impl KWaveArray {
                     *radius,
                     *start_angle,
                     *end_angle,
-                    &mut visit_point,
-                );
-            }
-            ElementShape::Rect {
-                position,
-                width,
-                height,
-                length: _,
-                euler_xyz_deg,
-            } => {
-                let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
-                Self::rasterize_rect_points(
-                    grid,
-                    pos_eff,
-                    *width,
-                    *height,
-                    euler_eff,
                     &mut visit_point,
                 );
             }

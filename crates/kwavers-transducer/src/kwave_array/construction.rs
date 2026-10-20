@@ -2,13 +2,17 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::error::KwaversResult;
 
 use aequitas::systems::si::quantities::{Angle, Length};
 use aequitas::systems::si::units::{Degree, Meter};
 
-use super::{ArrayTransform, DiscSourceProfile, ElementShape, KWaveArray, KWaveElement};
+use super::{
+    math, ArrayTransform, DiscSourceProfile, ElementShape, KWaveArray, KWaveElement,
+    SurfaceConvention,
+};
 use crate::curvilinear::ConvexArrayGeometry;
-use crate::transducers::physics::PlanarApertureGeometry;
+use crate::transducers::physics::{PlanarApertureGeometry, PlanarApertureShape};
 
 impl KWaveArray {
     /// Create a new empty `KWaveArray`.
@@ -134,54 +138,65 @@ impl KWaveArray {
 
     /// Add an axis-aligned rectangular element.
     ///
+    /// The rectangle is a planar aperture under the k-wave-python contract
+    /// (`SurfaceConvention::KWave`, ADR 136): unnormalised BLI deposition,
+    /// and `set_array_position` moves its centre only.
+    ///
     /// # Arguments
     /// * `position` - Center position `[x, y, z]` in metres
     /// * `width`    - Width in x-direction (m)
     /// * `height`   - Height in y-direction (m)
-    /// * `length`   - Length in z-direction (m)
+    ///
+    /// # Errors
+    /// Returns `KwaversError::Config` naming `width_m` or `height_m` when it
+    /// is not finite and positive, or `center_m` when `position` is not
+    /// finite. The array is unchanged on error.
     pub fn add_rect_element(
         &mut self,
         position: (f64, f64, f64),
         width: f64,
         height: f64,
-        length: f64,
-    ) -> &mut Self {
-        self.elements.push(
-            ElementShape::Rect {
-                position,
-                width,
-                height,
-                length,
-                euler_xyz_deg: (0.0, 0.0, 0.0),
-            }
-            .into(),
-        );
-        self
+    ) -> KwaversResult<&mut Self> {
+        self.add_rect_rot_element(position, width, height, (0.0, 0.0, 0.0))
     }
 
     /// Add a rectangular element rotated about its center by intrinsic X-Y-Z
     /// Euler angles (degrees). Matches the upstream k-wave-python
     /// `KWaveArray.add_rect_element` rotation contract used by the linear
-    /// array transducer example.
+    /// array transducer example: with `R = Rz·Ry·Rx`, the width runs along
+    /// `R·x̂`, the height along `R·ŷ`, and the normal is `R·ẑ`.
+    ///
+    /// # Errors
+    /// Returns `KwaversError::Config` naming `width_m` or `height_m` when it
+    /// is not finite and positive, `center_m` when `position` is not finite,
+    /// or the rotated axis when an angle is not finite. The array is unchanged
+    /// on error.
     pub fn add_rect_rot_element(
         &mut self,
         position: (f64, f64, f64),
         width: f64,
         height: f64,
-        length: f64,
         euler_xyz_deg: (f64, f64, f64),
-    ) -> &mut Self {
-        self.elements.push(
-            ElementShape::Rect {
-                position,
-                width,
-                height,
-                length,
-                euler_xyz_deg,
-            }
-            .into(),
-        );
-        self
+    ) -> KwaversResult<&mut Self> {
+        let rotation = math::euler_xyz_rotation_matrix(euler_xyz_deg);
+        let axis = |local: (f64, f64, f64)| {
+            let (x, y, z) = math::apply_matrix(&rotation, local);
+            [x, y, z]
+        };
+        let geometry = PlanarApertureGeometry::oriented(
+            [position.0, position.1, position.2],
+            axis((0.0, 0.0, 1.0)),
+            axis((1.0, 0.0, 0.0)),
+            PlanarApertureShape::Rectangle {
+                width_m: width,
+                height_m: height,
+            },
+        )?;
+        self.elements.push(KWaveElement::PlanarAperture {
+            geometry,
+            convention: SurfaceConvention::KWave,
+        });
+        Ok(self)
     }
 
     /// Add every element of a convex (curvilinear) array.
@@ -191,8 +206,7 @@ impl KWaveArray {
     /// rectangle about `y` by its own subtended angle.
     ///
     /// # Why the rotated rect and not the arc (ADR 112)
-    /// `rasterize_rect_points` builds its lattice at `(lx, ly, 0)` before
-    /// applying the Euler rotation, so a rectangle's local normal is `+z`.
+    /// A rectangle's local normal is `+z` before its Euler rotation (ADR 136).
     /// `euler_xyz_rotation_matrix` composes `Rz·Ry·Rx`, whose `y` block sends
     /// `+z` to `[sin β, 0, cos β]` — exactly
     /// [`ConvexArrayGeometry::element_normal`] at `β = θᵢ`, with no sign flip
@@ -206,14 +220,19 @@ impl KWaveArray {
     /// * `geometry`       - Convex array layout
     /// * `element_width`  - Element extent along the array (m)
     /// * `element_height` - Element extent across the array, elevation (m)
+    ///
+    /// # Errors
+    /// Returns the error of [`Self::add_rect_rot_element`] for the first
+    /// invalid element. The array is unchanged on error.
     pub fn add_convex_array(
         &mut self,
         geometry: &ConvexArrayGeometry,
         element_width: Length<f64>,
         element_height: Length<f64>,
-    ) -> &mut Self {
+    ) -> KwaversResult<&mut Self> {
         let width = element_width.in_unit::<Meter>();
         let height = element_height.in_unit::<Meter>();
+        let first_new_element = self.elements.len();
         for i in 0..geometry.num_elements() {
             let position = geometry.element_position(i);
             // The rasterizer's surface is f64 degrees; reading the typed angle
@@ -221,15 +240,17 @@ impl KWaveArray {
             // so a unit slip here is a type error rather than a wrong mask.
             let theta: Angle<f64> = geometry.element_angle_quantity(i);
             let theta_deg = theta.in_unit::<Degree>();
-            self.add_rect_rot_element(
+            if let Err(error) = self.add_rect_rot_element(
                 (position[0], position[1], position[2]),
                 width,
                 height,
-                0.0,
                 (0.0, theta_deg, 0.0),
-            );
+            ) {
+                self.elements.truncate(first_new_element);
+                return Err(error);
+            }
         }
-        self
+        Ok(self)
     }
 
     /// Add a disc-shaped element.
@@ -283,8 +304,16 @@ impl KWaveArray {
 
     /// Add validated oriented planar geometry: a disk, an annular sector, or a
     /// rectangle.
+    ///
+    /// The element is area-conserving (`SurfaceConvention::AreaConserving`,
+    /// ADR 136): its weighted mass is `area / dx²` up to rounding, and
+    /// `set_array_position` applies the full rigid transform to its centre,
+    /// normal and first axis.
     pub fn add_planar_aperture_element(&mut self, geometry: PlanarApertureGeometry) -> &mut Self {
-        self.elements.push(KWaveElement::PlanarAperture(geometry));
+        self.elements.push(KWaveElement::PlanarAperture {
+            geometry,
+            convention: SurfaceConvention::AreaConserving,
+        });
         self
     }
 
