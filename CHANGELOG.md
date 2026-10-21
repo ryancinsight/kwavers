@@ -4,6 +4,24 @@
 
 ### Changed
 
+- **[patch] The stack's advisory gate clears: the `zip` crate leaves this
+  workspace and the certificate roots move past their advisories.** `zip` 2.4.2
+  reached the lock through `gaia-mesh` 0.5.2 and `zip` 6.0.0 through
+  `consus-npy` 0.2.0; both providers now ship their own containers
+  (`consus-zip` 0.4.0 and Gaia 0.6.10's consus-zip 3MF writer), so advancing
+  Gaia to 0.6.10 and the Consus edges to 0.4.0 takes both out of the lock.
+  The unused `zip = "0.6"` workspace edge is deleted with them. The lock also
+  moves `rustls-webpki` to 0.103.16 and `webpki-root-certs` to 1.0.10, which
+  clears RUSTSEC-2026-0382 and RUSTSEC-2026-0383 alongside the three ZIP
+  advisories.
+- **[patch] The first-party providers move to their current cohort.** Aequitas
+  to 0.3.1, Apollo FFT to 0.29.3, Asclepius to 0.3.0, Athena to 0.3.2,
+  Eunomia to 0.10.0, Gaia to 0.6.10, Hephaestus to 0.27.0, Hermes to 0.9.2,
+  Horae to 0.2.2, Leto to 0.46.4, Mnemosyne to 0.10.1/0.7.1/0.7.0, Moirai to
+  0.10.0, Themis to 0.11.3, and Tyche to 0.4.0; the six RITK pins move to the
+  merged `12cedbff6` (RITK I/O 0.5.0, RITK registration 0.56.0). One git
+  source resolves to one revision, so every edge naming a provider
+  repository has to agree on a version or the resolver refuses the pair.
 - **[patch] The lossless staggered FDTD pressure update is one pass.** On a
   Cartesian grid without a CPML or absorption, the three velocity
   divergences are swept a row at a time into buffers that stay in cache and
