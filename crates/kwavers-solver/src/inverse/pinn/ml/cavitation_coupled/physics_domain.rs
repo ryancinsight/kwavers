@@ -1,6 +1,7 @@
 //! `SimulationPhysicsDomain` implementation for [`CavitationCoupledDomain`].
 
 use super::domain::CavitationCoupledDomain;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::physics::{
     BoundaryPosition, InitialConditionSpec, PhysicsLossWeights, PhysicsValidationMetric,
     PinnBoundaryComponent, PinnBoundaryConditionSpec, PinnCouplingInterface,
@@ -47,22 +48,30 @@ where
                 .iter()
                 .map(|(_, v, _)| *v as f32)
                 .collect();
-            let xt = Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &xs, &backend),
+            let xt = be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(
+                    vec![n, 1],
+                    &xs,
+                    &backend,
+                ))?,
                 false,
-            );
-            let yt = Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &ys, &backend),
+            ))?;
+            let yt = be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(
+                    vec![n, 1],
+                    &ys,
+                    &backend,
+                ))?,
                 false,
-            );
-            coeus_autograd::cat(&[&xt, &yt], 1)
+            ))?;
+            be(coeus_autograd::cat(&[&xt, &yt], 1))?
         } else {
-            coeus_autograd::cat(&[x, y], 1)
+            be(coeus_autograd::cat(&[x, y], 1))?
         };
 
-        let cav = self.cavitation_residual(&acoustic_field, &bubble_positions, physics_params);
-        let scat = self.bubble_scattering_residual(&acoustic_field, &bubble_positions);
-        Ok(coeus_autograd::add(&cav, &scat))
+        let cav = self.cavitation_residual(&acoustic_field, &bubble_positions, physics_params)?;
+        let scat = self.bubble_scattering_residual(&acoustic_field, &bubble_positions)?;
+        be(coeus_autograd::add(&cav, &scat))
     }
 
     fn boundary_conditions(&self) -> Vec<PinnBoundaryConditionSpec> {

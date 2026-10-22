@@ -1,6 +1,8 @@
 use super::core::PinnWave3D;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::wave_equation_3d::config::PinnConfig3D;
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
@@ -18,7 +20,7 @@ where
     pub(crate) fn generate_collocation_points(
         &self,
         config: &PinnConfig3D,
-    ) -> CollocationTensors<B> {
+    ) -> KwaversResult<CollocationTensors<B>> {
         let n_points = config.num_collocation_points;
         let mut x_points = Vec::with_capacity(n_points);
         let mut y_points = Vec::with_capacity(n_points);
@@ -59,14 +61,19 @@ where
 
         let backend = B::default();
         let n = x_points.len();
-        let mk = |v: &[f32]| {
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], v, &backend),
+        let mk = |v: &[f32]| -> KwaversResult<Var<f32, B>> {
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], v, &backend))?,
                 false,
-            )
+            ))
         };
 
-        (mk(&x_points), mk(&y_points), mk(&z_points), mk(&t_points))
+        Ok((
+            mk(&x_points)?,
+            mk(&y_points)?,
+            mk(&z_points)?,
+            mk(&t_points)?,
+        ))
     }
 }
 
@@ -89,7 +96,8 @@ mod tests {
 
         let solver = PinnWave3D::<TestBackend>::new(config.clone(), geometry, wave_speed)?;
 
-        let (x_colloc, y_colloc, z_colloc, t_colloc) = solver.generate_collocation_points(&config);
+        let (x_colloc, y_colloc, z_colloc, t_colloc) =
+            solver.generate_collocation_points(&config)?;
 
         let n_generated = match x_colloc.tensor.shape() {
             [n, _] => *n,
@@ -132,7 +140,7 @@ mod tests {
         let solver = PinnWave3D::<TestBackend>::new(config.clone(), geometry, wave_speed)?;
 
         let (x_colloc, _y_colloc, _z_colloc, _t_colloc) =
-            solver.generate_collocation_points(&config);
+            solver.generate_collocation_points(&config)?;
 
         let n_generated = match x_colloc.tensor.shape() {
             [n, _] => *n,

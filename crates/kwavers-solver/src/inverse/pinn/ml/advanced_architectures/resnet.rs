@@ -1,5 +1,6 @@
 //! ResNet-based PINN architectures for 1D and 2D wave equations.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use coeus_nn::{Linear, Module};
 use kwavers_core::error::KwaversResult;
@@ -70,7 +71,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
                 config.input_dim,
                 config.hidden_layers[0],
                 config.fourier_scale,
-            ))
+            )?)
         } else {
             None
         };
@@ -144,10 +145,10 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
         B::DeviceBuffer<f32>:
             coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
     {
-        let input = coeus_autograd::cat(&[x, t], 1);
+        let input = be(coeus_autograd::cat(&[x, t], 1))?;
 
         let features = if let Some(fourier) = &self.fourier_features {
-            fourier.forward(&input)
+            fourier.forward(&input)?
         } else {
             input
         };
@@ -156,10 +157,10 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
             self.input_proj.forward(&features),
             "ResNet 1D input projection",
         )?;
-        let mut out = coeus_autograd::gelu(&input_projection);
+        let mut out = be(coeus_autograd::gelu(&input_projection))?;
 
         for block in &self.residual_blocks {
-            out = coeus_autograd::gelu(&block.forward(&out)?);
+            out = be(coeus_autograd::gelu(&block.forward(&out)?))?;
         }
 
         map_forward(
@@ -204,7 +205,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
                 config.input_dim,
                 config.hidden_layers[0],
                 config.fourier_scale,
-            ))
+            )?)
         } else {
             None
         };
@@ -283,10 +284,10 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
         B::DeviceBuffer<f32>:
             coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
     {
-        let input = coeus_autograd::cat(&[x, y, t], 1);
+        let input = be(coeus_autograd::cat(&[x, y, t], 1))?;
 
         let features = if let Some(fourier) = &self.fourier_features {
-            fourier.forward(&input)
+            fourier.forward(&input)?
         } else {
             input
         };
@@ -295,10 +296,10 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
             self.input_proj.forward(&features),
             "ResNet 2D input projection",
         )?;
-        let mut out = coeus_autograd::gelu(&input_projection);
+        let mut out = be(coeus_autograd::gelu(&input_projection))?;
 
         for block in &self.residual_blocks {
-            out = coeus_autograd::gelu(&block.forward(&out)?);
+            out = be(coeus_autograd::gelu(&block.forward(&out)?))?;
         }
 
         map_forward(

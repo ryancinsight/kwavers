@@ -1,3 +1,4 @@
+use crate::inverse::pinn::be;
 use leto::{Array1, Array2};
 
 use coeus_autograd::Var;
@@ -97,18 +98,30 @@ where
         let t_data_vec: Vec<f32> = t_data.iter().map(|&v| v as f32).collect();
         let u_data_vec: Vec<f32> = u_data.iter().map(|&v| v as f32).collect();
 
-        let x_data_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_data, 1], &x_data_vec, &backend),
+        let x_data_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_data, 1],
+                &x_data_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let t_data_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_data, 1], &t_data_vec, &backend),
+        ))?;
+        let t_data_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_data, 1],
+                &t_data_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let u_data_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_data, 1], &u_data_vec, &backend),
+        ))?;
+        let u_data_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_data, 1],
+                &u_data_vec,
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
 
         let n_colloc = self.config.num_collocation_points;
         let x_colloc_vec: Vec<f32> = (0..n_colloc)
@@ -116,14 +129,22 @@ where
             .collect();
         let t_colloc_vec: Vec<f32> = (0..n_colloc).map(|i| i as f32 / n_colloc as f32).collect();
 
-        let x_colloc_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_colloc, 1], &x_colloc_vec, &backend),
+        let x_colloc_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_colloc, 1],
+                &x_colloc_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let t_colloc_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_colloc, 1], &t_colloc_vec, &backend),
+        ))?;
+        let t_colloc_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_colloc, 1],
+                &t_colloc_vec,
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
 
         let n_bc = 10;
         let x_bc_vec: Vec<f32> = vec![-1.0; n_bc / 2]
@@ -133,25 +154,37 @@ where
         let t_bc_vec: Vec<f32> = vec![0.0; n_bc];
         let u_bc_vec: Vec<f32> = vec![0.0; n_bc];
 
-        let x_bc_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_bc, 1], &x_bc_vec, &backend),
+        let x_bc_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_bc, 1],
+                &x_bc_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let t_bc_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_bc, 1], &t_bc_vec, &backend),
+        ))?;
+        let t_bc_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_bc, 1],
+                &t_bc_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let u_bc_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_bc, 1], &u_bc_vec, &backend),
+        ))?;
+        let u_bc_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_bc, 1],
+                &u_bc_vec,
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
 
         for epoch in 0..epochs {
             // Var gradients accumulate across `backward()` calls (unlike the previous autograd path's
             // per-call-graph `Gradients`, which is implicitly fresh each step);
             // zero them before this epoch's forward+backward or they carry over.
             for p in self.pinn.parameters() {
-                p.zero_grad();
+                be(p.zero_grad())?;
             }
 
             let (total_loss, data_loss, pde_loss, bc_loss) = self.pinn.compute_physics_loss(

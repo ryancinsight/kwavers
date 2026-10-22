@@ -1,4 +1,5 @@
 use super::constants::EPS_FD_F32;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::inverse::pinn::ml::PinnWave2D;
 use coeus_autograd::Var;
@@ -38,7 +39,7 @@ where
     //   R = ε·μ·∂²Ez/∂t² + μ·σ·∂Ez/∂t − ∂²Ez/∂x² − ∂²Ez/∂y²
     //
     // Proof (plane-wave verification):
-    //   Ez = exp(i(kx·x + ky·y − ωt)), kx² + ky² = ω²εμ − iωμσ
+    //   Ez = be(exp(i(kx·x + ky·y − ωt)))?, kx² + ky² = ω²εμ − iωμσ
     //   → ε·μ·(−ω²Ez) + μ·σ·(−iωEz) + (kx² + ky²)Ez = 0  ✓
     //
     // Algorithm — second-order central finite-difference approximation:
@@ -60,42 +61,42 @@ where
     use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub};
 
     // --- ∂²Ez/∂x² = (Ez(x+h) − 2·Ez(x) + Ez(x−h)) / h² ---
-    let ez_xp = model.forward(&scalar_add(x, h), y, t)?;
-    let ez_xm = model.forward(&scalar_sub(x, h), y, t)?;
+    let ez_xp = model.forward(&be(scalar_add(x, h))?, y, t)?;
+    let ez_xm = model.forward(&be(scalar_sub(x, h))?, y, t)?;
     let ez_0 = model.forward(x, y, t)?;
-    let d2ez_dx2 = scalar_mul(
-        &add(&sub(&ez_xp, &scalar_mul(&ez_0, 2.0)), &ez_xm),
+    let d2ez_dx2 = be(scalar_mul(
+        &be(add(&be(sub(&ez_xp, &be(scalar_mul(&ez_0, 2.0))?))?, &ez_xm))?,
         1.0 / (h * h),
-    );
+    ))?;
 
     // --- ∂²Ez/∂y² = (Ez(y+h) − 2·Ez(y) + Ez(y−h)) / h² ---
-    let ez_yp = model.forward(x, &scalar_add(y, h), t)?;
-    let ez_ym = model.forward(x, &scalar_sub(y, h), t)?;
-    let d2ez_dy2 = scalar_mul(
-        &add(&sub(&ez_yp, &scalar_mul(&ez_0, 2.0)), &ez_ym),
+    let ez_yp = model.forward(x, &be(scalar_add(y, h))?, t)?;
+    let ez_ym = model.forward(x, &be(scalar_sub(y, h))?, t)?;
+    let d2ez_dy2 = be(scalar_mul(
+        &be(add(&be(sub(&ez_yp, &be(scalar_mul(&ez_0, 2.0))?))?, &ez_ym))?,
         1.0 / (h * h),
-    );
+    ))?;
 
     // --- ∂²Ez/∂t² = (Ez(t+h) − 2·Ez(t) + Ez(t−h)) / h² ---
-    let ez_tp = model.forward(x, y, &scalar_add(t, h))?;
-    let ez_tm = model.forward(x, y, &scalar_sub(t, h))?;
-    let d2ez_dt2 = scalar_mul(
-        &add(&sub(&ez_tp, &scalar_mul(&ez_0, 2.0)), &ez_tm),
+    let ez_tp = model.forward(x, y, &be(scalar_add(t, h))?)?;
+    let ez_tm = model.forward(x, y, &be(scalar_sub(t, h))?)?;
+    let d2ez_dt2 = be(scalar_mul(
+        &be(add(&be(sub(&ez_tp, &be(scalar_mul(&ez_0, 2.0))?))?, &ez_tm))?,
         1.0 / (h * h),
-    );
+    ))?;
 
     // --- ∂Ez/∂t = (Ez(t+h) − Ez(t−h)) / (2h) ---
-    let dez_dt = scalar_mul(&sub(&ez_tp, &ez_tm), 1.0 / (2.0 * h));
+    let dez_dt = be(scalar_mul(&be(sub(&ez_tp, &ez_tm))?, 1.0 / (2.0 * h)))?;
 
     // --- Assemble residual: R = ε·μ·∂²Ez/∂t² + μ·σ·∂Ez/∂t − ∂²Ez/∂x² − ∂²Ez/∂y² ---
     let eps_mu = (eps * mu) as f32;
     let mu_sigma = (mu * sigma) as f32;
 
-    let laplacian = add(&d2ez_dx2, &d2ez_dy2);
-    let wave_term = scalar_mul(&d2ez_dt2, eps_mu);
-    let damping_term = scalar_mul(&dez_dt, mu_sigma);
+    let laplacian = be(add(&d2ez_dx2, &d2ez_dy2))?;
+    let wave_term = be(scalar_mul(&d2ez_dt2, eps_mu))?;
+    let damping_term = be(scalar_mul(&dez_dt, mu_sigma))?;
 
-    Ok(sub(&add(&wave_term, &damping_term), &laplacian))
+    be(sub(&be(add(&wave_term, &damping_term))?, &laplacian))
 }
 
 #[cfg(test)]

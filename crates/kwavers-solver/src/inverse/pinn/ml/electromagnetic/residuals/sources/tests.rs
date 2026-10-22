@@ -1,3 +1,5 @@
+use crate::inverse::pinn::be;
+use kwavers_core::error::KwaversResult;
 // -----------------------------------------------------------------------
 // Tests for compute_charge_density
 // -----------------------------------------------------------------------
@@ -10,7 +12,7 @@
 ///
 #[cfg(feature = "pinn")]
 #[test]
-fn test_charge_density_zero_for_source_free_medium() {
+fn test_charge_density_zero_for_source_free_medium() -> KwaversResult<()> {
     type B = coeus_core::MoiraiBackend;
     use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use coeus_autograd::Var;
@@ -23,10 +25,16 @@ fn test_charge_density_zero_for_source_free_medium() {
         domain_params: HashMap::new(),
     };
     let backend = B::default();
-    let x: Var<f32, B> = Var::new(coeus_tensor::Tensor::zeros_on(vec![4, 1], &backend), false);
-    let y: Var<f32, B> = Var::new(coeus_tensor::Tensor::zeros_on(vec![4, 1], &backend), false);
+    let x: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![4, 1], &backend))?,
+        false,
+    ))?;
+    let y: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![4, 1], &backend))?,
+        false,
+    ))?;
 
-    let rho = super::compute_charge_density::<B>(&x, &y, &params);
+    let rho = super::compute_charge_density::<B>(&x, &y, &params)?;
     let rho_data = rho.tensor.as_slice();
     for v in rho_data {
         assert!(
@@ -35,6 +43,8 @@ fn test_charge_density_zero_for_source_free_medium() {
             v
         );
     }
+
+    Ok(())
 }
 
 /// Uniform impressed charge density: all output elements = rho_0.
@@ -45,7 +55,7 @@ fn test_charge_density_zero_for_source_free_medium() {
 ///
 #[cfg(feature = "pinn")]
 #[test]
-fn test_charge_density_uniform_matches_param() {
+fn test_charge_density_uniform_matches_param() -> KwaversResult<()> {
     type B = coeus_core::MoiraiBackend;
     use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use coeus_autograd::Var;
@@ -61,10 +71,16 @@ fn test_charge_density_uniform_matches_param() {
         domain_params: domain,
     };
     let backend = B::default();
-    let x: Var<f32, B> = Var::new(coeus_tensor::Tensor::zeros_on(vec![3, 1], &backend), false);
-    let y: Var<f32, B> = Var::new(coeus_tensor::Tensor::zeros_on(vec![3, 1], &backend), false);
+    let x: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![3, 1], &backend))?,
+        false,
+    ))?;
+    let y: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![3, 1], &backend))?,
+        false,
+    ))?;
 
-    let rho = super::compute_charge_density::<B>(&x, &y, &params);
+    let rho = super::compute_charge_density::<B>(&x, &y, &params)?;
     let rho_data = rho.tensor.as_slice();
     for v in rho_data {
         let diff = (v - rho_expected as f32).abs();
@@ -75,6 +91,8 @@ fn test_charge_density_uniform_matches_param() {
             v
         );
     }
+
+    Ok(())
 }
 
 /// Gaussian charge density: peak at (x0,y0), decays with σ.
@@ -85,7 +103,7 @@ fn test_charge_density_uniform_matches_param() {
 ///
 #[cfg(feature = "pinn")]
 #[test]
-fn test_charge_density_gaussian_peak_at_centre() {
+fn test_charge_density_gaussian_peak_at_centre() -> KwaversResult<()> {
     type B = coeus_core::MoiraiBackend;
     use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use coeus_autograd::Var;
@@ -103,18 +121,26 @@ fn test_charge_density_gaussian_peak_at_centre() {
         initial_values: HashMap::new(),
         domain_params: domain,
     };
-    // Single point exactly at the Gaussian centre → exp(0) = 1 → ρ = ρ₀
+    // Single point exactly at the Gaussian centre → be(exp(0))? = 1 → ρ = ρ₀
     let backend = B::default();
-    let x: Var<f32, B> = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[0.5_f32], &backend),
+    let x: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![1, 1],
+            &[0.5_f32],
+            &backend,
+        ))?,
         false,
-    );
-    let y: Var<f32, B> = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[0.5_f32], &backend),
+    ))?;
+    let y: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![1, 1],
+            &[0.5_f32],
+            &backend,
+        ))?,
         false,
-    );
+    ))?;
 
-    let rho = super::compute_charge_density::<B>(&x, &y, &params);
+    let rho = super::compute_charge_density::<B>(&x, &y, &params)?;
     let rho_data = rho.tensor.as_slice();
     let diff = (rho_data[0] - rho_0 as f32).abs();
     assert!(
@@ -123,6 +149,8 @@ fn test_charge_density_gaussian_peak_at_centre() {
         rho_0,
         rho_data[0]
     );
+
+    Ok(())
 }
 
 // -----------------------------------------------------------------------
@@ -135,7 +163,7 @@ fn test_charge_density_gaussian_peak_at_centre() {
 ///
 #[cfg(feature = "pinn")]
 #[test]
-fn test_current_density_zero_for_dielectric() {
+fn test_current_density_zero_for_dielectric() -> KwaversResult<()> {
     type B = coeus_core::MoiraiBackend;
     use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use coeus_autograd::Var;
@@ -148,14 +176,22 @@ fn test_current_density_zero_for_dielectric() {
         domain_params: HashMap::new(),
     };
     let backend = B::default();
-    let x: Var<f32, B> = Var::new(coeus_tensor::Tensor::zeros_on(vec![5, 1], &backend), false);
-    let y: Var<f32, B> = Var::new(coeus_tensor::Tensor::zeros_on(vec![5, 1], &backend), false);
+    let x: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![5, 1], &backend))?,
+        false,
+    ))?;
+    let y: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![5, 1], &backend))?,
+        false,
+    ))?;
 
-    let jz = super::compute_current_density_z::<B>(&x, &y, &params);
+    let jz = super::compute_current_density_z::<B>(&x, &y, &params)?;
     let jz_data = jz.tensor.as_slice();
     for v in jz_data {
         assert!(v.abs() < 1e-10, "expected J_z=0 for dielectric, got {}", v);
     }
+
+    Ok(())
 }
 
 /// Conduction current: J = σ·E_z,background.
@@ -166,7 +202,7 @@ fn test_current_density_zero_for_dielectric() {
 ///
 #[cfg(feature = "pinn")]
 #[test]
-fn test_current_density_conduction_proportional_to_sigma_and_ez() {
+fn test_current_density_conduction_proportional_to_sigma_and_ez() -> KwaversResult<()> {
     type B = coeus_core::MoiraiBackend;
     use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use coeus_autograd::Var;
@@ -186,15 +222,23 @@ fn test_current_density_conduction_proportional_to_sigma_and_ez() {
         domain_params: domain,
     };
     let backend = B::default();
-    let x: Var<f32, B> = Var::new(coeus_tensor::Tensor::zeros_on(vec![3, 1], &backend), false);
-    let y: Var<f32, B> = Var::new(coeus_tensor::Tensor::zeros_on(vec![3, 1], &backend), false);
+    let x: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![3, 1], &backend))?,
+        false,
+    ))?;
+    let y: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![3, 1], &backend))?,
+        false,
+    ))?;
 
-    let jz = super::compute_current_density_z::<B>(&x, &y, &params);
+    let jz = super::compute_current_density_z::<B>(&x, &y, &params)?;
     let jz_data = jz.tensor.as_slice();
     for v in jz_data {
         let diff = (v - expected).abs();
         assert!(diff < 1e-4, "expected J_z=σ·E_z={}, got {}", expected, v);
     }
+
+    Ok(())
 }
 
 /// Uniform impressed current: all output elements equal current_density_z.
@@ -203,7 +247,7 @@ fn test_current_density_conduction_proportional_to_sigma_and_ez() {
 ///
 #[cfg(feature = "pinn")]
 #[test]
-fn test_current_density_uniform_impressed() {
+fn test_current_density_uniform_impressed() -> KwaversResult<()> {
     type B = coeus_core::MoiraiBackend;
     use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
     use coeus_autograd::Var;
@@ -219,13 +263,21 @@ fn test_current_density_uniform_impressed() {
         domain_params: domain,
     };
     let backend = B::default();
-    let x: Var<f32, B> = Var::new(coeus_tensor::Tensor::zeros_on(vec![4, 1], &backend), false);
-    let y: Var<f32, B> = Var::new(coeus_tensor::Tensor::zeros_on(vec![4, 1], &backend), false);
+    let x: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![4, 1], &backend))?,
+        false,
+    ))?;
+    let y: Var<f32, B> = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![4, 1], &backend))?,
+        false,
+    ))?;
 
-    let jz = super::compute_current_density_z::<B>(&x, &y, &params);
+    let jz = super::compute_current_density_z::<B>(&x, &y, &params)?;
     let jz_data = jz.tensor.as_slice();
     for v in jz_data {
         let diff = (v - j0 as f32).abs();
         assert!(diff < 1e-4, "expected J_z={}, got {}", j0, v);
     }
+
+    Ok(())
 }

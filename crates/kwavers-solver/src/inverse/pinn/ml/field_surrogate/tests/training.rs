@@ -1,5 +1,6 @@
 //! Trainer step, convergence, and Helmholtz-path tests (Phase C-2).
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -14,7 +15,7 @@ use super::B;
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Build a synthetic training batch from a separable Gaussian envelope:
-/// `p_max(x, y, z) = exp(-(x²+y²+z²)/(2σ²))`, independent of `(f0, pnp)`.
+/// `p_max(x, y, z) = be(exp(-(x²+y²+z²)/(2σ²))).unwrap()`, independent of `(f0, pnp)`.
 ///
 /// Targets are normalised to `[0, 1]` so they live within the network's
 /// `tanh`-friendly range.
@@ -44,26 +45,50 @@ fn make_synthetic_batch(backend: B, rng_seed: u64, n: usize) -> TrainingBatch<B>
         // Map f0_norm in [-1, 1] back to physical Hz in [0.5, 1.0] MHz
         f0_vec[i] = 0.75e6 + 0.25e6 * f0_norm;
     }
-    let inputs = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n, 5], &host_data, &backend),
+    let inputs = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![n, 5],
+            &host_data,
+            &backend,
+        ))
+        .unwrap(),
         false,
-    );
-    let targets = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n, 3], &targets, &backend),
+    ))
+    .unwrap();
+    let targets = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![n, 3],
+            &targets,
+            &backend,
+        ))
+        .unwrap(),
         false,
-    );
-    let f0_phys = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n], &f0_vec, &backend),
+    ))
+    .unwrap();
+    let f0_phys = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![n],
+            &f0_vec,
+            &backend,
+        ))
+        .unwrap(),
         false,
-    );
+    ))
+    .unwrap();
     // Synthetic batch is treated as drawn from a single virtual
     // kernel; the per-group prominence loop then collapses to the
     // same batch-wide aggregation Phase C-9 exercised, keeping the
     // training-loss-decreases test sensitive to gradient flow.
-    let group_ids = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n], &vec![0.0_f32; n], &backend),
+    let group_ids = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![n],
+            &vec![0.0_f32; n],
+            &backend,
+        ))
+        .unwrap(),
         false,
-    );
+    ))
+    .unwrap();
     TrainingBatch {
         inputs,
         targets,

@@ -1,5 +1,6 @@
 use super::core::PinnWave3D;
 use super::losses::LossScales;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::wave_equation_3d::config::TrainingMetrics3D;
 use crate::inverse::pinn::ml::wave_equation_3d::optimizer::SimpleOptimizer3D;
 use coeus_autograd::Var;
@@ -54,21 +55,25 @@ where
         }
 
         let backend = B::default();
-        let mk = |v: &[f32]| {
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n_data, 1], v, &backend),
+        let mk = |v: &[f32]| -> KwaversResult<Var<f32, B>> {
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(
+                    vec![n_data, 1],
+                    v,
+                    &backend,
+                ))?,
                 false,
-            )
+            ))
         };
-        let x_data_var = mk(x_data);
-        let y_data_var = mk(y_data);
-        let z_data_var = mk(z_data);
-        let t_data_var = mk(t_data);
-        let u_data_var = mk(u_data);
+        let x_data_var = mk(x_data)?;
+        let y_data_var = mk(y_data)?;
+        let z_data_var = mk(z_data)?;
+        let t_data_var = mk(t_data)?;
+        let u_data_var = mk(u_data)?;
 
         // Generate collocation points for PDE residual
         let (x_colloc, y_colloc, z_colloc, t_colloc) =
-            self.generate_collocation_points(&self.config.clone());
+            self.generate_collocation_points(&self.config.clone())?;
         let (x_ic, y_ic, z_ic, t_ic, u_ic) =
             Self::extract_initial_condition_tensors(x_data, y_data, z_data, t_data, u_data)?;
 
@@ -98,7 +103,7 @@ where
 
         for epoch in 0..epochs {
             for p in self.pinn.parameters() {
-                p.zero_grad();
+                be(p.zero_grad())?;
             }
 
             let (total_loss, data_loss, pde_loss, bc_loss, ic_loss) = self.compute_physics_loss(

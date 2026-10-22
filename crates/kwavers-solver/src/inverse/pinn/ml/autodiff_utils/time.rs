@@ -3,6 +3,7 @@
 //! # References
 //! - Raissi et al. (2019): "Physics-informed neural networks". *J. Comput. Phys.*, 378, 686–707.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 
 use super::ForwardOutput;
@@ -19,7 +20,7 @@ use super::ForwardOutput;
 ///
 /// # coeus_autograd pattern
 /// ```text
-/// input_grad = Var::new(input.clone(), true)
+/// input_grad = be(Var::new(input.clone(), true))?
 /// output = forward(&input_grad)
 /// sum(output_component).backward()
 /// du_dt = input_grad.grad()[:, 0]   // column 0 = time
@@ -38,13 +39,13 @@ where
     O: ForwardOutput<B>,
 {
     let batch = input.shape()[0];
-    let input_grad = Var::new(input.clone(), true);
+    let input_grad = be(Var::new(input.clone(), true))?;
     let output = forward_fn(&input_grad).into_forward_result()?;
-    let component = coeus_autograd::slice(
+    let component = be(coeus_autograd::slice(
         &output,
         &[(0, batch), (output_component, output_component + 1)],
-    );
-    coeus_autograd::sum(&component)
+    ))?;
+    be(coeus_autograd::sum(&component))?
         .backward()
         .map_err(|error| {
             kwavers_core::error::KwaversError::InternalError(format!(
@@ -60,7 +61,7 @@ where
         })?
         .slice(&[(0, batch), (0, 1)])
         .to_contiguous();
-    Ok(dt_grad)
+    be(dt_grad)
 }
 
 /// Compute second-order time derivative ∂²u/∂t² via central finite differences.
@@ -108,31 +109,42 @@ where
         plus[row * 3] += eps;
         minus[row * 3] -= eps;
     }
-    let input_plus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &plus, &backend);
-    let input_minus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &minus, &backend);
+    let input_plus = be(coeus_tensor::Tensor::from_slice_on(
+        vec![batch, 3],
+        &plus,
+        &backend,
+    ))?;
+    let input_minus = be(coeus_tensor::Tensor::from_slice_on(
+        vec![batch, 3],
+        &minus,
+        &backend,
+    ))?;
 
-    let output = forward_fn(&Var::new(input.clone(), false)).into_forward_result()?;
-    let u_t = coeus_autograd::slice(
+    let output = forward_fn(&be(Var::new(input.clone(), false))?).into_forward_result()?;
+    let u_t = be(coeus_autograd::slice(
         &output,
         &[(0, batch), (output_component, output_component + 1)],
-    );
+    ))?;
 
-    let output_plus = forward_fn(&Var::new(input_plus, false)).into_forward_result()?;
-    let u_t_plus = coeus_autograd::slice(
+    let output_plus = forward_fn(&be(Var::new(input_plus, false))?).into_forward_result()?;
+    let u_t_plus = be(coeus_autograd::slice(
         &output_plus,
         &[(0, batch), (output_component, output_component + 1)],
-    );
+    ))?;
 
-    let output_minus = forward_fn(&Var::new(input_minus, false)).into_forward_result()?;
-    let u_t_minus = coeus_autograd::slice(
+    let output_minus = forward_fn(&be(Var::new(input_minus, false))?).into_forward_result()?;
+    let u_t_minus = be(coeus_autograd::slice(
         &output_minus,
         &[(0, batch), (output_component, output_component + 1)],
-    );
+    ))?;
 
-    let two_u = coeus_autograd::scalar_mul(&u_t, 2.0);
-    let d2u_dt2 = coeus_autograd::scalar_mul(
-        &coeus_autograd::sub(&coeus_autograd::add(&u_t_plus, &u_t_minus), &two_u),
+    let two_u = be(coeus_autograd::scalar_mul(&u_t, 2.0))?;
+    let d2u_dt2 = be(coeus_autograd::scalar_mul(
+        &be(coeus_autograd::sub(
+            &be(coeus_autograd::add(&u_t_plus, &u_t_minus))?,
+            &two_u,
+        ))?,
         1.0 / (eps * eps),
-    );
+    ))?;
     Ok(d2u_dt2)
 }

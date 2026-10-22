@@ -113,7 +113,7 @@ mod ic_loss_tests {
             let x = 0.2 + (i as f32 / n_ic as f32) * 0.6;
             let y = 0.5;
             let z = 0.5;
-            // Gaussian IC: u₀(x) = exp(-((x-0.5)²) / 0.01)
+            // Gaussian IC: u₀(x) = be(exp(-((x-0.5)²) / 0.01)).unwrap()
             let u = (-(x - 0.5).powi(2) / 0.01).exp();
             x_data.push(x);
             y_data.push(y);
@@ -246,7 +246,7 @@ mod ic_loss_tests {
             let x = 0.2 + (i as f32 / n_ic as f32) * 0.6;
             let y = 0.5;
             let z = 0.5;
-            // Gaussian pulse: u₀(x) = exp(-((x-0.5)²) / 0.01)
+            // Gaussian pulse: u₀(x) = be(exp(-((x-0.5)²) / 0.01)).unwrap()
             let u = (-(x - 0.5).powi(2) / 0.01).exp();
             // Initial velocity: v₀(x) = 0 (stationary pulse)
             let v = 0.0;

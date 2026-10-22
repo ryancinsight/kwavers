@@ -188,8 +188,8 @@
 //!
 //! ### Frameworks
 //!
-//! - **Coeus**: Atlas-native autodiff/NN stack (`coeus_autograd`, `coeus_nn`,
-//!   `coeus_optim`) over the `MoiraiBackend` compute backend.
+//! - **Coeus**: Atlas-native autodiff/NN be(stack (`coeus_autograd`, `coeus_nn`,
+//!   `coeus_optim`))? over the `MoiraiBackend` compute backend.
 //! - **Rust**: Edition 2021
 //!
 //! ## Performance Notes

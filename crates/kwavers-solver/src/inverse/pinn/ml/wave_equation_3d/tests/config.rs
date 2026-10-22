@@ -35,7 +35,7 @@ fn test_collocation_points_rectangular() -> KwaversResult<()> {
 
     let solver = PinnWave3D::<TestBackend>::new(config.clone(), geometry, wave_speed)?;
 
-    let (x_colloc, y_colloc, z_colloc, t_colloc) = solver.generate_collocation_points(&config);
+    let (x_colloc, y_colloc, z_colloc, t_colloc) = solver.generate_collocation_points(&config)?;
 
     let n_generated = x_colloc.tensor.shape()[0];
     assert_eq!(n_generated, config.num_collocation_points);
@@ -67,7 +67,8 @@ fn test_collocation_points_spherical_filtering() -> KwaversResult<()> {
 
     let solver = PinnWave3D::<TestBackend>::new(config.clone(), geometry, wave_speed)?;
 
-    let (x_colloc, _y_colloc, _z_colloc, _t_colloc) = solver.generate_collocation_points(&config);
+    let (x_colloc, _y_colloc, _z_colloc, _t_colloc) =
+        solver.generate_collocation_points(&config)?;
 
     let n_generated = x_colloc.tensor.shape()[0];
     assert!(n_generated > 0);

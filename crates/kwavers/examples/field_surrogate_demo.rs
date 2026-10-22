@@ -22,6 +22,7 @@
 //! independently of any pre-existing test-crate breakage in unrelated
 //! modules.
 
+use kwavers_solver::inverse::pinn::be;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
@@ -311,10 +312,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             target_data[i] = (-(x_phys * x_phys) / (2.0 * sx * sx)).exp();
         }
         let backend = AB::default();
-        let inputs = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_samples, 5], &input_data, &backend),
+        let inputs = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_samples, 5],
+                &input_data,
+                &backend,
+            ))
+            .unwrap(),
             false,
-        );
+        ))
+        .unwrap();
         let pred = trainer.network.forward(&inputs)?;
         let pred_data: Vec<f32> = pred.tensor.as_slice().to_vec();
         let mut peak_pred = 0.0_f32;

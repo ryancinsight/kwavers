@@ -17,6 +17,7 @@
 //! draws measures the draw, not the derivative.
 
 use super::super::*;
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 
@@ -25,10 +26,16 @@ type TestBackend = coeus_core::MoiraiBackend;
 /// A column vector `Var` that does not track gradients: it is data, not a
 /// parameter.
 fn column(backend: TestBackend, values: &[f32]) -> Var<f32, TestBackend> {
-    Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![values.len(), 1], values, &backend),
+    be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![values.len(), 1],
+            values,
+            &backend,
+        ))
+        .unwrap(),
         false,
-    )
+    ))
+    .unwrap()
 }
 
 /// A network, the batch it is evaluated on, and that batch's target.
@@ -69,10 +76,11 @@ fn loss(
     target: &Var<f32, TestBackend>,
 ) -> KwaversResult<Var<f32, TestBackend>> {
     let prediction = network.forward(&inputs[0], &inputs[1], &inputs[2], &inputs[3])?;
-    let residual = coeus_autograd::sub(&prediction, target);
-    Ok(coeus_autograd::mean(&coeus_autograd::mul(
-        &residual, &residual,
-    )))
+    let residual = be(coeus_autograd::sub(&prediction, target)).unwrap();
+    Ok(be(coeus_autograd::mean(
+        &be(coeus_autograd::mul(&residual, &residual)).unwrap(),
+    ))
+    .unwrap())
 }
 
 fn scalar(v: &Var<f32, TestBackend>) -> f32 {
@@ -89,7 +97,7 @@ fn backward_reaches_every_parameter() -> KwaversResult<()> {
     let (network, inputs, target) = fixture()?;
 
     for p in network.parameters() {
-        p.zero_grad();
+        be(p.zero_grad())?;
     }
     let value = loss(&network, &inputs, &target)?;
     assert!(
@@ -142,7 +150,7 @@ fn reported_gradient_matches_a_finite_difference() -> KwaversResult<()> {
     let (network, inputs, target) = fixture()?;
 
     for p in network.parameters() {
-        p.zero_grad();
+        be(p.zero_grad())?;
     }
     loss(&network, &inputs, &target)?
         .backward()
@@ -170,10 +178,16 @@ fn reported_gradient_matches_a_finite_difference() -> KwaversResult<()> {
         let mut values = params[index].tensor.as_slice().to_vec();
         values[element] += delta;
         let shape = params[index].tensor.shape().to_vec();
-        params[index] = Var::new(
-            coeus_tensor::Tensor::from_slice_on(shape, &values, &TestBackend::default()),
+        params[index] = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                shape,
+                &values,
+                &TestBackend::default(),
+            ))
+            .unwrap(),
             true,
-        );
+        ))
+        .unwrap();
         let mut probe = network.clone();
         probe.load_parameters(&params);
         Ok(scalar(&loss(&probe, &inputs, &target)?))
@@ -211,7 +225,7 @@ fn the_optimizer_applies_the_gradient_it_was_given() -> KwaversResult<()> {
     let (network, inputs, target) = fixture()?;
 
     for p in network.parameters() {
-        p.zero_grad();
+        be(p.zero_grad())?;
     }
     loss(&network, &inputs, &target)?
         .backward()

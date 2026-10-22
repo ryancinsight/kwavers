@@ -1,19 +1,24 @@
 use super::super::config::PinnConfig3D;
 use super::core::PINN3DNetwork;
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 
 type TestBackend = coeus_core::MoiraiBackend;
 
-fn var_col(backend: TestBackend, values: &[f32]) -> Var<f32, TestBackend> {
-    Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![(values.len()), 1], values, &backend),
+fn var_col(backend: TestBackend, values: &[f32]) -> KwaversResult<Var<f32, TestBackend>> {
+    be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![values.len(), 1],
+            values,
+            &backend,
+        ))?,
         false,
-    )
+    ))
 }
 
-fn var_const(backend: TestBackend, n: usize, value: f32) -> Var<f32, TestBackend> {
+fn var_const(backend: TestBackend, n: usize, value: f32) -> KwaversResult<Var<f32, TestBackend>> {
     var_col(backend, &vec![value; n])
 }
 
@@ -42,10 +47,10 @@ fn test_forward_pass() -> KwaversResult<()> {
     let network = PINN3DNetwork::<TestBackend>::new(&config)?;
 
     let batch_size = 10;
-    let x = var_const(backend, batch_size, 0.0);
-    let y = var_const(backend, batch_size, 1.0);
-    let z = var_const(backend, batch_size, 0.5);
-    let t = var_const(backend, batch_size, 0.1);
+    let x = var_const(backend, batch_size, 0.0)?;
+    let y = var_const(backend, batch_size, 1.0)?;
+    let z = var_const(backend, batch_size, 0.5)?;
+    let t = var_const(backend, batch_size, 0.1)?;
 
     let output = network.forward(&x, &y, &z, &t)?;
 
@@ -64,10 +69,10 @@ fn test_pde_residual_shape() -> KwaversResult<()> {
     let network = PINN3DNetwork::<TestBackend>::new(&config)?;
 
     let n_points = 5;
-    let x = var_const(backend, n_points, 0.0);
-    let y = var_const(backend, n_points, 0.0);
-    let z = var_const(backend, n_points, 0.0);
-    let t = var_const(backend, n_points, 0.0);
+    let x = var_const(backend, n_points, 0.0)?;
+    let y = var_const(backend, n_points, 0.0)?;
+    let z = var_const(backend, n_points, 0.0)?;
+    let t = var_const(backend, n_points, 0.0)?;
 
     let wave_speed = |_x: f32, _y: f32, _z: f32| Ok(SOUND_SPEED_WATER_SIM as f32);
 
@@ -87,10 +92,10 @@ fn test_pde_residual_heterogeneous_medium() -> KwaversResult<()> {
 
     let network = PINN3DNetwork::<TestBackend>::new(&config)?;
 
-    let x = var_col(backend, &[0.25, 0.75]);
-    let y = var_col(backend, &[0.5, 0.5]);
-    let z = var_col(backend, &[0.5, 0.5]);
-    let t = var_col(backend, &[0.1, 0.1]);
+    let x = var_col(backend, &[0.25, 0.75])?;
+    let y = var_col(backend, &[0.5, 0.5])?;
+    let z = var_col(backend, &[0.5, 0.5])?;
+    let t = var_col(backend, &[0.1, 0.1])?;
 
     // Layered medium: different speeds in left/right halves
     let wave_speed = |x: f32, _y: f32, _z: f32| {
@@ -118,10 +123,10 @@ fn test_network_forward_deterministic() -> KwaversResult<()> {
 
     let network = PINN3DNetwork::<TestBackend>::new(&config)?;
 
-    let x = var_const(backend, 3, 1.0);
-    let y = var_const(backend, 3, 1.0);
-    let z = var_const(backend, 3, 1.0);
-    let t = var_const(backend, 3, 1.0);
+    let x = var_const(backend, 3, 1.0)?;
+    let y = var_const(backend, 3, 1.0)?;
+    let z = var_const(backend, 3, 1.0)?;
+    let t = var_const(backend, 3, 1.0)?;
 
     // Two forward passes with same input should give same output
     let output1 = network.forward(&x, &y, &z, &t)?;

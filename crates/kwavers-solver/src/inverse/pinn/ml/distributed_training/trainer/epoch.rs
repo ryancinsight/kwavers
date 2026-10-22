@@ -1,4 +1,5 @@
 use super::super::{DistributedPinnTrainer, TrainingState};
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::{TrainingMetrics2D, TrainingMetrics2D as Metrics};
 use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
@@ -44,7 +45,7 @@ where
         fn to_xyz_vars<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
             pts: &[(f64, f64, f64)],
             backend: &B,
-        ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>) {
+        ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
             let n = (pts.len()).max(1);
             let xv: Vec<f32> = pts.iter().map(|p| p.0 as f32).collect();
             let yv: Vec<f32> = pts.iter().map(|p| p.1 as f32).collect();
@@ -56,13 +57,17 @@ where
                     v
                 }
             };
-            let mk = |v: Vec<f32>| {
-                Var::new(
-                    coeus_tensor::Tensor::from_slice_on(vec![n, 1], &pad(v), backend),
+            let mk = |v: Vec<f32>| -> KwaversResult<Var<f32, B>> {
+                be(Var::new(
+                    be(coeus_tensor::Tensor::from_slice_on(
+                        vec![n, 1],
+                        &pad(v),
+                        backend,
+                    ))?,
                     false,
-                )
+                ))
             };
-            (mk(xv), mk(yv), mk(tv))
+            Ok((mk(xv)?, mk(yv)?, mk(tv)?))
         }
 
         let n_colloc = (collocation_points.len()).max(1);
@@ -75,32 +80,36 @@ where
         for replica_idx in 0..n_replicas {
             let backend = B::default();
 
-            let (x_colloc, y_colloc, t_colloc) = to_xyz_vars::<B>(collocation_points, &backend);
-            let (x_bc, y_bc, t_bc) = to_xyz_vars::<B>(boundary_points, &backend);
-            let (x_ic, y_ic, t_ic) = to_xyz_vars::<B>(initial_points, &backend);
+            let (x_colloc, y_colloc, t_colloc) = to_xyz_vars::<B>(collocation_points, &backend)?;
+            let (x_bc, y_bc, t_bc) = to_xyz_vars::<B>(boundary_points, &backend)?;
+            let (x_ic, y_ic, t_ic) = to_xyz_vars::<B>(initial_points, &backend)?;
 
             let u_colloc_vals: Vec<f32> = (0..n_colloc)
                 .map(|i| target_values.get(i).copied().unwrap_or(0.0) as f32)
                 .collect();
-            let u_colloc = Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n_colloc, 1], &u_colloc_vals, &backend),
+            let u_colloc = be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(
+                    vec![n_colloc, 1],
+                    &u_colloc_vals,
+                    &backend,
+                ))?,
                 false,
-            );
+            ))?;
 
-            let u_bc = Var::new(
-                coeus_tensor::Tensor::zeros_on(vec![n_bc, 1], &backend),
+            let u_bc = be(Var::new(
+                be(coeus_tensor::Tensor::zeros_on(vec![n_bc, 1], &backend))?,
                 false,
-            );
-            let u_ic = Var::new(
-                coeus_tensor::Tensor::zeros_on(vec![n_ic, 1], &backend),
+            ))?;
+            let u_ic = be(Var::new(
+                be(coeus_tensor::Tensor::zeros_on(vec![n_ic, 1], &backend))?,
                 false,
-            );
+            ))?;
 
             let loss_weights = LossWeights2D::default();
             let wave_speed = kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
             for p in self.coordinator.model_replicas[replica_idx].parameters() {
-                p.zero_grad();
+                be(p.zero_grad())?;
             }
 
             let (total_loss, data_loss, pde_loss, bc_loss, ic_loss) =

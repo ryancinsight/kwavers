@@ -47,6 +47,7 @@
 //! let time_series = predictor.time_series(x, y, &times)?;
 //! ```
 
+use crate::inverse::pinn::be;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 use leto::{Array1, Array2, Array3};
@@ -96,13 +97,17 @@ where
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn predict_point(&self, x: f64, y: f64, t: f64) -> KwaversResult<[f64; 2]> {
         let backend = B::default();
-        let mk = |v: f64| {
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[v as f32], &backend),
+        let mk = |v: f64| -> KwaversResult<Var<f32, B>> {
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(
+                    vec![1, 1],
+                    &[v as f32],
+                    &backend,
+                ))?,
                 false,
-            )
+            ))
         };
-        let output = self.model.forward(&mk(x), &mk(y), &mk(t))?;
+        let output = self.model.forward(&mk(x)?, &mk(y)?, &mk(t)?)?;
         let slice = output.tensor.as_slice();
         Ok([slice[0] as f64, slice[1] as f64])
     }
@@ -133,15 +138,19 @@ where
         let y_data: Vec<f32> = points.iter().map(|(_, y, _)| *y as f32).collect();
         let t_data: Vec<f32> = points.iter().map(|(_, _, t)| *t as f32).collect();
 
-        let mk = |data: &[f32]| {
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], data, &backend),
+        let mk = |data: &[f32]| -> KwaversResult<Var<f32, B>> {
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(
+                    vec![n, 1],
+                    data,
+                    &backend,
+                ))?,
                 false,
-            )
+            ))
         };
-        let x_var = mk(&x_data);
-        let y_var = mk(&y_data);
-        let t_var = mk(&t_data);
+        let x_var = mk(&x_data)?;
+        let y_var = mk(&y_data)?;
+        let t_var = mk(&t_data)?;
 
         let output = self.model.forward(&x_var, &y_var, &t_var)?;
         let slice = output.tensor.as_slice();

@@ -3,6 +3,8 @@ use super::super::types::PinnNeuralNetwork;
 #[cfg(feature = "gpu")]
 use super::super::types::QuantizedNetwork;
 #[cfg(feature = "gpu")]
+use crate::inverse::pinn::be;
+#[cfg(feature = "gpu")]
 use coeus_autograd::Var;
 #[cfg(feature = "gpu")]
 use kwavers_core::error::KwaversResult;
@@ -28,11 +30,11 @@ impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
             let input_dim = network.layer_sizes[i];
             let output_dim = network.layer_sizes[i + 1];
 
-            let weight_tensor = coeus_tensor::Tensor::from_slice_on(
+            let weight_tensor = be(coeus_tensor::Tensor::from_slice_on(
                 vec![output_dim, input_dim],
                 &f32_weights,
                 &backend,
-            );
+            ))?;
             weights.push(weight_tensor);
         }
 
@@ -41,8 +43,11 @@ impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
             let f32_biases: Vec<f32> = layer_biases.iter().map(|&b| b as f32 * scale).collect();
 
             let output_dim = network.layer_sizes[i + 1];
-            let bias_tensor =
-                coeus_tensor::Tensor::from_slice_on(vec![output_dim], &f32_biases, &backend);
+            let bias_tensor = be(coeus_tensor::Tensor::from_slice_on(
+                vec![output_dim],
+                &f32_biases,
+                &backend,
+            ))?;
             biases.push(bias_tensor);
         }
 
@@ -68,27 +73,31 @@ impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
             input_data.push(t[i]);
         }
 
-        let mut input = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 3], &input_data, &backend),
+        let mut input = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 3],
+                &input_data,
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
 
         for (layer_idx, (weight, bias)) in self.weights.iter().zip(&self.biases).enumerate() {
-            let weight_var = Var::new(weight.clone(), false);
-            let bias_var = Var::new(bias.clone(), false);
-            let transposed_weight = coeus_autograd::transpose_2d(&weight_var);
-            let out = coeus_autograd::matmul(&input, &transposed_weight);
-            input = coeus_autograd::add(&out, &bias_var);
+            let weight_var = be(Var::new(weight.clone(), false))?;
+            let bias_var = be(Var::new(bias.clone(), false))?;
+            let transposed_weight = be(coeus_autograd::transpose_2d(&weight_var))?;
+            let out = be(coeus_autograd::matmul(&input, &transposed_weight))?;
+            input = be(coeus_autograd::add(&out, &bias_var))?;
 
             input = match self.quantized_network.activations[layer_idx] {
-                super::super::types::ActivationType::Tanh => coeus_autograd::tanh(&input),
-                super::super::types::ActivationType::Relu => coeus_autograd::relu(&input),
+                super::super::types::ActivationType::Tanh => be(coeus_autograd::tanh(&input))?,
+                super::super::types::ActivationType::Relu => be(coeus_autograd::relu(&input))?,
                 super::super::types::ActivationType::Linear => input,
             };
         }
 
         let mut predictions = vec![0.0; batch_size];
-        backend.copy_to_host(input.tensor.storage(), &mut predictions);
+        be(backend.copy_to_host(input.tensor.storage(), &mut predictions))?;
 
         Ok((predictions, uncertainties))
     }

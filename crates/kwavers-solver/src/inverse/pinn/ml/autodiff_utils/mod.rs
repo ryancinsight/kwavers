@@ -7,7 +7,7 @@
 //! # Gradient Computation Pattern
 //!
 //! ```rust,ignore
-//! let input_grad = Var::new(input.clone(), true);
+//! let input_grad = be(Var::new(input.clone(), true))?;
 //! let output = model_forward(&input_grad);
 //! output.backward();
 //! let grad_tensor = input_grad.grad();

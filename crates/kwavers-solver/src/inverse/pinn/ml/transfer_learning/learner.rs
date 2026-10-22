@@ -1,6 +1,7 @@
 use super::{
     SourceFeatures, TrainingData, TransferLearner, TransferLearningStats, TransferMetrics,
 };
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -83,8 +84,8 @@ where
         let mut _layer_importance = Vec::new();
 
         for param in &params {
-            let squared = coeus_autograd::mul(param, param);
-            let magnitude_var = coeus_autograd::sqrt(&coeus_autograd::sum(&squared));
+            let squared = be(coeus_autograd::mul(param, param))?;
+            let magnitude_var = be(coeus_autograd::sqrt(&be(coeus_autograd::sum(&squared))?))?;
             let magnitude: f32 = magnitude_var.tensor.as_slice()[0];
             _weight_magnitudes.push(magnitude);
             _layer_importance.push(magnitude * 0.5);
@@ -209,28 +210,43 @@ where
         }
 
         let batch_size = x_vec.len();
-        let x_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &x_vec, &backend),
+        let x_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 1],
+                &x_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let y_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &y_vec, &backend),
+        ))?;
+        let y_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 1],
+                &y_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let t_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &t_vec, &backend),
+        ))?;
+        let t_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 1],
+                &t_vec,
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
 
         for p in model.parameters() {
-            p.zero_grad();
+            be(p.zero_grad())?;
         }
 
         let pde_residuals =
             model.compute_pde_residual(&x_var, &y_var, &t_var, self.config.wave_speed)?;
 
-        let squared = coeus_autograd::mul(&pde_residuals, &pde_residuals);
-        let total_loss = coeus_autograd::scalar_mul(&coeus_autograd::mean(&squared), 1e-12);
+        let squared = be(coeus_autograd::mul(&pde_residuals, &pde_residuals))?;
+        let total_loss = be(coeus_autograd::scalar_mul(
+            &be(coeus_autograd::mean(&squared))?,
+            1e-12,
+        ))?;
 
         total_loss.backward().map_err(|error| {
             KwaversError::InternalError(format!("transfer-learning backward: {error}"))

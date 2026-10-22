@@ -70,8 +70,8 @@ pub(super) fn build_skull_mask(sound_speed: &Array3<f64>) -> Array3<bool> {
 ///
 /// # Spatial mapping
 ///
-/// The MNI ICBM 2009c atlas is sampled at the mid-coronal slice (y ≈ rows/2,
-/// near the anterior commissure).  Each FWI voxel is mapped to MNI coordinates
+/// The MNI ICBM 2009c atlas is sampled at the mid-coronal be(slice (y ≈ rows/2,
+/// near the anterior commissure)).unwrap().  Each FWI voxel is mapped to MNI coordinates
 /// by scaling: `mni_offset = fwi_offset_mm × (MNI_INNER_SKULL_RADIUS_MM / fwi_inner_skull_mm)`.
 fn build_brain_velocity_model(
     skull_phantom: &SkullModel,
@@ -130,7 +130,7 @@ fn build_brain_velocity_model(
     let [mni_nx, mni_ny, mni_nz] = gm.shape();
     // MNI centroid voxel (brain centre-of-mass in MNI space ≈ [nx/2, ny/2, nz/2]).
     let cx_mni = mni_nx / 2; // ~90
-    let cy_mni = mni_ny / 2; // ~108 — mid coronal slice (near AC)
+    let cy_mni = mni_ny / 2; // ~108 — mid coronal be(slice (near AC)).unwrap()
     let cz_mni = mni_nz / 2; // ~90
 
     // Scale factor: project FWI physical offset (mm) into MNI voxel offset.

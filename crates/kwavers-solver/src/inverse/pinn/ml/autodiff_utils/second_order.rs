@@ -23,7 +23,9 @@
 //! weight gradient after `backward()`, while combining a `.grad()`-derived
 //! value the same way yields exactly zero.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 
 use super::ForwardOutput;
 
@@ -80,32 +82,43 @@ where
         plus[row * 3 + spatial_dim] += eps;
         minus[row * 3 + spatial_dim] -= eps;
     }
-    let input_plus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &plus, &backend);
-    let input_minus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &minus, &backend);
+    let input_plus = be(coeus_tensor::Tensor::from_slice_on(
+        vec![batch, 3],
+        &plus,
+        &backend,
+    ))?;
+    let input_minus = be(coeus_tensor::Tensor::from_slice_on(
+        vec![batch, 3],
+        &minus,
+        &backend,
+    ))?;
 
-    let output = forward_fn(&Var::new(input.clone(), false)).into_forward_result()?;
-    let u = coeus_autograd::slice(
+    let output = forward_fn(&be(Var::new(input.clone(), false))?).into_forward_result()?;
+    let u = be(coeus_autograd::slice(
         &output,
         &[(0, batch), (output_component, output_component + 1)],
-    );
+    ))?;
 
-    let output_plus = forward_fn(&Var::new(input_plus, false)).into_forward_result()?;
-    let u_plus = coeus_autograd::slice(
+    let output_plus = forward_fn(&be(Var::new(input_plus, false))?).into_forward_result()?;
+    let u_plus = be(coeus_autograd::slice(
         &output_plus,
         &[(0, batch), (output_component, output_component + 1)],
-    );
+    ))?;
 
-    let output_minus = forward_fn(&Var::new(input_minus, false)).into_forward_result()?;
-    let u_minus = coeus_autograd::slice(
+    let output_minus = forward_fn(&be(Var::new(input_minus, false))?).into_forward_result()?;
+    let u_minus = be(coeus_autograd::slice(
         &output_minus,
         &[(0, batch), (output_component, output_component + 1)],
-    );
+    ))?;
 
-    let two_u = coeus_autograd::scalar_mul(&u, 2.0);
-    let d2u = coeus_autograd::scalar_mul(
-        &coeus_autograd::sub(&coeus_autograd::add(&u_plus, &u_minus), &two_u),
+    let two_u = be(coeus_autograd::scalar_mul(&u, 2.0))?;
+    let d2u = be(coeus_autograd::scalar_mul(
+        &be(coeus_autograd::sub(
+            &be(coeus_autograd::add(&u_plus, &u_minus))?,
+            &two_u,
+        ))?,
         1.0 / (eps * eps),
-    );
+    ))?;
     Ok(d2u)
 }
 
@@ -138,7 +151,7 @@ where
 {
     let d2u_dx2 = compute_second_derivative_2d(forward_fn.clone(), input, output_component, 1)?;
     let d2u_dy2 = compute_second_derivative_2d(forward_fn, input, output_component, 2)?;
-    Ok(coeus_autograd::add(&d2u_dx2, &d2u_dy2))
+    be(coeus_autograd::add(&d2u_dx2, &d2u_dy2))
 }
 
 /// Compute gradient of divergence ∇(∇·u) = [∂(∇·u)/∂x, ∂(∇·u)/∂y] for the P-wave term.
@@ -183,8 +196,8 @@ where
     let d2ux_dxdy = compute_mixed_partial_2d(forward_fn.clone(), input, 0)?;
     let d2uy_dxdy = compute_mixed_partial_2d(forward_fn, input, 1)?;
 
-    let ddiv_dx = coeus_autograd::add(&d2ux_dx2, &d2uy_dxdy);
-    let ddiv_dy = coeus_autograd::add(&d2ux_dxdy, &d2uy_dy2);
+    let ddiv_dx = be(coeus_autograd::add(&d2ux_dx2, &d2uy_dxdy))?;
+    let ddiv_dy = be(coeus_autograd::add(&d2ux_dxdy, &d2uy_dy2))?;
 
     Ok((ddiv_dx, ddiv_dy))
 }
@@ -208,34 +221,42 @@ where
     let backend = B::default();
     let raw = input.as_slice();
 
-    let perturb = |dx: f32, dy: f32| {
+    let perturb = |dx: f32, dy: f32| -> KwaversResult<coeus_tensor::Tensor<f32, B>> {
         let mut v = raw.to_vec();
         for row in 0..batch {
             v[row * 3 + 1] += dx;
             v[row * 3 + 2] += dy;
         }
-        coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &v, &backend)
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![batch, 3],
+            &v,
+            &backend,
+        ))
     };
-    let component_of = |output: &Var<f32, B>| {
-        coeus_autograd::slice(
+    let component_of = |output: &Var<f32, B>| -> KwaversResult<Var<f32, B>> {
+        be(coeus_autograd::slice(
             output,
             &[(0, batch), (output_component, output_component + 1)],
-        )
+        ))
     };
 
-    let u_pp =
-        component_of(&forward_fn(&Var::new(perturb(eps, eps), false)).into_forward_result()?);
-    let u_pm =
-        component_of(&forward_fn(&Var::new(perturb(eps, -eps), false)).into_forward_result()?);
-    let u_mp =
-        component_of(&forward_fn(&Var::new(perturb(-eps, eps), false)).into_forward_result()?);
-    let u_mm =
-        component_of(&forward_fn(&Var::new(perturb(-eps, -eps), false)).into_forward_result()?);
+    let u_pp = component_of(
+        &forward_fn(&be(Var::new(perturb(eps, eps)?, false))?).into_forward_result()?,
+    )?;
+    let u_pm = component_of(
+        &forward_fn(&be(Var::new(perturb(eps, -eps)?, false))?).into_forward_result()?,
+    )?;
+    let u_mp = component_of(
+        &forward_fn(&be(Var::new(perturb(-eps, eps)?, false))?).into_forward_result()?,
+    )?;
+    let u_mm = component_of(
+        &forward_fn(&be(Var::new(perturb(-eps, -eps)?, false))?).into_forward_result()?,
+    )?;
 
-    let sum_diag = coeus_autograd::add(&u_pp, &u_mm);
-    let sum_anti = coeus_autograd::add(&u_pm, &u_mp);
-    let numerator = coeus_autograd::sub(&sum_diag, &sum_anti);
-    Ok(coeus_autograd::scalar_mul(
+    let sum_diag = be(coeus_autograd::add(&u_pp, &u_mm))?;
+    let sum_anti = be(coeus_autograd::add(&u_pm, &u_mp))?;
+    let numerator = be(coeus_autograd::sub(&sum_diag, &sum_anti))?;
+    be(coeus_autograd::scalar_mul(
         &numerator,
         1.0 / (4.0 * eps * eps),
     ))

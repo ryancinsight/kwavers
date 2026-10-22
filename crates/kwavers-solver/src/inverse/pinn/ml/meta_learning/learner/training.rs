@@ -1,4 +1,5 @@
 use super::MetaLearner;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::meta_learning::gradient::norm::add_gradients;
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLoss;
 use crate::inverse::pinn::ml::meta_learning::types::PhysicsTask;
@@ -51,27 +52,29 @@ where
             .parameters()
             .into_iter()
             .zip(averaged_grads.iter())
-            .map(|(param, grad)| match grad {
-                Some(g) => {
-                    let backend = B::default();
-                    let old = param.tensor.as_slice();
-                    let updated: Vec<f32> = old
-                        .iter()
-                        .zip(g.iter())
-                        .map(|(&p, &gr)| p - self.config.outer_lr as f32 * gr)
-                        .collect();
-                    Var::new(
-                        coeus_tensor::Tensor::from_slice_on(
-                            param.tensor.shape().to_vec(),
-                            &updated,
-                            &backend,
-                        ),
-                        param.grad.is_some(),
-                    )
+            .map(|(param, grad)| -> KwaversResult<Var<f32, B>> {
+                match grad {
+                    Some(g) => {
+                        let backend = B::default();
+                        let old = param.tensor.as_slice();
+                        let updated: Vec<f32> = old
+                            .iter()
+                            .zip(g.iter())
+                            .map(|(&p, &gr)| p - self.config.outer_lr as f32 * gr)
+                            .collect();
+                        Ok(be(Var::new(
+                            be(coeus_tensor::Tensor::from_slice_on(
+                                param.tensor.shape().to_vec(),
+                                &updated,
+                                &backend,
+                            ))?,
+                            param.grad.is_some(),
+                        ))?)
+                    }
+                    None => Ok(param),
                 }
-                None => param,
             })
-            .collect();
+            .collect::<Result<Vec<_>, _>>()?;
         self.base_model.load_parameters(&updated_params);
 
         let average_physics_loss = if !physics_losses.is_empty() {

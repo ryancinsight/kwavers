@@ -3,7 +3,9 @@
 //! This module implements the loss computation logic for Physics-Informed
 //! Neural Networks, including PDE residuals, boundary conditions, and data fitting.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 
 use crate::inverse::pinn::elastic_2d::config::LossWeights;
 
@@ -40,10 +42,17 @@ impl LossComputer {
         &self,
         residual_x: &Var<f32, B>,
         residual_y: &Var<f32, B>,
-    ) -> Var<f32, B> {
-        let loss_x = coeus_autograd::mean(&coeus_autograd::mul(residual_x, residual_x));
-        let loss_y = coeus_autograd::mean(&coeus_autograd::mul(residual_y, residual_y));
-        coeus_autograd::scalar_mul(&coeus_autograd::add(&loss_x, &loss_y), 0.5)
+    ) -> KwaversResult<Var<f32, B>> {
+        let loss_x = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            residual_x, residual_x,
+        ))?))?;
+        let loss_y = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            residual_y, residual_y,
+        ))?))?;
+        be(coeus_autograd::scalar_mul(
+            &be(coeus_autograd::add(&loss_x, &loss_y))?,
+            0.5,
+        ))
     }
 
     /// Compute boundary condition loss
@@ -60,9 +69,11 @@ impl LossComputer {
         &self,
         predicted: &Var<f32, B>,
         target: &Var<f32, B>,
-    ) -> Var<f32, B> {
-        let diff = coeus_autograd::sub(predicted, target);
-        coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff))
+    ) -> KwaversResult<Var<f32, B>> {
+        let diff = be(coeus_autograd::sub(predicted, target))?;
+        be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &diff, &diff,
+        ))?))
     }
 
     /// Compute initial condition loss
@@ -83,12 +94,19 @@ impl LossComputer {
         predicted_v: &Var<f32, B>,
         target_u: &Var<f32, B>,
         target_v: &Var<f32, B>,
-    ) -> Var<f32, B> {
-        let diff_u = coeus_autograd::sub(predicted_u, target_u);
-        let diff_v = coeus_autograd::sub(predicted_v, target_v);
-        let loss_u = coeus_autograd::mean(&coeus_autograd::mul(&diff_u, &diff_u));
-        let loss_v = coeus_autograd::mean(&coeus_autograd::mul(&diff_v, &diff_v));
-        coeus_autograd::scalar_mul(&coeus_autograd::add(&loss_u, &loss_v), 0.5)
+    ) -> KwaversResult<Var<f32, B>> {
+        let diff_u = be(coeus_autograd::sub(predicted_u, target_u))?;
+        let diff_v = be(coeus_autograd::sub(predicted_v, target_v))?;
+        let loss_u = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &diff_u, &diff_u,
+        ))?))?;
+        let loss_v = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &diff_v, &diff_v,
+        ))?))?;
+        be(coeus_autograd::scalar_mul(
+            &be(coeus_autograd::add(&loss_u, &loss_v))?,
+            0.5,
+        ))
     }
 
     /// Compute data fitting loss
@@ -105,9 +123,11 @@ impl LossComputer {
         &self,
         predicted: &Var<f32, B>,
         observed: &Var<f32, B>,
-    ) -> Var<f32, B> {
-        let diff = coeus_autograd::sub(predicted, observed);
-        coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff))
+    ) -> KwaversResult<Var<f32, B>> {
+        let diff = be(coeus_autograd::sub(predicted, observed))?;
+        be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &diff, &diff,
+        ))?))
     }
 
     /// Compute total weighted loss
@@ -128,23 +148,32 @@ impl LossComputer {
         boundary: &Var<f32, B>,
         initial: &Var<f32, B>,
         data: Option<&Var<f32, B>>,
-    ) -> Var<f32, B> {
-        let mut total = coeus_autograd::add(
-            &coeus_autograd::scalar_mul(pde, self.weights.pde as f32),
-            &coeus_autograd::add(
-                &coeus_autograd::scalar_mul(boundary, self.weights.boundary as f32),
-                &coeus_autograd::scalar_mul(initial, self.weights.initial as f32),
-            ),
-        );
+    ) -> KwaversResult<Var<f32, B>> {
+        let mut total = be(coeus_autograd::add(
+            &be(coeus_autograd::scalar_mul(pde, self.weights.pde as f32))?,
+            &be(coeus_autograd::add(
+                &be(coeus_autograd::scalar_mul(
+                    boundary,
+                    self.weights.boundary as f32,
+                ))?,
+                &be(coeus_autograd::scalar_mul(
+                    initial,
+                    self.weights.initial as f32,
+                ))?,
+            ))?,
+        ))?;
 
         if let Some(data_loss) = data {
-            total = coeus_autograd::add(
+            total = be(coeus_autograd::add(
                 &total,
-                &coeus_autograd::scalar_mul(data_loss, self.weights.data as f32),
-            );
+                &be(coeus_autograd::scalar_mul(
+                    data_loss,
+                    self.weights.data as f32,
+                ))?,
+            ))?;
         }
 
-        total
+        Ok(total)
     }
 
     /// Extract scalar loss values for logging
