@@ -1,4 +1,4 @@
-use super::projection::axis_map_for_index;
+use super::projection::{point_element_of, validate_uniform_index, AxisBasis};
 use super::{validate_tensor_state, AcousticDgTensorSourceWeight, AcousticDgTensorWorkspace};
 use crate::forward::pstd::dg::dg_solver::core::DGSolver;
 use crate::forward::pstd::dg::dg_solver::rk_update::{
@@ -75,12 +75,9 @@ impl DGSolver {
         index: [usize; 3],
     ) -> KwaversResult<Vec<AcousticDgTensorSourceWeight>> {
         let topology = DgTopology::from_grid(&self.grid, self.n_nodes)?;
-        let maps = [
-            axis_map_for_index(self, topology, 0, index[0])?,
-            axis_map_for_index(self, topology, 1, index[1])?,
-            axis_map_for_index(self, topology, 2, index[2])?,
-        ];
-        let elem = topology.element_index([maps[0].elem, maps[1].elem, maps[2].elem]);
+        validate_uniform_index(self, topology, index)?;
+        let basis = AxisBasis::new(self);
+        let elem = point_element_of(topology, index);
         let mut out = Vec::with_capacity(topology.nodes_per_element);
         for node in 0..topology.nodes_per_element {
             let coords = topology.node_coords(node);
@@ -88,7 +85,7 @@ impl DGSolver {
             for axis in 0..3 {
                 if topology.active_axes[axis] {
                     let node_axis = coords[axis];
-                    weight *= maps[axis].basis[node_axis] * 2.0
+                    weight *= basis.at(index[axis], node_axis) * 2.0
                         / (self.n_nodes as f64 * self.weights[node_axis]);
                 }
             }

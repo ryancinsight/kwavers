@@ -4,6 +4,31 @@
 
 ### Changed
 
+- **[patch] The tensor DG uniform-grid projection builds its basis once and
+  computes each point's weights once.** A uniform grid index lands on element
+  `index / n_nodes` at local position `index % n_nodes`, so the GLL basis
+  depends on the local position alone: every element reuses the same
+  `n_nodes` patterns, and every active axis reuses them too because the
+  quadrature nodes and the local coordinate mapping are the same on all three.
+  The projection previously built one `AxisMap` per grid index per axis, each
+  carrying an owned `Vec<f64>`, which stored `element_counts[axis]` copies of
+  the same patterns -- `4 + nx + ny + nz` allocations per call, holding
+  `(nx + ny + nz) * n_nodes` doubles. It now stores each pattern once in one
+  contiguous buffer and derives the element arithmetically: two allocations per
+  call, at 48^3 that is 2 against 148.
+  The per-node weights depend on the grid point alone, so one computation
+  serves every variable projected there. The four-field entry point no longer
+  repeats the `nodes_per_element` products once per output field. Criterion,
+  `dg_projection`, four fields against the same four outputs produced by four
+  single-field calls: 7.04 against 16.21 ms at 24^3 order 2, 53.91 against
+  119.01 ms at 48^3 order 2, 123.65 against 275.19 ms at 48^3 order 3 -- about
+  2x across the set, and the win grows with the node count per element because
+  that is what the repeated products cost.
+  Two tests pin the invariants. One checks that the stored basis pattern is
+  identical in every element, which is what makes the stored-once layout
+  correct. The other checks that the four-field projection returns exactly the
+  bit pattern the single-field projection returns for pressure, so sharing the
+  weights changed the cost and not the answer.
 - **Breaking:** `AcousticProperties` returns Aequitas quantities.
   `absorption_coefficient` and `attenuation` return `ReciprocalLength<f64>`;
   `nonlinearity_parameter` (B/A) and `nonlinearity_coefficient` (β) return
@@ -17,7 +42,6 @@
   array fast path. This completes the trait-typing work `CoreMedium`'s
   `sound_speed`, `density`, `absorption`, `nonlinearity` and `max_sound_speed`
   began, and that the thermal and viscous traits preceded.
-
 - **[patch] The stack's advisory gate clears: the `zip` crate leaves this
   workspace and the certificate roots move past their advisories.** `zip` 2.4.2
   reached the lock through `gaia-mesh` 0.5.2 and `zip` 6.0.0 through

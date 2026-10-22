@@ -300,6 +300,83 @@ fn tensor_uniform_projection_evaluates_gll_polynomial_on_grid_coordinates() {
 }
 
 #[test]
+fn uniform_basis_pattern_repeats_across_elements() {
+    // The projection stores one basis pattern per local position and relies on
+    // that pattern being identical in every element: the element is derived
+    // arithmetically and the basis is read from `index % n_nodes`. If the two
+    // diverged, the stored-once layout would return the wrong basis for every
+    // element but the first.
+    let solver = make_solver_with_order(24, 24, 1, 3);
+    let basis = super::projection::AxisBasis::new(&solver);
+    let n_nodes = solver.n_nodes;
+    for local in 0..n_nodes {
+        for axis_node in 0..n_nodes {
+            let first = basis.at(local, axis_node);
+            for element in 1..(solver.grid.nx / n_nodes) {
+                let twin = basis.at(element * n_nodes + local, axis_node);
+                assert_eq!(
+                    first.to_bits(),
+                    twin.to_bits(),
+                    "basis at local {local}, node {axis_node} changed in element {element}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn tensor_uniform_field_projection_agrees_with_the_single_field_projection() {
+    // The fields entry point computes one weight set per grid point and applies
+    // it to four variables; the single-field entry point computes the same set
+    // for one. They must agree exactly, or the shared weights changed an answer
+    // rather than only its cost.
+    let solver = make_solver_with_order(8, 8, 4, 3);
+    let topology = DgTopology::from_grid(&solver.grid, solver.n_nodes).unwrap();
+    let mut state = Array3::zeros(solver.acoustic_tensor_state_shape().unwrap());
+    for elem in 0..topology.n_elements {
+        for node in 0..topology.nodes_per_element {
+            for var in 0..4 {
+                state[[elem, node, var]] =
+                    (0.37 * elem as f64 + 0.61 * node as f64 + 0.19 * var as f64).sin();
+            }
+        }
+    }
+
+    let shape = (solver.grid.nx, solver.grid.ny, solver.grid.nz);
+    let mut alone = Array3::zeros(shape);
+    solver
+        .project_acoustic_tensor_pressure_to_uniform_grid(&state, &mut alone)
+        .unwrap();
+
+    let mut pressure = Array3::zeros(shape);
+    let mut ux = Array3::zeros(shape);
+    let mut uy = Array3::zeros(shape);
+    let mut uz = Array3::zeros(shape);
+    solver
+        .project_acoustic_tensor_fields_to_uniform_grid(
+            &state,
+            &mut pressure,
+            &mut ux,
+            &mut uy,
+            &mut uz,
+        )
+        .unwrap();
+
+    for index in 0..alone.len() {
+        let single = alone.as_slice().unwrap()[index];
+        let shared = pressure.as_slice().unwrap()[index];
+        assert_eq!(
+            single.to_bits(),
+            shared.to_bits(),
+            "the fields projection changed the pressure answer at flat index {index}"
+        );
+    }
+    for variable in [&ux, &uy, &uz] {
+        assert!(variable.iter().all(|value| value.is_finite()));
+    }
+}
+
+#[test]
 fn tensor_weak_cell_source_weights_conserve_reference_cell_measure() {
     let solver = make_solver_with_order(8, 8, 1, 3);
     let topology = DgTopology::from_grid(&solver.grid, solver.n_nodes).unwrap();
