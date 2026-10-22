@@ -229,7 +229,7 @@ fn bench_backward_pass(c: &mut Criterion) {
 
         b.iter(|| {
             for p in model.parameters() {
-                p.zero_grad();
+                be(p.zero_grad()).expect("invariant: benchmark backend resets parameter gradients");
             }
             let output = model
                 .forward(&x, &y, &t)
@@ -403,7 +403,8 @@ fn bench_batch_scaling(c: &mut Criterion) {
 
                 b.iter(|| {
                     for p in model.parameters() {
-                        p.zero_grad();
+                        be(p.zero_grad())
+                            .expect("invariant: benchmark backend resets parameter gradients");
                     }
                     let output = model
                         .forward(&x, &y, &t)

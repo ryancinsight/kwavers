@@ -10,6 +10,17 @@ use std::time::Duration;
 #[cfg(feature = "pinn")]
 type Backend = MoiraiBackend;
 
+/// The coordinate tensors a split produces, in `x`, `y`, `t` order.
+#[cfg(feature = "pinn")]
+type SplitCoordinates = Result<
+    (
+        Tensor<f32, Backend>,
+        Tensor<f32, Backend>,
+        Tensor<f32, Backend>,
+    ),
+    BackendError,
+>;
+
 #[cfg(feature = "pinn")]
 fn benchmark_split_coordinates(c: &mut Criterion) {
     let mut group = c.benchmark_group("adaptive_sampling_split");
@@ -40,17 +51,7 @@ fn benchmark_split_coordinates(c: &mut Criterion) {
 }
 
 #[cfg(feature = "pinn")]
-fn split_coordinates_slow(
-    points: &Tensor<f32, Backend>,
-    backend: Backend,
-) -> Result<
-    (
-        Tensor<f32, Backend>,
-        Tensor<f32, Backend>,
-        Tensor<f32, Backend>,
-    ),
-    BackendError,
-> {
+fn split_coordinates_slow(points: &Tensor<f32, Backend>, backend: Backend) -> SplitCoordinates {
     let values = points.to_contiguous()?;
     let values = values.as_slice();
     let total_points = points.shape()[0];
@@ -74,16 +75,7 @@ fn split_coordinates_slow(
 }
 
 #[cfg(feature = "pinn")]
-fn split_coordinates_fast(
-    points: &Tensor<f32, Backend>,
-) -> Result<
-    (
-        Tensor<f32, Backend>,
-        Tensor<f32, Backend>,
-        Tensor<f32, Backend>,
-    ),
-    BackendError,
-> {
+fn split_coordinates_fast(points: &Tensor<f32, Backend>) -> SplitCoordinates {
     let total_points = points.shape()[0];
     let column = |c: usize| -> Result<Tensor<f32, Backend>, BackendError> {
         Ok(points
