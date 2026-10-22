@@ -41,6 +41,7 @@
 <a id="kw-power-law-inverse-forms"></a>- [KW-POWER-LAW-INVERSE-FORMS](backlog/kw-power-law-inverse-forms.md) — Inverse, rad/s and constant power-law conversions still spell the factors [patch] — todo
 <a id="kw-prose-pr-unmergeable-2026-09-16"></a>- [KW-PROSE-PR-UNMERGEABLE-2026-09-16](backlog/kw-prose-pr-unmergeable-2026-09-16.md) — A prose-only pull request can never satisfy the required checks [patch] [ci] — blocked
 <a id="kw-py-angular-spectrum"></a>- [KW-PY-ANGULAR-SPECTRUM](backlog/kw-py-angular-spectrum.md) — The k-Wave parity helper propagates angular spectra in Python [patch] — todo
+<a id="kw-py-thermal-offset"></a>- [KW-PY-THERMAL-OFFSET](backlog/kw-py-thermal-offset.md) — PSTD thermal output from Python sits 273.15 K above the initial temperature [patch] — todo
 <a id="kw-py-uvlock-stale-2026-09-21"></a>- [KW-PY-UVLOCK-STALE-2026-09-21](backlog/kw-py-uvlock-stale-2026-09-21.md) — The Python dev lockfile is stale against its own pyproject [patch] — todo
 <a id="kw-ray-040"></a>- [KW-RAY-040](backlog/kw-ray-040.md) — Layered focus-path contract [minor] — in-progress
 <a id="kw-release-crates-01"></a>- [KW-RELEASE-CRATES-01](backlog/kw-release-crates-01.md) — Publish the Rust package closure [patch] — blocked
