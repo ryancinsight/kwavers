@@ -10,7 +10,10 @@ fn test_calcium_oxalate_properties() {
     let stone = StoneMaterial::calcium_oxalate_monohydrate();
 
     assert_eq!(stone.density(), 2000.0);
-    assert_eq!(stone.youngs_modulus(), 20e9);
+    // E is reconstructed from the Lame moduli proteus derives in
+    // `from_engineering`, so the round trip carries a few float roundings;
+    // the same derived relative bound the elastic property tests use.
+    assert!((stone.youngs_modulus() - 20e9).abs() / 20e9 < 1e-10);
     assert_eq!(stone.poisson_ratio(), 0.3);
 
     assert!(stone.elastic().p_wave_speed() > 0.0);
