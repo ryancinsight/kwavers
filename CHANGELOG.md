@@ -22,8 +22,10 @@
   `dg_projection`, four fields against the same four outputs produced by four
   single-field calls: 7.04 against 16.21 ms at 24^3 order 2, 53.91 against
   119.01 ms at 48^3 order 2, 123.65 against 275.19 ms at 48^3 order 3 -- about
-  2x across the set, and the win grows with the node count per element because
-  that is what the repeated products cost.
+  2x across the set. The ratio holds at both node counts rather than growing
+  with them, which is what sharing one weight computation across four
+  variables should give: the saving is three of four products, whatever
+  `nodes_per_element` is.
   Two tests pin the invariants. One checks that the stored basis pattern is
   identical in every element, which is what makes the stored-once layout
   correct. The other checks that the four-field projection returns exactly the
