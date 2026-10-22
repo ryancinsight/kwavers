@@ -79,6 +79,7 @@ impl<M: Medium> FactoryMediumParameters for MediumDescriptor<'_, M> {
 
     fn absorption(&self, frequency: f64) -> f64 {
         AcousticProperties::absorption_coefficient(self.medium, 0.0, 0.0, 0.0, self.grid, frequency)
+            .into_base()
     }
 }
 

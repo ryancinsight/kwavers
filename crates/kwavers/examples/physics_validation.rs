@@ -357,7 +357,9 @@ fn test_acoustic_absorption() -> Result<(), Box<dyn std::error::Error>> {
         let distance: f64 = 0.1; // 10 cm
 
         // Get absorption coefficient from medium
-        let alpha = medium.absorption_coefficient(0.0, 0.0, 0.0, &grid, frequency);
+        let alpha = medium
+            .absorption_coefficient(0.0, 0.0, 0.0, &grid, frequency)
+            .into_base();
 
         // Convert from Np/m/MHz^y to Np/m at our frequency
         // Since delta=0, the frequency dependence is removed

@@ -43,7 +43,9 @@ fn test_absorption_at_reference_frequency_equals_alpha0() {
     let medium = uniform_medium(alpha0, 1.5, f_ref);
     let grid = small_grid();
 
-    let result = medium.absorption_coefficient(1.5, 1.5, 1.5, &grid, f_ref);
+    let result = medium
+        .absorption_coefficient(1.5, 1.5, 1.5, &grid, f_ref)
+        .into_base();
     assert!(
         (result - alpha0).abs() < f64::EPSILON * alpha0,
         "at f=f_ref: expected {alpha0}, got {result}"
@@ -63,7 +65,9 @@ fn test_power_law_exponent_y2_doubles_frequency() {
     let medium = uniform_medium(1.0, 2.0, f_ref);
     let grid = small_grid();
 
-    let result = medium.absorption_coefficient(1.5, 1.5, 1.5, &grid, 2.0 * f_ref);
+    let result = medium
+        .absorption_coefficient(1.5, 1.5, 1.5, &grid, 2.0 * f_ref)
+        .into_base();
     let expected = 4.0_f64; // 1.0 * 2^2
     assert!(
         (result - expected).abs() < 1e-12,
@@ -84,7 +88,9 @@ fn test_power_law_tissue_exponent_y1_5() {
     let medium = uniform_medium(alpha0, 1.5, f_ref);
     let grid = small_grid();
 
-    let result = medium.absorption_coefficient(1.5, 1.5, 1.5, &grid, 4.0 * f_ref);
+    let result = medium
+        .absorption_coefficient(1.5, 1.5, 1.5, &grid, 4.0 * f_ref)
+        .into_base();
     let expected = alpha0 * 8.0; // 0.5 * 4^1.5 = 0.5 * 8 = 4
     assert!(
         (result - expected).abs() < 1e-10,
@@ -104,7 +110,9 @@ fn test_power_law_linear_exponent_y1() {
     let medium = uniform_medium(alpha0, 1.0, f_ref);
     let grid = small_grid();
 
-    let result = medium.absorption_coefficient(1.5, 1.5, 1.5, &grid, 3.0 * f_ref);
+    let result = medium
+        .absorption_coefficient(1.5, 1.5, 1.5, &grid, 3.0 * f_ref)
+        .into_base();
     let expected = alpha0 * 3.0;
     assert!(
         (result - expected).abs() < 1e-12,
@@ -152,8 +160,12 @@ fn test_spatially_varying_alpha_power() {
     m.reference_frequency = f_ref;
     let grid = small_grid();
 
-    let r0 = m.absorption_coefficient(0.0, 0.0, 0.0, &grid, 2.0 * f_ref);
-    let r3 = m.absorption_coefficient(3.0, 3.0, 3.0, &grid, 2.0 * f_ref);
+    let r0 = m
+        .absorption_coefficient(0.0, 0.0, 0.0, &grid, 2.0 * f_ref)
+        .into_base();
+    let r3 = m
+        .absorption_coefficient(3.0, 3.0, 3.0, &grid, 2.0 * f_ref)
+        .into_base();
     assert!(
         (r0 - 2.0).abs() < 1e-12,
         "[0,0,0] y=1: expected 2.0, got {r0}"

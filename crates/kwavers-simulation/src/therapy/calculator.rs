@@ -143,7 +143,8 @@ impl TherapyCalculator {
                     z,
                     grid,
                     self.parameters.frequency,
-                );
+                )
+                .into_base();
 
                 // Acoustic intensity
                 let intensity = p * p / (2.0 * rho * c);

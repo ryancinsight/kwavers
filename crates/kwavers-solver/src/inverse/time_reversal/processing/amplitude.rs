@@ -48,7 +48,8 @@ impl AmplitudeCorrector {
             sz,
             grid,
             frequency,
-        );
+        )
+        .into_base();
 
         let corrected: Vec<f64> = signal
             .iter()
