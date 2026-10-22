@@ -27,7 +27,9 @@
 //! here. The technique is orthogonal to LayerNorm; we are not
 //! removing normalisation (we have none) but augmenting tanh.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 
 /// Per-layer Dynamic Tanh activation:
 /// `y = γ · tanh(α · x) + β`.
@@ -56,7 +58,7 @@ where
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
 {
     fn default() -> Self {
-        Self::new()
+        Self::new().expect("invariant: scalar [1] tensors always construct")
     }
 }
 
@@ -76,7 +78,7 @@ where
     /// init bakes in an extra linear-region scaling that interacts
     /// badly with the cosine-annealed LR's high-LR exploration phase.
     #[must_use]
-    pub fn new() -> Self {
+    pub fn new() -> KwaversResult<Self> {
         Self::with_init(1.0, 1.0, 0.0)
     }
 
@@ -84,19 +86,19 @@ where
     /// Useful for ablations (e.g. `α = 1.0` recovers vanilla `tanh`
     /// with a learnable γ on top).
     #[must_use]
-    pub fn with_init(alpha: f32, gamma: f32, beta: f32) -> Self {
+    pub fn with_init(alpha: f32, gamma: f32, beta: f32) -> KwaversResult<Self> {
         let backend = B::default();
-        let leaf = |v: f32| {
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![1], &[v], &backend),
+        let leaf = |v: f32| -> KwaversResult<Var<f32, B>> {
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![1], &[v], &backend))?,
                 true,
-            )
+            ))
         };
-        Self {
-            alpha: leaf(alpha),
-            gamma: leaf(gamma),
-            beta: leaf(beta),
-        }
+        Ok(Self {
+            alpha: leaf(alpha)?,
+            gamma: leaf(gamma)?,
+            beta: leaf(beta)?,
+        })
     }
 
     /// Flatten `(α, γ, β)` in that order.
@@ -116,10 +118,13 @@ where
     /// Broadcasting: `α, γ, β` are scalar `[1]` `Var`s; `coeus_autograd`
     /// arithmetic ops broadcast them across the `[batch, F]` shape and
     /// reduce gradients back to `[1]` on the backward pass.
-    pub fn forward(&self, x: &Var<f32, B>) -> Var<f32, B> {
-        let scaled = coeus_autograd::mul(x, &self.alpha);
-        let activated = coeus_autograd::tanh(&scaled);
-        coeus_autograd::add(&coeus_autograd::mul(&activated, &self.gamma), &self.beta)
+    pub fn forward(&self, x: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
+        let scaled = be(coeus_autograd::mul(x, &self.alpha))?;
+        let activated = be(coeus_autograd::tanh(&scaled))?;
+        be(coeus_autograd::add(
+            &be(coeus_autograd::mul(&activated, &self.gamma))?,
+            &self.beta,
+        ))
     }
 
     /// Read the current scalar values — useful for logging /

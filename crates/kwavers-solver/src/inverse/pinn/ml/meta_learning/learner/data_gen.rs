@@ -214,7 +214,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearne
     /// Generate initial condition data for meta-learning tasks.
     ///
     /// Samples 200 points within geometry using three IC patterns (selected by task ID hash):
-    /// 1. Gaussian pulse: u₀(x,y) = A·exp(-r²/(2σ²))
+    /// 1. Gaussian pulse: u₀(x,y) = A·be(exp(-r²/(2σ²)))?
     /// 2. Plane wave: u₀(x,y) = A·sin(k·r) with wave velocity initial condition
     /// 3. Delta pulse: tighter Gaussian
     fn generate_initial_conditions(&self, task: &PhysicsTask) -> Vec<(f64, f64, f64, f64, f64)> {

@@ -1,5 +1,6 @@
 use super::constants::EPS_FD_F32;
 use super::sources::compute_charge_density;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::inverse::pinn::ml::PinnWave2D;
 use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub, Var};
@@ -47,21 +48,24 @@ where
     let h = EPS_FD_F32;
 
     // μ ∂Hz/∂t
-    let hz_tp = model_hz.forward(x, y, &scalar_add(t, h))?;
-    let hz_tm = model_hz.forward(x, y, &scalar_sub(t, h))?;
-    let dhz_dt = scalar_mul(&sub(&hz_tp, &hz_tm), 1.0 / (2.0 * h));
+    let hz_tp = model_hz.forward(x, y, &be(scalar_add(t, h))?)?;
+    let hz_tm = model_hz.forward(x, y, &be(scalar_sub(t, h))?)?;
+    let dhz_dt = be(scalar_mul(&be(sub(&hz_tp, &hz_tm))?, 1.0 / (2.0 * h)))?;
 
     // −∂Ex/∂y
-    let ex_yp = model_ex.forward(x, &scalar_add(y, h), t)?;
-    let ex_ym = model_ex.forward(x, &scalar_sub(y, h), t)?;
-    let dex_dy = scalar_mul(&sub(&ex_yp, &ex_ym), 1.0 / (2.0 * h));
+    let ex_yp = model_ex.forward(x, &be(scalar_add(y, h))?, t)?;
+    let ex_ym = model_ex.forward(x, &be(scalar_sub(y, h))?, t)?;
+    let dex_dy = be(scalar_mul(&be(sub(&ex_yp, &ex_ym))?, 1.0 / (2.0 * h)))?;
 
     // +∂Ey/∂x
-    let ey_xp = model_ey.forward(&scalar_add(x, h), y, t)?;
-    let ey_xm = model_ey.forward(&scalar_sub(x, h), y, t)?;
-    let dey_dx = scalar_mul(&sub(&ey_xp, &ey_xm), 1.0 / (2.0 * h));
+    let ey_xp = model_ey.forward(&be(scalar_add(x, h))?, y, t)?;
+    let ey_xm = model_ey.forward(&be(scalar_sub(x, h))?, y, t)?;
+    let dey_dx = be(scalar_mul(&be(sub(&ey_xp, &ey_xm))?, 1.0 / (2.0 * h)))?;
 
-    Ok(add(&sub(&scalar_mul(&dhz_dt, mu as f32), &dex_dy), &dey_dx))
+    be(add(
+        &be(sub(&be(scalar_mul(&dhz_dt, mu as f32))?, &dex_dy))?,
+        &dey_dx,
+    ))
 }
 
 /// TE-mode Ampère-x residual: R_{Ax} = ε ∂Ex/∂t − ∂Hz/∂y + σ Ex
@@ -96,21 +100,21 @@ where
     let h = EPS_FD_F32;
 
     // ε ∂Ex/∂t
-    let ex_tp = model_ex.forward(x, y, &scalar_add(t, h))?;
-    let ex_tm = model_ex.forward(x, y, &scalar_sub(t, h))?;
-    let dex_dt = scalar_mul(&sub(&ex_tp, &ex_tm), 1.0 / (2.0 * h));
+    let ex_tp = model_ex.forward(x, y, &be(scalar_add(t, h))?)?;
+    let ex_tm = model_ex.forward(x, y, &be(scalar_sub(t, h))?)?;
+    let dex_dt = be(scalar_mul(&be(sub(&ex_tp, &ex_tm))?, 1.0 / (2.0 * h)))?;
 
     // −∂Hz/∂y
-    let hz_yp = model_hz.forward(x, &scalar_add(y, h), t)?;
-    let hz_ym = model_hz.forward(x, &scalar_sub(y, h), t)?;
-    let dhz_dy = scalar_mul(&sub(&hz_yp, &hz_ym), 1.0 / (2.0 * h));
+    let hz_yp = model_hz.forward(x, &be(scalar_add(y, h))?, t)?;
+    let hz_ym = model_hz.forward(x, &be(scalar_sub(y, h))?, t)?;
+    let dhz_dy = be(scalar_mul(&be(sub(&hz_yp, &hz_ym))?, 1.0 / (2.0 * h)))?;
 
     // σ Ex (conduction current)
     let ex = model_ex.forward(x, y, t)?;
 
-    Ok(add(
-        &sub(&scalar_mul(&dex_dt, eps as f32), &dhz_dy),
-        &scalar_mul(&ex, sigma as f32),
+    be(add(
+        &be(sub(&be(scalar_mul(&dex_dt, eps as f32))?, &dhz_dy))?,
+        &be(scalar_mul(&ex, sigma as f32))?,
     ))
 }
 
@@ -141,21 +145,21 @@ where
     let h = EPS_FD_F32;
 
     // ε ∂Ey/∂t
-    let ey_tp = model_ey.forward(x, y, &scalar_add(t, h))?;
-    let ey_tm = model_ey.forward(x, y, &scalar_sub(t, h))?;
-    let dey_dt = scalar_mul(&sub(&ey_tp, &ey_tm), 1.0 / (2.0 * h));
+    let ey_tp = model_ey.forward(x, y, &be(scalar_add(t, h))?)?;
+    let ey_tm = model_ey.forward(x, y, &be(scalar_sub(t, h))?)?;
+    let dey_dt = be(scalar_mul(&be(sub(&ey_tp, &ey_tm))?, 1.0 / (2.0 * h)))?;
 
     // +∂Hz/∂x
-    let hz_xp = model_hz.forward(&scalar_add(x, h), y, t)?;
-    let hz_xm = model_hz.forward(&scalar_sub(x, h), y, t)?;
-    let dhz_dx = scalar_mul(&sub(&hz_xp, &hz_xm), 1.0 / (2.0 * h));
+    let hz_xp = model_hz.forward(&be(scalar_add(x, h))?, y, t)?;
+    let hz_xm = model_hz.forward(&be(scalar_sub(x, h))?, y, t)?;
+    let dhz_dx = be(scalar_mul(&be(sub(&hz_xp, &hz_xm))?, 1.0 / (2.0 * h)))?;
 
     // σ Ey
     let ey = model_ey.forward(x, y, t)?;
 
-    Ok(add(
-        &add(&scalar_mul(&dey_dt, eps as f32), &dhz_dx),
-        &scalar_mul(&ey, sigma as f32),
+    be(add(
+        &be(add(&be(scalar_mul(&dey_dt, eps as f32))?, &dhz_dx))?,
+        &be(scalar_mul(&ey, sigma as f32))?,
     ))
 }
 
@@ -190,16 +194,19 @@ where
     let h = EPS_FD_F32;
 
     // ∂Ex/∂x
-    let ex_xp = model_ex.forward(&scalar_add(x, h), y, t)?;
-    let ex_xm = model_ex.forward(&scalar_sub(x, h), y, t)?;
-    let dex_dx = scalar_mul(&sub(&ex_xp, &ex_xm), 1.0 / (2.0 * h));
+    let ex_xp = model_ex.forward(&be(scalar_add(x, h))?, y, t)?;
+    let ex_xm = model_ex.forward(&be(scalar_sub(x, h))?, y, t)?;
+    let dex_dx = be(scalar_mul(&be(sub(&ex_xp, &ex_xm))?, 1.0 / (2.0 * h)))?;
 
     // ∂Ey/∂y
-    let ey_yp = model_ey.forward(x, &scalar_add(y, h), t)?;
-    let ey_ym = model_ey.forward(x, &scalar_sub(y, h), t)?;
-    let dey_dy = scalar_mul(&sub(&ey_yp, &ey_ym), 1.0 / (2.0 * h));
+    let ey_yp = model_ey.forward(x, &be(scalar_add(y, h))?, t)?;
+    let ey_ym = model_ey.forward(x, &be(scalar_sub(y, h))?, t)?;
+    let dey_dy = be(scalar_mul(&be(sub(&ey_yp, &ey_ym))?, 1.0 / (2.0 * h)))?;
 
-    let rho = compute_charge_density(x, y, physics_params);
+    let rho = compute_charge_density(x, y, physics_params)?;
 
-    Ok(sub(&scalar_mul(&add(&dex_dx, &dey_dy), eps as f32), &rho))
+    be(sub(
+        &be(scalar_mul(&be(add(&dex_dx, &dey_dy))?, eps as f32))?,
+        &rho,
+    ))
 }

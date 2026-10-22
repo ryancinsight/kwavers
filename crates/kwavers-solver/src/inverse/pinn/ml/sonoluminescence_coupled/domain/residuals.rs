@@ -5,6 +5,7 @@
 //! - Jackson (1999) *Classical Electrodynamics*
 //! - Putterman (1995) *Sonoluminescence: Sound into Light*
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 
 use super::SonoluminescenceCoupledDomain;
@@ -28,7 +29,7 @@ where
         y: &Var<f32, B>,
         t: &Var<f32, B>,
         _physics_params: &PinnDomainPhysicsParameters,
-    ) -> Var<f32, B> {
+    ) -> KwaversResult<Var<f32, B>> {
         let batch_size = x.tensor.shape()[0];
         let mut source_terms = Vec::with_capacity(batch_size);
 
@@ -58,10 +59,14 @@ where
         }
 
         let backend = B::default();
-        Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &source_terms, &backend),
+        be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 1],
+                &source_terms,
+                &backend,
+            ))?,
             false,
-        )
+        ))
     }
 
     /// Compute the electromagnetic PDE residual augmented with sonoluminescence
@@ -78,83 +83,83 @@ where
         t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
     ) -> KwaversResult<Var<f32, B>> {
-        let x_grad = Var::new(x.tensor.clone(), true);
-        let y_grad = Var::new(y.tensor.clone(), true);
-        let t_grad = Var::new(t.tensor.clone(), true);
+        let x_grad = be(Var::new(x.tensor.clone(), true))?;
+        let y_grad = be(Var::new(y.tensor.clone(), true))?;
+        let t_grad = be(Var::new(t.tensor.clone(), true))?;
 
         let electric_field = model.forward(&x_grad, &y_grad, &t_grad)?;
         electric_field.backward().map_err(|error| {
             KwaversError::InternalError(format!("sonoluminescence electric derivative: {error}"))
         })?;
-        let e_dx = Var::new(
+        let e_dx = be(Var::new(
             x_grad.grad().ok_or_else(|| {
                 KwaversError::InternalError("sonoluminescence electric x gradient missing".into())
             })?,
             false,
-        );
-        let e_dy = Var::new(
+        ))?;
+        let e_dy = be(Var::new(
             y_grad.grad().ok_or_else(|| {
                 KwaversError::InternalError("sonoluminescence electric y gradient missing".into())
             })?,
             false,
-        );
-        let e_dt = Var::new(
+        ))?;
+        let e_dt = be(Var::new(
             t_grad.grad().ok_or_else(|| {
                 KwaversError::InternalError("sonoluminescence electric t gradient missing".into())
             })?,
             false,
-        );
+        ))?;
 
-        let x_grad_2 = Var::new(x.tensor.clone(), true);
-        let y_grad_2 = Var::new(y.tensor.clone(), true);
-        let t_grad_2 = Var::new(t.tensor.clone(), true);
+        let x_grad_2 = be(Var::new(x.tensor.clone(), true))?;
+        let y_grad_2 = be(Var::new(y.tensor.clone(), true))?;
+        let t_grad_2 = be(Var::new(t.tensor.clone(), true))?;
 
         let magnetic_field_2 = model.forward(&x_grad_2, &y_grad_2, &t_grad_2)?;
         magnetic_field_2.backward().map_err(|error| {
             KwaversError::InternalError(format!("sonoluminescence magnetic derivative: {error}"))
         })?;
-        let b_dx = Var::new(
+        let b_dx = be(Var::new(
             x_grad_2.grad().ok_or_else(|| {
                 KwaversError::InternalError("sonoluminescence magnetic x gradient missing".into())
             })?,
             false,
-        );
-        let b_dy = Var::new(
+        ))?;
+        let b_dy = be(Var::new(
             y_grad_2.grad().ok_or_else(|| {
                 KwaversError::InternalError("sonoluminescence magnetic y gradient missing".into())
             })?,
             false,
-        );
-        let b_dt = Var::new(
+        ))?;
+        let b_dt = be(Var::new(
             t_grad_2.grad().ok_or_else(|| {
                 KwaversError::InternalError("sonoluminescence magnetic t gradient missing".into())
             })?,
             false,
-        );
+        ))?;
 
         // Physical constants (SI) from SSOT (cast to f32 for tensor arithmetic).
         let mu_0_f32 = VACUUM_PERMEABILITY as f32;
         let epsilon_0_f32 = VACUUM_PERMITTIVITY as f32;
 
-        let current_density = self.compute_light_sources(x, y, t, physics_params);
+        let current_density = self.compute_light_sources(x, y, t, physics_params)?;
 
         // ampere_residual = e_dy - e_dx + b_dt*mu_0 + current_density*mu_0
-        let ampere_residual = coeus_autograd::add(
-            &coeus_autograd::sub(&e_dy, &e_dx),
-            &coeus_autograd::add(
-                &coeus_autograd::scalar_mul(&b_dt, mu_0_f32),
-                &coeus_autograd::scalar_mul(&current_density, mu_0_f32),
-            ),
-        );
+        let ampere_residual = be(coeus_autograd::add(
+            &be(coeus_autograd::sub(&e_dy, &e_dx))?,
+            &be(coeus_autograd::add(
+                &be(coeus_autograd::scalar_mul(&b_dt, mu_0_f32))?,
+                &be(coeus_autograd::scalar_mul(&current_density, mu_0_f32))?,
+            ))?,
+        ))?;
         // faraday_residual = b_dx - b_dy - mu_0*epsilon_0*e_dt - current_density*mu_0
-        let faraday_residual = coeus_autograd::sub(
-            &coeus_autograd::sub(&b_dx, &b_dy),
-            &coeus_autograd::add(
-                &coeus_autograd::scalar_mul(&e_dt, mu_0_f32 * epsilon_0_f32),
-                &coeus_autograd::scalar_mul(&current_density, mu_0_f32),
-            ),
-        );
+        let faraday_residual = be(coeus_autograd::sub(
+            &be(coeus_autograd::sub(&b_dx, &b_dy))?,
+            &be(coeus_autograd::add(
+                &be(coeus_autograd::scalar_mul(&e_dt, mu_0_f32 * epsilon_0_f32))?,
+                &be(coeus_autograd::scalar_mul(&current_density, mu_0_f32))?,
+            ))?,
+        ))?;
 
-        Ok(coeus_autograd::add(&ampere_residual, &faraday_residual))
+        be(coeus_autograd::add(&ampere_residual, &faraday_residual))
     }
 }

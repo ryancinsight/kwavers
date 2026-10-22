@@ -1,5 +1,7 @@
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use coeus_autograd::{add, exp, mul, neg, scalar_add, scalar_mul, scalar_sub, Var};
+use kwavers_core::error::KwaversResult;
 
 #[cfg(test)]
 mod tests;
@@ -26,7 +28,7 @@ mod tests;
 ///
 /// A volume charge distribution of total charge Q₀ in a sphere of radius σ:
 /// ```text
-/// ρ(r) = ρ₀ · exp(−((x−x₀)² + (y−y₀)²) / (2σ²))
+/// ρ(r) = ρ₀ · be(exp(−((x−x₀)² + (y−y₀)²) / (2σ²)))?
 /// ```
 /// with `ρ₀ = domain_params["charge_density"]`, `x₀ = domain_params["charge_x0"]`,
 /// `y₀ = domain_params["charge_y0"]`, `σ = domain_params["charge_sigma"]`.
@@ -41,7 +43,7 @@ pub fn compute_charge_density<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBack
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     physics_params: &PinnDomainPhysicsParameters,
-) -> Var<f32, B> {
+) -> KwaversResult<Var<f32, B>> {
     let rho_0 = physics_params
         .domain_params
         .get("charge_density")
@@ -49,11 +51,11 @@ pub fn compute_charge_density<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBack
         .unwrap_or(0.0) as f32;
 
     let backend = B::default();
-    let zeros = || {
-        Var::new(
-            coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend),
+    let zeros = || -> KwaversResult<Var<f32, B>> {
+        be(Var::new(
+            be(coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend))?,
             false,
-        )
+        ))
     };
 
     if rho_0 == 0.0 {
@@ -68,17 +70,20 @@ pub fn compute_charge_density<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBack
 
     match (x0, y0, sigma) {
         (Some(x0), Some(y0), Some(sigma)) if sigma > 0.0 => {
-            // Gaussian charge distribution: ρ(r) = ρ₀ · exp(−r²/(2σ²))
+            // Gaussian charge distribution: ρ(r) = ρ₀ · be(exp(−r²/(2σ²)))?
             // where r² = (x−x₀)² + (y−y₀)²
-            let dx = scalar_sub(x, x0 as f32);
-            let dy = scalar_sub(y, y0 as f32);
-            let r_sq = add(&mul(&dx, &dx), &mul(&dy, &dy));
+            let dx = be(scalar_sub(x, x0 as f32))?;
+            let dy = be(scalar_sub(y, y0 as f32))?;
+            let r_sq = be(add(&be(mul(&dx, &dx))?, &be(mul(&dy, &dy))?))?;
             let two_sigma_sq = (2.0 * sigma * sigma) as f32;
-            scalar_mul(&exp(&neg(&scalar_mul(&r_sq, 1.0 / two_sigma_sq))), rho_0)
+            let decay = be(scalar_mul(&r_sq, 1.0 / two_sigma_sq))?;
+            let negated = be(neg(&decay))?;
+            let window = be(exp(&negated))?;
+            Ok(be(scalar_mul(&window, rho_0))?)
         }
         _ => {
             // Spatially-uniform charge density
-            scalar_add(&zeros(), rho_0)
+            Ok(be(scalar_add(&zeros()?, rho_0))?)
         }
     }
 }
@@ -110,7 +115,7 @@ pub fn compute_charge_density<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBack
 ///
 /// A filamentary current of linear density K₀ spread over radius σ:
 /// ```text
-/// J_z(r) = K₀ · exp(−r²/(2σ²)) / (2πσ²)
+/// J_z(r) = K₀ · be(exp(−r²/(2σ²)))? / (2πσ²)
 /// ```
 ///
 /// ## Reference
@@ -124,7 +129,7 @@ pub fn compute_current_density_z<
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     physics_params: &PinnDomainPhysicsParameters,
-) -> Var<f32, B> {
+) -> KwaversResult<Var<f32, B>> {
     // Conduction background: J_cond = σ·E_z,background (if both are specified)
     let sigma = physics_params
         .domain_params
@@ -146,11 +151,11 @@ pub fn compute_current_density_z<
         .unwrap_or(0.0) as f32;
 
     let backend = B::default();
-    let zeros = || {
-        Var::new(
-            coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend),
+    let zeros = || -> KwaversResult<Var<f32, B>> {
+        be(Var::new(
+            be(coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend))?,
             false,
-        )
+        ))
     };
 
     let j_impressed = if j0 != 0.0 {
@@ -159,19 +164,22 @@ pub fn compute_current_density_z<
         let sig = physics_params.domain_params.get("current_sigma").copied();
         match (x0, y0, sig) {
             (Some(cx), Some(cy), Some(s)) if s > 0.0 => {
-                // Gaussian impressed current: J_z(r) = J₀·exp(−r²/(2σ²))
-                let dx = scalar_sub(x, cx as f32);
-                let dy = scalar_sub(y, cy as f32);
-                let r_sq = add(&mul(&dx, &dx), &mul(&dy, &dy));
+                // Gaussian impressed current: J_z(r) = J₀·be(exp(−r²/(2σ²)))?
+                let dx = be(scalar_sub(x, cx as f32))?;
+                let dy = be(scalar_sub(y, cy as f32))?;
+                let r_sq = be(add(&be(mul(&dx, &dx))?, &be(mul(&dy, &dy))?))?;
                 let two_s2 = (2.0 * s * s) as f32;
-                scalar_mul(&exp(&neg(&scalar_mul(&r_sq, 1.0 / two_s2))), j0)
+                be(scalar_mul(
+                    &be(exp(&be(neg(&be(scalar_mul(&r_sq, 1.0 / two_s2))?))?))?,
+                    j0,
+                ))?
             }
-            _ => scalar_add(&zeros(), j0),
+            _ => be(scalar_add(&zeros()?, j0))?,
         }
     } else {
-        zeros()
+        zeros()?
     };
 
     // Total impressed current (conduction background + external source)
-    scalar_add(&j_impressed, j_cond)
+    be(scalar_add(&j_impressed, j_cond))
 }

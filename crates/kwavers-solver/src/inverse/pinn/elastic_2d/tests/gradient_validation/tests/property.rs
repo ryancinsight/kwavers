@@ -1,8 +1,10 @@
 use super::autodiff_fixtures::autodiff_gradient_x;
 use crate::inverse::elastic_2d::Config;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
 use coeus_autograd::Var;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
+use kwavers_core::error::KwaversResult;
 
 type B = super::TestBackend;
 
@@ -19,25 +21,44 @@ fn test_gradient_batch_consistency() {
 
     let single_grad = autodiff_gradient_x(&model, x, y, t, 0).unwrap();
 
-    let x_batch = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![2, 1], &[x as f32, x as f32], &backend),
+    let x_batch = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![2, 1],
+            &[x as f32, x as f32],
+            &backend,
+        ))
+        .unwrap(),
         true,
-    );
-    let y_batch = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![2, 1], &[y as f32, y as f32], &backend),
+    ))
+    .unwrap();
+    let y_batch = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![2, 1],
+            &[y as f32, y as f32],
+            &backend,
+        ))
+        .unwrap(),
         false,
-    );
-    let t_batch = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![2, 1], &[t as f32, t as f32], &backend),
+    ))
+    .unwrap();
+    let t_batch = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![2, 1],
+            &[t as f32, t as f32],
+            &backend,
+        ))
+        .unwrap(),
         false,
-    );
+    ))
+    .unwrap();
 
     let u_batch = model
         .forward(&x_batch, &y_batch, &t_batch)
         .expect("elastic batch forward");
-    let u0 = coeus_autograd::slice(&u_batch, &[(0, 1), (0, 1)]);
+    let u0 = be(coeus_autograd::slice(&u_batch, &[(0, 1), (0, 1)])).unwrap();
 
-    coeus_autograd::sum(&u0)
+    be(coeus_autograd::sum(&u0))
+        .unwrap()
         .backward()
         .expect("elastic batch backward");
     let du_dx = x_batch.grad().expect("Batch gradient should exist");
@@ -57,20 +78,24 @@ fn test_gradient_batch_consistency() {
 /// computes no residual -- non-finite values are the classic autodiff failure
 /// and that is the real property here.
 #[test]
-fn forward_and_gradient_stay_finite() {
+fn forward_and_gradient_stay_finite() -> KwaversResult<()> {
     let config = Config::forward_problem(1e9, 5e8, DENSITY_WATER_NOMINAL);
     let model = ElasticPINN2D::<B>::new(&config).unwrap();
     let backend = B::default();
 
-    let mk = |v: f32| {
-        Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[v], &backend),
+    let mk = |v: f32| -> KwaversResult<Var<f32, B>> {
+        be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![1, 1],
+                &[v],
+                &backend,
+            ))?,
             true,
-        )
+        ))
     };
-    let x = mk(0.5);
-    let y = mk(0.5);
-    let t = mk(0.1);
+    let x = mk(0.5)?;
+    let y = mk(0.5)?;
+    let t = mk(0.1)?;
 
     let u = model.forward(&x, &y, &t).expect("elastic PDE forward");
 
@@ -78,8 +103,9 @@ fn forward_and_gradient_stay_finite() {
         assert!(val.is_finite(), "Forward pass should produce finite values");
     }
 
-    let u_x_component = coeus_autograd::slice(&u, &[(0, 1), (0, 1)]);
-    coeus_autograd::sum(&u_x_component)
+    let u_x_component = be(coeus_autograd::slice(&u, &[(0, 1), (0, 1)])).unwrap();
+    be(coeus_autograd::sum(&u_x_component))
+        .unwrap()
         .backward()
         .expect("elastic PDE backward");
 
@@ -91,4 +117,6 @@ fn forward_and_gradient_stay_finite() {
         "Gradient should be finite, got {}",
         du_dx_val
     );
+
+    Ok(())
 }

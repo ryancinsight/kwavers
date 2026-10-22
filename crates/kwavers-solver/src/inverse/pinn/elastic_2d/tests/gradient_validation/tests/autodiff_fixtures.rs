@@ -1,4 +1,5 @@
 use super::TestBackend;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
 use crate::inverse::pinn::ml::autodiff_utils::compute_second_derivative_2d;
 use coeus_autograd::Var;
@@ -8,10 +9,16 @@ type B = TestBackend;
 
 fn var_point(v: f64) -> Var<f32, B> {
     let backend = B::default();
-    Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[v as f32], &backend),
+    be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![1, 1],
+            &[v as f32],
+            &backend,
+        ))
+        .unwrap(),
         false,
-    )
+    ))
+    .unwrap()
 }
 
 /// Compute central finite difference approximation of ∂f/∂x
@@ -113,15 +120,20 @@ pub(super) fn autodiff_gradient_x(
     t: f64,
     component: usize,
 ) -> KwaversResult<f64> {
-    let x_t = Var::new(x_leaf(x), true);
+    let x_t = be(Var::new(x_leaf(x), true)).unwrap();
     let y_t = var_point(y);
     let t_t = var_point(t);
 
     let u = model
         .forward(&x_t, &y_t, &t_t)
         .expect("elastic autodiff forward");
-    let u_component = coeus_autograd::slice(&u, &[(0, 1), (component, component + 1)]);
-    coeus_autograd::sum(&u_component)
+    let u_component = be(coeus_autograd::slice(
+        &u,
+        &[(0, 1), (component, component + 1)],
+    ))
+    .unwrap();
+    be(coeus_autograd::sum(&u_component))
+        .unwrap()
         .backward()
         .map_err(|error| {
             kwavers_core::error::KwaversError::InternalError(format!(
@@ -144,14 +156,19 @@ pub(super) fn autodiff_gradient_y(
     component: usize,
 ) -> KwaversResult<f64> {
     let x_t = var_point(x);
-    let y_t = Var::new(x_leaf(y), true);
+    let y_t = be(Var::new(x_leaf(y), true)).unwrap();
     let t_t = var_point(t);
 
     let u = model
         .forward(&x_t, &y_t, &t_t)
         .expect("elastic autodiff forward");
-    let u_component = coeus_autograd::slice(&u, &[(0, 1), (component, component + 1)]);
-    coeus_autograd::sum(&u_component)
+    let u_component = be(coeus_autograd::slice(
+        &u,
+        &[(0, 1), (component, component + 1)],
+    ))
+    .unwrap();
+    be(coeus_autograd::sum(&u_component))
+        .unwrap()
         .backward()
         .map_err(|error| {
             kwavers_core::error::KwaversError::InternalError(format!(
@@ -165,7 +182,12 @@ pub(super) fn autodiff_gradient_y(
 
 fn x_leaf(v: f64) -> coeus_tensor::Tensor<f32, B> {
     let backend = B::default();
-    coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[v as f32], &backend)
+    be(coeus_tensor::Tensor::from_slice_on(
+        vec![1, 1],
+        &[v as f32],
+        &backend,
+    ))
+    .unwrap()
 }
 
 /// Compute second derivative ∂²u/∂x² at a point.
@@ -186,13 +208,17 @@ pub(super) fn autodiff_second_derivative_xx(
     component: usize,
 ) -> KwaversResult<f64> {
     let backend = B::default();
-    let input =
-        coeus_tensor::Tensor::from_slice_on(vec![1, 3], &[t as f32, x as f32, y as f32], &backend);
+    let input = be(coeus_tensor::Tensor::from_slice_on(
+        vec![1, 3],
+        &[t as f32, x as f32, y as f32],
+        &backend,
+    ))
+    .unwrap();
     let forward = |combined: &Var<f32, B>| -> Var<f32, B> {
         let n = combined.tensor.shape()[0];
-        let t = coeus_autograd::slice(combined, &[(0, n), (0, 1)]);
-        let x = coeus_autograd::slice(combined, &[(0, n), (1, 2)]);
-        let y = coeus_autograd::slice(combined, &[(0, n), (2, 3)]);
+        let t = be(coeus_autograd::slice(combined, &[(0, n), (0, 1)])).unwrap();
+        let x = be(coeus_autograd::slice(combined, &[(0, n), (1, 2)])).unwrap();
+        let y = be(coeus_autograd::slice(combined, &[(0, n), (2, 3)])).unwrap();
         model
             .forward(&x, &y, &t)
             .expect("elastic second-derivative forward")

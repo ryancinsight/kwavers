@@ -1,4 +1,5 @@
 use super::core::PinnWave3D;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::wave_equation_3d::config::LossWeights3D;
 use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
@@ -178,8 +179,10 @@ where
     ) -> KwaversResult<PhysicsLossComponents3D<B>> {
         // Data loss: MSE between predictions and training data
         let u_pred = self.pinn.forward(x_data, y_data, z_data, t_data)?;
-        let data_diff = coeus_autograd::sub(&u_pred, u_data);
-        let data_loss_raw = coeus_autograd::mean(&coeus_autograd::mul(&data_diff, &data_diff));
+        let data_diff = be(coeus_autograd::sub(&u_pred, u_data))?;
+        let data_loss_raw = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &data_diff, &data_diff,
+        ))?))?;
 
         // PDE loss: MSE of PDE residual at collocation points
         let pde_residual =
@@ -187,26 +190,34 @@ where
                 .compute_pde_residual(x_colloc, y_colloc, z_colloc, t_colloc, |x, y, z| {
                     self.get_wave_speed(x, y, z)
                 })?;
-        let pde_loss_raw = coeus_autograd::mean(&coeus_autograd::mul(&pde_residual, &pde_residual));
+        let pde_loss_raw = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &pde_residual,
+            &pde_residual,
+        ))?))?;
 
         // Boundary condition loss: sample the 6 domain faces and enforce Dirichlet u=0.
         let bc_loss_raw = self.compute_bc_loss_internal(epoch)?;
 
         // Initial condition loss: displacement + optional velocity at t=0.
         let u_ic_pred = self.pinn.forward(x_ic, y_ic, z_ic, t_ic)?;
-        let ic_disp_diff = coeus_autograd::sub(&u_ic_pred, u_ic);
-        let ic_disp_loss = coeus_autograd::mean(&coeus_autograd::mul(&ic_disp_diff, &ic_disp_diff));
+        let ic_disp_diff = be(coeus_autograd::sub(&u_ic_pred, u_ic))?;
+        let ic_disp_loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &ic_disp_diff,
+            &ic_disp_diff,
+        ))?))?;
 
         let ic_loss_raw = if let Some(v_ic_var) = v_ic {
             let du_dt = self.compute_temporal_derivative_at_t0(x_ic, y_ic, z_ic, t_ic)?;
-            let ic_vel_diff = coeus_autograd::sub(&du_dt, v_ic_var);
-            let ic_vel_loss =
-                coeus_autograd::mean(&coeus_autograd::mul(&ic_vel_diff, &ic_vel_diff));
+            let ic_vel_diff = be(coeus_autograd::sub(&du_dt, v_ic_var))?;
+            let ic_vel_loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+                &ic_vel_diff,
+                &ic_vel_diff,
+            ))?))?;
 
-            coeus_autograd::add(
-                &coeus_autograd::scalar_mul(&ic_disp_loss, 0.5),
-                &coeus_autograd::scalar_mul(&ic_vel_loss, 0.5),
-            )
+            be(coeus_autograd::add(
+                &be(coeus_autograd::scalar_mul(&ic_disp_loss, 0.5))?,
+                &be(coeus_autograd::scalar_mul(&ic_vel_loss, 0.5))?,
+            ))?
         } else {
             ic_disp_loss
         };
@@ -220,25 +231,45 @@ where
         loss_scales.update(data_loss_val, pde_loss_val, bc_loss_val, ic_loss_val);
 
         let eps = 1e-8_f32;
-        let data_loss_normalized =
-            coeus_autograd::scalar_mul(&data_loss_raw, 1.0 / (loss_scales.data_scale + eps));
-        let pde_loss_normalized =
-            coeus_autograd::scalar_mul(&pde_loss_raw, 1.0 / (loss_scales.pde_scale + eps));
-        let bc_loss_normalized =
-            coeus_autograd::scalar_mul(&bc_loss_raw, 1.0 / (loss_scales.bc_scale + eps));
-        let ic_loss_normalized =
-            coeus_autograd::scalar_mul(&ic_loss_raw, 1.0 / (loss_scales.ic_scale + eps));
+        let data_loss_normalized = be(coeus_autograd::scalar_mul(
+            &data_loss_raw,
+            1.0 / (loss_scales.data_scale + eps),
+        ))?;
+        let pde_loss_normalized = be(coeus_autograd::scalar_mul(
+            &pde_loss_raw,
+            1.0 / (loss_scales.pde_scale + eps),
+        ))?;
+        let bc_loss_normalized = be(coeus_autograd::scalar_mul(
+            &bc_loss_raw,
+            1.0 / (loss_scales.bc_scale + eps),
+        ))?;
+        let ic_loss_normalized = be(coeus_autograd::scalar_mul(
+            &ic_loss_raw,
+            1.0 / (loss_scales.ic_scale + eps),
+        ))?;
 
-        let total_loss = coeus_autograd::add(
-            &coeus_autograd::add(
-                &coeus_autograd::scalar_mul(&data_loss_normalized, weights.data_weight),
-                &coeus_autograd::scalar_mul(&pde_loss_normalized, weights.pde_weight),
-            ),
-            &coeus_autograd::add(
-                &coeus_autograd::scalar_mul(&bc_loss_normalized, weights.bc_weight),
-                &coeus_autograd::scalar_mul(&ic_loss_normalized, weights.ic_weight),
-            ),
-        );
+        let total_loss = be(coeus_autograd::add(
+            &be(coeus_autograd::add(
+                &be(coeus_autograd::scalar_mul(
+                    &data_loss_normalized,
+                    weights.data_weight,
+                ))?,
+                &be(coeus_autograd::scalar_mul(
+                    &pde_loss_normalized,
+                    weights.pde_weight,
+                ))?,
+            ))?,
+            &be(coeus_autograd::add(
+                &be(coeus_autograd::scalar_mul(
+                    &bc_loss_normalized,
+                    weights.bc_weight,
+                ))?,
+                &be(coeus_autograd::scalar_mul(
+                    &ic_loss_normalized,
+                    weights.ic_weight,
+                ))?,
+            ))?,
+        ))?;
 
         Ok((
             total_loss,
@@ -274,22 +305,24 @@ where
 
         let backend = B::default();
         let n = bc_points_x.len();
-        let mk = |v: &[f32]| {
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], v, &backend),
+        let mk = |v: &[f32]| -> KwaversResult<Var<f32, B>> {
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], v, &backend))?,
                 false,
-            )
+            ))
         };
-        let x_bc = mk(&bc_points_x);
-        let y_bc = mk(&bc_points_y);
-        let z_bc = mk(&bc_points_z);
-        let t_bc = mk(&bc_points_t);
+        let x_bc = mk(&bc_points_x)?;
+        let y_bc = mk(&bc_points_y)?;
+        let z_bc = mk(&bc_points_z)?;
+        let t_bc = mk(&bc_points_t)?;
 
         // Evaluate PINN at boundary points
         let u_bc = self.pinn.forward(&x_bc, &y_bc, &z_bc, &t_bc)?;
 
         // Dirichlet BC: u = 0 on boundary
-        Ok(coeus_autograd::mean(&coeus_autograd::mul(&u_bc, &u_bc)))
+        be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &u_bc, &u_bc,
+        ))?))
     }
 }
 

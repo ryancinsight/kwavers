@@ -38,7 +38,7 @@ fn draw_for(seed: u64) -> KwaversResult<(Vec<f32>, u64)> {
     let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
     let owned = solver.config.clone();
-    let (x, y, z, t) = solver.generate_collocation_points(&owned);
+    let (x, y, z, t) = solver.generate_collocation_points(&owned)?;
     let mut points = Vec::new();
     for tensor in [&x, &y, &z, &t] {
         points.extend_from_slice(tensor.tensor.as_slice());

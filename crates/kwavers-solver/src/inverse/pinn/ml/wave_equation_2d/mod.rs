@@ -31,6 +31,8 @@ pub use trainer::PinnTrainer2D;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::inverse::pinn::be;
+    use kwavers_core::error::KwaversResult;
     use std::f64::consts::PI;
 
     type TestBackend = coeus_core::MoiraiBackend;
@@ -104,7 +106,7 @@ mod tests {
     }
 
     #[test]
-    fn test_pinn_2d_forward_pass() {
+    fn test_pinn_2d_forward_pass() -> KwaversResult<()> {
         let config = PinnConfig2D::default();
         let pinn = PinnWave2D::<TestBackend>::new(config).unwrap();
 
@@ -112,20 +114,34 @@ mod tests {
         // But the forward method takes x, y, t separately as [batch, 1]
         let backend = TestBackend::default();
         let batch_size = 2;
-        let x = coeus_autograd::Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &[0.5_f32, 0.6], &backend),
+        let x = be(coeus_autograd::Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 1],
+                &[0.5_f32, 0.6],
+                &backend,
+            ))?,
             false,
-        );
-        let y = coeus_autograd::Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &[0.5_f32, 0.6], &backend),
+        ))?;
+        let y = be(coeus_autograd::Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 1],
+                &[0.5_f32, 0.6],
+                &backend,
+            ))?,
             false,
-        );
-        let t = coeus_autograd::Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &[0.0_f32, 0.1], &backend),
+        ))?;
+        let t = be(coeus_autograd::Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 1],
+                &[0.0_f32, 0.1],
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
 
         let output = pinn.forward(&x, &y, &t).expect("2D forward");
         assert_eq!(output.tensor.shape(), &[2, 1]);
+
+        Ok(())
     }
 }

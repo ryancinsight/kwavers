@@ -1,24 +1,31 @@
 //! Tests for the SimpleOptimizer gradient descent implementation.
 
 use super::core::SimpleOptimizer;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::wave_equation_1d::config::PinnConfig;
 use crate::inverse::pinn::ml::wave_equation_1d::network::PinnWave1D;
 use coeus_autograd::Var;
 use coeus_core::MoiraiBackend;
+use kwavers_core::error::KwaversResult;
 
 type TestBackend = MoiraiBackend;
 
-fn var2(vals: &[f32], backend: TestBackend) -> Var<f32, TestBackend> {
-    Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![(vals.len()), 1], vals, &backend),
+fn var2(vals: &[f32], backend: TestBackend) -> KwaversResult<Var<f32, TestBackend>> {
+    be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![vals.len(), 1],
+            vals,
+            &backend,
+        ))?,
         false,
-    )
+    ))
 }
 
-fn zero_grad(pinn: &PinnWave1D<TestBackend>) {
+fn zero_grad(pinn: &PinnWave1D<TestBackend>) -> KwaversResult<()> {
     for p in pinn.parameters() {
-        p.zero_grad();
+        be(p.zero_grad())?;
     }
+    Ok(())
 }
 
 #[test]
@@ -34,7 +41,7 @@ fn test_optimizer_learning_rate() {
 }
 
 #[test]
-fn test_optimizer_step_compiles() {
+fn test_optimizer_step_compiles() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![10, 10],
@@ -44,18 +51,20 @@ fn test_optimizer_step_compiles() {
 
     let optimizer = SimpleOptimizer::new(0.001);
 
-    let x = var2(&[0.5], backend);
-    let t = var2(&[0.1], backend);
+    let x = var2(&[0.5], backend)?;
+    let t = var2(&[0.1], backend)?;
     let u = pinn.forward(&x, &t).expect("1D optimizer forward");
-    let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
+    let loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(&u, &u))?))?;
 
-    zero_grad(&pinn);
+    zero_grad(&pinn)?;
     loss.backward().expect("1D optimizer backward");
     let _updated_pinn = optimizer.step(pinn).expect("PINN 1D optimizer step");
+
+    Ok(())
 }
 
 #[test]
-fn test_optimizer_step_updates_parameters() {
+fn test_optimizer_step_updates_parameters() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![5, 5],
@@ -63,18 +72,20 @@ fn test_optimizer_step_updates_parameters() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = var2(&[0.5], backend);
-    let t = var2(&[0.1], backend);
+    let x = var2(&[0.5], backend)?;
+    let t = var2(&[0.1], backend)?;
     let u_before = pinn.forward(&x, &t).expect("1D optimizer forward");
     let u_before_val = u_before.tensor.as_slice()[0];
 
     let optimizer = SimpleOptimizer::new(0.1);
 
-    let target = var2(&[1.0], backend);
-    let diff = coeus_autograd::sub(&u_before, &target);
-    let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
+    let target = var2(&[1.0], backend)?;
+    let diff = be(coeus_autograd::sub(&u_before, &target))?;
+    let loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+        &diff, &diff,
+    ))?))?;
 
-    zero_grad(&pinn);
+    zero_grad(&pinn)?;
     loss.backward().expect("1D optimizer backward");
 
     let updated_pinn = optimizer.step(pinn).expect("PINN 1D optimizer step");
@@ -84,10 +95,11 @@ fn test_optimizer_step_updates_parameters() {
 
     assert!(u_before_val.is_finite());
     assert!(u_after_val.is_finite());
+    Ok(())
 }
 
 #[test]
-fn test_optimizer_multiple_steps() {
+fn test_optimizer_multiple_steps() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![5, 5],
@@ -97,21 +109,23 @@ fn test_optimizer_multiple_steps() {
 
     let optimizer = SimpleOptimizer::new(0.01);
 
-    let x = var2(&[0.5], backend);
-    let t = var2(&[0.1], backend);
-    let target = var2(&[0.0], backend);
+    let x = var2(&[0.5], backend)?;
+    let t = var2(&[0.1], backend)?;
+    let target = var2(&[0.0], backend)?;
 
     let mut losses = Vec::new();
 
     for _ in 0..5 {
         let u = pinn.forward(&x, &t).expect("1D optimizer forward");
-        let diff = coeus_autograd::sub(&u, &target);
-        let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
+        let diff = be(coeus_autograd::sub(&u, &target))?;
+        let loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &diff, &diff,
+        ))?))?;
 
         let loss_val = loss.tensor.as_slice()[0];
         losses.push(loss_val);
 
-        zero_grad(&pinn);
+        zero_grad(&pinn)?;
         loss.backward().expect("1D optimizer backward");
         pinn = optimizer.step(pinn).expect("PINN 1D optimizer step");
     }
@@ -121,10 +135,12 @@ fn test_optimizer_multiple_steps() {
     }
 
     assert_eq!(losses.len(), 5);
+
+    Ok(())
 }
 
 #[test]
-fn test_optimizer_with_different_learning_rates() {
+fn test_optimizer_with_different_learning_rates() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![5, 5],
@@ -141,34 +157,35 @@ fn test_optimizer_with_different_learning_rates() {
     assert_eq!(optimizer_large.learning_rate(), 0.1);
 
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
-    let x = var2(&[0.5], backend);
-    let t = var2(&[0.1], backend);
+    let x = var2(&[0.5], backend)?;
+    let t = var2(&[0.1], backend)?;
 
     let u = pinn.forward(&x, &t).expect("1D optimizer forward");
-    let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
-    zero_grad(&pinn);
+    let loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(&u, &u))?))?;
+    zero_grad(&pinn)?;
     loss.backward().expect("1D optimizer backward");
     let pinn = optimizer_small
         .step(pinn.clone())
         .expect("PINN 1D optimizer step");
 
     let u = pinn.forward(&x, &t).expect("1D optimizer forward");
-    let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
-    zero_grad(&pinn);
+    let loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(&u, &u))?))?;
+    zero_grad(&pinn)?;
     loss.backward().expect("1D optimizer backward");
     let pinn = optimizer_medium
         .step(pinn.clone())
         .expect("PINN 1D optimizer step");
 
     let u = pinn.forward(&x, &t).expect("1D optimizer forward");
-    let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
-    zero_grad(&pinn);
+    let loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(&u, &u))?))?;
+    zero_grad(&pinn)?;
     loss.backward().expect("1D optimizer backward");
     optimizer_large.step(pinn).expect("PINN 1D optimizer step");
+    Ok(())
 }
 
 #[test]
-fn test_gradient_mapper_preserves_structure() {
+fn test_gradient_mapper_preserves_structure() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![10, 10],
@@ -178,15 +195,17 @@ fn test_gradient_mapper_preserves_structure() {
 
     let optimizer = SimpleOptimizer::new(0.001);
 
-    let x = var2(&[0.5], backend);
-    let t = var2(&[0.1], backend);
+    let x = var2(&[0.5], backend)?;
+    let t = var2(&[0.1], backend)?;
     let u = pinn.forward(&x, &t).expect("1D optimizer forward");
-    let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
-    zero_grad(&pinn);
+    let loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(&u, &u))?))?;
+    zero_grad(&pinn)?;
     loss.backward().expect("1D optimizer backward");
 
     let updated_pinn = optimizer.step(pinn).expect("PINN 1D optimizer step");
 
     let u_after = updated_pinn.forward(&x, &t).expect("1D optimizer forward");
     assert_eq!(u_after.tensor.shape(), &[1, 1]);
+
+    Ok(())
 }

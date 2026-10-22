@@ -1,4 +1,5 @@
 use super::compute_elastic_wave_pde_residual;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::elastic_2d::config::Config;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
 use coeus_autograd::Var;
@@ -6,11 +7,15 @@ use kwavers_core::error::KwaversResult;
 
 type B = coeus_core::MoiraiBackend;
 
-fn var_col(backend: B, values: &[f32]) -> Var<f32, B> {
-    Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![(values.len()), 1], values, &backend),
+fn var_col(backend: B, values: &[f32]) -> KwaversResult<Var<f32, B>> {
+    be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![values.len(), 1],
+            values,
+            &backend,
+        ))?,
         false,
-    )
+    ))
 }
 
 #[test]
@@ -22,9 +27,9 @@ fn test_residual_is_finite() -> KwaversResult<()> {
     };
     let model = ElasticPINN2D::<B>::new(&config)?;
 
-    let x = var_col(backend, &[0.1, 0.3]);
-    let y = var_col(backend, &[0.2, 0.4]);
-    let t = var_col(backend, &[0.05, 0.1]);
+    let x = var_col(backend, &[0.1, 0.3])?;
+    let y = var_col(backend, &[0.2, 0.4])?;
+    let t = var_col(backend, &[0.05, 0.1])?;
 
     let (residual_x, residual_y) =
         compute_elastic_wave_pde_residual(&model, &x, &y, &t, 1000.0, 2.25e9, 0.0)?;
@@ -52,20 +57,20 @@ fn test_residual_gradient_reaches_network_weights() -> KwaversResult<()> {
     let model = ElasticPINN2D::<B>::new(&config)?;
 
     for p in model.parameters() {
-        p.zero_grad();
+        be(p.zero_grad())?;
     }
 
-    let x = var_col(backend, &[0.1, 0.3]);
-    let y = var_col(backend, &[0.2, 0.4]);
-    let t = var_col(backend, &[0.05, 0.1]);
+    let x = var_col(backend, &[0.1, 0.3])?;
+    let y = var_col(backend, &[0.2, 0.4])?;
+    let t = var_col(backend, &[0.05, 0.1])?;
 
     let (residual_x, residual_y) =
         compute_elastic_wave_pde_residual(&model, &x, &y, &t, 1000.0, 2.25e9, 5.0e8)?;
 
-    let loss = coeus_autograd::add(
-        &coeus_autograd::sum(&residual_x),
-        &coeus_autograd::sum(&residual_y),
-    );
+    let loss = be(coeus_autograd::add(
+        &be(coeus_autograd::sum(&residual_x))?,
+        &be(coeus_autograd::sum(&residual_y))?,
+    ))?;
     loss.backward().expect("elastic residual backward");
 
     let any_param_has_nonzero_grad = model.parameters().iter().any(|p| {

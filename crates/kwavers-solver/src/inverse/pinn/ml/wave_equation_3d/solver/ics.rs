@@ -1,4 +1,5 @@
 use super::core::PinnWave3D;
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -31,11 +32,11 @@ where
 
         let u_t0 = self.pinn.forward(x, y, z, t)?;
 
-        let t_eps = coeus_autograd::scalar_add(t, eps);
+        let t_eps = be(coeus_autograd::scalar_add(t, eps))?;
         let u_t_eps = self.pinn.forward(x, y, z, &t_eps)?;
 
-        Ok(coeus_autograd::scalar_mul(
-            &coeus_autograd::sub(&u_t_eps, &u_t0),
+        be(coeus_autograd::scalar_mul(
+            &be(coeus_autograd::sub(&u_t_eps, &u_t0))?,
             1.0 / eps,
         ))
     }
@@ -80,8 +81,12 @@ where
 
         let n_ic = v_ic.len();
         let backend = B::default();
-        Ok(Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_ic, 1], &v_ic, &backend),
+        be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_ic, 1],
+                &v_ic,
+                &backend,
+            ))?,
             false,
         ))
     }
@@ -128,13 +133,17 @@ where
         let t_ic = vec![min_t; n_ic];
 
         let backend = B::default();
-        let mk = |v: &[f32]| {
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n_ic, 1], v, &backend),
+        let mk = |v: &[f32]| -> KwaversResult<Var<f32, B>> {
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(
+                    vec![n_ic, 1],
+                    v,
+                    &backend,
+                ))?,
                 false,
-            )
+            ))
         };
 
-        Ok((mk(&x_ic), mk(&y_ic), mk(&z_ic), mk(&t_ic), mk(&u_ic)))
+        Ok((mk(&x_ic)?, mk(&y_ic)?, mk(&z_ic)?, mk(&t_ic)?, mk(&u_ic)?))
     }
 }

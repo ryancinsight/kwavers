@@ -1,3 +1,4 @@
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 
@@ -37,65 +38,92 @@ where
     let backend = B::default();
     let n = batch.inputs.tensor.shape()[0];
     let center_out = network.forward(&batch.inputs)?;
-    let p_center = coeus_autograd::reshape(
-        &coeus_autograd::slice(&center_out, &[(0, n), (1, 2)]),
+    let p_center = be(coeus_autograd::reshape(
+        &be(coeus_autograd::slice(&center_out, &[(0, n), (1, 2)]))?,
         vec![n],
-    );
+    ))?;
 
     let inv_hx = 1.0 / batch.coord_half_m.0;
     let inv_hy = 1.0 / batch.coord_half_m.1;
     let inv_hz = 1.0 / batch.coord_half_m.2;
-    let one_hot = |axis: usize, sign: f32, inv_h: f32| -> Var<f32, B> {
+    let one_hot = |axis: usize, sign: f32, inv_h: f32| -> KwaversResult<Var<f32, B>> {
         let mut data = vec![0.0_f32; n * 5];
         let perturb = sign * eps_m * inv_h;
         for i in 0..n {
             data[i * 5 + axis] = perturb;
         }
-        Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n, 5], &data, &backend),
+        be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n, 5],
+                &data,
+                &backend,
+            ))?,
             false,
-        )
+        ))
     };
 
-    let plus_x = coeus_autograd::add(&batch.inputs, &one_hot(0, 1.0, inv_hx));
-    let minus_x = coeus_autograd::add(&batch.inputs, &one_hot(0, -1.0, inv_hx));
-    let plus_y = coeus_autograd::add(&batch.inputs, &one_hot(1, 1.0, inv_hy));
-    let minus_y = coeus_autograd::add(&batch.inputs, &one_hot(1, -1.0, inv_hy));
-    let plus_z = coeus_autograd::add(&batch.inputs, &one_hot(2, 1.0, inv_hz));
-    let minus_z = coeus_autograd::add(&batch.inputs, &one_hot(2, -1.0, inv_hz));
+    let plus_x = be(coeus_autograd::add(
+        &batch.inputs,
+        &one_hot(0, 1.0, inv_hx)?,
+    ))?;
+    let minus_x = be(coeus_autograd::add(
+        &batch.inputs,
+        &one_hot(0, -1.0, inv_hx)?,
+    ))?;
+    let plus_y = be(coeus_autograd::add(
+        &batch.inputs,
+        &one_hot(1, 1.0, inv_hy)?,
+    ))?;
+    let minus_y = be(coeus_autograd::add(
+        &batch.inputs,
+        &one_hot(1, -1.0, inv_hy)?,
+    ))?;
+    let plus_z = be(coeus_autograd::add(
+        &batch.inputs,
+        &one_hot(2, 1.0, inv_hz)?,
+    ))?;
+    let minus_z = be(coeus_autograd::add(
+        &batch.inputs,
+        &one_hot(2, -1.0, inv_hz)?,
+    ))?;
 
-    let pick_pmax = |v: &Var<f32, B>| -> Var<f32, B> {
-        coeus_autograd::reshape(&coeus_autograd::slice(v, &[(0, n), (1, 2)]), vec![n])
+    let pick_pmax = |v: &Var<f32, B>| -> KwaversResult<Var<f32, B>> {
+        be(coeus_autograd::reshape(
+            &be(coeus_autograd::slice(v, &[(0, n), (1, 2)]))?,
+            vec![n],
+        ))
     };
-    let p_xp = pick_pmax(&network.forward(&plus_x)?);
-    let p_xm = pick_pmax(&network.forward(&minus_x)?);
-    let p_yp = pick_pmax(&network.forward(&plus_y)?);
-    let p_ym = pick_pmax(&network.forward(&minus_y)?);
-    let p_zp = pick_pmax(&network.forward(&plus_z)?);
-    let p_zm = pick_pmax(&network.forward(&minus_z)?);
+    let p_xp = pick_pmax(&network.forward(&plus_x)?)?;
+    let p_xm = pick_pmax(&network.forward(&minus_x)?)?;
+    let p_yp = pick_pmax(&network.forward(&plus_y)?)?;
+    let p_ym = pick_pmax(&network.forward(&minus_y)?)?;
+    let p_zp = pick_pmax(&network.forward(&plus_z)?)?;
+    let p_zm = pick_pmax(&network.forward(&minus_z)?)?;
 
     // Sum of finite-difference second-difference contributions across
     // all three axes (still dimensionless, equal to eps_m² · ∇²p̂).
-    let six_center = coeus_autograd::scalar_mul(&p_center, 6.0);
-    let sum_neighbors = coeus_autograd::add(
-        &coeus_autograd::add(&p_xp, &p_xm),
-        &coeus_autograd::add(
-            &coeus_autograd::add(&p_yp, &p_ym),
-            &coeus_autograd::add(&p_zp, &p_zm),
-        ),
-    );
-    let lap_sum = coeus_autograd::sub(&sum_neighbors, &six_center);
+    let six_center = be(coeus_autograd::scalar_mul(&p_center, 6.0))?;
+    let sum_neighbors = be(coeus_autograd::add(
+        &be(coeus_autograd::add(&p_xp, &p_xm))?,
+        &be(coeus_autograd::add(
+            &be(coeus_autograd::add(&p_yp, &p_ym))?,
+            &be(coeus_autograd::add(&p_zp, &p_zm))?,
+        ))?,
+    ))?;
+    let lap_sum = be(coeus_autograd::sub(&sum_neighbors, &six_center))?;
 
     // Per-sample (k·eps_m)². Tensor of shape [n].
-    let k_eps =
-        coeus_autograd::scalar_mul(&batch.f0_phys_hz, 2.0 * std::f32::consts::PI * eps_m / c0);
-    let k_eps_sq = coeus_autograd::mul(&k_eps, &k_eps);
+    let k_eps = be(coeus_autograd::scalar_mul(
+        &batch.f0_phys_hz,
+        2.0 * std::f32::consts::PI * eps_m / c0,
+    ))?;
+    let k_eps_sq = be(coeus_autograd::mul(&k_eps, &k_eps))?;
 
     // Dimensionless residual: lap_sum / (k·eps_m)² + p̂.
     // Small floor on (k·eps_m)² prevents divide-by-zero when f0 = 0.
-    let safe_k_eps_sq = coeus_autograd::scalar_add(&k_eps_sq, 1.0e-12);
-    Ok(coeus_autograd::add(
-        &coeus_autograd::div(&lap_sum, &safe_k_eps_sq),
+    let safe_k_eps_sq = be(coeus_autograd::scalar_add(&k_eps_sq, 1.0e-12))?;
+    be(coeus_autograd::add(
+        &be(coeus_autograd::div(&lap_sum, &safe_k_eps_sq))?,
         &p_center,
     ))
 }

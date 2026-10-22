@@ -8,6 +8,7 @@
 //! * The cumulative-weight table is rebuilt when the mode changes.
 //! * Empty / single-voxel datasets are handled gracefully.
 
+use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
 use super::super::{KernelCubeSampler, SamplingMode};
@@ -45,13 +46,13 @@ fn make_cube_sampler() -> KernelCubeSampler {
 }
 
 #[test]
-fn test_sampler_emits_distinct_group_ids_per_kernel() {
+fn test_sampler_emits_distinct_group_ids_per_kernel() -> KwaversResult<()> {
     let sampler = make_cube_sampler();
     // 4 corners → 4 active groups, dense indices 0..3.
     assert_eq!(sampler.num_groups(), 4);
     // Large batch + uniform sampling makes the empirical group set
     // overwhelmingly likely to cover all 4 groups.
-    let batch = sampler.batch::<B>(0, 2048);
+    let batch = sampler.batch::<B>(0, 2048)?;
     let group_host: Vec<f32> = batch.group_ids.tensor.as_slice().to_vec();
     assert_eq!(batch.num_groups, 4);
     let mut seen = [false; 4];
@@ -69,6 +70,7 @@ fn test_sampler_emits_distinct_group_ids_per_kernel() {
         seen.iter().all(|&b| b),
         "uniform 2048-sample batch did not cover all 4 groups: {seen:?}"
     );
+    Ok(())
 }
 
 #[test]
@@ -78,7 +80,7 @@ fn test_default_sampling_is_uniform() {
 }
 
 #[test]
-fn test_set_sampling_switches_mode_idempotently() {
+fn test_set_sampling_switches_mode_idempotently() -> KwaversResult<()> {
     let mut sampler = make_cube_sampler();
     sampler.set_sampling(SamplingMode::ImportanceByMagnitude { exponent: 1.5 });
     assert!(matches!(
@@ -89,20 +91,21 @@ fn test_set_sampling_switches_mode_idempotently() {
     assert!(matches!(sampler.sampling, SamplingMode::Uniform));
     // Switching back into importance mode must rebuild the table.
     sampler.set_sampling(SamplingMode::ImportanceByMagnitude { exponent: 1.0 });
-    let first_importance = sampler.batch::<B>(7, 256);
+    let first_importance = sampler.batch::<B>(7, 256)?;
     let first_targets = first_importance.targets.tensor.as_slice().to_vec();
 
     sampler.set_sampling(SamplingMode::Uniform);
     sampler.set_sampling(SamplingMode::ImportanceByMagnitude { exponent: 1.0 });
-    let rebuilt_importance = sampler.batch::<B>(7, 256);
+    let rebuilt_importance = sampler.batch::<B>(7, 256)?;
     assert_eq!(
         rebuilt_importance.targets.tensor.as_slice(),
         first_targets.as_slice()
     );
+    Ok(())
 }
 
 #[test]
-fn test_uniform_sampling_empirical_group_histogram_is_flat() {
+fn test_uniform_sampling_empirical_group_histogram_is_flat() -> KwaversResult<()> {
     let sampler = make_cube_sampler();
     let n_batches = 128usize;
     let batch_size = 512usize;
@@ -112,7 +115,7 @@ fn test_uniform_sampling_empirical_group_histogram_is_flat() {
     let mut counts = vec![0usize; sampler.num_groups()];
 
     for step in 0..n_batches {
-        let batch = sampler.batch::<B>(step as u64, batch_size);
+        let batch = sampler.batch::<B>(step as u64, batch_size)?;
         for group in batch.group_ids.tensor.as_slice() {
             let group_index = *group as usize;
             assert!(((*group - group_index as f32).abs()) < f32::EPSILON);
@@ -127,10 +130,11 @@ fn test_uniform_sampling_empirical_group_histogram_is_flat() {
             "uniform group {group_index} count {count} deviates by {deviation} from {expected_per_group}; limit {max_deviation}"
         );
     }
+    Ok(())
 }
 
 #[test]
-fn test_importance_sampling_concentrates_on_high_magnitude_voxels() {
+fn test_importance_sampling_concentrates_on_high_magnitude_voxels() -> KwaversResult<()> {
     // For exponent=2, voxels at the focal peak (|p|≈1) should be
     // sampled ~ (1/eps)² ≈ 10⁸× more often than rim voxels
     // (|p|≈0). The CDF table directly encodes this — verify the
@@ -141,7 +145,7 @@ fn test_importance_sampling_concentrates_on_high_magnitude_voxels() {
     // Find the index of the highest-magnitude voxel by reading the
     // internal cumulative weights — accessible via a deterministic
     // sample at u very close to 1.0.
-    let batch = sampler.batch::<B>(0, 1);
+    let batch = sampler.batch::<B>(0, 1)?;
     // Just confirm the call succeeds (the batch is shape [1, 5]).
     assert_eq!(batch.inputs.tensor.shape(), &[1, 5]);
 
@@ -153,7 +157,7 @@ fn test_importance_sampling_concentrates_on_high_magnitude_voxels() {
     let n_batches = 10usize;
     let batch_size = 256usize;
     for step in 0..n_batches {
-        let b = sampler.batch::<B>(step as u64, batch_size);
+        let b = sampler.batch::<B>(step as u64, batch_size)?;
         let host: Vec<f32> = b.targets.tensor.as_slice().to_vec();
         for chunk in host.chunks_exact(3) {
             mean_abs_x_pred += chunk[1].abs() as f64; // p_max channel
@@ -169,10 +173,11 @@ fn test_importance_sampling_concentrates_on_high_magnitude_voxels() {
         mean_abs_x_pred > 0.30,
         "importance sampling did not concentrate on focal voxels: mean |p_max| = {mean_abs_x_pred:.3}"
     );
+    Ok(())
 }
 
 #[test]
-fn test_importance_sampling_with_unit_exponent_is_balanced() {
+fn test_importance_sampling_with_unit_exponent_is_balanced() -> KwaversResult<()> {
     // exponent=1 weights voxels by their magnitude — focal sampling
     // is enhanced but not collapsed to a single point. Empirical
     // mean |p_max| should be larger than uniform's ~0.10 but
@@ -183,7 +188,7 @@ fn test_importance_sampling_with_unit_exponent_is_balanced() {
     let batch_size = 256usize;
     let mut mean_abs = 0.0_f64;
     for step in 0..n_batches {
-        let b = sampler.batch::<B>(step as u64, batch_size);
+        let b = sampler.batch::<B>(step as u64, batch_size)?;
         let host: Vec<f32> = b.targets.tensor.as_slice().to_vec();
         for chunk in host.chunks_exact(3) {
             mean_abs += chunk[1].abs() as f64;
@@ -194,4 +199,5 @@ fn test_importance_sampling_with_unit_exponent_is_balanced() {
         mean_abs > 0.15,
         "exponent=1 importance sampling too weak: mean |p_max| = {mean_abs:.3}"
     );
+    Ok(())
 }

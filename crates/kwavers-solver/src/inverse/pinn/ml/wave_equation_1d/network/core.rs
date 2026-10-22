@@ -20,6 +20,7 @@
 //!   Neural Networks, 2(5):359-366. DOI: 10.1016/0893-6080(89)90020-8
 
 use super::super::config::PinnConfig;
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -145,11 +146,11 @@ where
     ///
     /// Predicted field values u(x,t) [batch_size, 1]
     pub fn forward(&self, x: &Var<f32, B>, t: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
-        let input = coeus_autograd::cat(&[x, t], 1);
+        let input = be(coeus_autograd::cat(&[x, t], 1))?;
         let mut h = map_forward(self.input_layer.forward(&input), "PINN 1D input layer")?;
         for layer in &self.hidden_layers {
             h = map_forward(layer.forward(&h), "PINN 1D hidden layer")?;
-            h = coeus_autograd::tanh(&h);
+            h = be(coeus_autograd::tanh(&h))?;
         }
         map_forward(self.output_layer.forward(&h), "PINN 1D output layer")
     }
@@ -182,14 +183,22 @@ where
         let t_vec: Vec<f32> = t.iter().map(|&v| v as f32).collect();
 
         let backend = B::default();
-        let x_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x_vec, &backend),
+        let x_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n, 1],
+                &x_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let t_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t_vec, &backend),
+        ))?;
+        let t_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n, 1],
+                &t_vec,
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
 
         let u_var = self.forward(&x_var, &t_var)?;
         let u_vec: Vec<f64> = u_var.tensor.as_slice().iter().map(|&v| v as f64).collect();

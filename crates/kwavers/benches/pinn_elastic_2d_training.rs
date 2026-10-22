@@ -25,8 +25,10 @@
 //! - Energy conservation (within tolerance)
 //! - Material parameter recovery (for inverse problems)
 
-#[cfg(feature = "pinn")]
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+
+#[cfg(feature = "pinn")]
+use kwavers_solver::inverse::pinn::be;
 
 #[cfg(feature = "pinn")]
 use coeus_autograd::Var;
@@ -50,10 +52,16 @@ fn uniform_var(backend: Backend, n: usize, lo: f32, hi: f32) -> Var<f32, Backend
     let data: Vec<f32> = (0..n)
         .map(|_| lo + rand::random::<f32>() * (hi - lo))
         .collect();
-    Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, &backend),
+    be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![n, 1],
+            &data,
+            &backend,
+        ))
+        .unwrap(),
         false,
-    )
+    ))
+    .unwrap()
 }
 
 #[cfg(feature = "pinn")]
@@ -66,18 +74,25 @@ fn normal_var(backend: Backend, n: usize, mean: f32, std: f32) -> Var<f32, Backe
             mean + std * (-2.0 * u1.ln()).sqrt() * (2.0 * std::f32::consts::PI * u2).cos()
         })
         .collect();
-    Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, &backend),
+    be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![n, 1],
+            &data,
+            &backend,
+        ))
+        .unwrap(),
         false,
-    )
+    ))
+    .unwrap()
 }
 
 #[cfg(feature = "pinn")]
 fn zeros_var(backend: Backend, n: usize, cols: usize) -> Var<f32, Backend> {
-    Var::new(
-        coeus_tensor::Tensor::zeros_on(vec![n, cols], &backend),
+    be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![n, cols], &backend)).unwrap(),
         false,
-    )
+    ))
+    .unwrap()
 }
 
 // ============================================================================
@@ -214,14 +229,17 @@ fn bench_backward_pass(c: &mut Criterion) {
 
         b.iter(|| {
             for p in model.parameters() {
-                p.zero_grad();
+                be(p.zero_grad()).expect("invariant: benchmark backend resets parameter gradients");
             }
             let output = model
                 .forward(&x, &y, &t)
                 .expect("invariant: benchmark inputs have validated PINN shapes");
             let target = zeros_var(backend, n, 2);
-            let diff = coeus_autograd::sub(&output, &target);
-            let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
+            let diff = be(coeus_autograd::sub(&output, &target)).unwrap();
+            let loss = be(coeus_autograd::mean(
+                &be(coeus_autograd::mul(&diff, &diff)).unwrap(),
+            ))
+            .unwrap();
             loss.backward()
                 .expect("invariant: benchmark loss graph has valid gradients");
             black_box(())
@@ -282,7 +300,8 @@ fn bench_training_epoch(c: &mut Criterion) {
             };
 
             let mut optimizer =
-                PINNOptimizer::adam(&model, config.learning_rate, 0.0, 0.9, 0.999, 1e-8);
+                PINNOptimizer::adam(&model, config.learning_rate, 0.0, 0.9, 0.999, 1e-8)
+                    .expect("invariant: Adam state allocation matches the model's parameters");
             let mut scheduler = LRScheduler::constant(config.learning_rate);
             let loop_config = ElasticPinnLoopConfig {
                 max_epochs: 1,
@@ -384,14 +403,18 @@ fn bench_batch_scaling(c: &mut Criterion) {
 
                 b.iter(|| {
                     for p in model.parameters() {
-                        p.zero_grad();
+                        be(p.zero_grad())
+                            .expect("invariant: benchmark backend resets parameter gradients");
                     }
                     let output = model
                         .forward(&x, &y, &t)
                         .expect("invariant: benchmark inputs have validated PINN shapes");
                     let target = zeros_var(backend, n, 2);
-                    let diff = coeus_autograd::sub(&output, &target);
-                    let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
+                    let diff = be(coeus_autograd::sub(&output, &target)).unwrap();
+                    let loss = be(coeus_autograd::mean(
+                        &be(coeus_autograd::mul(&diff, &diff)).unwrap(),
+                    ))
+                    .unwrap();
                     loss.backward()
                         .expect("invariant: benchmark loss graph has valid gradients");
 

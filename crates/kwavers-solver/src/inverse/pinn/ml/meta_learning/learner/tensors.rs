@@ -1,4 +1,5 @@
 use super::MetaLearner;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLoss;
 use crate::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskData};
 use crate::inverse::pinn::ml::wave_equation_2d::{LossWeights2D, PinnWave2D};
@@ -26,12 +27,12 @@ where
     ) -> KwaversResult<(MetaLoss, Vec<Option<Vec<f32>>>)> {
         let backend = B::default();
 
-        let (x_colloc, y_colloc, t_colloc) = self.to_vars_3(&data.collocation_points, &backend);
-        let (x_bc, y_bc, t_bc, u_bc) = self.to_vars_4(&data.boundary_data, &backend);
-        let (x_ic, y_ic, t_ic, u_ic) = self.to_vars_5_to_4(&data.initial_data, &backend);
+        let (x_colloc, y_colloc, t_colloc) = self.to_vars_3(&data.collocation_points, &backend)?;
+        let (x_bc, y_bc, t_bc, u_bc) = self.to_vars_4(&data.boundary_data, &backend)?;
+        let (x_ic, y_ic, t_ic, u_ic) = self.to_vars_5_to_4(&data.initial_data, &backend)?;
 
         for p in model.parameters() {
-            p.zero_grad();
+            be(p.zero_grad())?;
         }
 
         let (total_loss, _data_loss, pde_loss, _bc_loss, _ic_loss) = model.compute_physics_loss(
@@ -80,31 +81,36 @@ where
         &self,
         data: &[(f64, f64, f64)],
         backend: &B,
-    ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>) {
+    ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
         let n = (data.len()).max(1);
         if data.is_empty() {
-            let dummy = || Var::new(coeus_tensor::Tensor::zeros_on(vec![1, 1], backend), false);
-            return (dummy(), dummy(), dummy());
+            let dummy = || -> KwaversResult<Var<f32, B>> {
+                be(Var::new(
+                    be(coeus_tensor::Tensor::zeros_on(vec![1, 1], backend))?,
+                    false,
+                ))
+            };
+            return Ok((dummy()?, dummy()?, dummy()?));
         }
 
         let x: Vec<f32> = data.iter().map(|p| p.0 as f32).collect();
         let y: Vec<f32> = data.iter().map(|p| p.1 as f32).collect();
         let t: Vec<f32> = data.iter().map(|p| p.2 as f32).collect();
 
-        (
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend),
+        Ok((
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend))?,
                 false,
-            ),
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend),
+            ))?,
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend))?,
                 false,
-            ),
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend),
+            ))?,
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend))?,
                 false,
-            ),
-        )
+            ))?,
+        ))
     }
 
     #[allow(clippy::type_complexity)] // (x, y, t, u) tensors, no cohesive grouping
@@ -112,11 +118,16 @@ where
         &self,
         data: &[(f64, f64, f64, f64)],
         backend: &B,
-    ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>) {
+    ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
         let n = (data.len()).max(1);
         if data.is_empty() {
-            let dummy = || Var::new(coeus_tensor::Tensor::zeros_on(vec![1, 1], backend), false);
-            return (dummy(), dummy(), dummy(), dummy());
+            let dummy = || -> KwaversResult<Var<f32, B>> {
+                be(Var::new(
+                    be(coeus_tensor::Tensor::zeros_on(vec![1, 1], backend))?,
+                    false,
+                ))
+            };
+            return Ok((dummy()?, dummy()?, dummy()?, dummy()?));
         }
 
         let x: Vec<f32> = data.iter().map(|p| p.0 as f32).collect();
@@ -124,24 +135,24 @@ where
         let t: Vec<f32> = data.iter().map(|p| p.2 as f32).collect();
         let u: Vec<f32> = data.iter().map(|p| p.3 as f32).collect();
 
-        (
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend),
+        Ok((
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend))?,
                 false,
-            ),
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend),
+            ))?,
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend))?,
                 false,
-            ),
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend),
+            ))?,
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend))?,
                 false,
-            ),
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &u, backend),
+            ))?,
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &u, backend))?,
                 false,
-            ),
-        )
+            ))?,
+        ))
     }
 
     #[allow(clippy::type_complexity)] // (x, y, t, u) tensors, no cohesive grouping
@@ -149,11 +160,16 @@ where
         &self,
         data: &[(f64, f64, f64, f64, f64)],
         backend: &B,
-    ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>) {
+    ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
         let n = (data.len()).max(1);
         if data.is_empty() {
-            let dummy = || Var::new(coeus_tensor::Tensor::zeros_on(vec![1, 1], backend), false);
-            return (dummy(), dummy(), dummy(), dummy());
+            let dummy = || -> KwaversResult<Var<f32, B>> {
+                be(Var::new(
+                    be(coeus_tensor::Tensor::zeros_on(vec![1, 1], backend))?,
+                    false,
+                ))
+            };
+            return Ok((dummy()?, dummy()?, dummy()?, dummy()?));
         }
 
         let x: Vec<f32> = data.iter().map(|p| p.0 as f32).collect();
@@ -161,23 +177,23 @@ where
         let t: Vec<f32> = data.iter().map(|p| p.2 as f32).collect();
         let u: Vec<f32> = data.iter().map(|p| p.3 as f32).collect();
 
-        (
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend),
+        Ok((
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend))?,
                 false,
-            ),
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend),
+            ))?,
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend))?,
                 false,
-            ),
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend),
+            ))?,
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend))?,
                 false,
-            ),
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &u, backend),
+            ))?,
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &u, backend))?,
                 false,
-            ),
-        )
+            ))?,
+        ))
     }
 }

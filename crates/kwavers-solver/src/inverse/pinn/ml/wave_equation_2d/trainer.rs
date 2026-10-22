@@ -2,6 +2,7 @@ use super::config::{PinnConfig2D, TrainingMetrics2D};
 use super::geometry::WaveGeometry2D;
 use super::model::PinnWave2D;
 use super::optimizer::SimpleOptimizer2D;
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array2};
@@ -22,11 +23,18 @@ where
     pub optimizer: SimpleOptimizer2D,
 }
 
-fn var_col<B: coeus_ops::BackendOps<f32> + Default>(vals: &[f32], backend: &B) -> Var<f32, B> {
-    Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![(vals.len()), 1], vals, backend),
+fn var_col<B: coeus_ops::BackendOps<f32> + Default>(
+    vals: &[f32],
+    backend: &B,
+) -> KwaversResult<Var<f32, B>> {
+    be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![vals.len(), 1],
+            vals,
+            backend,
+        ))?,
         false,
-    )
+    ))
 }
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> PinnTrainer2D<B>
@@ -129,10 +137,10 @@ where
         let t_data_vec: Vec<f32> = t_data.iter().map(|&v| v as f32).collect();
         let u_data_vec: Vec<f32> = u_data.iter().map(|&v| v as f32).collect();
 
-        let x_data_var = var_col(&x_data_vec, &backend);
-        let y_data_var = var_col(&y_data_vec, &backend);
-        let t_data_var = var_col(&t_data_vec, &backend);
-        let u_data_var = var_col(&u_data_vec, &backend);
+        let x_data_var = var_col(&x_data_vec, &backend)?;
+        let y_data_var = var_col(&y_data_vec, &backend)?;
+        let t_data_var = var_col(&t_data_vec, &backend)?;
+        let u_data_var = var_col(&u_data_vec, &backend)?;
 
         let n_colloc = config.num_collocation_points;
         let (x_colloc, y_colloc) = self.geometry.sample_points(n_colloc);
@@ -142,19 +150,19 @@ where
         let x_colloc_vec: Vec<f32> = x_colloc.iter().map(|&v| v as f32).collect();
         let y_colloc_vec: Vec<f32> = y_colloc.iter().map(|&v| v as f32).collect();
 
-        let x_colloc_var = var_col(&x_colloc_vec, &backend);
-        let y_colloc_var = var_col(&y_colloc_vec, &backend);
-        let t_colloc_var = var_col(&t_colloc_vec, &backend);
+        let x_colloc_var = var_col(&x_colloc_vec, &backend)?;
+        let y_colloc_var = var_col(&y_colloc_vec, &backend)?;
+        let t_colloc_var = var_col(&t_colloc_vec, &backend)?;
 
-        let (x_bc, y_bc, t_bc, u_bc) = self.generate_boundary_conditions(config, &backend);
-        let (x_ic, y_ic, t_ic, u_ic) = self.generate_initial_conditions(config, &backend);
+        let (x_bc, y_bc, t_bc, u_bc) = self.generate_boundary_conditions(config, &backend)?;
+        let (x_ic, y_ic, t_ic, u_ic) = self.generate_initial_conditions(config, &backend)?;
 
         for epoch in 0..epochs {
             // Var gradients accumulate across `backward()` calls (unlike the previous autograd path's
             // per-call-graph `Gradients`, implicitly fresh each step); zero
             // them before this epoch's forward+backward or they carry over.
             for p in self.pinn.parameters() {
-                p.zero_grad();
+                be(p.zero_grad())?;
             }
 
             let (total_loss, data_loss, pde_loss, bc_loss, ic_loss) =
@@ -231,7 +239,7 @@ where
         &self,
         _config: &PinnConfig2D,
         backend: &B,
-    ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>) {
+    ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
         let n_bc = 50;
         let mut x_bc = Vec::new();
         let mut y_bc = Vec::new();
@@ -288,12 +296,12 @@ where
             u_bc.push(u as f32);
         }
 
-        (
-            var_col(&x_bc, backend),
-            var_col(&y_bc, backend),
-            var_col(&t_bc, backend),
-            var_col(&u_bc, backend),
-        )
+        Ok((
+            var_col(&x_bc, backend)?,
+            var_col(&y_bc, backend)?,
+            var_col(&t_bc, backend)?,
+            var_col(&u_bc, backend)?,
+        ))
     }
 
     #[allow(clippy::type_complexity)] // (x, y, t, u) initial-condition tensors, no cohesive grouping
@@ -301,7 +309,7 @@ where
         &self,
         _config: &PinnConfig2D,
         backend: &B,
-    ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>) {
+    ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
         let n_ic = 200;
         let (x_ic, y_ic) = self.geometry.sample_points(n_ic);
 
@@ -316,12 +324,12 @@ where
             .map(|v| v as f32)
             .collect();
 
-        (
-            var_col(&x_ic_vec, backend),
-            var_col(&y_ic_vec, backend),
-            var_col(&t_ic_vec, backend),
-            var_col(&u_ic_vec, backend),
-        )
+        Ok((
+            var_col(&x_ic_vec, backend)?,
+            var_col(&y_ic_vec, backend)?,
+            var_col(&t_ic_vec, backend)?,
+            var_col(&u_ic_vec, backend)?,
+        ))
     }
 
     pub fn pinn(&self) -> &PinnWave2D<B> {

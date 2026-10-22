@@ -3,6 +3,7 @@
 //! This module implements the high-level training procedure that coordinates
 //! data loading, loss computation, optimization, and convergence checking.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 
 use super::super::model::ElasticPINN2D;
@@ -78,7 +79,7 @@ where
         let lr = scheduler.get_lr();
 
         for p in model.parameters() {
-            p.zero_grad();
+            be(p.zero_grad())?;
         }
 
         // ── PDE residual: ρ ∂²u/∂t² − ∇·σ ───────────────────────────────────
@@ -91,7 +92,7 @@ where
             lambda,
             mu,
         )?;
-        let pde_loss = loss_computer.pde_loss::<B>(&residual_x, &residual_y);
+        let pde_loss = loss_computer.pde_loss::<B>(&residual_x, &residual_y)?;
 
         // ── Boundary condition loss ───────────────────────────────────────────
         let out_bc = model.forward(
@@ -99,29 +100,32 @@ where
             &training_data.boundary.y,
             &training_data.boundary.t,
         )?;
-        let bc_loss = loss_computer.boundary_loss::<B>(&out_bc, &training_data.boundary.values);
+        let bc_loss = loss_computer.boundary_loss::<B>(&out_bc, &training_data.boundary.values)?;
 
         // ── Initial condition loss ────────────────────────────────────────────
         let backend = B::default();
-        let zero_t = Var::new(
-            coeus_tensor::Tensor::zeros_on(training_data.initial.x.tensor.shape(), &backend),
+        let zero_t = be(Var::new(
+            be(coeus_tensor::Tensor::zeros_on(
+                training_data.initial.x.tensor.shape(),
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
         let out_ic = model.forward(&training_data.initial.x, &training_data.initial.y, &zero_t)?;
         // velocity target: zero (quiescent start assumed when none provided)
-        let zero_vel = Var::new(
-            coeus_tensor::Tensor::zeros_on(
+        let zero_vel = be(Var::new(
+            be(coeus_tensor::Tensor::zeros_on(
                 training_data.initial.displacement.tensor.shape(),
                 &backend,
-            ),
+            ))?,
             false,
-        );
+        ))?;
         let ic_loss = loss_computer.initial_loss::<B>(
             &out_ic,
             &zero_vel,
             &training_data.initial.displacement,
             &training_data.initial.velocity,
-        );
+        )?;
 
         // ── Optional data loss from observations ─────────────────────────────
         let data_loss_opt = training_data
@@ -131,12 +135,13 @@ where
                 model
                     .forward(&obs.x, &obs.y, &obs.t)
                     .map(|out_obs| loss_computer.data_loss::<B>(&out_obs, &obs.displacement))
+                    .and_then(|l| l)
             })
             .transpose()?;
 
         // ── Total weighted loss ───────────────────────────────────────────────
         let total_loss =
-            loss_computer.total_loss::<B>(&pde_loss, &bc_loss, &ic_loss, data_loss_opt.as_ref());
+            loss_computer.total_loss::<B>(&pde_loss, &bc_loss, &ic_loss, data_loss_opt.as_ref())?;
 
         // Extract scalar values before backward.
         let total_val = total_loss.tensor.as_slice()[0] as f64;
@@ -233,30 +238,34 @@ where
 
     // Create dummy training data (would be provided by user)
     let backend = B::default();
-    let zeros =
-        |shape: Vec<usize>| Var::new(coeus_tensor::Tensor::zeros_on(shape, &backend), false);
+    let zeros = |shape: Vec<usize>| -> KwaversResult<Var<f32, B>> {
+        be(Var::new(
+            be(coeus_tensor::Tensor::zeros_on(shape, &backend))?,
+            false,
+        ))
+    };
 
     let collocation = super::super::loss::data::CollocationData {
-        x: zeros(vec![100, 1]),
-        y: zeros(vec![100, 1]),
-        t: zeros(vec![100, 1]),
+        x: zeros(vec![100, 1])?,
+        y: zeros(vec![100, 1])?,
+        t: zeros(vec![100, 1])?,
         source_x: None,
         source_y: None,
     };
 
     let boundary = super::super::loss::data::BoundaryData {
-        x: zeros(vec![50, 1]),
-        y: zeros(vec![50, 1]),
-        t: zeros(vec![50, 1]),
+        x: zeros(vec![50, 1])?,
+        y: zeros(vec![50, 1])?,
+        t: zeros(vec![50, 1])?,
         boundary_type: vec![],
-        values: zeros(vec![50, 2]),
+        values: zeros(vec![50, 2])?,
     };
 
     let initial = super::super::loss::data::InitialData {
-        x: zeros(vec![25, 1]),
-        y: zeros(vec![25, 1]),
-        displacement: zeros(vec![25, 2]),
-        velocity: zeros(vec![25, 2]),
+        x: zeros(vec![25, 1])?,
+        y: zeros(vec![25, 1])?,
+        displacement: zeros(vec![25, 2])?,
+        velocity: zeros(vec![25, 2])?,
     };
 
     let training_data = TrainingData {
@@ -266,7 +275,7 @@ where
         observations: None,
     };
 
-    let mut optimizer = PINNOptimizer::sgd(model, learning_rate, 0.0);
+    let mut optimizer = PINNOptimizer::sgd(model, learning_rate, 0.0)?;
     let mut scheduler = LRScheduler::constant(learning_rate);
 
     train_pinn(

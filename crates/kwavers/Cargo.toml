@@ -372,6 +372,7 @@ path = "examples/skull_ct_phase_correction.rs"
 [[example]]
 name = "seismic_imaging_demo"
 path = "examples/seismic_imaging_demo.rs"
+required-features = ["pinn"]
 
 [[example]]
 name = "seismic_imaging_3d_demo"
@@ -394,6 +395,7 @@ path = "examples/single_bubble_sonoluminescence.rs"
 [[example]]
 name = "liver_theranostic_reconstruction"
 path = "examples/liver_theranostic_reconstruction.rs"
+required-features = ["pinn"]
 
 [[example]]
 name = "transcranial_ct_mri_reconstruction"

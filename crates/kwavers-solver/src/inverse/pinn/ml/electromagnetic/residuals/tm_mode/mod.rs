@@ -1,5 +1,6 @@
 use super::constants::EPS_FD_F32;
 use super::sources::compute_current_density_z;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use crate::inverse::pinn::ml::PinnWave2D;
 use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub, Var};
@@ -39,16 +40,16 @@ where
     let h = EPS_FD_F32;
 
     // μ ∂Hx/∂t
-    let hx_tp = model_hx.forward(x, y, &scalar_add(t, h))?;
-    let hx_tm = model_hx.forward(x, y, &scalar_sub(t, h))?;
-    let dhx_dt = scalar_mul(&sub(&hx_tp, &hx_tm), 1.0 / (2.0 * h));
+    let hx_tp = model_hx.forward(x, y, &be(scalar_add(t, h))?)?;
+    let hx_tm = model_hx.forward(x, y, &be(scalar_sub(t, h))?)?;
+    let dhx_dt = be(scalar_mul(&be(sub(&hx_tp, &hx_tm))?, 1.0 / (2.0 * h)))?;
 
     // ∂Ez/∂y
-    let ez_yp = model_ez.forward(x, &scalar_add(y, h), t)?;
-    let ez_ym = model_ez.forward(x, &scalar_sub(y, h), t)?;
-    let dez_dy = scalar_mul(&sub(&ez_yp, &ez_ym), 1.0 / (2.0 * h));
+    let ez_yp = model_ez.forward(x, &be(scalar_add(y, h))?, t)?;
+    let ez_ym = model_ez.forward(x, &be(scalar_sub(y, h))?, t)?;
+    let dez_dy = be(scalar_mul(&be(sub(&ez_yp, &ez_ym))?, 1.0 / (2.0 * h)))?;
 
-    Ok(add(&scalar_mul(&dhx_dt, mu as f32), &dez_dy))
+    be(add(&be(scalar_mul(&dhx_dt, mu as f32))?, &dez_dy))
 }
 
 /// TM-mode Faraday-y residual: R_{Fy} = μ ∂Hy/∂t − ∂Ez/∂x
@@ -80,16 +81,16 @@ where
     let h = EPS_FD_F32;
 
     // μ ∂Hy/∂t
-    let hy_tp = model_hy.forward(x, y, &scalar_add(t, h))?;
-    let hy_tm = model_hy.forward(x, y, &scalar_sub(t, h))?;
-    let dhy_dt = scalar_mul(&sub(&hy_tp, &hy_tm), 1.0 / (2.0 * h));
+    let hy_tp = model_hy.forward(x, y, &be(scalar_add(t, h))?)?;
+    let hy_tm = model_hy.forward(x, y, &be(scalar_sub(t, h))?)?;
+    let dhy_dt = be(scalar_mul(&be(sub(&hy_tp, &hy_tm))?, 1.0 / (2.0 * h)))?;
 
     // ∂Ez/∂x
-    let ez_xp = model_ez.forward(&scalar_add(x, h), y, t)?;
-    let ez_xm = model_ez.forward(&scalar_sub(x, h), y, t)?;
-    let dez_dx = scalar_mul(&sub(&ez_xp, &ez_xm), 1.0 / (2.0 * h));
+    let ez_xp = model_ez.forward(&be(scalar_add(x, h))?, y, t)?;
+    let ez_xm = model_ez.forward(&be(scalar_sub(x, h))?, y, t)?;
+    let dez_dx = be(scalar_mul(&be(sub(&ez_xp, &ez_xm))?, 1.0 / (2.0 * h)))?;
 
-    Ok(sub(&scalar_mul(&dhy_dt, mu as f32), &dez_dx))
+    be(sub(&be(scalar_mul(&dhy_dt, mu as f32))?, &dez_dx))
 }
 
 /// TM-mode Ampère-z residual: R_{Az} = ε ∂Ez/∂t − ∂Hy/∂x + ∂Hx/∂y + σ Ez + Jz
@@ -134,29 +135,29 @@ where
     let h = EPS_FD_F32;
 
     // ε ∂Ez/∂t
-    let ez_tp = model_ez.forward(x, y, &scalar_add(t, h))?;
-    let ez_tm = model_ez.forward(x, y, &scalar_sub(t, h))?;
-    let dez_dt = scalar_mul(&sub(&ez_tp, &ez_tm), 1.0 / (2.0 * h));
+    let ez_tp = model_ez.forward(x, y, &be(scalar_add(t, h))?)?;
+    let ez_tm = model_ez.forward(x, y, &be(scalar_sub(t, h))?)?;
+    let dez_dt = be(scalar_mul(&be(sub(&ez_tp, &ez_tm))?, 1.0 / (2.0 * h)))?;
 
     // −∂Hy/∂x
-    let hy_xp = model_hy.forward(&scalar_add(x, h), y, t)?;
-    let hy_xm = model_hy.forward(&scalar_sub(x, h), y, t)?;
-    let dhy_dx = scalar_mul(&sub(&hy_xp, &hy_xm), 1.0 / (2.0 * h));
+    let hy_xp = model_hy.forward(&be(scalar_add(x, h))?, y, t)?;
+    let hy_xm = model_hy.forward(&be(scalar_sub(x, h))?, y, t)?;
+    let dhy_dx = be(scalar_mul(&be(sub(&hy_xp, &hy_xm))?, 1.0 / (2.0 * h)))?;
 
     // +∂Hx/∂y
-    let hx_yp = model_hx.forward(x, &scalar_add(y, h), t)?;
-    let hx_ym = model_hx.forward(x, &scalar_sub(y, h), t)?;
-    let dhx_dy = scalar_mul(&sub(&hx_yp, &hx_ym), 1.0 / (2.0 * h));
+    let hx_yp = model_hx.forward(x, &be(scalar_add(y, h))?, t)?;
+    let hx_ym = model_hx.forward(x, &be(scalar_sub(y, h))?, t)?;
+    let dhx_dy = be(scalar_mul(&be(sub(&hx_yp, &hx_ym))?, 1.0 / (2.0 * h)))?;
 
     // σ Ez
     let ez = model_ez.forward(x, y, t)?;
 
     // J_ext,z
-    let j_z = compute_current_density_z(x, y, physics_params);
+    let j_z = compute_current_density_z(x, y, physics_params)?;
 
-    let mut residual = scalar_mul(&dez_dt, eps as f32);
-    residual = sub(&residual, &dhy_dx);
-    residual = add(&residual, &dhx_dy);
-    residual = add(&residual, &scalar_mul(&ez, sigma as f32));
-    Ok(add(&residual, &j_z))
+    let mut residual = be(scalar_mul(&dez_dt, eps as f32))?;
+    residual = be(sub(&residual, &dhy_dx))?;
+    residual = be(add(&residual, &dhx_dy))?;
+    residual = be(add(&residual, &be(scalar_mul(&ez, sigma as f32))?))?;
+    be(add(&residual, &j_z))
 }

@@ -1,3 +1,4 @@
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -51,17 +52,27 @@ where
     }
     let backend = B::default();
     let idx_values: Vec<f32> = indices.iter().map(|&i| i as f32).collect();
-    let idx_var = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![(idx_values.len())], &idx_values, &backend),
+    let idx_var = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![idx_values.len()],
+            &idx_values,
+            &backend,
+        ))?,
         false,
-    );
+    ))?;
 
-    let x = coeus_autograd::index_select(&data.x, 0, &idx_var);
-    let y = coeus_autograd::index_select(&data.y, 0, &idx_var);
-    let t = coeus_autograd::index_select(&data.t, 0, &idx_var);
+    let x = be(coeus_autograd::index_select(&data.x, 0, &idx_var))?;
+    let y = be(coeus_autograd::index_select(&data.y, 0, &idx_var))?;
+    let t = be(coeus_autograd::index_select(&data.t, 0, &idx_var))?;
     let n = indices.len();
-    let source_x = Var::new(coeus_tensor::Tensor::zeros_on(vec![n, 1], &backend), false);
-    let source_y = Var::new(coeus_tensor::Tensor::zeros_on(vec![n, 1], &backend), false);
+    let source_x = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![n, 1], &backend))?,
+        false,
+    ))?;
+    let source_y = be(Var::new(
+        be(coeus_tensor::Tensor::zeros_on(vec![n, 1], &backend))?,
+        false,
+    ))?;
     Ok(CollocationData {
         x,
         y,

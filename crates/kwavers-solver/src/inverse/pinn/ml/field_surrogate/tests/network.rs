@@ -1,6 +1,8 @@
 //! Architecture construction and forward-pass shape tests.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 
 use super::super::config::ParamFieldPINNConfig;
 use super::super::network::ParamFieldPINNNetwork;
@@ -33,29 +35,41 @@ fn test_forward_output_shape() {
 
     let batch = 17usize;
     let data: Vec<f32> = (0..batch * 5).map(|i| (i as f32) * 0.01).collect();
-    let input = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![batch, 5], &data, &backend),
+    let input = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![batch, 5],
+            &data,
+            &backend,
+        ))
+        .unwrap(),
         false,
-    );
+    ))
+    .unwrap();
     let output = net.forward(&input).expect("field surrogate forward");
     assert_eq!(output.tensor.shape(), &[batch, 3]);
 }
 
 #[test]
-fn test_forward_xyz_params_shape() {
+fn test_forward_xyz_params_shape() -> KwaversResult<()> {
     let backend = B::default();
     let cfg = ParamFieldPINNConfig::default();
     let net = ParamFieldPINNNetwork::<B>::new(&cfg).unwrap();
 
     let batch = 8usize;
-    let mk = |fill: f32| {
-        Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch, 1], &vec![fill; batch], &backend),
+    let mk = |fill: f32| -> KwaversResult<Var<f32, B>> {
+        be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch, 1],
+                &vec![fill; batch],
+                &backend,
+            ))?,
             false,
-        )
+        ))
     };
     let out = net
-        .forward_xyz_params(&mk(0.1), &mk(0.2), &mk(0.3), &mk(0.4), &mk(0.5))
+        .forward_xyz_params(&mk(0.1)?, &mk(0.2)?, &mk(0.3)?, &mk(0.4)?, &mk(0.5)?)
         .expect("field surrogate parameterized forward");
     assert_eq!(out.tensor.shape(), &[batch, 3]);
+
+    Ok(())
 }

@@ -1,5 +1,6 @@
 //! `ResidualBlock`: pre-norm residual block for PINN architectures.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use coeus_nn::{LayerNorm, Linear, Module};
 use kwavers_core::error::KwaversResult;
@@ -51,8 +52,8 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResidualBl
         let linear2 = Linear::new(hidden_dim, input_dim, true).map_err(|error| {
             crate::inverse::pinn::layer_construction_failed("second residual", error)
         })?;
-        let norm1 = LayerNorm::new(hidden_dim, 1e-5);
-        let norm2 = LayerNorm::new(input_dim, 1e-5);
+        let norm1 = be(LayerNorm::new(hidden_dim, 1e-5))?;
+        let norm2 = be(LayerNorm::new(input_dim, 1e-5))?;
 
         Ok(Self {
             linear1,
@@ -93,11 +94,11 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResidualBl
     pub fn forward(&self, x: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
         let out = map_forward(self.linear1.forward(x), "PINN residual linear layer")?;
         let out = map_forward(self.norm1.forward(&out), "PINN residual normalization")?;
-        let out = coeus_autograd::gelu(&out);
+        let out = be(coeus_autograd::gelu(&out))?;
 
         let out = map_forward(self.linear2.forward(&out), "PINN residual linear layer")?;
         let out = map_forward(self.norm2.forward(&out), "PINN residual normalization")?;
 
-        Ok(coeus_autograd::add(&out, x))
+        be(coeus_autograd::add(&out, x))
     }
 }

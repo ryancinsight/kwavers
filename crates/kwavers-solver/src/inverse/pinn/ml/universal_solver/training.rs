@@ -8,6 +8,7 @@ use super::types::{
     GeometricFeature, PhysicsSolution, UniversalSolverConvergenceInfo, UniversalSolverDomainInfo,
     UniversalSolverGeometry2D, UniversalSolverStats, UniversalTrainingConfig,
 };
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::physics::{PinnDomainPhysicsParameters, SimulationPhysicsDomain};
 use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -230,18 +231,30 @@ where
             .collect();
 
         let backend = B::default();
-        let x_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_points, 1], &x_coords, &backend),
+        let x_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_points, 1],
+                &x_coords,
+                &backend,
+            ))?,
             false,
-        );
-        let y_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_points, 1], &y_coords, &backend),
+        ))?;
+        let y_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_points, 1],
+                &y_coords,
+                &backend,
+            ))?,
             false,
-        );
-        let t_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n_points, 1], &t_coords, &backend),
+        ))?;
+        let t_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n_points, 1],
+                &t_coords,
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
 
         let mut loss_history = Vec::new();
         let optimizer = crate::inverse::pinn::ml::wave_equation_2d::SimpleOptimizer2D::new(
@@ -250,12 +263,12 @@ where
 
         for epoch in 0..config.epochs {
             for p in model.parameters() {
-                p.zero_grad();
+                be(p.zero_grad())?;
             }
 
             let residual = domain.pde_residual(model, &x_var, &y_var, &t_var, physics_params)?;
-            let squared = coeus_autograd::mul(&residual, &residual);
-            let pde_loss = coeus_autograd::mean(&squared);
+            let squared = be(coeus_autograd::mul(&residual, &residual))?;
+            let pde_loss = be(coeus_autograd::mean(&squared))?;
             pde_loss.backward().map_err(|error| {
                 KwaversError::InternalError(format!("universal PINN backward: {error}"))
             })?;

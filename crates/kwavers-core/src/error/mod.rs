@@ -189,6 +189,11 @@ pub enum KwaversError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
+    /// Compute-backend operation failure (the PINN/ML tensor backend): an
+    /// allocation, storage or shape operation the backend refused.
+    #[error("Backend operation failed: {0}")]
+    BackendOp(String),
+
     /// Multiple errors occurred during validation
     #[error(transparent)]
     MultipleErrors(#[from] MultiError),

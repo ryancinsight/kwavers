@@ -301,7 +301,7 @@ fn load_liver_ct(ct_path: &str, seg_path: &str) -> Option<LiverPhantom> {
         }
     };
 
-    // Pick the axial slice (z-index) with the largest liver area (label ≥ 1).
+    // Pick the axial be(slice (z-index)).unwrap() with the largest liver area (label ≥ 1).
     let focal_z = if let Some(seg) = seg_vol.as_ref() {
         let mut best_k = vnz / 2;
         let mut best_area = 0usize;
@@ -1182,7 +1182,7 @@ fn main() -> KwaversResult<()> {
     // ReverseTimeMigration here because at NY = 5 its 4th-order y-stencil
     // (interior s![2..NY-2] = single plane y=2) reads zeros from boundary
     // planes 0,1,3,4 and contributes a spurious -2.5·p/dy² damping term per
-    // step.  Over 1133 steps the wave decays by ~exp(-27) ≈ 1e-12, below
+    // step.  Over 1133 steps the wave decays by ~be(exp(-27)).unwrap() ≈ 1e-12, below
     // RTM_AMPLITUDE_THRESHOLD = 1e-10 → identically zero image.  Genuine 2-D
     // RTM in a 3-D solver requires NY ≥ ~80 (full-3D box, 16× memory) or a
     // dedicated 2-D propagator.  The snapshot path is the well-defined
@@ -1458,7 +1458,7 @@ fn main() -> KwaversResult<()> {
             eprintln!("  WARN: failed to write {}: {e}", p.display());
         }
 
-        // Born V(x) = 1 − (c₀/c)²: signed scattering potential.  abs() in
+        // Born V(x) = 1 − (c₀/c)²: signed scattering potential.  be(abs()).unwrap() in
         // bmode_compress turns it into a magnitude image.
         let bmode_born = bmode_compress(&born_image, DYNAMIC_RANGE_DB);
         let p = out_dir.join("bmode_born.gif");
