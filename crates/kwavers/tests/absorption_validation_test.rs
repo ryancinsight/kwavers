@@ -6,7 +6,7 @@
 //! Reference: Treeby et al., "Modeling power law absorption and dispersion
 //! for acoustic propagation using the fractional Laplacian", JASA 2010
 
-use kwavers_core::constants::SOUND_SPEED_WATER;
+use kwavers_core::constants::{DB_TO_NP, NP_TO_DB, SOUND_SPEED_WATER};
 use plotters::prelude::*;
 
 #[path = "support/figures.rs"]
@@ -146,7 +146,7 @@ fn render_absorption_figure(path: &std::path::Path) -> Result<(), Box<dyn std::e
     // ── Panel 3: Kramers-Kronig phase velocity dispersion ────────────────────
     {
         let c0 = TISSUE_SOUND_SPEED;
-        let alpha_0_np_per_m = 0.7 * 0.115 / 0.01; // Np/m at 1 MHz
+        let alpha_0_np_per_m = 0.7 * DB_TO_NP * 100.0; // Np/m at 1 MHz
         let y = 1.1;
         let omega_ref = 2.0 * std::f64::consts::PI * 1e6; // reference ω₀ = 2π·1 MHz
         let tan_factor = (std::f64::consts::PI * y / 2.0).tan(); // negative for 1 < y < 2
@@ -218,7 +218,7 @@ fn render_absorption_figure(path: &std::path::Path) -> Result<(), Box<dyn std::e
 #[test]
 fn test_water_absorption() {
     // Water absorption: α = 0.0022 * f^2 [dB/(MHz^2·cm)]
-    // Convert to Np/m: 1 dB = 0.115 Np, 1 cm = 0.01 m
+    // Convert to Np/m: 1 dB = ln(10)/20 Np, 1 m = 100 cm
 
     let frequencies = [0.5e6, 1.0e6, 2.0e6, 5.0e6]; // Hz
     let expected_alpha_db_per_cm = [
@@ -231,7 +231,7 @@ fn test_water_absorption() {
     for (i, &f) in frequencies.iter().enumerate() {
         let f_mhz: f64 = f / 1e6;
         let alpha_db_per_cm = 0.0022 * f_mhz.powi(2);
-        let alpha_np_per_m = alpha_db_per_cm * 0.115 / 0.01;
+        let alpha_np_per_m = alpha_db_per_cm * DB_TO_NP * 100.0;
 
         // Verify against expected values
         let error = (alpha_db_per_cm - expected_alpha_db_per_cm[i]).abs();
@@ -245,7 +245,7 @@ fn test_water_absorption() {
 
         // Verify power law with y=2 for water
         let alpha_from_power_law = power_law_absorption(
-            0.0022 * 0.115 / 0.01, // α₀ at 1 MHz in Np/m
+            0.0022 * DB_TO_NP * 100.0, // α₀ at 1 MHz in Np/m
             f,
             1e6, // Reference frequency 1 MHz
             2.0, // Power law exponent for water
@@ -276,7 +276,7 @@ fn test_tissue_absorption() {
 
         // Calculate using power law
         let alpha_db = alpha_0_db * f_mhz.powf(power);
-        let alpha_np_per_m = alpha_db * 0.115 / 0.01;
+        let alpha_np_per_m = alpha_db * DB_TO_NP * 100.0;
 
         // Verify reasonable range for soft tissue
         assert!(
@@ -288,7 +288,7 @@ fn test_tissue_absorption() {
 
         // Verify power law behavior
         if f > 1e6 {
-            let alpha_1mhz = power_law_absorption(alpha_0_db * 0.115 / 0.01, 1e6, 1e6, power);
+            let alpha_1mhz = power_law_absorption(alpha_0_db * DB_TO_NP * 100.0, 1e6, 1e6, power);
             let ratio = alpha_np_per_m / alpha_1mhz;
             let expected_ratio = f_mhz.powf(power);
 
@@ -317,7 +317,7 @@ fn test_absorption_dispersion_relation() {
     // consistent with measured tissue behavior).
 
     let c0 = TISSUE_SOUND_SPEED;
-    let alpha_0_np_per_m = 0.7 * 0.115 / 0.01; // Np/m at 1 MHz reference
+    let alpha_0_np_per_m = 0.7 * DB_TO_NP * 100.0; // Np/m at 1 MHz reference
     let y = 1.1;
     let omega_ref = 2.0 * std::f64::consts::PI * 1e6; // ω₀ = 2π·1 MHz
     let tan_factor = (std::f64::consts::PI * y / 2.0).tan(); // negative for 1 < y < 2
@@ -385,10 +385,10 @@ fn test_thermoviscous_absorption() {
 
     // Convert to dB/(MHz²·cm) for comparison.
     // alpha_classical is in Np/m at f=1 MHz.
-    // 1 Np/m = (1/11.5) dB/cm  (since 1 dB = 0.115 Np, 1 cm = 0.01 m)
+    // 1 Np/m = NP_TO_DB / 100 dB/cm  (1 Np = 20/ln(10) dB, 1 m = 100 cm)
     // At 1 MHz the quadratic law α = α₀·f² gives α₀ = α/f² = α (per MHz² with f=1).
-    // So: α₀ [dB/(MHz²·cm)] = alpha_classical [Np/m] × 0.01/0.115
-    let alpha_db_per_mhz2_cm = alpha_classical * 0.01 / 0.115;
+    // So: α₀ [dB/(MHz²·cm)] = alpha_classical [Np/m] × NP_TO_DB / 100
+    let alpha_db_per_mhz2_cm = alpha_classical * NP_TO_DB / 100.0;
 
     // Should be on the order of 0.002 for water (Duck 1990: 0.0022 dB/(MHz²·cm))
     assert!(

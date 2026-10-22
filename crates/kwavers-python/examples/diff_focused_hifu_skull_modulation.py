@@ -53,6 +53,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Rectangle, FancyArrowPatch
 from matplotlib.colors import ListedColormap
+import pykwavers as kw
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -99,14 +100,14 @@ alpha_th = k_th / (rho * cp)
 
 # ── 2.  Acoustic absorption coefficients  [Np/m] ─────────────────────────────
 #
-# alpha_np [Np/m] = alpha_dB_cm_MHz * f_MHz * 100 / (20/ln(10))
-#             = alpha_dB_cm_MHz * f_MHz * 11.516
+# alpha_np [Np/m] = alpha_dB_cm_MHz * f_MHz * (dB/cm -> Np/m), the factor
+# kw.db2neper returns for exponent 0: 100 * ln(10)/20.
 
 F_MHZ    = 0.650          # transducer frequency  [MHz]
 ALPHA_DB = np.where(Z < Z_WATER_END, 2.2e-3,   # water  [dB/cm/MHz]
            np.where(Z < Z_SKULL_END, 15.0,      # skull (cortical bone)
                                       0.60))    # brain (ICRU Report 61)
-ALPHA_NP = ALPHA_DB * F_MHZ * 11.516            # [Np/m]
+ALPHA_NP = ALPHA_DB * F_MHZ * kw.db2neper(1.0, 0.0)  # [Np/m]
 
 # ── 3.  Blood and body constants ──────────────────────────────────────────────
 

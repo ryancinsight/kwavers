@@ -3,6 +3,7 @@
 //! These tests validate our implementations against known analytical solutions
 //! and published results from peer-reviewed literature.
 
+use kwavers_core::constants::DB_TO_NP;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
@@ -252,8 +253,8 @@ fn test_acoustic_attenuation() {
         let freq_mhz = freq / 1e6;
         let alpha = alpha_0 * f64::powf(freq_mhz, y); // dB/cm
 
-        // Convert to Np/m (1 dB = 0.115 Np, 1 cm = 0.01 m)
-        let alpha_np_m = alpha * 0.115 / 0.01;
+        // Convert to Np/m (1 dB = ln(10)/20 Np, 1 m = 100 cm)
+        let alpha_np_m = alpha * DB_TO_NP * 100.0;
 
         // Penetration depth (where amplitude drops to 1/e)
         let penetration_depth = 1.0 / alpha_np_m;

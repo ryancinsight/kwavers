@@ -471,25 +471,22 @@ class TestKWavePythonParity:
         """
         from kwave.utils.mapgen import water_absorption as kw_wa
 
-        import math
-
-        NEPER2DB = 20.0 / math.log(10.0)  # exact Np → dB factor
-        # k-Wave scales Pinkerton by its own NEPER2DB literal; a 4-decimal
-        # literal (8.686) deviates from the exact factor by 1.27e-5 relative,
-        # so the comparison bound is that deviation plus the rounding of the
-        # eight-term polynomial and the two conversions (< 1e-9).
-        rtol = abs(8.686 - NEPER2DB) / NEPER2DB + 1.0e-9
+        # k-Wave converts its Np polynomial to dB with the literal
+        # NEPER2DB = 8.686 (kwave/utils/mapgen.py), not 20/ln(10). Dividing by
+        # the same literal recovers k-Wave's Np value, so the two
+        # implementations of the Pinkerton polynomial compare directly.
+        KWAVE_NEPER2DB = 8.686
         for freq_mhz in [0.5, 1.0, 2.0, 5.0]:
             for temp in [10.0, 20.0, 25.0, 37.0, 50.0]:
                 freq_hz = freq_mhz * 1e6
                 pk_npm = kw.water_absorption(freq_hz, temp)  # Np/m
                 kw_dbcm = float(kw_wa(freq_mhz, temp))       # dB/cm
 
-                # Convert k-wave dB/cm → Np/m: Np/m = (dB/cm) / NEPER2DB * 100
-                kw_npm = kw_dbcm / NEPER2DB * 100.0
+                # Convert k-wave dB/cm → Np/m: Np/m = (dB/cm) / KWAVE_NEPER2DB * 100
+                kw_npm = kw_dbcm / KWAVE_NEPER2DB * 100.0
 
                 if kw_npm > 1e-10:
-                    np.testing.assert_allclose(pk_npm, kw_npm, rtol=rtol,
+                    np.testing.assert_allclose(pk_npm, kw_npm, rtol=1e-6,
                         err_msg=f"water_absorption mismatch at {freq_mhz} MHz, {temp}°C")
 
     def test_hounsfield2density_matches_kwave(self):

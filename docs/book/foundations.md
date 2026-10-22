@@ -528,8 +528,8 @@ where $f$ is frequency in MHz, $\alpha_0$ is the absorption coefficient at
 | Kidney | 1.0 | 1.0 |
 | Bone (cancellous) | 9.94 | 1.0 |
 
-Unit conversion: $1\,\text{dB cm}^{-1} = 0.1151\,\text{Np cm}^{-1}
-= 11.51\,\text{Np m}^{-1}$.
+Unit conversion: $1\,\text{dB cm}^{-1} = \ln(10)/20\,\text{Np cm}^{-1}
+\approx 0.1151\,\text{Np cm}^{-1} \approx 11.51\,\text{Np m}^{-1}$.
 
 ![Figure 1.3 — power-law attenuation vs frequency](figures/ch01/fig03_power_law_attenuation.png)
 
