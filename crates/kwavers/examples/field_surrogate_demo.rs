@@ -229,7 +229,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).expect("trainer");
     let mut history: Vec<(f32, f32, f32, f32)> = Vec::with_capacity(n_steps);
     for step in 0..n_steps {
-        let batch = sampler.batch::<AB>(step as u64, batch_size);
+        let batch = sampler.batch::<AB>(step as u64, batch_size)?;
         let m = trainer.step(batch)?;
         history.push((m.data, m.helmholtz, m.peak_prominence, m.total));
         if step % log_every == 0 {
@@ -317,11 +317,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 vec![n_samples, 5],
                 &input_data,
                 &backend,
-            ))
-            .unwrap(),
+            ))?,
             false,
-        ))
-        .unwrap();
+        ))?;
         let pred = trainer.network.forward(&inputs)?;
         let pred_data: Vec<f32> = pred.tensor.as_slice().to_vec();
         let mut peak_pred = 0.0_f32;

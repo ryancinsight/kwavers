@@ -300,7 +300,8 @@ fn bench_training_epoch(c: &mut Criterion) {
             };
 
             let mut optimizer =
-                PINNOptimizer::adam(&model, config.learning_rate, 0.0, 0.9, 0.999, 1e-8);
+                PINNOptimizer::adam(&model, config.learning_rate, 0.0, 0.9, 0.999, 1e-8)
+                    .expect("invariant: Adam state allocation matches the model's parameters");
             let mut scheduler = LRScheduler::constant(config.learning_rate);
             let loop_config = ElasticPinnLoopConfig {
                 max_epochs: 1,

@@ -50,8 +50,7 @@ pub(crate) fn train_pinn(
         return Err(KwaversError::InvalidInput("epochs must be positive".to_string()).into());
     }
 
-    let mut optimizer =
-        PINNOptimizer::adam(&model, config.learning_rate, 0.0, 0.9, 0.999, 1e-8)?;
+    let mut optimizer = PINNOptimizer::adam(&model, config.learning_rate, 0.0, 0.9, 0.999, 1e-8)?;
 
     let mut t_data: Vec<f32> = Vec::with_capacity(inputs.len());
     let mut x_data: Vec<f32> = Vec::with_capacity(inputs.len());
@@ -69,19 +68,35 @@ pub(crate) fn train_pinn(
 
     let backend = AutodiffBackend::default();
     let t_tensor = be(Var::new(
-        be(Tensor::from_slice_on(vec![inputs.len(), 1], t_data.as_slice(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![inputs.len(), 1],
+            t_data.as_slice(),
+            &backend,
+        ))?,
         false,
     ))?;
     let x_tensor = be(Var::new(
-        be(Tensor::from_slice_on(vec![inputs.len(), 1], x_data.as_slice(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![inputs.len(), 1],
+            x_data.as_slice(),
+            &backend,
+        ))?,
         false,
     ))?;
     let y_tensor = be(Var::new(
-        be(Tensor::from_slice_on(vec![inputs.len(), 1], y_data.as_slice(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![inputs.len(), 1],
+            y_data.as_slice(),
+            &backend,
+        ))?,
         false,
     ))?;
     let target_tensor = be(Var::new(
-        be(Tensor::from_slice_on(vec![targets.len(), 2], target_data.as_slice(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![targets.len(), 2],
+            target_data.as_slice(),
+            &backend,
+        ))?,
         false,
     ))?;
 
@@ -203,15 +218,27 @@ pub(crate) fn validate_gradients(
     let backend = AutodiffBackend::default();
 
     let t = be(Var::new(
-        be(Tensor::from_slice_on(vec![1, 1], [test_point[0] as f32].as_ref(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [test_point[0] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
     ))?;
     let x = be(Var::new(
-        be(Tensor::from_slice_on(vec![1, 1], [test_point[1] as f32].as_ref(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [test_point[1] as f32].as_ref(),
+            &backend,
+        ))?,
         true,
     ))?;
     let y = be(Var::new(
-        be(Tensor::from_slice_on(vec![1, 1], [test_point[2] as f32].as_ref(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [test_point[2] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
     ))?;
 
@@ -227,15 +254,27 @@ pub(crate) fn validate_gradients(
     let mut point_plus = test_point;
     point_plus[1] += eps;
     let t_plus = be(Var::new(
-        be(Tensor::from_slice_on(vec![1, 1], [point_plus[0] as f32].as_ref(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_plus[0] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
     ))?;
     let x_plus = be(Var::new(
-        be(Tensor::from_slice_on(vec![1, 1], [point_plus[1] as f32].as_ref(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_plus[1] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
     ))?;
     let y_plus = be(Var::new(
-        be(Tensor::from_slice_on(vec![1, 1], [point_plus[2] as f32].as_ref(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_plus[2] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
     ))?;
     let output_plus = model.forward(&x_plus, &y_plus, &t_plus)?;
@@ -244,15 +283,27 @@ pub(crate) fn validate_gradients(
     let mut point_minus = test_point;
     point_minus[1] -= eps;
     let t_minus = be(Var::new(
-        be(Tensor::from_slice_on(vec![1, 1], [point_minus[0] as f32].as_ref(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_minus[0] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
     ))?;
     let x_minus = be(Var::new(
-        be(Tensor::from_slice_on(vec![1, 1], [point_minus[1] as f32].as_ref(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_minus[1] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
     ))?;
     let y_minus = be(Var::new(
-        be(Tensor::from_slice_on(vec![1, 1], [point_minus[2] as f32].as_ref(), &backend))?,
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_minus[2] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
     ))?;
     let output_minus = model.forward(&x_minus, &y_minus, &t_minus)?;
