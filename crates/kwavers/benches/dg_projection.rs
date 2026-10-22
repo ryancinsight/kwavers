@@ -22,7 +22,7 @@
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use kwavers_grid::Grid;
-use kwavers_solver::forward::pstd::dg::{DGConfig, DgBoundaryCondition, DGSolver};
+use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver, DgBoundaryCondition};
 use leto::Array3;
 use std::sync::Arc;
 use std::time::Duration;
@@ -39,9 +39,8 @@ const ORDERS: [usize; 2] = [2, 3];
 const SPACING: f64 = 1.0;
 
 fn solver(extent: usize, polynomial_order: usize) -> DGSolver {
-    let grid = Arc::new(
-        Grid::new(extent, extent, extent, SPACING, SPACING, SPACING).expect("valid grid"),
-    );
+    let grid =
+        Arc::new(Grid::new(extent, extent, extent, SPACING, SPACING, SPACING).expect("valid grid"));
     let config = DGConfig {
         polynomial_order,
         sound_speed: 2.0,
@@ -89,7 +88,11 @@ fn bench_projection(criterion: &mut Criterion) {
                 bencher.iter(|| {
                     solver
                         .project_acoustic_tensor_fields_to_uniform_grid(
-                            &state, &mut pressure, &mut ux, &mut uy, &mut uz,
+                            &state,
+                            &mut pressure,
+                            &mut ux,
+                            &mut uy,
+                            &mut uz,
                         )
                         .expect("projection");
                 });
@@ -103,7 +106,9 @@ fn bench_projection(criterion: &mut Criterion) {
                     bencher.iter(|| {
                         for _ in 0..4 {
                             solver
-                                .project_acoustic_tensor_pressure_to_uniform_grid(&state, &mut alone)
+                                .project_acoustic_tensor_pressure_to_uniform_grid(
+                                    &state, &mut alone,
+                                )
                                 .expect("projection");
                         }
                     });
