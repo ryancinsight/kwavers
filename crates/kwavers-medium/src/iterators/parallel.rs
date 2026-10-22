@@ -69,14 +69,16 @@ impl<'a> ParallelMediumIterator<'a> {
                 z,
                 self.grid,
                 CoreMedium::reference_frequency(self.medium),
-            ),
+            )
+            .into_base(),
             nonlinearity: AcousticProperties::nonlinearity_coefficient(
                 self.medium,
                 x,
                 y,
                 z,
                 self.grid,
-            ),
+            )
+            .into_base(),
             position: (x, y, z),
             indices: (i, j, k),
         }

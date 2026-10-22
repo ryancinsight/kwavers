@@ -5,6 +5,7 @@
 
 use crate::absorption::AbsorptionTissueType;
 use crate::core::CoreMedium;
+use aequitas::systems::si::quantities::{Dimensionless, ReciprocalLength};
 use kwavers_core::constants::acoustic_parameters::{
     WATER_ABSORPTION_ALPHA_0, WATER_NONLINEARITY_B_A,
 };
@@ -12,26 +13,46 @@ use kwavers_grid::Grid;
 
 /// Trait for acoustic wave propagation properties
 pub trait AcousticProperties: CoreMedium {
-    /// Get absorption coefficient at a specific point and frequency (Np/m)
-    fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64;
+    /// Get absorption coefficient at a specific point and frequency
+    fn absorption_coefficient(
+        &self,
+        x: f64,
+        y: f64,
+        z: f64,
+        grid: &Grid,
+        frequency: f64,
+    ) -> ReciprocalLength<f64>;
 
-    /// Get acoustic attenuation coefficient (Np/m)
-    fn attenuation(&self, _x: f64, _y: f64, _z: f64, frequency: f64, _grid: &Grid) -> f64 {
+    /// Get acoustic attenuation coefficient
+    fn attenuation(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        frequency: f64,
+        _grid: &Grid,
+    ) -> ReciprocalLength<f64> {
         // Default power-law absorption: α(f) = WATER_ABSORPTION_ALPHA_0 · f^1.05
-        WATER_ABSORPTION_ALPHA_0 * frequency.powf(1.05)
+        ReciprocalLength::from_base(WATER_ABSORPTION_ALPHA_0 * frequency.powf(1.05))
     }
 
     /// Get nonlinearity parameter (B/A) for nonlinear wave propagation.
     ///
     /// Default: `WATER_NONLINEARITY_B_A = 5.0` (Beyer 1960; Duck 1990 Table 4.4).
-    fn nonlinearity_parameter(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        WATER_NONLINEARITY_B_A
+    fn nonlinearity_parameter(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> Dimensionless<f64> {
+        Dimensionless::from_base(WATER_NONLINEARITY_B_A)
     }
 
     /// Get nonlinearity coefficient (beta) - alternative parameterization
-    fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Dimensionless<f64> {
         // Beta = 1 + B/(2A)
-        1.0 + self.nonlinearity_parameter(x, y, z, grid) / 2.0
+        Dimensionless::from_base(1.0 + self.nonlinearity_parameter(x, y, z, grid).into_base() / 2.0)
     }
 
     /// Get the raw power-law absorption prefactor α₀ at 1 MHz [dB/(MHz^y·cm)].
