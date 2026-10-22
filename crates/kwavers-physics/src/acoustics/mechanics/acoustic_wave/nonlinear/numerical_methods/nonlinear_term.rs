@@ -95,7 +95,8 @@ impl NonlinearWave {
                     let density = kwavers_medium::density_at(medium, x, y, z, grid).into_base();
                     let b_over_a = kwavers_medium::AcousticProperties::nonlinearity_parameter(
                         medium, x, y, z, grid,
-                    );
+                    )
+                    .into_base();
 
                     // β = 1 + B/(2A) (Def 3.2, SSOT); prefactor 2β·dt²/ρ₀ from Westervelt Ch. 3.
                     let beta = kwavers_medium::properties::coefficient_of_nonlinearity(b_over_a);

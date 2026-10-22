@@ -76,7 +76,8 @@ pub(super) fn compute_nonlinear_term_into(
                     let (x, y, z) = grid.coords(i, j, k);
                     let beta = kwavers_medium::AcousticProperties::nonlinearity_coefficient(
                         medium, x, y, z, grid,
-                    );
+                    )
+                    .into_base();
 
                     // Explicit-form nonlinear coefficient for leapfrog:
                     // ∂²p/∂t² = c²∇²p + (β/ρc²)∂²(p²)/∂t² + …
@@ -243,7 +244,8 @@ mod tests {
         );
 
         // Analytical: explicit-form coefficient = +β/(ρc²)
-        let beta = AcousticProperties::nonlinearity_coefficient(&medium, 1.0, 1.0, 1.0, &grid);
+        let beta =
+            AcousticProperties::nonlinearity_coefficient(&medium, 1.0, 1.0, 1.0, &grid).into_base();
         let coeff = beta / (RHO * C.powi(2));
 
         // Bootstrap approximation used when prev_prev is absent:

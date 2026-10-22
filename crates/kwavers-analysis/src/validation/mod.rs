@@ -131,7 +131,8 @@ pub fn validate_absorption_model(
     // Get implementation's absorption
     use kwavers_medium::AcousticProperties;
     let alpha_impl =
-        AcousticProperties::absorption_coefficient(medium, 0.0, 0.0, 0.0, grid, frequency);
+        AcousticProperties::absorption_coefficient(medium, 0.0, 0.0, 0.0, grid, frequency)
+            .into_base();
 
     // Compare with measured value if provided
     let measurement_error = if measured_alpha > 0.0 {

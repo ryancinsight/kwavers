@@ -34,7 +34,8 @@ pub fn compute_diffusivity_from_power_law_absorption<M: Medium + ?Sized>(
 
     let alpha = kwavers_medium::AcousticProperties::absorption_coefficient(
         medium, x, y, z, grid, frequency,
-    );
+    )
+    .into_base();
     let (i, j, k) = kwavers_medium::continuous_to_discrete(x, y, z, grid);
     let c = medium.sound_speed(i, j, k).into_base();
     let omega = TWO_PI * frequency;
@@ -67,6 +68,7 @@ pub fn compute_nonlinearity_coefficient<M: Medium + ?Sized>(
 ) -> f64 {
     // nonlinearity_parameter returns B/A; β = 1 + B/(2A) (Def 3.2, SSOT).
     let b_over_a =
-        kwavers_medium::AcousticProperties::nonlinearity_parameter(medium, x, y, z, grid);
+        kwavers_medium::AcousticProperties::nonlinearity_parameter(medium, x, y, z, grid)
+            .into_base();
     kwavers_medium::properties::coefficient_of_nonlinearity(b_over_a)
 }

@@ -1,6 +1,6 @@
 use aequitas::systems::si::quantities::{
-    DynamicViscosity, ReciprocalTemperature, SpecificHeatCapacity, ThermalConductivity,
-    ThermalDiffusivity,
+    Dimensionless, DynamicViscosity, ReciprocalLength, ReciprocalTemperature, SpecificHeatCapacity,
+    ThermalConductivity, ThermalDiffusivity,
 };
 use leto::Array3;
 
@@ -24,8 +24,11 @@ impl AcousticProperties for HomogeneousMedium {
         _z: f64,
         _grid: &Grid,
         frequency: f64,
-    ) -> f64 {
-        self.absorption_alpha * (frequency / self.reference_frequency).powf(self.absorption_power)
+    ) -> ReciprocalLength<f64> {
+        ReciprocalLength::from_base(
+            self.absorption_alpha
+                * (frequency / self.reference_frequency).powf(self.absorption_power),
+        )
     }
 
     fn alpha_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
@@ -36,8 +39,14 @@ impl AcousticProperties for HomogeneousMedium {
         self.absorption_power
     }
 
-    fn nonlinearity_parameter(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.nonlinearity
+    fn nonlinearity_parameter(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> Dimensionless<f64> {
+        Dimensionless::from_base(self.nonlinearity)
     }
 
     fn acoustic_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {

@@ -112,11 +112,18 @@ impl AcousticProperties for HeterogeneousMedium {
     /// per-voxel power-law exponent stored in `self.alpha_power`.  Both α₀
     /// and y are trilinearly interpolated when `use_trilinear_interpolation`
     /// is set.
-    fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
+    fn absorption_coefficient(
+        &self,
+        x: f64,
+        y: f64,
+        z: f64,
+        grid: &Grid,
+        frequency: f64,
+    ) -> ReciprocalLength<f64> {
         let base_absorption = self.lookup_field(&self.absorption, x, y, z, grid);
         let exponent = self.lookup_field(&self.alpha_power, x, y, z, grid);
         let freq_ratio = frequency / self.reference_frequency;
-        base_absorption * freq_ratio.powf(exponent)
+        ReciprocalLength::from_base(base_absorption * freq_ratio.powf(exponent))
     }
 
     /// Power-law prefactor α₀ [dB/(MHz^y·cm)] at the given continuous coordinates.

@@ -175,12 +175,20 @@ impl AcousticProperties for TestElasticMedium {
         _z: f64,
         _grid: &Grid,
         _frequency: f64,
-    ) -> f64 {
-        0.0 // No absorption in test medium
+    ) -> ReciprocalLength<f64> {
+        // No absorption in test medium
+        ReciprocalLength::from_base(0.0)
     }
 
-    fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        3.5 // Default B/A for water-like media
+    fn nonlinearity_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> Dimensionless<f64> {
+        // Default B/A for water-like media
+        Dimensionless::from_base(3.5)
     }
 
     fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {

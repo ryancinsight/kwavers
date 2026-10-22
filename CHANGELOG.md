@@ -4,6 +4,20 @@
 
 ### Changed
 
+- **Breaking:** `AcousticProperties` returns Aequitas quantities.
+  `absorption_coefficient` and `attenuation` return `ReciprocalLength<f64>`;
+  `nonlinearity_parameter` (B/A) and `nonlinearity_coefficient` (β) return
+  `Dimensionless<f64>`. The four implementors construct at their storage
+  boundary via `from_base`, so the tissue power-law conversion
+  (`alpha_0 · (f/f_ref)^y` from dB/(MHz^y·cm) through `DB_TO_NP · 100`) stays
+  where the units are known, and 30 caller sites across 23 files in seven
+  crates read `into_base` at the numerical boundary.
+  `alpha_coefficient` (dB/(MHz^y·cm), not SI), `alpha_power` (a pure
+  exponent), `acoustic_diffusivity`, and `tissue_type` stay raw, as does every
+  array fast path. This completes the trait-typing work `CoreMedium`'s
+  `sound_speed`, `density`, `absorption`, `nonlinearity` and `max_sound_speed`
+  began, and that the thermal and viscous traits preceded.
+
 - **[patch] The stack's advisory gate clears: the `zip` crate leaves this
   workspace and the certificate roots move past their advisories.** `zip` 2.4.2
   reached the lock through `gaia-mesh` 0.5.2 and `zip` 6.0.0 through
