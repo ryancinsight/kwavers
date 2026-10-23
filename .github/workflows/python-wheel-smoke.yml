@@ -52,7 +52,15 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: Base wheel (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 45 }}
+    # Twenty minutes on a pull request, not five. Five assumed a warm cache:
+    # the job builds the extension and its whole dependency graph, and the
+    # same build on the schedule event measured 14m07s from checkout to
+    # completion (run 39903092802, ubuntu-latest). Seven of the last eight
+    # pull-request runs were cancelled mid-compile at the old budget against
+    # one that finished, so the budget, not the change under test, was
+    # deciding the result. Twenty keeps a cold build inside the limit and
+    # still bounds a hung one.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 20 || 45 }}
     strategy:
       fail-fast: false
       matrix:
