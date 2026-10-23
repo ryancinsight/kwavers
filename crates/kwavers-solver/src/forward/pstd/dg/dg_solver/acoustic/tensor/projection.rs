@@ -1,13 +1,49 @@
+//! Projection of tensor DG state onto the uniform solver grid.
+//!
+//! A uniform grid index lands on element `index / n_nodes` at local position
+//! `index % n_nodes`, so the GLL basis at that index depends on the local
+//! position alone: every element reuses the same `n_nodes` patterns, and every
+//! active axis reuses them too, because the quadrature nodes and the local
+//! coordinate mapping are the same on all three. The basis is therefore stored
+//! once, in one contiguous buffer, and the element is derived arithmetically.
+//!
+//! The per-node interpolation weights depend on the grid point alone, so one
+//! computation serves every variable projected there. Computing them per
+//! variable repeated the same `nodes_per_element` products once per output
+//! field.
+
 use super::{validate_tensor_state, ACOUSTIC_PRESSURE_VAR};
 use crate::forward::pstd::dg::dg_solver::core::DGSolver;
 use crate::forward::pstd::dg::dg_solver::topology::DgTopology;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
-#[derive(Debug, Clone)]
-pub(super) struct AxisMap {
-    pub(super) elem: usize,
-    pub(super) basis: Vec<f64>,
+/// The local GLL basis evaluated at every uniform-grid position.
+///
+/// `values[local * n_nodes + node]` is the basis value of `node` at local
+/// position `local`. One buffer serves all three axes and every element.
+pub(super) struct AxisBasis {
+    values: Vec<f64>,
+    n_nodes: usize,
+}
+
+impl AxisBasis {
+    /// Evaluate the basis at each of the `n_nodes` uniform local positions.
+    pub(super) fn new(solver: &DGSolver) -> Self {
+        let n_nodes = solver.n_nodes;
+        let mut values = vec![0.0; n_nodes * n_nodes];
+        for (local, row) in values.chunks_exact_mut(n_nodes).enumerate() {
+            let xi = local_coordinate(n_nodes, local);
+            lagrange_values_into(solver, xi, row);
+        }
+        Self { values, n_nodes }
+    }
+
+    /// The basis value of `axis_node` at a grid index along one axis.
+    #[inline]
+    pub(super) fn at(&self, index: usize, axis_node: usize) -> f64 {
+        self.values[(index % self.n_nodes) * self.n_nodes + axis_node]
+    }
 }
 
 impl DGSolver {
@@ -23,12 +59,14 @@ impl DGSolver {
     ) -> KwaversResult<()> {
         let topology = validate_tensor_state(self, state, 1.0)?;
         validate_grid_shape(self, "pressure", pressure.shape())?;
-        let maps = axis_maps(self, topology);
+        let basis = AxisBasis::new(self);
+        let mut weights = Vec::new();
         for i in 0..self.grid.nx {
             for j in 0..self.grid.ny {
                 for k in 0..self.grid.nz {
+                    let elem = point_weights(topology, &basis, [i, j, k], &mut weights);
                     pressure[[i, j, k]] =
-                        interpolate_var(topology, state, &maps, [i, j, k], ACOUSTIC_PRESSURE_VAR);
+                        interpolate_var(state, elem, &weights, ACOUSTIC_PRESSURE_VAR);
                 }
             }
         }
@@ -56,16 +94,20 @@ impl DGSolver {
         ] {
             validate_grid_shape(self, name, dim)?;
         }
-        let maps = axis_maps(self, topology);
+        let basis = AxisBasis::new(self);
+        let mut weights = Vec::new();
         for i in 0..self.grid.nx {
             for j in 0..self.grid.ny {
                 for k in 0..self.grid.nz {
                     let index = [i, j, k];
+                    // One weight set, four fields: the weights are a property
+                    // of the point, not of the variable.
+                    let elem = point_weights(topology, &basis, index, &mut weights);
                     pressure[[i, j, k]] =
-                        interpolate_var(topology, state, &maps, index, ACOUSTIC_PRESSURE_VAR);
-                    ux[[i, j, k]] = interpolate_var(topology, state, &maps, index, 1);
-                    uy[[i, j, k]] = interpolate_var(topology, state, &maps, index, 2);
-                    uz[[i, j, k]] = interpolate_var(topology, state, &maps, index, 3);
+                        interpolate_var(state, elem, &weights, ACOUSTIC_PRESSURE_VAR);
+                    ux[[i, j, k]] = interpolate_var(state, elem, &weights, 1);
+                    uy[[i, j, k]] = interpolate_var(state, elem, &weights, 2);
+                    uz[[i, j, k]] = interpolate_var(state, elem, &weights, 3);
                 }
             }
         }
@@ -73,90 +115,66 @@ impl DGSolver {
     }
 }
 
-pub(super) fn axis_map_for_index(
-    solver: &DGSolver,
+/// The element a uniform grid point lands in.
+#[inline]
+pub(super) fn point_element_of(topology: DgTopology, index: [usize; 3]) -> usize {
+    let n_nodes = topology.n_nodes;
+    topology.element_index([index[0] / n_nodes, index[1] / n_nodes, index[2] / n_nodes])
+}
+
+/// Fill `weights` with the per-node interpolation weights for one grid point,
+/// and return the element the point lands in.
+///
+/// `weights` is caller scratch: the projection reuses it across the whole grid,
+/// so the inner loop allocates nothing.
+fn point_weights(
     topology: DgTopology,
-    axis: usize,
-    index: usize,
-) -> KwaversResult<AxisMap> {
-    let dims = [solver.grid.nx, solver.grid.ny, solver.grid.nz];
-    if index >= dims[axis] {
-        return Err(KwaversError::InvalidInput(format!(
-            "DG acoustic uniform index {index} exceeds axis {axis} dimension {}",
-            dims[axis]
-        )));
-    }
-    if !topology.active_axes[axis] {
-        if index != 0 {
-            return Err(KwaversError::InvalidInput(format!(
-                "DG acoustic inactive axis {axis} requires index 0, got {index}"
-            )));
-        }
-        return Ok(AxisMap {
-            elem: 0,
-            basis: vec![1.0],
-        });
-    }
-    let elem = index / solver.n_nodes;
-    let local = (index % solver.n_nodes) as f64 / solver.n_nodes as f64;
-    let xi = local.mul_add(2.0, -1.0);
-    Ok(AxisMap {
-        elem,
-        basis: lagrange_values(solver, xi),
-    })
-}
-
-#[allow(clippy::needless_range_loop)]
-pub(super) fn lagrange_values(solver: &DGSolver, xi: f64) -> Vec<f64> {
-    let mut values = vec![1.0; solver.n_nodes];
-    for node in 0..solver.n_nodes {
-        let xi_node = solver.xi_nodes[node];
-        let mut basis = 1.0;
-        for other in 0..solver.n_nodes {
-            if other != node {
-                basis *= (xi - solver.xi_nodes[other]) / (xi_node - solver.xi_nodes[other]);
-            }
-        }
-        values[node] = basis;
-    }
-    values
-}
-
-fn axis_maps(solver: &DGSolver, topology: DgTopology) -> Vec<Vec<AxisMap>> {
-    [solver.grid.nx, solver.grid.ny, solver.grid.nz]
-        .into_iter()
-        .enumerate()
-        .map(|(axis, dim)| {
-            (0..dim)
-                .map(|index| {
-                    axis_map_for_index(solver, topology, axis, index).expect("validated grid index")
-                })
-                .collect()
-        })
-        .collect()
-}
-
-fn interpolate_var(
-    topology: DgTopology,
-    state: &Array3<f64>,
-    maps: &[Vec<AxisMap>],
+    basis: &AxisBasis,
     index: [usize; 3],
-    var: usize,
-) -> f64 {
-    let axis_maps = [&maps[0][index[0]], &maps[1][index[1]], &maps[2][index[2]]];
-    let elem = topology.element_index([axis_maps[0].elem, axis_maps[1].elem, axis_maps[2].elem]);
-    let mut value = 0.0;
+    weights: &mut Vec<f64>,
+) -> usize {
+    weights.clear();
     for node in 0..topology.nodes_per_element {
         let coords = topology.node_coords(node);
         let mut weight = 1.0;
         for axis in 0..3 {
             if topology.active_axes[axis] {
-                weight *= axis_maps[axis].basis[coords[axis]];
+                weight *= basis.at(index[axis], coords[axis]);
             }
         }
-        value += weight * state[[elem, node, var]];
+        weights.push(weight);
     }
-    value
+    point_element_of(topology, index)
+}
+
+/// The weighted sum of one variable over an element's nodes.
+#[inline]
+fn interpolate_var(state: &Array3<f64>, elem: usize, weights: &[f64], var: usize) -> f64 {
+    weights
+        .iter()
+        .enumerate()
+        .map(|(node, weight)| weight * state[[elem, node, var]])
+        .sum()
+}
+
+/// The local coordinate of `local` in the reference element `[-1, 1]`.
+#[inline]
+fn local_coordinate(n_nodes: usize, local: usize) -> f64 {
+    (local as f64 / n_nodes as f64).mul_add(2.0, -1.0)
+}
+
+/// Evaluate the Lagrange basis at `xi` into `out`.
+fn lagrange_values_into(solver: &DGSolver, xi: f64, out: &mut [f64]) {
+    for (node, slot) in out.iter_mut().enumerate() {
+        let xi_node = solver.xi_nodes[node];
+        let mut basis = 1.0;
+        for (other, xi_other) in solver.xi_nodes.iter().enumerate() {
+            if other != node {
+                basis *= (xi - xi_other) / (xi_node - xi_other);
+            }
+        }
+        *slot = basis;
+    }
 }
 
 fn validate_grid_shape(solver: &DGSolver, name: &str, dim: [usize; 3]) -> KwaversResult<()> {
@@ -165,6 +183,31 @@ fn validate_grid_shape(solver: &DGSolver, name: &str, dim: [usize; 3]) -> Kwaver
         return Err(KwaversError::InvalidInput(format!(
             "DG acoustic {name} grid shape {dim:?} does not match {expected:?}"
         )));
+    }
+    Ok(())
+}
+
+/// Reject a uniform grid index outside the grid, or a nonzero index on an
+/// inactive axis.
+pub(super) fn validate_uniform_index(
+    solver: &DGSolver,
+    topology: DgTopology,
+    index: [usize; 3],
+) -> KwaversResult<()> {
+    let dims = [solver.grid.nx, solver.grid.ny, solver.grid.nz];
+    for axis in 0..3 {
+        if index[axis] >= dims[axis] {
+            return Err(KwaversError::InvalidInput(format!(
+                "DG acoustic uniform index {} exceeds axis {axis} dimension {}",
+                index[axis], dims[axis]
+            )));
+        }
+        if !topology.active_axes[axis] && index[axis] != 0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "DG acoustic inactive axis {axis} requires index 0, got {}",
+                index[axis]
+            )));
+        }
     }
     Ok(())
 }
