@@ -6,6 +6,7 @@
 //! thermal coupling) so the solver dispatch can accept a small number of
 //! well-typed config objects instead of 20+ loose parameters.
 
+use kwavers_solver::forward::pstd::config::PowerLawDispersion;
 use serde::{Deserialize, Serialize};
 
 // ============================================================================
@@ -150,6 +151,12 @@ pub struct NonlinearConfig {
     pub alpha_coeff: f64,
     /// Medium absorption power-law exponent (k-Wave default: 1.5 for tissue).
     pub alpha_power: f64,
+    /// Whether the power law carries its Kramers–Kronig dispersion (k-Wave's
+    /// default) or absorbs without it (k-Wave `alpha_mode = 'no_dispersion'`),
+    /// which also admits `alpha_power = 1`. Absent from a serialized
+    /// configuration, it is the causal form.
+    #[serde(default)]
+    pub power_law_dispersion: PowerLawDispersion,
 }
 
 impl Default for NonlinearConfig {
@@ -158,6 +165,7 @@ impl Default for NonlinearConfig {
             enabled: false,
             alpha_coeff: 0.0,
             alpha_power: 1.5,
+            power_law_dispersion: PowerLawDispersion::Causal,
         }
     }
 }
@@ -181,6 +189,13 @@ impl NonlinearConfig {
     #[must_use]
     pub fn with_alpha_power(mut self, power: f64) -> Self {
         self.alpha_power = power;
+        self
+    }
+
+    /// Builder: select causal dispersion or absorption without it.
+    #[must_use]
+    pub fn with_power_law_dispersion(mut self, dispersion: PowerLawDispersion) -> Self {
+        self.power_law_dispersion = dispersion;
         self
     }
 }
@@ -420,6 +435,20 @@ mod tests {
         assert!(cfg.enabled);
         assert!((cfg.alpha_coeff - 0.75).abs() < 1e-12);
         assert!((cfg.alpha_power - 1.5).abs() < 1e-12);
+        assert_eq!(cfg.power_law_dispersion, PowerLawDispersion::Causal);
+        let omitted = cfg.with_power_law_dispersion(PowerLawDispersion::Omitted);
+        assert_eq!(omitted.power_law_dispersion, PowerLawDispersion::Omitted);
+    }
+
+    /// A configuration serialized before the dispersion field existed keeps
+    /// the causal form.
+    #[test]
+    fn nonlinear_config_without_dispersion_deserializes_as_causal() {
+        let cfg: NonlinearConfig =
+            serde_json::from_str(r#"{"enabled":false,"alpha_coeff":0.5,"alpha_power":1.1}"#)
+                .expect("a configuration without the dispersion field parses");
+        assert_eq!(cfg.power_law_dispersion, PowerLawDispersion::Causal);
+        assert_eq!(cfg.alpha_power, 1.1);
     }
 
     #[test]

@@ -164,10 +164,10 @@ claimed struct name) before implementing. Confirmed corrections below.
   — `[major]` (2026-06-11). The PSTD power-law absorption operator applied `|k|^{y−2}`/`|k|^{y−1}`
   with a SINGLE global exponent (k-Wave's limitation), so a CT body model's bone (y≈1.0) and soft
   tissue (y≈1.1) shared one frequency dependence. New `absorption::strata::ExponentStrata` +
-  `build_exponent_strata`: represents the distinct exponents as ≤`MAX_STRATA` strata (linspace for a
+  `resolve_exponent_spectrum`: represents the distinct exponents as ≤`MAX_STRATA` strata (linspace for a
   continuum), each with its own spectral symbol, blended per-voxel between bracketing strata by a
   partition-of-unity (index,weight) — exact at every tissue's exponent, convexity-bounded between.
-  Gated: built only when y(x) non-uniform (`AbsorptionKernel.strata: Option`); lossless/single-y keep
+  Gated: built only when y(x) non-uniform (`ExponentSpectrum::Stratified`); lossless/single-y keep
   the bit-identical uniform path (27 existing tests unchanged). Apply shares one forward FFT across
   strata, no new buffers (rebuilds input from divergence cache), reuses div_ux as scratch — memory-
   neutral for the common case. Validation: rigorous differential test — a 2-tissue-y medium's

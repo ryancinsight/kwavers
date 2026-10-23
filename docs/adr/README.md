@@ -101,3 +101,4 @@
 | [132](132-one-lockstep-traversal.md) | One lockstep field traversal, in kwavers-core | Accepted |
 | [133](133-elastic-stress-evaluates-in-slabs.md) | The elastic acceleration evaluates in slabs past the cache | Accepted |
 | [134](134-ivus-imaging-input-records.md) | IVUS imaging operations consume input records | Accepted |
+| [135](135-pstd-dispersion-is-run-configuration.md) | Power-law dispersion is part of every PSTD run's configuration | Accepted |

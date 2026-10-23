@@ -39,6 +39,7 @@
 //! - k-wave-python: `kspace_solver.py:613` — the canonical reference run by
 //!   the parity scripts.
 
+use super::kernel::ExponentSpectrum;
 use crate::forward::lanes::for_each_z_lane;
 use crate::pstd::PSTDSolver;
 use kwavers_core::error::KwaversResult;
@@ -335,83 +336,84 @@ impl PSTDSolver {
             return Ok(());
         };
 
-        if let Some(strata) = &abs.strata {
-            // ── Stratified path: spatially-varying exponent y(x) (beyond k-Wave).
-            // For each Laplacian, accumulate the per-stratum operator weighted by
-            // the per-voxel bracket weights, reproducing each tissue's own power
-            // law. One forward FFT is re-formed per stratum (no extra buffers);
-            // strata exist only for genuinely heterogeneous-y media.
-            let m_count = strata.exponents.len();
+        match &abs.spectrum {
+            ExponentSpectrum::Stratified(strata) => {
+                // ── Stratified path: spatially-varying exponent y(x) (beyond k-Wave).
+                // For each Laplacian, accumulate the per-stratum operator weighted by
+                // the per-voxel bracket weights, reproducing each tissue's own power
+                // law. One forward FFT is re-formed per stratum (no extra buffers);
+                // strata exist only when y(x) does not collapse to one exponent.
+                // L1 = Σ_m w_m(x) · IFFT( |k|^(y_m−2) · FFT(ρ₀·∇·u) ) → dpx.
+                self.dpx.fill(0.0);
+                for (m, nabla1) in (0_u32..).zip(&strata.nabla1) {
+                    // Rebuild ρ₀·∇·u into dpy from the divergence cache (cheap, no FFT).
+                    build_weighted_divergence(
+                        &mut self.dpy,
+                        &self.div_ux,
+                        &self.div_uy,
+                        &self.div_uz,
+                        &self.materials.rho0,
+                    );
+                    self.fft.forward_r2c_into(&self.dpy, &mut self.grad_k);
+                    multiply_spectral_operator(&mut self.grad_k, nabla1);
+                    self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpy);
+                    accumulate_stratum(
+                        &mut self.dpx,
+                        &self.dpy,
+                        &strata.bracket_lo,
+                        &strata.weight_hi,
+                        m,
+                    );
+                }
 
-            // L1 = Σ_m w_m(x) · IFFT( |k|^(y_m−2) · FFT(ρ₀·∇·u) ) → dpx.
-            self.dpx.fill(0.0);
-            for m in 0..m_count {
-                // Rebuild ρ₀·∇·u into dpy from the divergence cache (cheap, no FFT).
+                // L2 = Σ_m w_m(x) · IFFT( |k|^(y_m−1) · FFT(ρ_total) ) → dpy.
+                // div_u holds ρ_total; div_ux is reused as the per-stratum scratch
+                // (the divergence cache is no longer needed this step).
+                self.dpy.fill(0.0);
+                for (m, nabla2) in (0_u32..).zip(&strata.nabla2) {
+                    self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
+                    multiply_spectral_operator(&mut self.grad_k, nabla2);
+                    self.fft
+                        .inverse_c2r_into(&mut self.grad_k, &mut self.div_ux);
+                    accumulate_stratum(
+                        &mut self.dpy,
+                        &self.div_ux,
+                        &strata.bracket_lo,
+                        &strata.weight_hi,
+                        m,
+                    );
+                }
+            }
+            ExponentSpectrum::Uniform { nabla1, nabla2, .. } => {
+                // ── Uniform path (single global exponent, k-Wave-equivalent).
+                //
+                // Step 1 (Opt-7 + Opt-12): build ρ₀·∇·u directly into dpx from div_u*
+                // cache. `update_density_cartesian` writes ∂u_α/∂α into
+                // `div_ux`/`div_uy`/`div_uz`; `apply_pressure_sources` zeros `dpx` but
+                // never touches the cache, so it is current here. dpx (Step 1 content)
+                // is consumed by the Step 3 FFT before the IFFT overwrites dpx with L1.
                 build_weighted_divergence(
-                    &mut self.dpy,
+                    &mut self.dpx,
                     &self.div_ux,
                     &self.div_uy,
                     &self.div_uz,
                     &self.materials.rho0,
                 );
-                self.fft.forward_r2c_into(&self.dpy, &mut self.grad_k);
-                multiply_spectral_operator(&mut self.grad_k, &strata.nabla1[m]);
-                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpy);
-                accumulate_stratum(
-                    &mut self.dpx,
-                    &self.dpy,
-                    &strata.bracket_lo,
-                    &strata.weight_hi,
-                    m as u32,
-                );
-            }
 
-            // L2 = Σ_m w_m(x) · IFFT( |k|^(y_m−1) · FFT(ρ_total) ) → dpy.
-            // div_u holds ρ_total; div_ux is reused as the per-stratum scratch
-            // (the divergence cache is no longer needed this step).
-            self.dpy.fill(0.0);
-            for m in 0..m_count {
+                // Step 3: L1 = IFFT( |k|^(y−2) · FFT(ρ₀·∇·u) ) → dpx (clobbered).
+                self.fft.forward_r2c_into(&self.dpx, &mut self.grad_k);
+                // Construction stores the operators on the half spectrum already.
+                multiply_spectral_operator(&mut self.grad_k, nabla1);
+                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
+                // dpx now holds L1.
+
+                // Step 4: L2 = IFFT( |k|^(y−1) · FFT(ρ_total) ) → dpy (clobbered).
+                // div_u still holds ρ_total from the EOS step in update_pressure.
                 self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
-                multiply_spectral_operator(&mut self.grad_k, &strata.nabla2[m]);
-                self.fft
-                    .inverse_c2r_into(&mut self.grad_k, &mut self.div_ux);
-                accumulate_stratum(
-                    &mut self.dpy,
-                    &self.div_ux,
-                    &strata.bracket_lo,
-                    &strata.weight_hi,
-                    m as u32,
-                );
+                multiply_spectral_operator(&mut self.grad_k, nabla2);
+                self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpy);
+                // dpy now holds L2.
             }
-        } else {
-            // ── Uniform path (single global exponent, k-Wave-equivalent).
-            //
-            // Step 1 (Opt-7 + Opt-12): build ρ₀·∇·u directly into dpx from div_u*
-            // cache. `update_density_cartesian` writes ∂u_α/∂α into
-            // `div_ux`/`div_uy`/`div_uz`; `apply_pressure_sources` zeros `dpx` but
-            // never touches the cache, so it is current here. dpx (Step 1 content)
-            // is consumed by the Step 3 FFT before the IFFT overwrites dpx with L1.
-            build_weighted_divergence(
-                &mut self.dpx,
-                &self.div_ux,
-                &self.div_uy,
-                &self.div_uz,
-                &self.materials.rho0,
-            );
-
-            // Step 3: L1 = IFFT( |k|^(y−2) · FFT(ρ₀·∇·u) ) → dpx (clobbered).
-            self.fft.forward_r2c_into(&self.dpx, &mut self.grad_k);
-            // Construction stores the operators on the half spectrum already.
-            multiply_spectral_operator(&mut self.grad_k, &abs.nabla1);
-            self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpx);
-            // dpx now holds L1.
-
-            // Step 4: L2 = IFFT( |k|^(y−1) · FFT(ρ_total) ) → dpy (clobbered).
-            // div_u still holds ρ_total from the EOS step in update_pressure.
-            self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
-            multiply_spectral_operator(&mut self.grad_k, &abs.nabla2);
-            self.fft.inverse_c2r_into(&mut self.grad_k, &mut self.dpy);
-            // dpy now holds L2.
         }
 
         // ── Step 5: p += c₀² · (τ · L1 − η · L2).

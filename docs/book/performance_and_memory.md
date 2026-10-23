@@ -201,25 +201,31 @@ For lossless simulations (absorption coefficient α = 0 everywhere), the PSTD ab
 ```rust,ignore
 // crates/kwavers-solver/src/forward/pstd/physics/absorption/kernel.rs
 pub(crate) struct AbsorptionKernel {
-    pub tau: Array3<f64>,     // N³  absorption proportionality
-    pub eta: Array3<f64>,     // N³  dispersion proportionality (0 without dispersion)
-    pub nabla1: Array3<f64>,  // N³  |k|^{y-2} fractional-Laplacian operator
-    pub nabla2: Array3<f64>,  // N³  |k|^{y-1} fractional-Laplacian operator
-    pub alpha_si: Array3<f64>,// N³  absorption coefficient (SI)
-    pub strata: Option<ExponentStrata>, // per-voxel y only: blended operators
-    pub exponent: AbsorptionExponent,   // Uniform(y), or Field(N³) when y varies
+    pub tau: Array3<f64>,      // N³  absorption proportionality
+    pub eta: Array3<f64>,      // N³  dispersion proportionality (0 without dispersion)
+    pub alpha_si: Array3<f64>, // N³  absorption coefficient (SI)
+    pub spectrum: ExponentSpectrum,
+}
+pub(crate) enum ExponentSpectrum {
+    // One y: |k|^{y-2} and |k|^{y-1} on the r2c half spectrum, N²(N/2+1) each.
+    Uniform { exponent: f64, nabla1: Array3<f64>, nabla2: Array3<f64> },
+    // Per-voxel y: M ≤ 8 half-spectrum symbol pairs plus a (u32, f64) blend per voxel.
+    Stratified(ExponentStrata),
 }
 // The orchestrator stores `Option<AbsorptionKernel>` — None for lossless media.
 ```
 
-Memory saving for lossless: 5 × N³ × 8 B (f64) = 5 × 256³ × 8 = **670 MB** for N=256 (the
-entire kernel is elided, not just a subset; a spatially varying exponent adds the
-`strata` operators and one more N³ exponent field). The struct is monomorphic `f64`; there is no
+Memory saving for lossless: 3 × N³ × 8 B for the coefficient fields plus 2 × N²(N/2+1) × 8 B
+for the uniform operators, ≈ 4 × N³ × 8 B = **538 MB** for N = 256 (the entire kernel is elided,
+not just a subset). The operators are built on the half spectrum directly, which the r2c apply
+path reads, because `|k|` is even in `k_z`. A spatially varying exponent replaces the uniform pair
+with the stratified operators, from which each voxel's exponent is recovered rather than stored.
+The struct is monomorphic `f64`; there is no
 `Scalar` generic (see §20.10.3).
 
 An earlier formulation carried an extra cross-axis coupling array; auditing the Treeby & Cox
 derivation showed no such cross term for the power-law absorption model, so the kernel was
-reduced to the five operators above.
+reduced to the fields above.
 
 ### 20.7.5 Optimized Memory Budget
 
@@ -227,8 +233,8 @@ reduced to the five operators above.
 |-------------------------------|---------------|
 | grad_k consolidation          | –134 MB       |
 | Density advection removal     | –201 MB       |
-| AbsorptionKernel Option (lossless, 5 × N³ f64 elided) | –670 MB  |
-| **Total (lossless simulation)** | **~–1.0 GB** |
+| AbsorptionKernel Option (lossless, ≈ 4 × N³ f64 elided) | –538 MB  |
+| **Total (lossless simulation)** | **~–0.87 GB** |
 
 ![PSTD memory budget vs grid size: baseline vs optimized.](figures/ch19/fig02_memory_budget.png)
 
@@ -397,7 +403,7 @@ sim2.run(steps=4000)  # Continues from step 1000
 |-----------------------------------|-------------------------------|------------|
 | grad_k consolidation              | –134 MB/sim                   | Merged     |
 | Density advection removal         | –201 MB/sim, –N³ FLOPs/step   | Merged     |
-| AbsorptionKernel Option           | –670 MB for lossless          | Merged     |
+| AbsorptionKernel Option           | –538 MB for lossless          | Merged     |
 | TDR poll every 16 batches         | Eliminates GPU hang >~60 s    | Merged     |
 | Rayon grain-size tuning           | Near-linear scaling, P ≤ 32   | Merged     |
 | FFT plan caching (rustfft)        | –O(N log N) per step          | Merged     |
