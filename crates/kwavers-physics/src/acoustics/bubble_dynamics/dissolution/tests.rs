@@ -9,7 +9,7 @@ fn saturated_no_surface_tension_does_not_dissolve() {
     p.surface_tension = 0.0;
     let mut model = EpsteinPlessetDissolution::new(p);
     model.surface_tension = false;
-    let rate = model.radius_rate(2e-6, 1e-3);
+    let rate = model.radius_rate(2e-6, 1e-3).into_base();
     assert!(
         rate.abs() < 1e-12,
         "saturated σ=0 bubble must be static; rate={rate}"
@@ -20,7 +20,7 @@ fn saturated_no_surface_tension_does_not_dissolve() {
 fn undersaturated_bubble_dissolves() {
     let model = EpsteinPlessetDissolution::new(GasDiffusionParams::air_in_water(0.0));
     assert!(
-        model.radius_rate(2e-6, 1e-3) < 0.0,
+        model.radius_rate(2e-6, 1e-3).into_base() < 0.0,
         "degassed liquid ⇒ dissolves"
     );
 }
@@ -30,7 +30,7 @@ fn supersaturated_bubble_grows() {
     // f = 2 (supersaturated) with negligible surface tension at large R ⇒ growth.
     let model = EpsteinPlessetDissolution::new(GasDiffusionParams::air_in_water(2.0));
     assert!(
-        model.radius_rate(20e-6, 1e-3) > 0.0,
+        model.radius_rate(20e-6, 1e-3).into_base() > 0.0,
         "supersaturated ⇒ grows"
     );
 }
@@ -41,7 +41,7 @@ fn surface_tension_dissolves_even_when_saturated() {
     // liquid because of the Laplace overpressure (surface tension on).
     let model = EpsteinPlessetDissolution::new(GasDiffusionParams::air_in_water(1.0));
     assert!(
-        model.radius_rate(2e-6, 1e-3) < 0.0,
+        model.radius_rate(2e-6, 1e-3).into_base() < 0.0,
         "saturated free bubble must still dissolve via surface tension"
     );
 }
@@ -97,7 +97,7 @@ fn shell_slows_dissolution_vs_free_bubble() {
     let r = 2e-6;
     let t = 1e-3;
     assert!(
-        shelled.radius_rate(r, t).abs() < free.radius_rate(r, t).abs(),
+        shelled.radius_rate(r, t).into_base().abs() < free.radius_rate(r, t).into_base().abs(),
         "shell permeation resistance must slow dissolution"
     );
 }
@@ -107,7 +107,7 @@ fn impermeable_shell_stabilizes_bubble() {
     let p = GasDiffusionParams::air_in_water(0.0);
     let shelled = ShellPermeationDissolution::new(p, 0.0); // k_s = 0
     assert_eq!(
-        shelled.radius_rate(2e-6, 1e-3),
+        shelled.radius_rate(2e-6, 1e-3).into_base(),
         0.0,
         "impermeable shell ⇒ no dissolution"
     );
