@@ -59,7 +59,13 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: complete benchmark smoke
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ github.event_name == 'pull_request' && 5 || 30 }}
+    # Five minutes assumed a cache that this change is what starts writing, so
+    # the pull request that introduces it could not pass its own job: the cold
+    # compile of every bench target runs past five minutes and was cancelled
+    # before running a single benchmark. Fifteen is the cold ceiling and
+    # matches the rest of the pull-request CI budget; the warm path stays near
+    # two minutes once the landing run has written the caches.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 30 }}
     env:
       BENCH_TARGET_DIR: ${{ github.workspace }}/target
       CARGO_TERM_COLOR: always
