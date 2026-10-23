@@ -328,7 +328,7 @@ fn build_relaxation_kernel(
     causal_alpha_0: Option<f64>,
 ) -> KwaversResult<Option<AbsorptionKernel>> {
     let shape = [grid.nx, grid.ny, grid.nz];
-    let f_ref = medium.reference_frequency();
+    let f_ref = medium.reference_frequency().into_base();
     let omega_ref = 2.0 * std::f64::consts::PI * f_ref;
     let y_eff = clamp_fractional_exponent(relaxation.local_exponent(omega_ref));
 

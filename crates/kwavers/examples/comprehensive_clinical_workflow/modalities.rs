@@ -38,8 +38,8 @@ fn estimate_elastic_time_step<M: Medium>(
                 }
 
                 let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                let lambda = medium.lame_lambda(x, y, z, grid);
-                let mu = medium.lame_mu(x, y, z, grid);
+                let lambda = medium.lame_lambda(x, y, z, grid).into_base();
+                let mu = medium.lame_mu(x, y, z, grid).into_base();
 
                 let cs = (mu / rho).sqrt();
                 let cp = ((lambda + 2.0 * mu) / rho).sqrt();

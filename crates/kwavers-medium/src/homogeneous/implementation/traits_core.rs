@@ -1,4 +1,6 @@
-use aequitas::systems::si::quantities::{Dimensionless, MassDensity, ReciprocalLength, Velocity};
+use aequitas::systems::si::quantities::{
+    Dimensionless, Frequency, MassDensity, ReciprocalLength, Velocity,
+};
 use leto::{Array3, ArrayView3, ArrayViewMut3};
 
 use crate::core::{ArrayAccess, CoreMedium};
@@ -16,8 +18,8 @@ impl CoreMedium for HomogeneousMedium {
         Velocity::from_base(self.sound_speed)
     }
 
-    fn reference_frequency(&self) -> f64 {
-        self.reference_frequency
+    fn reference_frequency(&self) -> Frequency<f64> {
+        Frequency::from_base(self.reference_frequency)
     }
 
     fn absorption(&self, _i: usize, _j: usize, _k: usize) -> ReciprocalLength<f64> {

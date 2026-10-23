@@ -1,6 +1,8 @@
 use crate::{
+    acoustic::AcousticProperties,
     core::{ArrayAccess, CoreMedium},
     elastic::ElasticProperties,
+    thermal::ThermalProperties,
     viscous::ViscousProperties,
 };
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
@@ -24,6 +26,50 @@ fn test_water_properties() {
         water.viscosity(0.0, 0.0, 0.0, &grid).into_base(),
         VISCOSITY_WATER
     );
+}
+
+/// Water absorption unit regression (Szabo 1994): the stored prefactor
+/// α₀ = 0.0022 dB/(cm·MHz²) must surface as Np/m after the
+/// × 100 [cm/m] × DB_TO_NP [Np/dB] conversion: α(1 MHz) = 0.02533 Np/m.
+/// Both the frequency-dependent `absorption_coefficient` and the default
+/// `attenuation` must agree at the 1 MHz reference, and α ∝ f² for water.
+#[test]
+fn water_absorption_is_np_per_m_at_reference() {
+    use kwavers_core::constants::acoustic_parameters::{DB_TO_NP, WATER_ABSORPTION_ALPHA_0};
+    let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
+    let water = HomogeneousMedium::water(&grid);
+    let expected = WATER_ABSORPTION_ALPHA_0 * DB_TO_NP * 100.0;
+    let alpha_1mhz = water
+        .absorption_coefficient(0.0, 0.0, 0.0, &grid, 1.0e6)
+        .into_base();
+    assert!(
+        (alpha_1mhz - expected).abs() <= 1e-12 * expected,
+        "alpha(1 MHz) = {alpha_1mhz} Np/m, expected {expected} Np/m"
+    );
+    let atten_1mhz = water.attenuation(0.0, 0.0, 0.0, 1.0e6, &grid).into_base();
+    assert!(
+        (atten_1mhz - expected).abs() <= 1e-12 * expected,
+        "attenuation(1 MHz) = {atten_1mhz} Np/m, expected {expected} Np/m"
+    );
+    // Stokes–Kirchhoff f² law: doubling frequency quadruples α.
+    let alpha_2mhz = water
+        .absorption_coefficient(0.0, 0.0, 0.0, &grid, 2.0e6)
+        .into_base();
+    assert!((alpha_2mhz - 4.0 * alpha_1mhz).abs() <= 1e-12 * alpha_2mhz);
+}
+
+/// γ is by definition Cp/Cv: the default ratio must equal the ratio of
+/// the two specific-heat getters (liquid default Cv ≈ Cp gives γ = 1).
+#[test]
+fn specific_heat_ratio_equals_cp_over_cv() {
+    let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
+    let water = HomogeneousMedium::water(&grid);
+    let cp = water
+        .specific_heat_capacity(0.0, 0.0, 0.0, &grid)
+        .into_base();
+    let cv = water.specific_heat(0.0, 0.0, 0.0, &grid).into_base();
+    let gamma = water.specific_heat_ratio(0.0, 0.0, 0.0, &grid).into_base();
+    assert!(gamma > 0.0 && (gamma - cp / cv).abs() <= 1e-15);
 }
 
 #[test]
@@ -84,8 +130,10 @@ fn test_elastic_homogeneous_lame_inversion_satisfies_dispersion() {
 
     // Dispersion-relation round-trip: ElasticProperties::compressional_wave_speed
     // and shear_wave_speed must recover the input speeds within float epsilon.
-    let cp_back = med.compressional_wave_speed(0.0, 0.0, 0.0, &grid);
-    let cs_back = med.shear_wave_speed(0.0, 0.0, 0.0, &grid);
+    let cp_back = med
+        .compressional_wave_speed(0.0, 0.0, 0.0, &grid)
+        .into_base();
+    let cs_back = med.shear_wave_speed(0.0, 0.0, 0.0, &grid).into_base();
     assert!(
         (cp_back - cp).abs() < 1e-9,
         "c_p round-trip: got {}",
@@ -118,8 +166,14 @@ fn test_elastic_homogeneous_fluid_limit_zero_shear_speed() {
         "λ should equal bulk modulus K = ρ·c_p² in fluid limit; got {}",
         med.lame_lambda_value(),
     );
-    assert!(med.shear_wave_speed(0.0, 0.0, 0.0, &grid).abs() < 1e-12);
-    assert!((med.compressional_wave_speed(0.0, 0.0, 0.0, &grid) - cp).abs() < 1e-9);
+    assert!(med.shear_wave_speed(0.0, 0.0, 0.0, &grid).into_base().abs() < 1e-12);
+    assert!(
+        (med.compressional_wave_speed(0.0, 0.0, 0.0, &grid)
+            .into_base()
+            - cp)
+            .abs()
+            < 1e-9
+    );
 }
 
 /// Stability bound: c_s > c_p / √2 violates λ ≥ 0 (Poisson ratio ν < 0

@@ -44,7 +44,7 @@ impl<'a> Iterator for MediumPropertyIterator<'a> {
                 y,
                 z,
                 self.grid,
-                CoreMedium::reference_frequency(self.medium),
+                CoreMedium::reference_frequency(self.medium).into_base(),
             )
             .into_base(),
             nonlinearity: AcousticProperties::nonlinearity_coefficient(

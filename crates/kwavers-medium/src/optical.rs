@@ -19,8 +19,15 @@ pub(crate) fn interaction_from_si<Role: CoefficientRole>(
 
 /// Trait for optical medium properties
 pub trait MediumOpticalProperties: CoreMedium {
-    /// Get optical absorption coefficient (1/m).
-    fn optical_absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    /// Get optical absorption coefficient μa (1/m): Beer–Lambert
+    /// attenuation rate, I(x) = I₀ exp(-μa x).
+    fn optical_absorption_coefficient(
+        &self,
+        x: f64,
+        y: f64,
+        z: f64,
+        grid: &Grid,
+    ) -> ReciprocalLength<f64>;
 
     /// Get the reduced scattering coefficient mu_s' (1/m).
     ///

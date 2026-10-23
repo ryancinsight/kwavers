@@ -27,6 +27,14 @@ impl ThermalProperties for HeterogeneousMedium {
         SpecificHeatCapacity::from_base(self.lookup_field(&self.specific_heat, x, y, z, grid))
     }
 
+    /// The stored specific heat is Cp (it feeds thermal diffusivity
+    /// α = κ/(ρCp)); without this override Cp would fall back to the trait's
+    /// water constant and could violate Cp ≥ Cv (Mayer). Liquids: Cv ≈ Cp,
+    /// so γ = Cp/Cv = 1 by the trait defaults.
+    fn specific_heat_capacity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> SpecificHeatCapacity {
+        self.specific_heat(x, y, z, grid)
+    }
+
     /// Thermal diffusivity at continuous coordinates (m²/s)
     #[inline]
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ThermalDiffusivity {

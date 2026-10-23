@@ -280,7 +280,7 @@ fn test_consistency_with_point_access() {
     let y = 0.005;
     let z = 0.005;
 
-    let cs_point = medium.shear_wave_speed(x, y, z, &grid);
+    let cs_point = medium.shear_wave_speed(x, y, z, &grid).into_base();
     let cs_array_val = cs_array[[5, 5, 5]];
 
     let rel_error = if cs_point > 1e-10 {

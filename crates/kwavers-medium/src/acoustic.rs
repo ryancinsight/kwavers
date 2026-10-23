@@ -7,7 +7,7 @@ use crate::absorption::AbsorptionTissueType;
 use crate::core::CoreMedium;
 use aequitas::systems::si::quantities::{Dimensionless, ReciprocalLength};
 use kwavers_core::constants::acoustic_parameters::{
-    WATER_ABSORPTION_ALPHA_0, WATER_NONLINEARITY_B_A,
+    DB_TO_NP, WATER_ABSORPTION_ALPHA_0, WATER_ABSORPTION_POWER, WATER_NONLINEARITY_B_A,
 };
 use kwavers_grid::Grid;
 
@@ -32,8 +32,13 @@ pub trait AcousticProperties: CoreMedium {
         frequency: f64,
         _grid: &Grid,
     ) -> ReciprocalLength<f64> {
-        // Default power-law absorption: α(f) = WATER_ABSORPTION_ALPHA_0 · f^1.05
-        ReciprocalLength::from_base(WATER_ABSORPTION_ALPHA_0 * frequency.powf(1.05))
+        // Water power-law absorption (Szabo 1994): the stored prefactor
+        // WATER_ABSORPTION_ALPHA_0 is in dB/(cm·MHz^y) with y = WATER_ABSORPTION_POWER = 2
+        // (Stokes–Kirchhoff f² law). Convert dB/cm at `frequency` [Hz] to Np/m:
+        // × 100 [cm/m] × DB_TO_NP [Np/dB]. At 1 MHz this gives 0.0253 Np/m.
+        let alpha_db_per_cm = WATER_ABSORPTION_ALPHA_0
+            * (frequency / kwavers_core::constants::MHZ_TO_HZ).powf(WATER_ABSORPTION_POWER);
+        ReciprocalLength::from_base(alpha_db_per_cm * DB_TO_NP * 100.0)
     }
 
     /// Get nonlinearity parameter (B/A) for nonlinear wave propagation.
@@ -78,7 +83,7 @@ pub trait AcousticProperties: CoreMedium {
         None
     }
 
-    /// Get acoustic diffusivity (m²/s)
-    /// Represents the ratio of thermal diffusivity to acoustic velocity
-    fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    // Sound diffusivity δ [m²/s] is deliberately not a trait getter: it is
+    // frequency-derived, δ = 2αc³/ω² (Hamilton & Blackstock), and is owned by
+    // kwavers-physics `compute_diffusivity_from_power_law_absorption`.
 }

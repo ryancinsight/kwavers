@@ -28,6 +28,7 @@ impl NonlinearElasticWaveSolver {
     ) -> KwaversResult<Self> {
         let attenuation_np_per_m = medium
             .optical_absorption_coefficient(0.0, 0.0, 0.0, grid)
+            .into_base()
             .max(0.0);
 
         let numerics = NumericsOperators::new(grid.clone());

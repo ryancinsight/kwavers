@@ -408,7 +408,7 @@ fn multi_relaxation_mode_realizes_spectrum_at_drive_frequency() {
 
     // Realized absorption at ω_ref equals the relaxation spectrum's α(ω_ref).
     let relax = RelaxationAbsorption::new(tau, weights).unwrap();
-    let f_ref = kwavers_medium::CoreMedium::reference_frequency(&medium);
+    let f_ref = kwavers_medium::CoreMedium::reference_frequency(&medium).into_base();
     let omega_ref = TWO_PI * f_ref;
     let y_eff = relax.local_exponent(omega_ref).clamp(0.1, 2.0);
     let expected = relax.attenuation(omega_ref, SOUND_SPEED_WATER_SIM);

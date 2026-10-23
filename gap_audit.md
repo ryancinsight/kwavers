@@ -6208,3 +6208,15 @@ The refreshed workspace measurement after this merge found three
 `missing_panics_doc` sites in the `kwavers` facade; that package is the current
 ratchet slice.
 
+
+<a id="KW-MEDIUM-ABSORPTION-STORAGE-UNITS"></a>
+## KW-MEDIUM-ABSORPTION-STORAGE-UNITS — CoreMedium::absorption()/absorption_array() storage semantics (2026-10-22)
+- risk: `CoreMedium::absorption(i,j,k)` is typed `ReciprocalLength` (Np/m) but homogeneous returns the raw Szabo prefactor alpha0 [dB/(cm*MHz^y)] unconverted, and `absorption_array()` fills alpha0*(f_ref/1MHz)^y in the same dB-based numeric. Heterogeneous/tissue return their `absorption` fields, whose producers variously store alpha0 (dB-based, per heterogeneous/core/structure.rs theorem doc) — so scalar `absorption()` values are dB/cm numerics wearing an Np/m type, 11.513x off, exactly the defect fixed for `absorption_coefficient` in the bubble/elastic/optical slice.
+- evidence: homogeneous/implementation/traits_core.rs `absorption()` = `ReciprocalLength::from_base(self.absorption_alpha)`; `absorption_array()` same file; heterogeneous traits acoustic `absorption()` returns field directly. Solver alpha paths mostly consume `alpha_coefficient()` (documented dB prefactor, converted at solver boundary), so changing array storage needs a solver-side consumer audit first.
+- re-open trigger: audit every `absorption_array()`/`absorption()` consumer, decide one storage convention (alpha0 dB-based vs alpha at f_ref in Np/m), convert at the typed scalar boundary, add a water-valued regression test like `water_absorption_is_np_per_m_at_reference`.
+
+<a id="KW-SWE-OPTICAL-ATTENUATION"></a>
+## KW-SWE-OPTICAL-ATTENUATION — nonlinear SWE solver seeds attenuation from the optical coefficient (2026-10-22)
+- risk: `kwavers-solver/src/forward/elastic/nonlinear/solver/core.rs` sets `attenuation_np_per_m` from `medium.optical_absorption_coefficient(...)` — an optical Beer-Lambert mu_a used as an acoustic attenuation. Dimensionally L^-1 either way, so types cannot catch it, but the physics source is wrong for an elastic-wave solver unless deliberately modelling photoacoustic coupling.
+- evidence: core.rs:29-31 (found while typing `optical_absorption_coefficient` as `ReciprocalLength`).
+- re-open trigger: confirm intended physics with the SWE owner; likely replace with `AcousticProperties::absorption_coefficient` at the solver's operating frequency or remove the field if unused downstream.

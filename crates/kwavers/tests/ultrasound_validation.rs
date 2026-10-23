@@ -369,9 +369,9 @@ pub mod swe_validation {
         // Expected elasticity values (from homogeneous medium)
         // For isotropic materials: E = μ(3λ + 2μ)/(λ + μ), cs = sqrt(μ/ρ)
         use kwavers_medium::{CoreMedium, ElasticProperties};
-        let lame_mu = medium.lame_mu(0.0, 0.0, 0.0, grid);
+        let lame_mu = medium.lame_mu(0.0, 0.0, 0.0, grid).into_base();
         let density = medium.density(0, 0, 0).into_base();
-        let lame_lambda = medium.lame_lambda(0.0, 0.0, 0.0, grid);
+        let lame_lambda = medium.lame_lambda(0.0, 0.0, 0.0, grid).into_base();
         let expected_e = lame_mu * (3.0 * lame_lambda + 2.0 * lame_mu) / (lame_lambda + lame_mu);
         let expected_mu = lame_mu;
         let expected_cs = (expected_mu / density).sqrt();

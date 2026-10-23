@@ -3,7 +3,9 @@
 //! This module provides fundamental traits that all medium types must implement,
 //! establishing a Single Source of Truth (SSOT) for medium behaviors.
 
-use aequitas::systems::si::quantities::{Dimensionless, MassDensity, ReciprocalLength, Velocity};
+use aequitas::systems::si::quantities::{
+    Dimensionless, Frequency, MassDensity, ReciprocalLength, Velocity,
+};
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::ComponentBase;
@@ -47,9 +49,9 @@ pub trait CoreMedium: ComponentBase {
     /// Check if the medium is homogeneous
     fn is_homogeneous(&self) -> bool;
 
-    /// Get reference frequency for the medium (used for absorption calculations)
-    fn reference_frequency(&self) -> f64 {
-        REFERENCE_FREQUENCY_HZ
+    /// Get reference frequency for the medium in hertz (used for absorption calculations)
+    fn reference_frequency(&self) -> Frequency<f64> {
+        Frequency::from_base(REFERENCE_FREQUENCY_HZ)
     }
 
     /// Validate medium properties against physical constraints

@@ -40,10 +40,6 @@ impl AcousticProperties for HeterogeneousTissueMedium {
         Dimensionless::from_base(self.get_tissue_properties(i, j, k).nonlinearity)
     }
 
-    fn acoustic_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.0 // Default/Placeholder
-    }
-
     fn tissue_type(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Option<AbsorptionTissueType> {
         let (i, j, k) = crate::continuous_to_discrete(x, y, z, grid);
         Some(self.tissue_map[[i, j, k]])

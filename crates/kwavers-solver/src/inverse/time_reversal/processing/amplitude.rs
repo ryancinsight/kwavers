@@ -180,8 +180,14 @@ mod tests {
             corrector.apply_correction(signal, dt, &medium, &grid, frequency, sensor_pos, false)?;
 
         let ratio = with_abs[1] / without_abs[1];
-        let expected = (0.5 * SOUND_SPEED_WATER_SIM * dt).exp();
-        assert!((ratio - expected).abs() < 1e-12);
+        // Stored alpha0 = 0.5 is in dB/(cm·MHz^y); with y = 0 the typed
+        // absorption_coefficient surfaces 0.5 dB/cm in Np/m (Szabo 1994).
+        let alpha_np_m = 0.5 * kwavers_core::constants::DB_TO_NP * 100.0;
+        let expected = (alpha_np_m * SOUND_SPEED_WATER_SIM * dt).exp();
+        assert!(
+            (ratio / expected - 1.0).abs() < 1e-12,
+            "ratio {ratio}, expected {expected}"
+        );
         Ok(())
     }
 }
