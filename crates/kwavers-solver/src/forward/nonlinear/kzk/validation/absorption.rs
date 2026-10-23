@@ -18,12 +18,12 @@ mod tests {
     /// ## Expected result
     ///
     /// After propagating distance d = 0.1 m at frequency f₀:
-    ///   α(f₀) = 0.5 dB/cm = 5 dB/m = 5/8.686 Np/m ≈ 0.5756 Np/m
+    ///   α(f₀) = 0.5 dB/cm = 5 dB/m = 5·ln(10)/20 Np/m ≈ 0.5756 Np/m
     ///   Amplitude decay: exp(-α·d) = exp(-0.05756) ≈ 0.944
     ///   Intensity ratio = [exp(-α·d)]² = exp(-2α·d) ≈ 0.891
     ///
     /// Wait — at 10 cm: α·d = 0.5756 × 0.1 = 0.05756 Np.
-    /// In dB: 0.05756 × 8.686 = 0.5 dB.  Total: 5 dB over 10 cm.
+    /// In dB: 0.05756 × 20/ln(10) = 0.5 dB.  Total: 5 dB over 10 cm.
     /// Intensity ratio = 10^(-5/10) = 10^(-0.5) ≈ 0.316.  ✓
     ///
     /// ## Grid requirements for spectral accuracy

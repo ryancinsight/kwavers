@@ -7,6 +7,8 @@
 //! - Francois & Garrison (1982): Absorption model
 //! - Pinkerton (1949): Simplified absorption model
 
+use super::acoustic_parameters::DB_TO_NP;
+
 /// Water properties and attenuation models
 #[derive(Debug)]
 pub struct WaterProperties;
@@ -165,6 +167,15 @@ impl WaterProperties {
         NEPER2DB * 1e12 * frequency_mhz * frequency_mhz * a_on_fsqr
     }
 
+    /// Pinkerton absorption of distilled water in Np/m at `frequency_hz`.
+    ///
+    /// [`Self::absorption_pinkerton`] gives dB/cm at the frequency in MHz;
+    /// 1 dB/cm = 100 dB/m and 1 dB = ln(10)/20 Np ([`DB_TO_NP`]).
+    #[must_use]
+    pub fn absorption_pinkerton_np_per_m(frequency_hz: f64, temperature: f64) -> f64 {
+        Self::absorption_pinkerton(frequency_hz / 1e6, temperature) * (100.0 * DB_TO_NP)
+    }
+
     /// Calculate water absorption coefficient
     /// Based on Francois & Garrison (1982) model
     #[must_use]
@@ -209,6 +220,32 @@ impl WaterProperties {
 
         // Total absorption in dB/km, convert to Np/m
         let alpha_db_per_km = boric + magnesium + water;
-        alpha_db_per_km * 0.1151 / 1e3 // Convert to Np/m
+        alpha_db_per_km * DB_TO_NP / 1e3 // Convert to Np/m
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WaterProperties;
+
+    /// The Np/m form is the dB/cm form scaled by 100·ln(10)/20.
+    ///
+    /// The scale `100·DB_TO_NP` costs three roundings (the stored constant,
+    /// the product, the factor applied to the dB/cm value). The reference
+    /// `db·100·LN_10/20` costs four (the stored `LN_10` and three
+    /// operations). Each is at most half an ULP of the result, so the
+    /// difference stays within seven half-ULP of the result.
+    #[test]
+    fn pinkerton_np_per_m_scales_db_per_cm_by_the_neper_definition() {
+        const ROUNDINGS: f64 = 7.0;
+        for (frequency_hz, temperature) in [(1.0e6, 20.0), (2.5e6, 37.0), (0.5e6, 5.0)] {
+            let db_per_cm = WaterProperties::absorption_pinkerton(frequency_hz / 1e6, temperature);
+            let reference = db_per_cm * 100.0 * std::f64::consts::LN_10 / 20.0;
+            let got = WaterProperties::absorption_pinkerton_np_per_m(frequency_hz, temperature);
+            assert!(
+                (got - reference).abs() <= ROUNDINGS * 0.5 * f64::EPSILON * reference,
+                "{got} against {reference} at {frequency_hz} Hz, {temperature} C"
+            );
+        }
     }
 }

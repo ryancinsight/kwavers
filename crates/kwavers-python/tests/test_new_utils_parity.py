@@ -266,7 +266,7 @@ class TestWaterProperties:
     def test_absorption_at_reference(self):
         """Water absorption at 1 MHz, 20°C ≈ 0.002 dB/cm ≈ 0.023 Np/m (Pinkerton 1949)."""
         alpha = kw.water_absorption(1e6, 20.0)
-        # 0.002 dB/cm → 0.002 / 8.686 * 100 ≈ 0.023 Np/m
+        # 0.002 dB/cm → 0.002 * 100 * ln(10)/20 ≈ 0.023 Np/m
         assert alpha == pytest.approx(0.023, abs=0.005)
 
     def test_absorption_frequency_squared(self):
@@ -471,7 +471,14 @@ class TestKWavePythonParity:
         """
         from kwave.utils.mapgen import water_absorption as kw_wa
 
-        NEPER2DB = 8.686  # 20*log10(e)
+        import math
+
+        NEPER2DB = 20.0 / math.log(10.0)  # exact Np → dB factor
+        # k-Wave scales Pinkerton by its own NEPER2DB literal; a 4-decimal
+        # literal (8.686) deviates from the exact factor by 1.27e-5 relative,
+        # so the comparison bound is that deviation plus the rounding of the
+        # eight-term polynomial and the two conversions (< 1e-9).
+        rtol = abs(8.686 - NEPER2DB) / NEPER2DB + 1.0e-9
         for freq_mhz in [0.5, 1.0, 2.0, 5.0]:
             for temp in [10.0, 20.0, 25.0, 37.0, 50.0]:
                 freq_hz = freq_mhz * 1e6
@@ -482,7 +489,7 @@ class TestKWavePythonParity:
                 kw_npm = kw_dbcm / NEPER2DB * 100.0
 
                 if kw_npm > 1e-10:
-                    np.testing.assert_allclose(pk_npm, kw_npm, rtol=1e-6,
+                    np.testing.assert_allclose(pk_npm, kw_npm, rtol=rtol,
                         err_msg=f"water_absorption mismatch at {freq_mhz} MHz, {temp}°C")
 
     def test_hounsfield2density_matches_kwave(self):

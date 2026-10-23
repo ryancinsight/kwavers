@@ -34,6 +34,7 @@
 //! - Dines KA, Kak AC (1979). "Ultrasonic attenuation tomography of soft
 //!   tissues." *Ultrasonic Imaging* 1(1):16–33.
 
+use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use leto::{Array1, Array3};
@@ -78,7 +79,7 @@ impl AcousticProjectionGeometry {
     /// Conversion from the conventional clinical unit dB/(cm·MHz):
     /// ```text
     /// α_np [Np/(m·Hz)] = α_dB [dB/(cm·MHz)]
-    ///                    × ln(10)/20    [dB → Np]
+    ///                    × DB_TO_NP     [dB → Np, ln(10)/20]
     ///                    × 100          [1/cm → 1/m]
     ///                    × 1e-6         [1/MHz → 1/Hz]
     ///                  = α_dB × 1.15129e-4
@@ -86,7 +87,7 @@ impl AcousticProjectionGeometry {
     #[inline]
     #[must_use]
     pub fn alpha_nepers_per_m_per_hz(&self) -> f64 {
-        self.attenuation_db_cm_mhz * (10.0_f64.ln() / 20.0) * 100.0 * 1e-6
+        self.attenuation_db_cm_mhz * DB_TO_NP * 100.0 * 1e-6
     }
 }
 

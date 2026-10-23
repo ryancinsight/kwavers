@@ -617,8 +617,10 @@ fn compute_pressure_slice(
                 let fdy = focus.y - source.y;
                 let fdz = focus.z - source.z;
                 let focus_distance = (fdx * fdx + fdy * fdy + fdz * fdz).sqrt().max(grid.dx);
-                let attenuation_np =
-                    20.0 * (frequency_hz * 1e-6) * element.skull_thickness_m * 100.0 / 8.686;
+                let attenuation_np = 20.0
+                    * (frequency_hz * 1e-6)
+                    * element.skull_thickness_m
+                    * (100.0 * kwavers_core::constants::DB_TO_NP);
                 let phase = k_water * (distance - focus_distance) + element.correction_rad;
                 let amplitude =
                     element_transmission_gain(element) * (-attenuation_np).exp() / distance;

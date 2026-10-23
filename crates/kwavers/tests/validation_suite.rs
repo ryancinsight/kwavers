@@ -82,7 +82,7 @@ mod plane_wave_validation {
 
         // Convert to Np/m
         let freq_mhz: f64 = freq / 1e6;
-        let alpha_np_m = alpha_0 * freq_mhz.powf(y) * 100.0 / 8.686;
+        let alpha_np_m = alpha_0 * freq_mhz.powf(y) * 100.0 * kwavers_core::constants::DB_TO_NP;
 
         // Test absorption over propagation distance
         let distances = vec![0.01, 0.05, 0.1, 0.2]; // meters

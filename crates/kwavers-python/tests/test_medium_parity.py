@@ -13,6 +13,8 @@ This module tests:
 5. Medium validation and edge cases
 """
 
+import math
+
 import numpy as np
 import pytest
 
@@ -349,10 +351,15 @@ class TestAbsorptionPhysics:
 
     def test_absorption_neper_per_meter(self):
         """Convert absorption from dB/cm to Np/m."""
-        # 1 dB/cm = 8.686 Np/m
+        # 1 dB = ln(10)/20 Np and 1 cm = 0.01 m, so 1 dB/cm = 100 ln(10)/20 Np/m.
+        # y = 0 removes the frequency scaling: db2neper is the pure unit factor.
         alpha_db_cm = 0.5
-        alpha_np_m = alpha_db_cm * 8.686 / 0.01  # Convert to Np/m
-        assert abs(alpha_np_m - 434.3) < 0.1
+        alpha_np_m = kw.db2neper(alpha_db_cm, 0.0)
+        reference = alpha_db_cm * 100.0 * math.log(10.0) / 20.0
+        # Reference carries ln(10), two products and a quotient (4 roundings);
+        # the binding carries a stored constant, a product and the factor (3).
+        # 7 half-ULP of the result: 7 * 2**-53 < 1e-15 relative.
+        assert alpha_np_m == pytest.approx(reference, rel=1.0e-15, abs=0.0)
 
 
 # ============================================================================

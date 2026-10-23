@@ -64,7 +64,7 @@ fn test_temperature_correction() {
 fn test_db_conversion() {
     let skull = SkullAttenuation::cortical();
 
-    // At 1 MHz: α = 60 Np/m = 60 * 8.686 * 0.01 = 5.2 dB/cm
+    // At 1 MHz: α = 60 Np/m = 60 * 20/ln(10) * 0.01 = 5.2 dB/cm
     let alpha_db = skull.attenuation_db_per_cm(MHZ_TO_HZ);
     assert!((alpha_db - 5.2).abs() < 0.5);
 }

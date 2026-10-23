@@ -115,8 +115,8 @@ mod absorption_tests {
         // Classical absorption in Np/m
         let alpha_np_m = 2.0 * eta * omega.powi(2) / (3.0 * rho * c.powi(3));
 
-        // Convert Np/m to dB/cm: 1 Np = 8.686 dB, 1 m = 100 cm
-        let alpha_db_cm = alpha_np_m * 8.686 / 100.0;
+        // Convert Np/m to dB/cm: 1 Np = 20/ln(10) dB, 1 m = 100 cm
+        let alpha_db_cm = alpha_np_m * kwavers_core::constants::NP_TO_DB / 100.0;
 
         // Classical absorption at 1 MHz should be ~0.002 dB/cm
         eprintln!("Calculated alpha_db_cm: {}", alpha_db_cm);

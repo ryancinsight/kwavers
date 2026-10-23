@@ -278,13 +278,12 @@ def angular_spectrum_cw(
             # Convert dB·MHz^{-y}·cm^{-1} to Np/m at f0
             alpha_coeff = medium["alpha_coeff"]
             alpha_power = medium["alpha_power"]
-            # db2neper converts dB/m at 1 Hz^y; multiply by f^y to get Np/m
-            alpha_neper_per_m = (
-                alpha_coeff
-                * (100.0)  # cm^{-1} → m^{-1}: ×100
-                / (8.686)  # dB→Np
-                * (1e-6 * f0) ** alpha_power  # scale by (MHz)^y
-            )
+            # db2neper gives Np/((rad/s)^y m); multiply by ω0^y to get Np/m
+            from ._pykwavers import db2neper
+
+            alpha_neper_per_m = db2neper(alpha_coeff, alpha_power) * (
+                2.0 * _np.pi * f0
+            ) ** alpha_power
         else:
             alpha_neper_per_m = 0.0
     else:

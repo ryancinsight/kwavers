@@ -82,7 +82,7 @@ METRICS_PATH = DEFAULT_OUTPUT_DIR / "diff_focused_ultrasound_heating_metrics.txt
 # ---------------------------------------------------------------------------
 # Analytical Q estimate at source plane
 # ---------------------------------------------------------------------------
-ALPHA_NP = ALPHA_DB_CM_MHZ * F0 / 1e6 * (100.0 / 8.686)   # Np/m  (dB/cm/MHz → Np/m)
+ALPHA_NP = pkw.db2neper(ALPHA_DB_CM_MHZ, 1.0) * (2.0 * np.pi * F0)   # Np/m  (dB/cm/MHz → Np/m, y = 1)
 # At source (x=0): p_amplitude ~ rho*c0*v0, I = p^2/(2*rho*c0)
 # For a unit-velocity source: I_reference = rho*c0/2  (per unit v^2)
 # We'll extract the actual I from the pressure field post-simulation.

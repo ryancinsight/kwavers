@@ -309,7 +309,7 @@ mod photoacoustic_tests {
 ///
 /// **THEOREM: F = 2αI/c**
 fn radiation_force(absorption_np: f64, intensity: f64, sound_speed: f64) -> f64 {
-    // α is in Np/m, convert from dB/cm if needed: α_np = 0.1151 * α_db
+    // α is in Np/m, convert from dB/cm if needed: α_np = DB_TO_NP * α_db
     // I in W/m², c in m/s → F in Pa (radiation stress)
     2.0 * absorption_np * intensity / sound_speed
 }
@@ -334,7 +334,7 @@ mod arfi_tests {
         let intensity = 1e6; // 100 W/cm² = 1e6 W/m²
         let alpha_db = 2.0; // dB/cm/MHz
         let freq_mhz = 3.0; // MHz
-        let alpha_np = 0.1151 * alpha_db * freq_mhz * 100.0; // Np/m
+        let alpha_np = kwavers_core::constants::DB_TO_NP * alpha_db * freq_mhz * 100.0; // Np/m
         let c = 1540.0; // m/s
 
         let force = radiation_force(alpha_np, intensity, c);

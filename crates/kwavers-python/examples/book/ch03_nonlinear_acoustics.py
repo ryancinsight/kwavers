@@ -291,7 +291,7 @@ tissues = {
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
 # Stokes-Kirchhoff (water): α = δω²/(2c³) [Np/m] — kw.stokes_kirchhoff_absorption_np_m; Theorem 3.10.
-alpha_sk_dBcm = alpha_sk * 8.686 / 100  # Np/m → dB/cm
+alpha_sk_dBcm = alpha_sk * kw.neper2db(1.0, 0.0)  # Np/m → dB/cm (y = 0: pure unit scale)
 ax.loglog(freqs / 1e6, alpha_sk_dBcm, label="Water (Stokes-Kirchhoff, y=2)",
           color="C0", lw=2)
 

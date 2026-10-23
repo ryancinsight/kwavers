@@ -120,7 +120,7 @@ mod physics_unit_tests {
     fn test_alpha_db_cm_to_np_m_matches_scalar_reference_at_1mhz() {
         let alpha_db_cm = 0.75;
         let got = alpha_db_cm_to_np_m(alpha_db_cm, 1.0, 1.5);
-        let expected = alpha_db_cm * 100.0 / (20.0 / std::f64::consts::LN_10);
+        let expected = alpha_db_cm * 100.0 / kwavers_core::constants::acoustic_parameters::NP_TO_DB;
         assert!(
             (got - expected).abs() < 1e-12,
             "conversion mismatch: got {got}, expected {expected}"
