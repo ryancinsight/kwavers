@@ -4,6 +4,16 @@
 
 ### Changed
 
+- **Breaking:** `DissolutionModel::radius_rate` returns `Velocity<f64>`. The
+  contract already documented `dR/dt` in `m/s`; the sealed trait has two
+  implementors, so the change is contained to the dissolution module and its
+  integrator. `EpsteinPlessetDissolution` and `ShellPermeationDissolution`
+  both construct at their formula boundary, the shelled model reads its core
+  model's rate with `into_base` to apply the permeation resistance, and the
+  RK4 integrator unwraps once where it needs a scalar. `AcousticElasticCoupling`
+  is left untyped on purpose: it has no implementor in the workspace, so
+  changing its signature would be an unvalidated contract change rather than a
+  migration, and its documented units are already correct.
 - **Breaking:** `AcousticProperties::acoustic_diffusivity` is removed. The
   method claimed `m²/s` and had four implementations returning four different
   dimensions: `k / (ρ·c_p·c)` is metres, `c² / ρ` is `m⁵/(kg·s²)`, the

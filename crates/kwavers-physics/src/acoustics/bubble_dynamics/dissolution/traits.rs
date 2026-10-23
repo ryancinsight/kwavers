@@ -6,6 +6,7 @@
 //! same [`DissolutionModel`] contract so callers (integrators, the residual-gas
 //! field, the planner) stay model-agnostic.
 
+use aequitas::systems::si::quantities::Velocity;
 use kwavers_core::constants::cavitation::{
     GAS_DIFFUSION_COEFFICIENT_WATER, OSTWALD_SOLUBILITY_AIR_WATER, SURFACE_TENSION_WATER,
 };
@@ -65,9 +66,9 @@ pub(crate) mod sealed {
 /// Sealed — implemented only by the models in this module
 /// ([`super::EpsteinPlessetDissolution`], [`super::ShellPermeationDissolution`]).
 pub trait DissolutionModel: sealed::Sealed {
-    /// Radius rate `dR/dt` [m/s] at radius `radius_m` and elapsed time
+    /// Radius rate `dR/dt` at radius `radius_m` and elapsed time
     /// `time_s` (the latter feeds the transient diffusion-layer term).
-    fn radius_rate(&self, radius_m: f64, time_s: f64) -> f64;
+    fn radius_rate(&self, radius_m: f64, time_s: f64) -> Velocity<f64>;
 
     /// The transport parameters this model uses.
     fn params(&self) -> &GasDiffusionParams;
