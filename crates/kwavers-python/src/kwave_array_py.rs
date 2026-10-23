@@ -118,15 +118,26 @@ impl KWaveArray {
 
     /// Add a rectangular element.
     ///
+    /// Follows k-wave-python's rectangle contract: unnormalised BLI
+    /// deposition, and ``set_array_position`` moves the centre only.
+    ///
     /// Parameters
     /// ----------
     /// position : tuple[float, float, float]
     ///     Center position [x, y, z] in meters
-    /// dims : tuple[float, float, float]
-    ///     Dimensions [width, height, length] in meters
-    fn add_rect_element(&mut self, position: (f64, f64, f64), dims: (f64, f64, f64)) {
+    /// dims : tuple[float, float]
+    ///     Dimensions [width, height] in meters
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If a dimension is not finite and positive, or ``position`` is not
+    ///     finite.
+    fn add_rect_element(&mut self, position: (f64, f64, f64), dims: (f64, f64)) -> PyResult<()> {
         self.inner
-            .add_rect_element(position, dims.0, dims.1, dims.2);
+            .add_rect_element(position, dims.0, dims.1)
+            .map_err(|error| PyValueError::new_err(error.to_string()))?;
+        Ok(())
     }
 
     /// Add a rectangular element rotated about its center by intrinsic X-Y-Z
@@ -138,18 +149,26 @@ impl KWaveArray {
     /// ----------
     /// position : tuple[float, float, float]
     ///     Center position [x, y, z] in meters.
-    /// dims : tuple[float, float, float]
-    ///     Dimensions [width, height, length] in meters.
+    /// dims : tuple[float, float]
+    ///     Dimensions [width, height] in meters.
     /// euler_xyz_deg : tuple[float, float, float]
     ///     Intrinsic X-Y-Z Euler angles in degrees.
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If a dimension is not finite and positive, or ``position`` or an
+    ///     angle is not finite.
     fn add_rect_rot_element(
         &mut self,
         position: (f64, f64, f64),
-        dims: (f64, f64, f64),
+        dims: (f64, f64),
         euler_xyz_deg: (f64, f64, f64),
-    ) {
+    ) -> PyResult<()> {
         self.inner
-            .add_rect_rot_element(position, dims.0, dims.1, dims.2, euler_xyz_deg);
+            .add_rect_rot_element(position, dims.0, dims.1, euler_xyz_deg)
+            .map_err(|error| PyValueError::new_err(error.to_string()))?;
+        Ok(())
     }
 
     /// Install a global translation + intrinsic X-Y-Z Euler rotation (degrees)

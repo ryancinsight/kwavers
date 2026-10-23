@@ -14,13 +14,12 @@ impl KWaveArray {
             .iter()
             .map(|e| {
                 let local = match e {
-                    KWaveElement::PlanarAperture(geometry) => {
+                    KWaveElement::PlanarAperture { geometry, .. } => {
                         let [x, y, z] = geometry.center_m();
                         (x, y, z)
                     }
                     KWaveElement::Shape(shape) => match shape {
                         ElementShape::Arc { position, .. }
-                        | ElementShape::Rect { position, .. }
                         | ElementShape::Disc { position, .. }
                         | ElementShape::ProfiledDisc { position, .. }
                         | ElementShape::Bowl { position, .. }
@@ -34,15 +33,15 @@ impl KWaveArray {
 
     /// Compute the total geometric measure of all elements.
     ///
-    /// Bowl and disc elements contribute area; arc elements contribute arc
-    /// length; rect elements contribute `width × height`; annuli contribute
-    /// the spherical-ring area.
+    /// Bowl, disc and planar-aperture elements (rectangles included) contribute
+    /// area; arc elements contribute arc length; annuli contribute the
+    /// spherical-ring area.
     #[must_use]
     pub fn compute_total_surface_area(&self) -> f64 {
         self.elements
             .iter()
             .map(|e| match e {
-                KWaveElement::PlanarAperture(geometry) => geometry.shape().area_m2(),
+                KWaveElement::PlanarAperture { geometry, .. } => geometry.shape().area_m2(),
                 KWaveElement::Shape(e) => match e {
                     ElementShape::Bowl {
                         radius: r,
@@ -55,11 +54,6 @@ impl KWaveArray {
                     ElementShape::ProfiledDisc { diameter: d, .. } => {
                         std::f64::consts::PI * (d / 2.0).powi(2)
                     }
-                    ElementShape::Rect {
-                        width: w,
-                        height: h,
-                        ..
-                    } => w * h,
                     ElementShape::Arc {
                         radius: r,
                         start_angle: s,

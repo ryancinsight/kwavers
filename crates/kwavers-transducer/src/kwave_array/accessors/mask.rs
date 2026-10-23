@@ -10,8 +10,13 @@ impl KWaveArray {
     pub fn get_array_binary_mask(&self, grid: &kwavers_grid::Grid) -> Array3<bool> {
         let mut mask = grid.array_fill(false);
         for element in &self.elements {
-            if let KWaveElement::PlanarAperture(geometry) = element {
-                Self::rasterize_planar_aperture(&mut mask, grid, *geometry);
+            if let KWaveElement::PlanarAperture {
+                geometry,
+                convention,
+            } = element
+            {
+                let geometry = self.apply_transform_planar(*geometry, *convention);
+                Self::rasterize_planar_aperture(&mut mask, grid, geometry);
                 continue;
             }
             let KWaveElement::Shape(element) = element else {
@@ -34,16 +39,6 @@ impl KWaveArray {
                         *start_angle,
                         *end_angle,
                     );
-                }
-                ElementShape::Rect {
-                    position,
-                    width,
-                    height,
-                    length: _,
-                    euler_xyz_deg,
-                } => {
-                    let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
-                    Self::rasterize_rect(&mut mask, grid, pos_eff, *width, *height, euler_eff);
                 }
                 ElementShape::Disc {
                     position,
@@ -95,8 +90,13 @@ impl KWaveArray {
     pub fn get_array_weighted_mask(&self, grid: &kwavers_grid::Grid) -> Array3<f64> {
         let mut mask = grid.array_zeros();
         for element in &self.elements {
-            if let KWaveElement::PlanarAperture(geometry) = element {
-                Self::rasterize_planar_aperture_weighted(&mut mask, grid, *geometry);
+            if let KWaveElement::PlanarAperture {
+                geometry,
+                convention,
+            } = element
+            {
+                let geometry = self.apply_transform_planar(*geometry, *convention);
+                Self::rasterize_planar_aperture_weighted(&mut mask, grid, geometry, *convention);
                 continue;
             }
             let KWaveElement::Shape(element) = element else {
@@ -153,18 +153,6 @@ impl KWaveArray {
                         *diameter,
                         *start_angle,
                         *end_angle,
-                    );
-                }
-                ElementShape::Rect {
-                    position,
-                    width,
-                    height,
-                    length: _,
-                    euler_xyz_deg,
-                } => {
-                    let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
-                    Self::rasterize_rect_weighted(
-                        &mut mask, grid, pos_eff, *width, *height, euler_eff,
                     );
                 }
                 ElementShape::Annulus {

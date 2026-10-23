@@ -844,7 +844,7 @@ kwavers_transducer                   Transducer geometry → grid rasterization
 ├── kwave_array/
 │   ├── mod.rs                      KWaveArray struct, public API
 │   ├── bli_kernel.rs               BLI stencil, sinc kernel, on-grid detection
-│   ├── construction.rs             add_rect_element, add_disc_element, add_profiled_disc_element, add_bowl_element, add_annular_element
+│   ├── construction.rs             add_rect_element, add_rect_rot_element, add_disc_element, add_profiled_disc_element, add_bowl_element, add_annular_element
 │   ├── rasterizer_planar.rs        Planar element rasterization
 │   ├── rasterizer_curved.rs        Curved (bowl) element rasterization
 │   ├── geometry.rs                 Disc / bowl / planar element geometry
@@ -861,13 +861,22 @@ kwavers_transducer                   Transducer geometry → grid rasterization
 produce k-Wave-compatible source masks and signal matrices. The public API exposes:
 
 ```rust,ignore
-// Add a rectangular element (typical for linear arrays); builder-style, returns &mut Self
+// Add a rectangular element (typical for linear arrays); builder-style, returns &mut Self.
+// The rectangle is a planar aperture under k-wave-python's contract (ADR 136).
 pub fn add_rect_element(
     &mut self,
     position: (f64, f64, f64),
-    u_size: f64,            // element width
-    v_size: f64,            // element height
-    euler_angles: (f64, f64, f64),  // XYZ rotation (alpha, beta, gamma) in radians
+    width: f64,             // extent along the element's x axis
+    height: f64,            // extent along the element's y axis
+) -> &mut Self
+
+// The same rectangle rotated about its centre by intrinsic X-Y-Z Euler angles in degrees.
+pub fn add_rect_rot_element(
+    &mut self,
+    position: (f64, f64, f64),
+    width: f64,
+    height: f64,
+    euler_xyz_deg: (f64, f64, f64),
 ) -> &mut Self
 
 // Add a focused disc element (piston with optional focus)

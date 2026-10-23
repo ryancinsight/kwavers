@@ -1,6 +1,7 @@
 # ADR 112: Wiring the convex array: orientation seam and angle units
 
 - Status: Accepted
+- Revision 2026-10-20: `add_rect_*` drop the unused length and build planar rectangles under the k-Wave convention (ADR 136); the other `add_*_element` signatures are unchanged.
 - Date: 2026-08-19
 - Item: `backlog.md#cov-3`
 
@@ -74,7 +75,8 @@ to `euler_xyz_deg` happens once, inside the constructor, at the boundary with
 the existing `f64`-degrees rasterizer surface.
 
 `ElementShape` and the `add_*_element` family keep their current `f64` degree
-signatures. They mirror k-Wave's `addArcElement` / `addRectElement` names and
+signatures, except that `add_rect_*` drop the unused length argument (ADR 136).
+They mirror k-Wave's `addArcElement` / `addRectElement` names and
 argument order for parity, and rewriting that surface is a separate decision
 from closing COV-3.
 
