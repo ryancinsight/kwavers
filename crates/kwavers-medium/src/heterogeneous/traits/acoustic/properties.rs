@@ -142,13 +142,4 @@ impl AcousticProperties for HeterogeneousMedium {
     fn alpha_power(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         self.lookup_field(&self.alpha_power, x, y, z, grid)
     }
-
-    /// Get acoustic diffusivity at continuous coordinates
-    fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let sound_speed = self.lookup_field(&self.sound_speed, x, y, z, grid);
-        let density = self.lookup_field(&self.density, x, y, z, grid);
-        // Acoustic diffusivity: D = c²/ρ (classical fluid mechanics formula)
-        // Exact for homogeneous fluids, per Morse & Ingard (1968) "Theoretical Acoustics"
-        sound_speed * sound_speed / density
-    }
 }

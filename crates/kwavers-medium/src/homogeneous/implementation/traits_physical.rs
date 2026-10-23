@@ -48,10 +48,6 @@ impl AcousticProperties for HomogeneousMedium {
     ) -> Dimensionless<f64> {
         Dimensionless::from_base(self.nonlinearity)
     }
-
-    fn acoustic_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.thermal_conductivity / (self.density * self.specific_heat * self.sound_speed)
-    }
 }
 
 impl ElasticProperties for HomogeneousMedium {

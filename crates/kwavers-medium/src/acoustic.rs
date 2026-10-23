@@ -77,8 +77,4 @@ pub trait AcousticProperties: CoreMedium {
     fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<AbsorptionTissueType> {
         None
     }
-
-    /// Get acoustic diffusivity (m²/s)
-    /// Represents the ratio of thermal diffusivity to acoustic velocity
-    fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
 }

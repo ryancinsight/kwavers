@@ -190,17 +190,6 @@ impl AcousticProperties for TestElasticMedium {
         // Default B/A for water-like media
         Dimensionless::from_base(3.5)
     }
-
-    fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        // Acoustic diffusivity = thermal diffusivity / c²
-        let thermal_diff = self.thermal_diffusivity(x, y, z, grid).into_base();
-        // Convert coordinates to indices (simplified for test)
-        let i = (x / grid.dx) as usize;
-        let j = (y / grid.dy) as usize;
-        let k = (z / grid.dz) as usize;
-        let c = self.sound_speed(i, j, k).into_base();
-        thermal_diff / (c * c)
-    }
 }
 
 impl ElasticArrayAccess for TestElasticMedium {
