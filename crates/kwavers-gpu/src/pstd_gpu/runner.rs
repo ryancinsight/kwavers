@@ -20,11 +20,10 @@ use crate::pstd_gpu::{
     SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
-use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::constants::{acoustic_parameters::REFERENCE_FREQUENCY_HZ, numerical::TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
 use kwavers_source::GridSource;
 use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
 use std::borrow::Cow;
@@ -352,6 +351,8 @@ where
             let (dk_x, dk_y, dk_z) = (TWO_PI / lx, TWO_PI / ly, TWO_PI / lz);
             let singularity_thresh: f64 = 1e-8;
             let y = absorption.exponent;
+            // Spectral normalizer for the SI prefactor (Np/m at 1 MHz).
+            let inv_omega_ref = 1.0 / (TWO_PI * REFERENCE_FREQUENCY_HZ);
 
             let mut n1 = vec![0.0f32; total];
             let mut n2 = vec![0.0f32; total];
@@ -385,8 +386,8 @@ where
                     n2[flat] = k_mag.powf(y - 1.0) as f32;
                 }
 
-                let alpha_db_cm = absorption.coefficients.at(flat);
-                let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, y);
+                let alpha_np_m = absorption.coefficients.at(flat);
+                let alpha_0_si = alpha_np_m * inv_omega_ref.powf(y);
                 let c0_local = f64::from(medium.c0_flat[flat]);
                 tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
                 eta_v[flat] = (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;

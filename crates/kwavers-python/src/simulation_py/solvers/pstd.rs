@@ -141,11 +141,17 @@ impl Simulation {
             BoundaryConfig::None
         };
 
-        let effective_alpha_db = if alpha_coeff_db > 0.0 {
-            alpha_coeff_db
-        } else {
-            medium.as_medium().alpha_coefficient(0.0, 0.0, 0.0, grid)
-        };
+        // Absorption is active when the caller supplies a dB prefactor or the
+        // medium reports a positive SI prefactor at the 1 MHz reference. The
+        // two unit domains never mix: the caller's dB value stays in the
+        // config, the medium's Np/m value is read per voxel by the solver
+        // (ADR 120).
+        let absorption_active = alpha_coeff_db > 0.0
+            || medium
+                .as_medium()
+                .alpha_coefficient(0.0, 0.0, 0.0, grid)
+                .into_base()
+                > 0.0;
 
         let effective_alpha_power = {
             let y_medium = medium.as_medium().alpha_power(0.0, 0.0, 0.0, grid);
@@ -156,7 +162,7 @@ impl Simulation {
             }
         };
 
-        let absorption_mode = if effective_alpha_db > 0.0 {
+        let absorption_mode = if absorption_active {
             AbsorptionMode::PowerLaw {
                 // Only a coefficient the caller actually supplied is passed on. The
                 // medium's own value is left to the solver, which reads it per

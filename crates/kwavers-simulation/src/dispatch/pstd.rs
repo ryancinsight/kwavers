@@ -255,11 +255,16 @@ pub(crate) fn prepare_solver(
     };
 
     let nl = req.nonlinear.cloned().unwrap_or_default();
-    let effective_alpha_db = if nl.alpha_coeff > 0.0 {
-        nl.alpha_coeff
-    } else {
-        req.medium.alpha_coefficient(0.0, 0.0, 0.0, req.grid)
-    };
+    // Absorption is active when the caller supplies a dB prefactor or the
+    // medium reports a positive SI prefactor at the 1 MHz reference. The two
+    // unit domains never mix: the caller's dB value stays in the config, the
+    // medium's Np/m value is read per voxel by the solver (ADR 120).
+    let absorption_active = nl.alpha_coeff > 0.0
+        || req
+            .medium
+            .alpha_coefficient(0.0, 0.0, 0.0, req.grid)
+            .into_base()
+            > 0.0;
 
     let effective_alpha_power = {
         let y_medium = req.medium.alpha_power(0.0, 0.0, 0.0, req.grid);
@@ -270,7 +275,7 @@ pub(crate) fn prepare_solver(
         }
     };
 
-    let absorption_mode = if effective_alpha_db > 0.0 {
+    let absorption_mode = if absorption_active {
         AbsorptionMode::PowerLaw {
             // Only a coefficient the caller actually supplied is passed on. The
             // medium's own value is left to the solver, which reads it per

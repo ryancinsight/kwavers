@@ -29,12 +29,14 @@
 use super::kernel::{AbsorptionExponent, AbsorptionKernel};
 use super::strata::build_exponent_strata;
 use crate::forward::pstd::config::{PSTDConfig, PowerLawDispersion};
+use kwavers_core::constants::acoustic_parameters::REFERENCE_FREQUENCY_HZ;
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::absorption::{
-    np_m_to_power_law_db_cm, power_law_db_cm_to_np_omega_m, AbsorptionMode,
+    power_law_db_cm_to_np_omega_m, AbsorptionMode,
 };
 use kwavers_physics::acoustics::mechanics::RelaxationAbsorption;
 use leto::Array3;
@@ -52,11 +54,12 @@ fn map_real_field(input: &Array3<f64>, mut map: impl FnMut(f64) -> f64) -> Array
 /// spectral nabla operators ∇^(y−2) and ∇^(y−1) in FFT-order k-space.
 ///
 /// ## Algorithm
-/// For `AbsorptionMode::PowerLaw { alpha_coeff: α_dB, alpha_power: y }`:
+/// For `AbsorptionMode::PowerLaw { alpha_coeff, alpha_power: y }`:
 ///
 /// **Spatial coefficients** (vary per cell for heterogeneous media):
 /// ```text
-///   α_SI(r) = power_law_db_cm_to_np_omega_m(α_dB(r), y(r))
+///   α_SI(r) = power_law_db_cm_to_np_omega_m(α_dB(r), y(r))   (caller dB path)
+///   α_SI(r) = α₀(r) · (1/(2π·1 MHz))^y(r)                     (medium SI path)
 ///   τ(r)    = −2 α_SI(r) · c₀(r)^(y(r)−1)
 ///   η(r)    =  2 α_SI(r) · c₀(r)^y(r) · tan(π y(r) / 2)   (causal dispersion)
 ///   η(r)    =  0                                         (dispersion omitted)
@@ -204,20 +207,33 @@ pub(crate) fn initialize_absorption_operators(
                         // (`!= 0.0`, `!= 1.0`), so a homogeneous medium's
                         // defaulted water values silently outranked a caller's
                         // request on both (ADR 120).
-                        let (alpha_db_cm, y) = match alpha_coeff {
-                            Some(requested) => (*requested, y_config),
+                        // The `Some` arm carries the caller's k-Wave dB prefactor;
+                        // the `None` arm carries the medium's SI prefactor in
+                        // Np/m at 1 MHz. Each converts to the spectral Np/ω^y/m
+                        // coefficient on its own path; the two unit domains
+                        // meet only as `alpha_0_si`.
+                        let (alpha_db_cm, alpha_np_m, y) = match alpha_coeff {
+                            Some(requested) => (*requested, 0.0, y_config),
                             None => {
                                 let y_medium = medium.alpha_power(x, y_coord, z, grid);
                                 // y = 1 is degenerate only for the causal form.
                                 let degenerate = y_medium.abs() <= 1e-12
                                     || (dispersive && (y_medium - 1.0).abs() <= 1e-12);
                                 let y = if !degenerate { y_medium } else { y_config };
-                                (medium.alpha_coefficient(x, y_coord, z, grid), y)
+                                (
+                                    0.0,
+                                    medium.alpha_coefficient(x, y_coord, z, grid).into_base(),
+                                    y,
+                                )
                             }
                         };
 
                         let c0_val = medium.sound_speed(i, j, k).into_base();
-                        let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, y);
+                        let alpha_0_si = if alpha_coeff.is_some() {
+                            power_law_db_cm_to_np_omega_m(alpha_db_cm, y)
+                        } else {
+                            alpha_np_m * (1.0 / (TWO_PI * REFERENCE_FREQUENCY_HZ)).powf(y)
+                        };
 
                         // Treeby & Cox (2010) Eqs. 19–20
                         tau[[i, j, k]] = -2.0 * alpha_0_si * c0_val.powf(y - 1.0);
@@ -342,8 +358,9 @@ fn build_relaxation_kernel(
                 let c0_val = medium.sound_speed(i, j, k).into_base();
                 let alpha_np_m =
                     causal_alpha_0.unwrap_or_else(|| relaxation.attenuation(omega_ref, c0_val));
-                let alpha_db_cm = np_m_to_power_law_db_cm(alpha_np_m, f_ref, y_eff);
-                let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, y_eff);
+                // The dB round trip (Np/m → dB/cm → Np/ω^y/m) is exactly
+                // α_np_m / ω_ref^y; write it directly in SI.
+                let alpha_0_si = alpha_np_m / omega_ref.powf(y_eff);
 
                 tau[[i, j, k]] = -2.0 * alpha_0_si * c0_val.powf(y_eff - 1.0);
                 eta[[i, j, k]] = 2.0

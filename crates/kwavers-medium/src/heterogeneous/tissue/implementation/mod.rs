@@ -25,8 +25,8 @@ mod viscous;
 /// - Per-voxel tissue type mapping with spatial region assignment
 /// - Frequency-dependent absorption: `absorption_coefficient(f)` returns α(f) in Np/m
 ///   via the power law α(f) = α₀·(f/1 MHz)^y (Szabo 1994 eq. 2)
-/// - `alpha_coefficient()` returns the raw α₀ prefactor [dB/(MHz^y·cm)] for use by
-///   the PSTD fractional Laplacian operator (which handles unit conversion internally)
+/// - `alpha_coefficient()` returns the α₀ prefactor in Np/m at 1 MHz for use by
+///   the PSTD fractional Laplacian operator (no dB conversion downstream)
 ///
 /// ## Not yet implemented
 /// - Temperature-dependent attenuation: α(T) = α₀·(1 + γ(T−T₀))

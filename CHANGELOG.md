@@ -4,6 +4,13 @@
 
 ### Changed
 
+- **Breaking:** `AcousticProperties::alpha_coefficient` returns
+  `ReciprocalLength<f64>` (Np/m at the 1 MHz reference) and
+  `MaterialFields::alpha0_db` becomes `alpha0` in the same SI units. The
+  k-Wave dB convention (`dB/(MHz^y·cm)`) now lives only at user-facing
+  boundaries (solver configs, KZK, Python): every implementor converts once
+  at its trait boundary, and FDTD/PSTD/GPU absorbers scale a true
+  attenuation `α(f) = α₀·(f/1 MHz)^y` with no downstream dB conversion.
 - **Breaking:** `DissolutionModel::radius_rate` returns `Velocity<f64>`. The
   contract already documented `dR/dt` in `m/s`; the sealed trait has two
   implementors, so the change is contained to the dissolution module and its

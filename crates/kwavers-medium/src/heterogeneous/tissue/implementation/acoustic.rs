@@ -25,9 +25,10 @@ impl AcousticProperties for HeterogeneousTissueMedium {
         ReciprocalLength::from_base(alpha_db_per_cm * DB_TO_NP * 100.0)
     }
 
-    fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ReciprocalLength<f64> {
         let (i, j, k) = crate::continuous_to_discrete(x, y, z, grid);
-        self.get_tissue_properties(i, j, k).alpha_0
+        // Table prefactor is dB/(cm·MHz^y); report Np/m at the boundary.
+        ReciprocalLength::from_base(self.get_tissue_properties(i, j, k).alpha_0 * DB_TO_NP * 100.0)
     }
 
     fn alpha_power(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
