@@ -169,7 +169,7 @@ pub(super) enum SurfaceConvention {
     KWave,
     /// The Rayleigh kernel's aperture contract (ADR 035): each sample
     /// deposits exactly `scale`, with the stencil normalised to unit sum, so
-    /// the weighted mass is `area / dx^2` up to rounding. The array transform
+    /// the weighted mass is `area / (dx·dy)` up to rounding. The array transform
     /// is the full rigid transform of the centre, normal and first axis.
     AreaConserving,
 }

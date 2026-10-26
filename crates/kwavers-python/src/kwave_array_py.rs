@@ -174,8 +174,20 @@ impl KWaveArray {
     /// Install a global translation + intrinsic X-Y-Z Euler rotation (degrees)
     /// applied to every element at rasterization time. Mirrors
     /// ``kWaveArray.set_array_position`` in k-wave-python.
-    fn set_array_position(&mut self, translation: (f64, f64, f64), euler_xyz_deg: (f64, f64, f64)) {
-        self.inner.set_array_position(translation, euler_xyz_deg);
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If a translation or angle component is not finite. The previous
+    ///     transform stays in force.
+    fn set_array_position(
+        &mut self,
+        translation: (f64, f64, f64),
+        euler_xyz_deg: (f64, f64, f64),
+    ) -> PyResult<()> {
+        self.inner
+            .set_array_position(translation, euler_xyz_deg)
+            .map_err(|error| PyValueError::new_err(error.to_string()))
     }
 
     /// Remove the global array transform if one was previously installed.

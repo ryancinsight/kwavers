@@ -45,7 +45,9 @@ fn test_set_array_position_matches_manual_position_rotation() {
             .add_rect_rot_element(local, dims.0, dims.1, per_element_euler)
             .expect("valid rectangle element");
     }
-    native.set_array_position(world_translation, global_euler);
+    native
+        .set_array_position(world_translation, global_euler)
+        .expect("finite array pose");
 
     let m_manual = manual.get_array_binary_mask(&grid);
     let m_native = native.get_array_binary_mask(&grid);
@@ -241,7 +243,9 @@ fn area_conserving_rectangle_follows_the_array_transform_rigidly() {
 
     let mut native = KWaveArray::new();
     native.add_planar_aperture_element(geometry);
-    native.set_array_position(translation, global_euler);
+    native
+        .set_array_position(translation, global_euler)
+        .expect("finite array pose");
 
     let rotation = euler_xyz_rotation_matrix(global_euler);
     let rotate = |axis: [f64; 3]| {
@@ -319,7 +323,9 @@ fn kwave_rectangle_follows_the_array_transform_by_centre_only() {
     native
         .add_rect_rot_element(local_centre, width, height, element_euler)
         .expect("valid rectangle element");
-    native.set_array_position(translation, global_euler);
+    native
+        .set_array_position(translation, global_euler)
+        .expect("finite array pose");
 
     let rotation = euler_xyz_rotation_matrix(global_euler);
     let rotated = apply_matrix(&rotation, local_centre);
@@ -345,9 +351,8 @@ fn kwave_rectangle_follows_the_array_transform_by_centre_only() {
     );
 }
 
-/// One rectangle, two conventions (ADR 136): the same 8×2-cell rectangle
-/// carries the k-wave-python mass under `KWave` and the exact area under
-/// `AreaConserving`.
+/// Rounding bound on the normalised weighted mass of `samples` samples whose
+/// exact mass is `exact_mass`.
 ///
 /// Each of the `N` samples deposits `scale / Σ K` times a stencil of at most
 /// `(2·7 + 1)³` weights, where 7 is `ceil(1 / (π · 0.05))`. A sum of `m` terms
@@ -357,11 +362,20 @@ fn kwave_rectangle_follows_the_array_transform_by_centre_only() {
 /// 1, then `|sinc(πx)| ≤ 1 / (π |x|)`), so the absolute mass is at most
 /// `4.25³` times the exact mass. Per-sample normalisation, accumulation into
 /// cells and the final sum contribute `2·N·S + 3·N` terms in total.
-#[test]
-fn rectangle_mass_follows_its_surface_convention() {
+fn mass_rounding_bound(samples: usize, exact_mass: f64) -> f64 {
     const STENCIL_CELLS: f64 = 15.0 * 15.0 * 15.0;
     const AXIS_ABSOLUTE_SUM: f64 = 4.25;
 
+    let sample_count = f64::from_count(samples);
+    let terms = 2.0 * sample_count * STENCIL_CELLS + 3.0 * sample_count;
+    terms * 0.5 * f64::EPSILON * AXIS_ABSOLUTE_SUM.powi(3) * exact_mass
+}
+
+/// One rectangle, two conventions (ADR 136): the same 8×2-cell rectangle
+/// carries the k-wave-python mass under `KWave` and the exact area under
+/// `AreaConserving`. The rounding bound is [`mass_rounding_bound`].
+#[test]
+fn rectangle_mass_follows_its_surface_convention() {
     let dx = 1.0e-4;
     let grid = Grid::new(41, 41, 5, dx, dx, dx).expect("grid");
     let centre = (20.0 * dx, 20.0 * dx, 2.0 * dx);
@@ -377,9 +391,7 @@ fn rectangle_mass_follows_its_surface_convention() {
 
     let mut samples = 0_usize;
     KWaveArray::rasterize_planar_aperture_points(&grid, geometry, |_, _| samples += 1);
-    let sample_count = f64::from_count(samples);
-    let terms = 2.0 * sample_count * STENCIL_CELLS + 3.0 * sample_count;
-    let rounding_bound = terms * 0.5 * f64::EPSILON * AXIS_ABSOLUTE_SUM.powi(3) * exact_mass;
+    let rounding_bound = mass_rounding_bound(samples, exact_mass);
 
     let mut conserving = KWaveArray::new();
     conserving.add_planar_aperture_element(geometry);
@@ -571,5 +583,90 @@ fn convex_array_elements_face_along_their_layout_normals() {
             want[1],
             want[2]
         );
+    }
+}
+
+/// A rectangle's mass is its area counted in cells of the plane it lies in.
+///
+/// The rectangle lies in the xy plane (normal `ẑ`), whose cells measure
+/// `dx × dy` = 100 µm × 200 µm. Its area is 800 µm × 600 µm = 4.8e-7 m², so
+/// the exact mass is `4.8e-7 / 2e-8 = 24` cells; the deleted generator's
+/// `area / dx²` would give 48. The lattice target is `ceil(10 · 24) = 240`
+/// samples, split `ceil(sqrt(240 · 800 / 600)) = ceil(17.89) = 18` across the
+/// width and `ceil(240 / 18) = 14` across the height, so 18 · 14 = 252 samples.
+/// Under `AreaConserving` every sample deposits exactly its share of the
+/// mass, so the weighted mask sums to 24 within [`mass_rounding_bound`].
+#[test]
+fn rectangle_mass_counts_cells_of_its_plane_on_an_anisotropic_grid() {
+    let (dx, dy, dz) = (1.0e-4, 2.0e-4, 1.0e-4);
+    let grid = Grid::new(41, 41, 5, dx, dy, dz).expect("grid");
+    let exact_mass = 24.0;
+
+    let mut kwave = KWaveArray::new();
+    kwave
+        .add_rect_element((20.0 * dx, 20.0 * dy, 2.0 * dz), 8.0e-4, 6.0e-4)
+        .expect("valid rectangle element");
+    let (geometry, _) = planar_element(&kwave, 0);
+
+    let mut samples = 0_usize;
+    let mut sampled_mass = 0.0;
+    KWaveArray::rasterize_planar_aperture_points(&grid, geometry, |_, scale| {
+        samples += 1;
+        sampled_mass += scale;
+    });
+    assert_eq!(samples, 252, "lattice of the xy-plane cell count");
+    assert!(
+        (sampled_mass - exact_mass).abs() <= f64::from_count(samples) * f64::EPSILON * exact_mass,
+        "sampled mass {sampled_mass}, exact {exact_mass}"
+    );
+
+    let mut conserving = KWaveArray::new();
+    conserving.add_planar_aperture_element(geometry);
+    let weighted_mass: f64 = weighted_values(&conserving, &grid).iter().sum();
+    let bound = mass_rounding_bound(samples, exact_mass);
+    assert!(
+        (weighted_mass - exact_mass).abs() <= bound,
+        "weighted mass {weighted_mass}, exact {exact_mass}, bound {bound}"
+    );
+}
+
+/// A non-finite array pose is rejected with the offending parameter named, and
+/// the previously installed transform stays in force.
+///
+/// The area-conserving transform rotates a validated frame without
+/// re-validating it, so an `inf` or NaN pose would otherwise yield a
+/// non-finite aperture frame.
+#[test]
+fn array_position_rejects_non_finite_pose_and_keeps_the_previous_one() {
+    use kwavers_core::error::{ConfigError, KwaversError};
+
+    let mut array = KWaveArray::new();
+    array
+        .set_array_position((1.0e-3, 0.0, 0.0), (0.0, 0.0, 30.0))
+        .expect("finite pose");
+    let installed = array.array_transform;
+    assert!(installed.is_some());
+
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        for (parameter, translation, euler) in [
+            ("array_translation_m", (0.0, bad, 0.0), (0.0, 0.0, 0.0)),
+            ("array_translation_m", (bad, 0.0, 0.0), (0.0, 0.0, 0.0)),
+            ("array_euler_xyz_deg", (0.0, 0.0, 0.0), (0.0, 0.0, bad)),
+            ("array_euler_xyz_deg", (0.0, 0.0, 0.0), (bad, 0.0, 0.0)),
+        ] {
+            let outcome = array.set_array_position(translation, euler);
+            assert!(
+                matches!(
+                    &outcome,
+                    Err(KwaversError::Config(ConfigError::InvalidValue { parameter: name, constraint, .. }))
+                        if name == parameter && constraint == "all components finite"
+                ),
+                "{parameter} = {bad}: got {outcome:?}"
+            );
+            assert_eq!(
+                array.array_transform, installed,
+                "a rejected pose changes nothing"
+            );
+        }
     }
 }

@@ -5,7 +5,7 @@
 //!
 //! Every rectangle, including the k-Wave-named `add_rect_*` elements, is a
 //! planar aperture (ADR 136). A rectangle is sampled on a midpoint lattice of
-//! `ceil(10·A/dx²)` points split by aspect ratio, placed on the aperture's
+//! `ceil(10·A/(dx·dy))` points split by aspect ratio, placed on the aperture's
 //! first axis and `normal × first_axis`; a single sample along an axis sits at
 //! the centre. A sample deposits either the unnormalised BLI stencil
 //! ([`SurfaceConvention::KWave`], k-wave-python's contract) or the stencil
@@ -293,9 +293,10 @@ impl KWaveArray {
         );
     }
 
-    /// Emit equal-area surface samples whose total BLI mass is `area / dx^2`:
-    /// a polar lattice for disks and annular sectors, a rectangular midpoint
-    /// lattice with near-square cells for rectangles.
+    /// Emit equal-area surface samples whose total BLI mass is `area / (dx·dy)`,
+    /// the area counted in cells of the xy plane (equal to `area / dx²` on an
+    /// isotropic grid): a polar lattice for disks and annular sectors, a
+    /// rectangular midpoint lattice with near-square cells for rectangles.
     pub(super) fn rasterize_planar_aperture_points<F>(
         grid: &kwavers_grid::Grid,
         geometry: PlanarApertureGeometry,
