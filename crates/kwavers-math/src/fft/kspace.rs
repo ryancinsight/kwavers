@@ -50,15 +50,24 @@ impl KSpaceCalculator {
 #[inline]
 #[must_use]
 pub fn wavenumber_vec_positive_nyquist(n: usize, d: f64) -> Vec<f64> {
-    let dk = TWO_PI / (n as f64 * d);
-    let signed = |i: usize| {
-        if i <= n / 2 {
-            i as isize
-        } else {
-            i as isize - n as isize
-        }
-    };
-    (0..n).map(|i| signed(i) as f64 * dk).collect()
+    use eunomia::F64;
+
+    // Counts convert through the conversion module that owns them:
+    // `from_count` is exact below 2^53 and rounds to nearest, ties to even,
+    // above it -- the same mapping the `as` casts performed. The negative
+    // branch negates the exact magnitude instead of routing through a signed
+    // index type, so no `usize -> isize` conversion exists at all; negation
+    // commutes with the scaling multiplication exactly.
+    let dk = TWO_PI / (F64::from_count(n).0 * d);
+    (0..n)
+        .map(|i| {
+            if i <= n / 2 {
+                F64::from_count(i).0 * dk
+            } else {
+                -(F64::from_count(n - i).0 * dk)
+            }
+        })
+        .collect()
 }
 
 impl KSpaceCalculator {

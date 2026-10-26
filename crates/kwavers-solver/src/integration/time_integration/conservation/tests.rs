@@ -78,7 +78,9 @@ fn test_energy_computation() {
         monitor.compute_total_energy(&pressure, &velocity_x, &velocity_y, &velocity_z, &medium);
 
     let dv = grid.dx * grid.dy * grid.dz;
-    let expected_energy = 1000.0 * 1e5 / 0.1 * dv;
+    // Water here has γ = Cp/Cv = 1 (liquid Cv ≈ Cp), so the monitor's
+    // isothermal branch counts kinetic energy only; velocities are zero.
+    let expected_energy = 0.0;
     assert_relative_roundoff_eq(energy, expected_energy, pressure.len());
 
     // Compute acoustic energy
@@ -119,7 +121,8 @@ fn energy_computation_preserves_logical_order_for_nonstandard_layouts() {
                 let vy = velocity_y[[i, j, k]];
                 let vz = velocity_z[[i, j, k]];
                 let kinetic = 0.5 * 1000.0 * vz.mul_add(vz, vx.mul_add(vx, vy * vy));
-                expected_total += (kinetic + p / 0.1) * dv;
+                // γ = 1 liquid branch: total energy is kinetic only.
+                expected_total += kinetic * dv;
 
                 let potential = p * p / (2.0 * 1000.0 * 1500.0_f64.powi(2));
                 expected_acoustic += (potential + kinetic) * dv;

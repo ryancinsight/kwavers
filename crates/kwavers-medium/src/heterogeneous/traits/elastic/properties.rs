@@ -5,20 +5,21 @@
 
 use crate::elastic::{ElasticArrayAccess, ElasticProperties};
 use crate::heterogeneous::core::HeterogeneousMedium;
+use aequitas::systems::si::quantities::Pressure;
 use kwavers_grid::Grid;
 use leto::Array3;
 
 impl ElasticProperties for HeterogeneousMedium {
     /// Lamé's first parameter λ at continuous coordinates (Pa)
     #[inline]
-    fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.lookup_field(&self.lame_lambda, x, y, z, grid)
+    fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Pressure<f64> {
+        Pressure::from_base(self.lookup_field(&self.lame_lambda, x, y, z, grid))
     }
 
     /// Lamé's second parameter μ (shear modulus) at continuous coordinates (Pa)
     #[inline]
-    fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.lookup_field(&self.lame_mu, x, y, z, grid)
+    fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Pressure<f64> {
+        Pressure::from_base(self.lookup_field(&self.lame_mu, x, y, z, grid))
     }
 }
 

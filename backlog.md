@@ -48,7 +48,6 @@
 <a id="kw-sim-test-compile-graph"></a>- [KW-SIM-TEST-COMPILE-GRAPH](backlog/kw-sim-test-compile-graph.md) — Reduce simulation test build latency [patch] [perf] — in-progress
 <a id="kw-sol-054"></a>- [KW-SOL-054](backlog/kw-sol-054.md) — Repair AVX-512 FDTD layout contract [patch] — todo
 <a id="kw-swe-edge-growth-2026-09-17"></a>- [KW-SWE-EDGE-GROWTH-2026-09-17](backlog/kw-swe-edge-growth-2026-09-17.md) — Elastic displacement grows without bound when the initial field reaches the edges [patch] [fix] — todo
-<a id="kw-tissue-factory-prefactor"></a>- [KW-TISSUE-FACTORY-PREFACTOR](backlog/kw-tissue-factory-prefactor.md) — TissueFactory scales α₀ by 0.18 before PSTD reads it as the 1 MHz prefactor [patch] [fix] — todo
 <a id="kwavers-aeq-met-66"></a>- [KWAVERS-AEQ-MET-66](backlog/kwavers-aeq-met-66.md) — Type thermal-diffusion quantities [major] [arch] — blocked
 <a id="kwavers-aeq-met-69"></a>- [KWAVERS-AEQ-MET-69](backlog/kwavers-aeq-met-69.md) — Type B-mode scan-conversion geometry [major] [arch] — in-progress
 <a id="kwavers-aeq-met-flex"></a>- [KWAVERS-AEQ-MET-FLEX](backlog/kwavers-aeq-met-flex.md) — Type the flexible-array dynamic metrics [arch] [major] — blocked

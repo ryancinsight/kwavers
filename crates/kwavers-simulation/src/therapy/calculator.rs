@@ -217,8 +217,21 @@ mod tests {
         let heat_source = calculator
             .calculate_heat_source(&pressure, &medium, &grid)
             .unwrap();
-        let expected = pressure.mapv(|p| absorption * p * p / (density * sound_speed));
+        // Q = 2αI with I = p²/(2ρc), i.e. Q = α·p²/(ρc), where α is the
+        // typed Np/m value: the stored 3.0 dB/(cm·MHz^y) prefactor converted
+        // × DB_TO_NP [Np/dB] × 100 [cm/m] (Szabo 1994; y = 0 here).
+        use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
+        let alpha_np_m = absorption * DB_TO_NP * 100.0;
+        let expected = pressure.mapv(|p| alpha_np_m * p * p / (density * sound_speed));
 
-        assert_eq!(heat_source, expected);
+        // Exact equality is not expected: the calculator forms Q = 2αI with
+        // I = p²/(2ρc), a different operation order from the α·p²/(ρc) closed
+        // form below. Agreement must hold to 1e-12 relative.
+        for (got, want) in heat_source.iter().zip(expected.iter()) {
+            assert!(
+                (got / want - 1.0).abs() <= 1e-12 || (got == want),
+                "Q mismatch: got {got}, want {want}"
+            );
+        }
     }
 }

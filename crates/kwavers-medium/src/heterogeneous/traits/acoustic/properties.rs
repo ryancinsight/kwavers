@@ -8,7 +8,9 @@ use crate::{
     acoustic::AcousticProperties,
     core::{ArrayAccess, CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
 };
-use aequitas::systems::si::quantities::{Dimensionless, MassDensity, ReciprocalLength, Velocity};
+use aequitas::systems::si::quantities::{
+    Dimensionless, Frequency, MassDensity, ReciprocalLength, Velocity,
+};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 
@@ -43,8 +45,8 @@ impl CoreMedium for HeterogeneousMedium {
     }
 
     /// Get reference frequency for absorption calculations
-    fn reference_frequency(&self) -> f64 {
-        self.reference_frequency
+    fn reference_frequency(&self) -> Frequency<f64> {
+        Frequency::from_base(self.reference_frequency)
     }
 
     /// Check if medium properties are spatially varying
@@ -123,7 +125,12 @@ impl AcousticProperties for HeterogeneousMedium {
         let base_absorption = self.lookup_field(&self.absorption, x, y, z, grid);
         let exponent = self.lookup_field(&self.alpha_power, x, y, z, grid);
         let freq_ratio = frequency / self.reference_frequency;
-        ReciprocalLength::from_base(base_absorption * freq_ratio.powf(exponent))
+        // Storage is the power-law prefactor α₀ [dB/(cm·MHz^y)] (see
+        // `alpha_coefficient`); convert dB/cm to Np/m like the tissue
+        // implementor: × 100 [cm/m] × DB_TO_NP [Np/dB] (Szabo 1994).
+        ReciprocalLength::from_base(
+            base_absorption * freq_ratio.powf(exponent) * kwavers_core::constants::DB_TO_NP * 100.0,
+        )
     }
 
     /// Power-law prefactor α₀ [dB/(MHz^y·cm)] at the given continuous coordinates.

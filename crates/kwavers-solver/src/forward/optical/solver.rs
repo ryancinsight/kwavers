@@ -93,7 +93,9 @@ impl OpticalDiffusionSolver {
             for j in 0..grid.ny {
                 for i in 0..grid.nx {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    mu_a[[i, j, k]] = medium.optical_absorption_coefficient(x, y, z, &grid);
+                    mu_a[[i, j, k]] = medium
+                        .optical_absorption_coefficient(x, y, z, &grid)
+                        .into_base();
                     mu_s_prime[[i, j, k]] = medium
                         .optical_reduced_scattering_coefficient(x, y, z, &grid)
                         .map_err(|error| {

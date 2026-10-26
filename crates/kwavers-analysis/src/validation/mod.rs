@@ -126,7 +126,7 @@ pub fn validate_absorption_model(
 
     let alpha_theory = kwavers_core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0
         * (frequency / kwavers_core::constants::MHZ_TO_HZ).powi(2);
-    let alpha_np_m = alpha_theory * kwavers_core::constants::DB_TO_NP; // Convert dB/cm to Np/cm (DB_TO_NP = ln(10)/20)
+    let alpha_np_m = alpha_theory * kwavers_core::constants::DB_TO_NP * 100.0; // dB/cm -> Np/m: x DB_TO_NP [Np/dB] x 100 [cm/m]
 
     // Get implementation's absorption
     use kwavers_medium::AcousticProperties;

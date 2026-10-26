@@ -43,10 +43,14 @@ pub trait ThermalProperties: CoreMedium {
     /// Get thermal expansion coefficient (1/K)
     fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ReciprocalTemperature;
 
-    /// Get specific heat ratio (γ = Cp/Cv)
-    fn specific_heat_ratio(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Dimensionless {
-        // Default for liquids
-        Dimensionless::from_base(1.1)
+    /// Get specific heat ratio (γ = Cp/Cv), by definition the ratio of the
+    /// specific_heat_capacity (Cp) and specific_heat (Cv) getters. With
+    /// the liquid default Cv ≈ Cp this yields γ ≈ 1 (water: 1.01), keeping
+    /// the three getters mutually consistent.
+    fn specific_heat_ratio(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Dimensionless {
+        let cp = self.specific_heat_capacity(x, y, z, grid).into_base();
+        let cv = self.specific_heat(x, y, z, grid).into_base();
+        Dimensionless::from_base(if cv > 0.0 { cp / cv } else { 1.0 })
     }
 
     /// Get adiabatic index (same as specific heat ratio)

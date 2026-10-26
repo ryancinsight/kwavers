@@ -6,40 +6,37 @@
 //! `proteus::elastic::IsotropicModuli`; the grid-side operators stay here.
 
 use crate::core::{ArrayAccess, CoreMedium};
+use aequitas::systems::si::quantities::{Pressure, Velocity};
 use kwavers_grid::Grid;
 use leto::Array3;
 
 /// Trait for elastic medium properties
 pub trait ElasticProperties: CoreMedium {
     /// Returns Lamé's first parameter λ (Pa)
-    fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Pressure<f64>;
 
     /// Returns Lamé's second parameter μ (shear modulus) (Pa)
-    fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Pressure<f64>;
 
     /// Calculates shear wave speed (m/s)
-    fn shear_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let mu = self.lame_mu(x, y, z, grid);
+    fn shear_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Velocity<f64> {
+        let mu = self.lame_mu(x, y, z, grid).into_base();
         let (i, j, k) = crate::continuous_to_discrete(x, y, z, grid);
         let rho = self.density(i, j, k).into_base();
-        if rho > 0.0 {
-            (mu / rho).sqrt()
-        } else {
-            0.0
-        }
+        Velocity::from_base(if rho > 0.0 { (mu / rho).sqrt() } else { 0.0 })
     }
 
     /// Calculates compressional wave speed (m/s)
-    fn compressional_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let lambda = self.lame_lambda(x, y, z, grid);
-        let mu = self.lame_mu(x, y, z, grid);
+    fn compressional_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Velocity<f64> {
+        let lambda = self.lame_lambda(x, y, z, grid).into_base();
+        let mu = self.lame_mu(x, y, z, grid).into_base();
         let (i, j, k) = crate::continuous_to_discrete(x, y, z, grid);
         let rho = self.density(i, j, k).into_base();
-        if rho > 0.0 {
+        Velocity::from_base(if rho > 0.0 {
             (2.0f64.mul_add(mu, lambda) / rho).sqrt()
         } else {
             0.0
-        }
+        })
     }
 }
 
