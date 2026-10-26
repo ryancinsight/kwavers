@@ -238,8 +238,14 @@ pub fn generate_kzk_acoustic_field(
     let b_over_a = medium
         .nonlinearity_parameter(0.0, 0.0, 0.0, grid)
         .into_base();
-    let alpha0 = medium.alpha_coefficient(0.0, 0.0, 0.0, grid);
     let alpha_power = medium.alpha_power(0.0, 0.0, 0.0, grid);
+    // KZKConfig carries the k-Wave dB prefactor; convert the SI boundary
+    // value back at f_ref, where the power ratio is exactly 1.
+    let alpha0 = kwavers_physics::acoustics::mechanics::absorption::np_m_to_power_law_db_cm(
+        medium.alpha_coefficient(0.0, 0.0, 0.0, grid).into_base(),
+        kwavers_core::constants::MHZ_TO_HZ,
+        alpha_power,
+    );
 
     // KZK time discretisation: 20 samples per fundamental period, CFL-safe.
     let frequency = acoustic_params.frequency;
@@ -342,8 +348,14 @@ fn generate_kzk_collimated(
     let b_over_a = medium
         .nonlinearity_parameter(0.0, 0.0, 0.0, grid)
         .into_base();
-    let alpha0 = medium.alpha_coefficient(0.0, 0.0, 0.0, grid);
     let alpha_power = medium.alpha_power(0.0, 0.0, 0.0, grid);
+    // KZKConfig carries the k-Wave dB prefactor; convert the SI boundary
+    // value back at f_ref, where the power ratio is exactly 1.
+    let alpha0 = kwavers_physics::acoustics::mechanics::absorption::np_m_to_power_law_db_cm(
+        medium.alpha_coefficient(0.0, 0.0, 0.0, grid).into_base(),
+        kwavers_core::constants::MHZ_TO_HZ,
+        alpha_power,
+    );
 
     let frequency = acoustic_params.frequency;
     let dt_cfl = 0.3 * grid.dx / c0;

@@ -88,7 +88,8 @@ impl<'a> CtMediumBuilder<'a> {
 
         // Overwrite every acoustic field with the per-voxel HU mapping. These are
         // exactly the fields the solver's acoustic traits read: `absorption` is
-        // the α₀ prefactor (alpha_coefficient), `alpha_power` the exponent y, and
+        // the α₀ prefactor in dB storage (reported as Np/m by
+        // alpha_coefficient), `alpha_power` the exponent y, and
         // `nonlinearity`/`b_a` the B/A parameter.
         medium.density = self.ct.mapv(|hu| model.density(hu));
         medium.sound_speed = self.ct.mapv(|hu| model.sound_speed(hu));

@@ -205,7 +205,8 @@ fn test_default_alpha_power_is_one() {
 
 /// **Regression (KW-TISSUE-FACTORY-PREFACTOR):** the factory stores the Szabo
 /// prefactor α₀ = 0.5 dB/(cm·MHz^y) at 1 MHz with f_ref = 1 MHz, so the typed
-/// Np/m getter matches at the reference and the raw getter returns 0.5.
+/// Np/m getter matches at the reference and the prefactor getter returns the
+/// same value converted to Np/m (× DB_TO_NP × 100).
 #[test]
 fn tissue_factory_stores_1mhz_prefactor() {
     use crate::heterogeneous::factory::tissue::TissueFactory;
@@ -213,8 +214,9 @@ fn tissue_factory_stores_1mhz_prefactor() {
     use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
     let grid = small_grid();
     let medium = TissueFactory::create_tissue_medium(&grid);
-    let raw = medium.alpha_coefficient(1.5, 1.5, 1.5, &grid);
-    assert!((raw - ACOUSTIC_ABSORPTION_TISSUE).abs() < f64::EPSILON);
+    let prefactor_si = medium.alpha_coefficient(1.5, 1.5, 1.5, &grid).into_base();
+    let expected_prefactor_si = ACOUSTIC_ABSORPTION_TISSUE * DB_TO_NP * 100.0;
+    assert!((prefactor_si - expected_prefactor_si).abs() < f64::EPSILON);
     let got = medium
         .absorption_coefficient(1.5, 1.5, 1.5, &grid, MHZ_TO_HZ)
         .into_base();

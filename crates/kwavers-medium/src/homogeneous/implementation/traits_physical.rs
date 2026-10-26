@@ -37,8 +37,11 @@ impl AcousticProperties for HomogeneousMedium {
         )
     }
 
-    fn alpha_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.absorption_alpha
+    fn alpha_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> ReciprocalLength<f64> {
+        // Stored prefactor is dB/(cm·MHz^y); report Np/m at the boundary.
+        ReciprocalLength::from_base(
+            self.absorption_alpha * kwavers_core::constants::DB_TO_NP * 100.0,
+        )
     }
 
     fn alpha_power(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {

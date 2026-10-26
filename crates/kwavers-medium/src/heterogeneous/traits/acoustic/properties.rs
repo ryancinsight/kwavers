@@ -133,13 +133,21 @@ impl AcousticProperties for HeterogeneousMedium {
         )
     }
 
-    /// Power-law prefactor α₀ [dB/(MHz^y·cm)] at the given continuous coordinates.
+    /// Power-law prefactor α₀ in Np/m at the 1 MHz reference, at the given
+    /// continuous coordinates.
     ///
-    /// Returns the spatially interpolated absorption prefactor from `self.absorption`.
-    /// The default trait implementation returns 0.0 (lossless), so this override is
-    /// required for `effective_alpha_db` in the solver to pick up the medium's field.
-    fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.lookup_field(&self.absorption, x, y, z, grid)
+    /// Returns the spatially interpolated absorption prefactor from
+    /// `self.absorption`, converted from its dB storage to Np/m at this
+    /// boundary. The default trait implementation returns 0 (lossless), so
+    /// this override is required for the solver to pick up the medium's field.
+    /// The solver's former `effective_alpha_db` rule now resolves the SI
+    /// prefactor here.
+    fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ReciprocalLength<f64> {
+        ReciprocalLength::from_base(
+            self.lookup_field(&self.absorption, x, y, z, grid)
+                * kwavers_core::constants::DB_TO_NP
+                * 100.0,
+        )
     }
 
     /// Per-voxel power-law exponent y at the given continuous coordinates.

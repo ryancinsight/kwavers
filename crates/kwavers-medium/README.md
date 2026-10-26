@@ -48,9 +48,10 @@ let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4).unwrap();
 let water = HomogeneousMedium::water(&grid);
 
 // Properties are queried per grid point; a homogeneous medium answers uniformly.
-let c = water.sound_speed(8, 8, 8);
+// Quantities unwrap to SI base units at the boundary.
+let c = water.sound_speed(8, 8, 8).into_base();
 assert!((c - 1500.0).abs() < 20.0);
-assert!((water.density(0, 0, 0) - water.density(8, 8, 8)).abs() < f64::EPSILON);
+assert!((water.density(0, 0, 0).into_base() - water.density(8, 8, 8).into_base()).abs() < f64::EPSILON);
 ```
 
 ## Documentation

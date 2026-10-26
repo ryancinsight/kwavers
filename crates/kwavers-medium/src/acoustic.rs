@@ -60,14 +60,16 @@ pub trait AcousticProperties: CoreMedium {
         Dimensionless::from_base(1.0 + self.nonlinearity_parameter(x, y, z, grid).into_base() / 2.0)
     }
 
-    /// Get the raw power-law absorption prefactor α₀ at 1 MHz [dB/(MHz^y·cm)].
+    /// Get the power-law absorption prefactor α₀ at the 1 MHz reference, in
+    /// Np/m (SI). The k-Wave dB convention (`dB/(MHz^y·cm)`) lives only in
+    /// user-facing configuration; every implementor converts dB/cm to Np/m
+    /// (× 100 [cm/m] × DB_TO_NP [Np/dB], Szabo 1994) at this boundary, so
+    /// solvers scale a true attenuation: `α(f) = α₀·(f/1 MHz)^y`.
     ///
-    /// The spectral solvers convert this coefficient to
-    /// `Np/((rad/s)^y·m)` at the solver boundary before forming `τ` and `η`.
-    /// Default implementation returns 0 if the medium does not expose an
-    /// explicit power-law coefficient.
-    fn alpha_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.0
+    /// Default implementation returns 0 (lossless) if the medium does not
+    /// expose an explicit power-law coefficient.
+    fn alpha_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> ReciprocalLength<f64> {
+        ReciprocalLength::from_base(0.0)
     }
 
     /// Get the power-law absorption exponent `y`.

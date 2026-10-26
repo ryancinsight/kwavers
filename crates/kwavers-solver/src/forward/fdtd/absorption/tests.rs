@@ -5,7 +5,7 @@
 //! behaviour is covered by the solver-level test in `solver::tests`.
 
 use super::*;
-use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_m;
+use kwavers_core::constants::{DB_TO_NP, MHZ_TO_HZ};
 
 const F_REF: f64 = 1.0e6;
 const DT: f64 = 1.0e-8;
@@ -32,7 +32,9 @@ fn heterogeneous_fields(shape: (usize, usize, usize)) -> MaterialFields {
                 let index = [i, j, k];
                 fields.rho0[index] = if far { 1100.0 } else { 1000.0 };
                 fields.c0[index] = if far { 1600.0 } else { 1540.0 };
-                fields.alpha0_db[index] = if far { 0.75 } else { 0.4 };
+                // SI Np/m at 1 MHz: the dB-quoted media (0.75 / 0.4 dB/cm)
+                // converted once at this user-facing test boundary.
+                fields.alpha0[index] = if far { 0.75 } else { 0.4 } * DB_TO_NP * 100.0;
                 fields.alpha_power[index] = if far { 1.4 } else { 0.8 };
             }
         }
@@ -177,24 +179,25 @@ fn reset_clears_the_memory_history() {
     );
 }
 
-/// The unit conversion into the fit is the medium's own convention. A cell
-/// quoted at `α₀` dB/(MHz^y·cm) must fit an `α` that matches
-/// `power_law_db_cm_to_np_m` at the reference frequency.
+/// The unit conversion into the fit is the SI storage convention. A cell
+/// carrying the 0.5 dB/(MHz^y·cm) medium as Np/m must fit an `α` that matches
+/// that SI prefactor scaled to the reference frequency.
 #[test]
 fn absorption_prefactor_uses_the_medium_unit_convention() {
     let shape = (1usize, 1, 1);
     let mut fields = MaterialFields::new(shape);
     fields.rho0[[0, 0, 0]] = 1000.0;
     fields.c0[[0, 0, 0]] = 1540.0;
-    fields.alpha0_db[[0, 0, 0]] = 0.5;
+    fields.alpha0[[0, 0, 0]] = 0.5 * DB_TO_NP * 100.0;
     fields.alpha_power[[0, 0, 0]] = 1.1;
 
     let absorption = RelaxationAbsorption::new(&fields, &settings(4)).expect("fit converges");
     assert!(absorption.fit_error() < 1.0e-2);
 
     // Reconstruct α at f_ref from the fitted spectrum and compare against the
-    // conversion, so a unit slip anywhere in the chain shows up here.
-    let expected = power_law_db_cm_to_np_m(0.5, 1.1, F_REF);
+    // SI storage scaled to the reference frequency, so a unit slip anywhere
+    // in the chain shows up here.
+    let expected = 0.5 * DB_TO_NP * 100.0 * (F_REF / MHZ_TO_HZ).powf(1.1);
     assert!(expected > 0.0);
     // The fit's own reported error already bounds |fitted − target|/target.
     assert!(

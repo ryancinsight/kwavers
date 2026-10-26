@@ -6,6 +6,9 @@ use kwavers_medium::{core::MIN_PHYSICAL_SOUND_SPEED, Medium};
 
 const POWER_LAW_SENTINEL_TOLERANCE: f64 = 1e-12;
 
+/// Prepared power-law prefactors in SI Np/m at the 1 MHz reference, either
+/// one uniform value (caller's k-Wave dB converted at the resolver boundary)
+/// or one per voxel (medium's typed prefactor, pushed already converted).
 #[derive(Clone, Debug)]
 pub(super) enum PreparedAbsorptionCoefficients {
     Uniform(f64),
@@ -52,11 +55,14 @@ impl PowerLawResolver {
         }
         if alpha_coeff_db > 0.0 {
             validate_active_power_law_exponent(alpha_power)?;
+            // User boundary is k-Wave dB; the prepared coefficients are SI
+            // Np/m at 1 MHz, matching what the medium path pushes.
+            use kwavers_core::constants::DB_TO_NP;
             return Ok(Self {
                 fallback_exponent: alpha_power,
                 exponent: Some(alpha_power),
                 coefficients: None,
-                uniform_coefficient: Some(alpha_coeff_db),
+                uniform_coefficient: Some(alpha_coeff_db * DB_TO_NP * 100.0),
             });
         }
         Ok(Self {
@@ -183,7 +189,7 @@ impl PstdMediumSnapshot {
                         let (x, y, z) = grid.indices_to_coordinates(ix, iy, iz);
                         absorption.push_medium_pair(
                             flat,
-                            medium.alpha_coefficient(x, y, z, grid),
+                            medium.alpha_coefficient(x, y, z, grid).into_base(),
                             medium.alpha_power(x, y, z, grid),
                         )?;
                     }
@@ -285,12 +291,15 @@ mod tests {
 
     #[test]
     fn explicit_absorption_pair_overrides_medium_pair() {
+        // The caller's k-Wave dB prefactor is converted once to SI Np/m at
+        // the resolver boundary.
+        use kwavers_core::constants::DB_TO_NP;
         assert_eq!(
             resolve_power_law_absorption(0.75, 1.5, [(0.4, 1.2)])
                 .expect("valid explicit absorption pair"),
             Some(PowerLawAbsorption {
                 exponent: 1.5,
-                explicit_coefficient: Some(0.75),
+                explicit_coefficient: Some(0.75 * DB_TO_NP * 100.0),
             })
         );
     }
