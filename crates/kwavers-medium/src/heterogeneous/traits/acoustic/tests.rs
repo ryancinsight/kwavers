@@ -220,6 +220,13 @@ fn tissue_factory_stores_1mhz_prefactor() {
         .into_base();
     let expected = ACOUSTIC_ABSORPTION_TISSUE * DB_TO_NP * 100.0;
     assert!((got - expected).abs() <= 1e-12 * expected);
+    // The trait default `attenuation` is the water law: α₀ = 0.0022
+    // dB/(cm·MHz²) at 1 MHz in Np/m — the same conversion, pinned here
+    // so a prefactor regression also moves this expectation.
+    use kwavers_core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0;
+    let atten = medium.attenuation(1.5, 1.5, 1.5, MHZ_TO_HZ, &grid).into_base();
+    let expected_water = WATER_ABSORPTION_ALPHA_0 * DB_TO_NP * 100.0;
+    assert!((atten - expected_water).abs() <= 1e-12 * expected_water);
 }
 
 /// **Theorem:** `TissueFactory` sets alpha_power=1.5 per Szabo (1994) Table I.
