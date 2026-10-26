@@ -192,6 +192,24 @@ def test_kwave_array_and_transducer_surface():
     assert transducer.transmit_apodization == "Hanning"
 
 
+def test_kwave_array_rejects_invalid_rectangles_and_poses_with_value_error():
+    arr = kw.KWaveArray()
+    with pytest.raises(ValueError, match="width_m"):
+        arr.add_rect_element(position=(0.0, 0.0, 0.0), dims=(0.0, 1.0e-3))
+    with pytest.raises(ValueError, match="height_m"):
+        arr.add_rect_element(position=(0.0, 0.0, 0.0), dims=(1.0e-3, float("nan")))
+    with pytest.raises(ValueError, match="center_m"):
+        arr.add_rect_rot_element(
+            position=(float("inf"), 0.0, 0.0), dims=(1.0e-3, 1.0e-3), euler_xyz_deg=(0.0, 0.0, 0.0)
+        )
+    assert arr.num_elements == 0
+
+    with pytest.raises(ValueError, match="array_translation_m"):
+        arr.set_array_position((0.0, float("nan"), 0.0), (0.0, 0.0, 0.0))
+    with pytest.raises(ValueError, match="array_euler_xyz_deg"):
+        arr.set_array_position((0.0, 0.0, 0.0), (0.0, float("inf"), 0.0))
+
+
 def test_kwave_array_disc_focus_generates_planar_weighted_mask():
     grid = kw.Grid(nx=32, ny=32, nz=32, dx=1.0e-3, dy=1.0e-3, dz=1.0e-3)
     arr = kw.KWaveArray()

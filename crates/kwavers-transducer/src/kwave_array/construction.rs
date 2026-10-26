@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 
 use aequitas::systems::si::quantities::{Angle, Length};
 use aequitas::systems::si::units::{Degree, Meter};
@@ -66,15 +66,34 @@ impl KWaveArray {
     /// applied to every element at rasterization time. Mirrors
     /// k-wave-python's `kWaveArray.set_array_position(translation, rotation)`.
     /// Passing zero for both is equivalent to the identity transform.
+    ///
+    /// # Errors
+    /// Returns `KwaversError::Config` naming `array_translation_m` or
+    /// `array_euler_xyz_deg` when a component is not finite. A finite pose
+    /// is a rigid map, which is what the area-conserving aperture transform
+    /// assumes; the previous transform is kept on error.
     pub fn set_array_position(
         &mut self,
         translation: (f64, f64, f64),
         euler_xyz_deg: (f64, f64, f64),
-    ) {
+    ) -> KwaversResult<()> {
+        for (parameter, (x, y, z)) in [
+            ("array_translation_m", translation),
+            ("array_euler_xyz_deg", euler_xyz_deg),
+        ] {
+            if !(x.is_finite() && y.is_finite() && z.is_finite()) {
+                return Err(KwaversError::Config(ConfigError::InvalidValue {
+                    parameter: parameter.to_owned(),
+                    value: format!("{:?}", [x, y, z]),
+                    constraint: "all components finite".to_owned(),
+                }));
+            }
+        }
         self.array_transform = Some(ArrayTransform {
             translation,
             euler_xyz_deg,
         });
+        Ok(())
     }
 
     /// Remove the global array transform if one was previously installed.
@@ -306,7 +325,7 @@ impl KWaveArray {
     /// rectangle.
     ///
     /// The element is area-conserving (`SurfaceConvention::AreaConserving`,
-    /// ADR 136): its weighted mass is `area / dx²` up to rounding, and
+    /// ADR 136): its weighted mass is `area / (dx·dy)` up to rounding, and
     /// `set_array_position` applies the full rigid transform to its centre,
     /// normal and first axis.
     pub fn add_planar_aperture_element(&mut self, geometry: PlanarApertureGeometry) -> &mut Self {

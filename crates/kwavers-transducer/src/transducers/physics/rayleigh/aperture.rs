@@ -189,7 +189,9 @@ impl PlanarApertureGeometry {
     ///
     /// The frame is not re-validated. A rigid map preserves the unit normal,
     /// the in-plane first axis and the shape bounds that `oriented` already
-    /// established, so the caller passes only such an image.
+    /// established, so the caller passes only such an image. A rigid map has
+    /// finite parameters: `KWaveArray::set_array_position` rejects a
+    /// non-finite pose before it can reach this constructor.
     #[must_use]
     pub(crate) const fn with_frame(
         self,
