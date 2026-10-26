@@ -203,6 +203,25 @@ fn test_default_alpha_power_is_one() {
     }
 }
 
+/// **Regression (KW-TISSUE-FACTORY-PREFACTOR):** the factory stores the Szabo
+/// prefactor α₀ = 0.5 dB/(cm·MHz^y) at 1 MHz with f_ref = 1 MHz, so the typed
+/// Np/m getter matches at the reference and the raw getter returns 0.5.
+#[test]
+fn tissue_factory_stores_1mhz_prefactor() {
+    use crate::heterogeneous::factory::tissue::TissueFactory;
+    use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
+    use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
+    let grid = small_grid();
+    let medium = TissueFactory::create_tissue_medium(&grid);
+    let raw = medium.alpha_coefficient(1.5, 1.5, 1.5, &grid);
+    assert!((raw - ACOUSTIC_ABSORPTION_TISSUE).abs() < f64::EPSILON);
+    let got = medium
+        .absorption_coefficient(1.5, 1.5, 1.5, &grid, MHZ_TO_HZ)
+        .into_base();
+    let expected = ACOUSTIC_ABSORPTION_TISSUE * DB_TO_NP * 100.0;
+    assert!((got - expected).abs() <= 1e-12 * expected);
+}
+
 /// **Theorem:** `TissueFactory` sets alpha_power=1.5 per Szabo (1994) Table I.
 /// # Panics
 /// - Panics if `grid must be valid`.
