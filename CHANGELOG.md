@@ -4,6 +4,28 @@
 
 ### Changed
 
+- **Breaking:** `DissolutionModel::radius_rate` returns `Velocity<f64>`. The
+  contract already documented `dR/dt` in `m/s`; the sealed trait has two
+  implementors, so the change is contained to the dissolution module and its
+  integrator. `EpsteinPlessetDissolution` and `ShellPermeationDissolution`
+  both construct at their formula boundary, the shelled model reads its core
+  model's rate with `into_base` to apply the permeation resistance, and the
+  RK4 integrator unwraps once where it needs a scalar. `AcousticElasticCoupling`
+  is left untyped on purpose: it has no implementor in the workspace, so
+  changing its signature would be an unvalidated contract change rather than a
+  migration, and its documented units are already correct.
+- **Breaking:** `AcousticProperties::acoustic_diffusivity` is removed. The
+  method claimed `m²/s` and had four implementations returning four different
+  dimensions: `k / (ρ·c_p·c)` is metres, `c² / ρ` is `m⁵/(kg·s²)`, the
+  elastic test medium's `α / c²` is seconds, and the tissue medium returned a
+  placeholder zero. Nothing called it — the workspace compiles unchanged
+  without it — and the power-law diffusivity the solvers use,
+  `compute_diffusivity_from_power_law_absorption` (`2αc³/ω²`, genuinely
+  `m²/s`), is a separate function that was never this method. Typing the
+  trait is what surfaced the disagreement: a quantity return type would have
+  forced one dimension onto four formulas that do not produce it, so the
+  method goes rather than gain a unit it cannot honour. This leaves no
+  untyped getter on the acoustic surface.
 - **[patch] The tensor DG uniform-grid projection builds its basis once and
   computes each point's weights once.** A uniform grid index lands on element
   `index / n_nodes` at local position `index % n_nodes`, so the GLL basis
@@ -40,10 +62,10 @@
   where the units are known, and 30 caller sites across 23 files in seven
   crates read `into_base` at the numerical boundary.
   `alpha_coefficient` (dB/(MHz^y·cm), not SI), `alpha_power` (a pure
-  exponent), `acoustic_diffusivity`, and `tissue_type` stay raw, as does every
-  array fast path. This completes the trait-typing work `CoreMedium`'s
-  `sound_speed`, `density`, `absorption`, `nonlinearity` and `max_sound_speed`
-  began, and that the thermal and viscous traits preceded.
+  exponent), and `tissue_type` stay raw, as does every array fast path. This
+  completes the trait-typing work `CoreMedium`'s `sound_speed`, `density`,
+  `absorption`, `nonlinearity` and `max_sound_speed` began, and that the
+  thermal and viscous traits preceded.
 - **[patch] The stack's advisory gate clears: the `zip` crate leaves this
   workspace and the certificate roots move past their advisories.** `zip` 2.4.2
   reached the lock through `gaia-mesh` 0.5.2 and `zip` 6.0.0 through

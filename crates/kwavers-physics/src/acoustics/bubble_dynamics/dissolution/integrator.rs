@@ -51,7 +51,7 @@ pub fn integrate_dissolution(
         };
     }
 
-    let rate = |r: f64, t: f64| model.radius_rate(r, t.max(0.5 * dt_s));
+    let rate = |r: f64, t: f64| model.radius_rate(r, t.max(0.5 * dt_s)).into_base();
 
     let mut t = 0.0_f64;
     let mut r = r0_m;

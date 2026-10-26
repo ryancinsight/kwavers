@@ -2,6 +2,7 @@
 
 use super::epstein_plesset::EpsteinPlessetDissolution;
 use super::traits::{sealed, DissolutionModel, GasDiffusionParams};
+use aequitas::systems::si::quantities::Velocity;
 
 /// Encapsulated-microbubble dissolution: Epstein–Plesset diffusion in series
 /// with the lipid/protein shell's finite gas permeability (Sarkar 2009).
@@ -52,16 +53,16 @@ impl ShellPermeationDissolution {
 impl sealed::Sealed for ShellPermeationDissolution {}
 
 impl DissolutionModel for ShellPermeationDissolution {
-    fn radius_rate(&self, radius_m: f64, time_s: f64) -> f64 {
+    fn radius_rate(&self, radius_m: f64, time_s: f64) -> Velocity<f64> {
         let r = radius_m.max(1e-15);
-        let bare = self.core.radius_rate(r, time_s);
+        let bare = self.core.radius_rate(r, time_s).into_base();
         // Series diffusion + shell-permeation resistance.
         let resistance = if self.shell_permeability > 0.0 {
             1.0 + self.core.params().diffusivity / (r * self.shell_permeability)
         } else {
             f64::INFINITY
         };
-        bare / resistance
+        Velocity::from_base(bare / resistance)
     }
 
     fn params(&self) -> &GasDiffusionParams {

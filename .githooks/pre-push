@@ -595,9 +595,9 @@ done
 # Stack tools are owned by the stack and run from committed revisions, never
 # from the stack checkout. The artifact-budget checker, secret scanner, and
 # lock checker always come from the fetched default (`origin/HEAD`, else
-# `origin/main`). The conformance and source-identity checkers also default to
+# `origin/main`). The conformance, source-identity and cast checkers default to
 # that revision. A provider-preparation push may select one immutable Atlas
-# commit for those two tools only with `git -c atlas.preparedTools=<full-sha>`.
+# commit for those tools only with `git -c atlas.preparedTools=<full-sha>`.
 # The selected revision's `scripts/` is extracted once into the stack's git
 # directory. A standalone clone outside the stack has no baseline, and each
 # tool reports itself unreachable.
@@ -704,11 +704,12 @@ if [ "$prepared_tools_selected" -eq 1 ]; then
   prepared_stack_scripts="$prepared_root/scripts"
   if [ ! -f "$prepared_stack_scripts/atlas-conformance.py" ] \
     || [ ! -f "$prepared_stack_scripts/atlas-build-identity.py" ] \
+    || [ ! -f "$prepared_stack_scripts/atlas_cast_gate.py" ] \
     || [ ! -f "$prepared_stack_scripts/atlas_stack.py" ]; then
     echo "pre-push: BLOCKED -- atlas.preparedTools commit $prepared_tools lacks a required prepared tool." >&2
     exit 1
   fi
-  echo "pre-push: conformance and source identity use prepared Atlas tools $prepared_tools" >&2
+  echo "pre-push: conformance, source identity and cast checks use prepared Atlas tools $prepared_tools" >&2
 fi
 
 # The skips above fall through to the code gate, so this whole section runs
@@ -1043,7 +1044,9 @@ fi
 stack_configs=()
 search_dir="$(dirname "$repo_root")"
 while :; do
-  if [ -f "$search_dir/.cargo/config.toml" ]; then
+  if [ -f "$search_dir/.cargo/config" ]; then
+    stack_configs=("$search_dir/.cargo/config" ${stack_configs[@]+"${stack_configs[@]}"})
+  elif [ -f "$search_dir/.cargo/config.toml" ]; then
     stack_configs=("$search_dir/.cargo/config.toml" ${stack_configs[@]+"${stack_configs[@]}"})
   fi
   parent="$(dirname "$search_dir")"
@@ -1086,14 +1089,12 @@ touch "$gate_root"
 gate_root="$(cd "$gate_root" && { pwd -W 2>/dev/null || pwd; })"
 gate_log=""
 
-# Mirror each config above the export without its `[patch]` table, and find
-# the shared target directory: the nearest config naming `build.target-dir`,
-# relative to the directory holding its `.cargo`. A TOML parser, not a line
-# filter: `[patch]` has dotted-key and inline forms, a patch table can hold an
-# array whose lines begin with `[`, and a target dir may be single-quoted.
-# Prints the directory to export into, then the target directory or nothing.
-if ! gate_layout="$("$python_bin" - "$gate_root" ${stack_configs[@]+"${stack_configs[@]}"} <<'PY'
+# Parse out every TOML form of `[patch]`; print the child directory and target.
+cargo_layout() {
+"$python_bin" - "$@" <<'PY'
+import hashlib
 import json
+import os
 import pathlib
 import sys
 import tomllib
@@ -1130,30 +1131,347 @@ def table(path, body, lines):
             table([*path, name], child, lines)
 
 
-parent = pathlib.Path(sys.argv[1])
-target = ''
-for config in sys.argv[2:]:
-    source = pathlib.Path(config)
+def is_absolute(path):
+    return (
+        pathlib.Path(path).is_absolute()
+        or pathlib.PurePosixPath(path).is_absolute()
+        or pathlib.PureWindowsPath(path).is_absolute()
+    )
+
+
+def rebase_path(item, root):
+    if not isinstance(item, str) or not item or is_absolute(item):
+        return item
+    return os.path.abspath(root / item)
+
+
+def rebase_executable(item, root):
+    if not isinstance(item, str) or ('/' not in item and '\\' not in item):
+        return item
+    return rebase_path(item, root)
+
+
+def rebase_program(item, root):
+    def program_path(program):
+        return rebase_executable(program, root)
+
+    if isinstance(item, list):
+        if not item or not isinstance(item[0], str):
+            return item
+        return [program_path(item[0]), *item[1:]]
+    if not isinstance(item, str):
+        return item
+    arguments = item.split()
+    if not arguments:
+        return item
+    program = program_path(arguments[0])
+    if program == arguments[0]:
+        return item
+    return [program, *arguments[1:]]
+
+
+def credential_alias_environment_key(name):
+    normalized = name.upper().replace('.', '_').replace('-', '_')
+    return 'CARGO_CREDENTIAL_ALIAS_' + normalized
+
+
+def credential_alias_name(
+    aliases, arguments, reserved_aliases, generated_aliases
+):
+    encoded = json.dumps(
+        arguments, ensure_ascii=False, separators=(',', ':')
+    ).encode()
+    base = 'atlas-config-mirror-' + hashlib.sha256(encoded).hexdigest()
+    name = base
+    collision = 0
+    while True:
+        if (
+            name in reserved_aliases
+            or credential_alias_environment_key(name) in os.environ
+        ):
+            pass
+        elif name in generated_aliases:
+            if generated_aliases[name] == arguments:
+                return name
+        elif name not in aliases:
+            aliases[name] = arguments
+            generated_aliases[name] = arguments
+            return name
+        collision += 1
+        name = f'{base}-{collision}'
+
+
+def rebase_credential_provider(
+    item, root, aliases, visible_aliases, generated_aliases
+):
+    if isinstance(item, str):
+        if (
+            (isinstance(aliases, dict) and item in aliases)
+            or item in visible_aliases
+            or item in generated_aliases
+            or credential_alias_environment_key(item) in os.environ
+        ):
+            return item
+    return rebase_program(item, root)
+
+
+def rebase_field(body, name, root, transform=rebase_path):
+    if isinstance(body, dict) and name in body:
+        body[name] = transform(body[name], root)
+
+
+def rebase_config(
+    data, root, reserved_aliases, visible_aliases, generated_aliases
+):
+    # https://doc.rust-lang.org/cargo/reference/config.html#config-relative-paths
+    # File-defined paths resolve from the parent of the defining directory.
+    # Moving a config therefore requires absolute original-relative paths.
+    paths = data.get('paths')
+    if isinstance(paths, list):
+        data['paths'] = [rebase_path(item, root) for item in paths]
+
+    build = data.get('build')
+    for name in ('target-dir', 'dep-info-basedir'):
+        rebase_field(build, name, root)
+    if isinstance(build, dict) and 'build-dir' in build:
+        build_dir = build['build-dir']
+        anchored_template = isinstance(build_dir, str) and build_dir.startswith(
+            ('{workspace-root}', '{cargo-cache-home}')
+        )
+        if not anchored_template:
+            build['build-dir'] = rebase_path(build_dir, root)
+    for name in ('rustc', 'rustc-wrapper', 'rustc-workspace-wrapper', 'rustdoc'):
+        rebase_field(build, name, root, rebase_executable)
+
+    http = data.get('http')
+    for name in ('cainfo', 'proxy-cainfo'):
+        rebase_field(http, name, root)
+    rebase_field(data.get('install'), 'root', root)
+    rebase_field(data.get('resolver'), 'lockfile-path', root)
+
+    sources = data.get('source')
+    if isinstance(sources, dict):
+        for source in sources.values():
+            for name in ('directory', 'local-registry'):
+                rebase_field(source, name, root)
+
+    targets = data.get('target')
+    if isinstance(targets, dict):
+        for target in targets.values():
+            rebase_field(target, 'runner', root, rebase_program)
+            rebase_field(target, 'linker', root, rebase_executable)
+    rebase_field(data.get('doc'), 'browser', root, rebase_program)
+
+    aliases = data.get('credential-alias')
+    if isinstance(aliases, dict):
+        for name, provider in aliases.items():
+            aliases[name] = rebase_program(provider, root)
+    registry = data.get('registry')
+    if isinstance(registry, dict) and 'credential-provider' in registry:
+        registry['credential-provider'] = rebase_credential_provider(
+            registry['credential-provider'], root, aliases,
+            visible_aliases, generated_aliases
+        )
+    if isinstance(registry, dict):
+        providers = registry.get('global-credential-providers')
+        if isinstance(providers, list):
+            rebased_providers = []
+            for provider in providers:
+                rebased = rebase_credential_provider(
+                    provider, root, aliases, visible_aliases,
+                    generated_aliases
+                )
+                if isinstance(provider, str) and isinstance(rebased, list):
+                    if aliases is None:
+                        aliases = {}
+                        data['credential-alias'] = aliases
+                    elif not isinstance(aliases, dict):
+                        raise ValueError('credential-alias must be a table')
+                    rebased = credential_alias_name(
+                        aliases, rebased, reserved_aliases,
+                        generated_aliases
+                    )
+                rebased_providers.append(rebased)
+            registry['global-credential-providers'] = rebased_providers
+    registries = data.get('registries')
+    if isinstance(registries, dict):
+        for registry in registries.values():
+            if isinstance(registry, dict) and 'credential-provider' in registry:
+                registry['credential-provider'] = rebase_credential_provider(
+                    registry['credential-provider'], root, aliases,
+                    visible_aliases, generated_aliases
+                )
+
+    if isinstance(aliases, dict):
+        visible_aliases.update(aliases)
+
+    environment = data.get('env')
+    if isinstance(environment, dict):
+        for setting in environment.values():
+            if isinstance(setting, dict) and setting.get('relative') is True:
+                rebase_field(setting, 'value', root)
+
+
+def resolve_include(entry, source):
+    if isinstance(entry, str):
+        include_path = entry
+        rewritten = None
+    elif isinstance(entry, dict) and isinstance(entry.get('path'), str):
+        include_path = entry['path']
+        rewritten = dict(entry)
+    else:
+        raise ValueError(f'invalid include in {source}')
+    included = pathlib.Path(include_path)
+    if not included.is_absolute():
+        included = source.parent / included
+    included = pathlib.Path(os.path.abspath(included))
+    if included.suffix != '.toml':
+        raise ValueError(f'Cargo include does not end in .toml: {included}')
+    optional = isinstance(entry, dict) and entry.get('optional') is True
+    return included, optional, rewritten
+
+
+def reserve_config_aliases(
+    source, active, visited, reserved_aliases
+):
+    source = pathlib.Path(os.path.abspath(source))
+    if source in active:
+        raise ValueError(f'recursive Cargo include: {source}')
+    if source in visited:
+        return
+    active.add(source)
+    with source.open('rb') as stream:
+        data = tomllib.load(stream)
+    aliases = data.get('credential-alias')
+    if isinstance(aliases, dict):
+        reserved_aliases.update(aliases)
+    includes = data.get('include')
+    if includes is not None:
+        if not isinstance(includes, list):
+            raise ValueError(f'invalid include list in {source}')
+        for entry in includes:
+            included, optional, _ = resolve_include(entry, source)
+            if not included.is_file():
+                if not optional:
+                    raise FileNotFoundError(included)
+                continue
+            reserve_config_aliases(
+                included, active, visited, reserved_aliases
+            )
+    active.remove(source)
+    visited.add(source)
+
+
+def mirror_include(
+    entry, source, include_root, active, mirrored_targets,
+    reserved_aliases, visible_aliases, generated_aliases
+):
+    included, optional, rewritten = resolve_include(entry, source)
+    if not included.is_file():
+        if not optional:
+            raise FileNotFoundError(included)
+        mirrored_path = str(included)
+        included_target = ''
+    else:
+        digest = hashlib.sha256(str(included).encode()).hexdigest()
+        mirrored = include_root / f'{digest}.toml'
+        included_target = mirror_config(
+            included, mirrored, include_root, active, mirrored_targets,
+            reserved_aliases, visible_aliases, generated_aliases
+        )
+        mirrored_path = str(mirrored)
+    if rewritten is None:
+        return mirrored_path, included_target
+    rewritten['path'] = mirrored_path
+    return rewritten, included_target
+
+
+def mirror_config(
+    source, destination, include_root, active, mirrored_targets,
+    reserved_aliases, visible_aliases, generated_aliases
+):
+    source = pathlib.Path(os.path.abspath(source))
+    if source in active:
+        raise ValueError(f'recursive Cargo include: {source}')
+    if source in mirrored_targets:
+        return mirrored_targets[source]
+    active.add(source)
     with source.open('rb') as stream:
         data = tomllib.load(stream)
     data.pop('patch', None)
+    includes = data.get('include')
+    configured_target = ''
+    if includes is not None:
+        if not isinstance(includes, list):
+            raise ValueError(f'invalid include list in {source}')
+        rewritten_includes = []
+        for entry in includes:
+            rewritten, included_target = mirror_include(
+                entry, source, include_root, active, mirrored_targets,
+                reserved_aliases, visible_aliases, generated_aliases
+            )
+            rewritten_includes.append(rewritten)
+            if included_target:
+                configured_target = included_target
+        data['include'] = rewritten_includes
     build = data.get('build')
-    configured = build.get('target-dir') if isinstance(build, dict) else None
-    if isinstance(configured, str) and configured:
-        chosen = pathlib.Path(configured)
-        target = str(chosen if chosen.is_absolute() else source.parent.parent / chosen)
+    own_target = build.get('target-dir') if isinstance(build, dict) else None
+    if isinstance(own_target, str) and own_target:
+        configured_target = rebase_path(own_target, source.parent.parent)
+    rebase_config(
+        data, source.parent.parent, reserved_aliases, visible_aliases,
+        generated_aliases
+    )
     lines = []
     table([], data, lines)
-    (parent / '.cargo').mkdir(parents=True, exist_ok=True)
-    mirrored = parent / '.cargo' / 'config.toml'
+    destination.parent.mkdir(parents=True, exist_ok=True)
     content = ('\n'.join(lines) + '\n').encode()
-    if not mirrored.is_file() or mirrored.read_bytes() != content:
-        mirrored.write_bytes(content)
+    if not destination.is_file() or destination.read_bytes() != content:
+        destination.write_bytes(content)
+    active.remove(source)
+    mirrored_targets[source] = configured_target
+    return configured_target
+
+
+parent = pathlib.Path(sys.argv[1])
+target = ''
+configs = [pathlib.Path(config) for config in sys.argv[2:]]
+cargo_home = pathlib.Path(
+    os.environ.get('CARGO_HOME', pathlib.Path.home() / '.cargo')
+)
+cargo_home_config = cargo_home / 'config'
+if not cargo_home_config.is_file():
+    cargo_home_config = cargo_home / 'config.toml'
+reserved_aliases = set()
+visited = set()
+cargo_home_aliases = set()
+if cargo_home_config.is_file():
+    reserve_config_aliases(
+        cargo_home_config, set(), visited, cargo_home_aliases
+    )
+    reserved_aliases.update(cargo_home_aliases)
+for source in configs:
+    reserve_config_aliases(source, set(), visited, reserved_aliases)
+visible_aliases = set(reserved_aliases)
+generated_aliases = {}
+for source in configs:
+    mirrored = parent / '.cargo' / 'config.toml'
+    configured = mirror_config(
+        source, mirrored, mirrored.parent / 'includes', set(), {},
+        reserved_aliases, visible_aliases, generated_aliases
+    )
+    if configured:
+        target = configured
     parent = parent / 'nested'
+(parent / '.cargo' / 'config.toml').unlink(missing_ok=True)
 print(parent)
 print(target)
 PY
-)"; then
+}
+
+# Member exports inherit mirrored parent configs. Meta exports keep their own
+# config exact; Cargo uses a separate mirror created after export.
+if ! gate_layout="$(cargo_layout "$gate_root" ${stack_configs[@]+"${stack_configs[@]}"})"; then
   echo "pre-push: could not read the stack's cargo configuration" >&2
   exit 1
 fi
@@ -1175,26 +1493,94 @@ if ! export_revision "$gate_sha" "$gate_export"; then
   fi
 fi
 
+# Mirror meta configs and toolchains outside gitlinks, preserving export bytes.
+meta_cargo_command_cwd() {
+  local export_root="$1" workspace_manifest="$2" layout_root="$3"
+  local workspace_root
+  rm -rf "$layout_root" || return 1
+  if ! workspace_root="$(cd "$export_root/$(dirname "$workspace_manifest")" \
+    && { pwd -W 2>/dev/null || pwd; })"; then
+    return 1
+  fi
+  local probe parent selector_name layout command_cwd _target
+  local -a candidate_configs=()
+  probe="$workspace_root"
+  while :; do
+    if [ -f "$probe/.cargo/config" ]; then
+      candidate_configs=("$probe/.cargo/config" ${candidate_configs[@]+"${candidate_configs[@]}"})
+    elif [ -f "$probe/.cargo/config.toml" ]; then
+      candidate_configs=("$probe/.cargo/config.toml" ${candidate_configs[@]+"${candidate_configs[@]}"})
+    fi
+    [ "$probe" = "$export_root" ] && break
+    parent="$(dirname "$probe")"
+    if [ "$parent" = "$probe" ]; then
+      echo "pre-push: BLOCKED -- $workspace_manifest is outside the exported Atlas root" >&2
+      return 1
+    fi
+    probe="$parent"
+  done
+  if ! layout="$(cargo_layout "$layout_root" ${candidate_configs[@]+"${candidate_configs[@]}"})"; then
+    return 1
+  fi
+  { read -r command_cwd; read -r _target || true; } <<<"$layout"
+  [ -n "$command_cwd" ] || return 1
+  mkdir -p "$command_cwd" || return 1
+  rm -f "$command_cwd/rust-toolchain" "$command_cwd/rust-toolchain.toml" || return 1
+  probe="$workspace_root"
+  while :; do
+    for selector_name in rust-toolchain.toml rust-toolchain; do
+      if [ -f "$probe/$selector_name" ]; then
+        cp "$probe/$selector_name" "$command_cwd/$selector_name" || return 1
+      fi
+    done
+    if [ -f "$command_cwd/rust-toolchain" ] || [ -f "$command_cwd/rust-toolchain.toml" ]; then
+      break
+    fi
+    [ "$probe" = "$export_root" ] && break
+    probe="$(dirname "$probe")"
+  done
+  printf '%s\n' "$command_cwd"
+}
+
+cargo_manifest_layout_root() {
+  local kind="$1" manifest="$2" manifest_key
+  if ! manifest_key="$(printf '%s' "$manifest" | git hash-object --stdin)"; then
+    return 1
+  fi
+  printf '%s/%s-%s\n' "$gate_parent" "$kind" "$manifest_key"
+}
+
 run_cargo_workspace_gate() {
   local workspace_manifest="$1"
   local gate_changed="$2"
   local gate_manifest_path="$gate_export/$workspace_manifest"
-  local gate_command_cwd
-  gate_command_cwd="$(dirname "$gate_manifest_path")"
+  local gate_workspace_root gate_cargo_cwd gate_layout_root gate_package_specs
+  local -a gate_manifest gate_specs
+  gate_workspace_root="$(dirname "$gate_manifest_path")"
   if [ ! -f "$gate_manifest_path" ]; then
     echo "pre-push: BLOCKED -- selected Cargo workspace manifest $workspace_manifest is missing from $gate_sha" >&2
     exit 1
   fi
-  # Leading space: the steps render as `cargo doc --no-deps$gate_specs`, and
-  # without it the flag joins the subcommand ("--no-deps--manifest-path").
-  gate_manifest=" --manifest-path $gate_manifest_path"
+  gate_cargo_cwd="$gate_workspace_root"
+  if [ "$stack_member" = "<meta>" ]; then
+    if ! gate_layout_root="$(cargo_manifest_layout_root cargo-candidate "$workspace_manifest")"; then
+      echo "pre-push: BLOCKED -- could not identify the candidate Cargo layout for $workspace_manifest" >&2
+      exit 1
+    fi
+    if ! gate_cargo_cwd="$(meta_cargo_command_cwd "$gate_export" "$workspace_manifest" \
+      "$gate_layout_root")"; then
+      echo "pre-push: BLOCKED -- could not mirror the candidate Cargo configuration for $workspace_manifest" >&2
+      exit 1
+    fi
+  fi
+  gate_manifest=(--manifest-path "$gate_manifest_path")
 
   if [ "$stack_member" = "<meta>" ] \
     && printf '%s\n' "$gate_changed" | grep -qE '(^|/)Cargo\.(lock|toml)$'; then
     if [ ! -f "$checker" ]; then
       echo "pre-push: BLOCKED -- the stack lockfile checker is missing for $workspace_manifest" >&2
       exit 1
-    elif ! (cd "$gate_command_cwd" \
+    elif ! (cd "$gate_cargo_cwd" \
       && "$python_bin" "$checker" --check --manifest-path "$gate_manifest_path"); then
       echo "pre-push: the lock for $workspace_manifest does not resolve under --locked on $gate_sha" >&2
       exit 1
@@ -1207,7 +1593,8 @@ run_cargo_workspace_gate() {
 # Cargo metadata marks each target with `test`; a package none of whose targets
 # has it is skipped by the tests stage only. Its clippy and rustdoc stages stay.
 if ! untestable_packages="$(
-  cd "$gate_command_cwd" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+  cd "$gate_cargo_cwd" && cargo metadata --no-deps --format-version 1 \
+    "${gate_manifest[@]}" |
     "$python_bin" -c 'import json, sys
 sys.stdout.reconfigure(newline="\n")
 metadata = json.load(sys.stdin)
@@ -1228,7 +1615,8 @@ fi
 # `--no-deps` reads membership without resolving dependencies or changing the
 # lockfile. Each output record is `<repo-relative manifest><tab><package name>`.
 if ! workspace_members="$(
-  cd "$gate_command_cwd" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+  cd "$gate_cargo_cwd" && cargo metadata --no-deps --format-version 1 \
+    "${gate_manifest[@]}" |
     "$python_bin" -c 'import json, os, sys
 # LF records: text-mode stdout on Windows writes CRLF, and bash keeps the CR
 # in the package name, so a new-member push gated `helios-core<CR>` beside
@@ -1242,7 +1630,7 @@ for package in metadata["packages"]:
         continue
     manifest = os.path.realpath(package["manifest_path"])
     relative = os.path.relpath(manifest, root).replace(os.sep, "/")
-    print(f"{relative}\t{package['"'"'name'"'"']}")' "$gate_command_cwd"
+    print(f"{relative}\t{package['"'"'name'"'"']}")' "$gate_workspace_root"
 )"; then
   echo "pre-push: cargo metadata could not establish workspace membership" >&2
   echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
@@ -1268,7 +1656,7 @@ while IFS= read -r changed_path; do
   package_dir=""
   excluded_manifest=""
   while [ "$owner_dir" != "." ] && [ "$owner_dir" != "/" ]; do
-    manifest="$gate_command_cwd/$owner_dir/Cargo.toml"
+    manifest="$gate_workspace_root/$owner_dir/Cargo.toml"
     if [ -f "$manifest" ]; then
       if grep -qE '^\[package\]' "$manifest" 2>/dev/null; then
         package_dir="$owner_dir"
@@ -1305,8 +1693,8 @@ while IFS= read -r changed_path; do
       continue
     fi
   fi
-  manifest="$gate_command_cwd/$package_dir/Cargo.toml"
-  relative_manifest="${manifest#"$gate_command_cwd"/}"
+  manifest="$gate_workspace_root/$package_dir/Cargo.toml"
+  relative_manifest="${manifest#"$gate_workspace_root"/}"
   relative_manifest="${relative_manifest#./}"
   package_name="$(printf '%s\n' "$workspace_members" | awk -F '\t' -v manifest="$relative_manifest" '$1 == manifest { print $2; exit }')"
   if [ -z "$package_name" ]; then
@@ -1353,7 +1741,8 @@ fi
 # appends to them, and run_cast_check judges them once, in the tail, after
 # every workspace has contributed.
 if [ -n "$stack_member" ]; then
-  cast_gate="${stack_scripts:+$stack_scripts/atlas_cast_gate.py}"
+  cast_scripts="${prepared_stack_scripts:-$stack_scripts}"
+  cast_gate="${cast_scripts:+$cast_scripts/atlas_cast_gate.py}"
   if [ ! -f "$cast_gate" ] || [ -z "$python_bin" ]; then
     echo "pre-push: BLOCKED -- the stack's cast gate is missing at ${stack_baseline:0:12}." >&2
     exit 1
@@ -1395,8 +1784,8 @@ MESSAGE
 # target at all. A nested virtual workspace, whose members deserve a real
 # gate, is still refused above.
 for standalone_manifest in $standalone_manifests; do
-  if ! (cd "$gate_command_cwd" && cargo metadata --locked --no-deps --format-version 1 \
-    --manifest-path "$gate_command_cwd/$standalone_manifest" >/dev/null 2>&1); then
+  if ! (cd "$gate_cargo_cwd" && cargo metadata --locked --no-deps --format-version 1 \
+    --manifest-path "$gate_workspace_root/$standalone_manifest" >/dev/null 2>&1); then
     cat >&2 <<MESSAGE
 
 pre-push: the lockfile of the standalone crate $standalone_manifest does not
@@ -1410,7 +1799,7 @@ To push anyway: SKIP_LOCAL_GATE=1 git push
 MESSAGE
     exit 1
   fi
-  if ! (cd "$gate_command_cwd" && cargo fmt --manifest-path "$gate_command_cwd/$standalone_manifest" -- --check >/dev/null); then
+  if ! (cd "$gate_cargo_cwd" && cargo fmt --manifest-path "$gate_workspace_root/$standalone_manifest" -- --check >/dev/null); then
     cat >&2 <<MESSAGE
 
 pre-push: \`cargo fmt --check\` fails for the standalone crate $standalone_manifest on $gate_sha.
@@ -1475,8 +1864,9 @@ classify_gate_step() {
   # crate's own workspace -- names its directory and package selection;
   # the defaults are this workspace's export and its gate packages.
   local step_directory="${step_root:-$gate_export}"
+  local step_cargo_cwd="${step_command_cwd:-${gate_cargo_cwd:-$step_directory}}"
   local step_names="${step_selection-$gate_packages}"
-  if (cd "$step_directory" && "$@" >"$log" 2>&1); then
+  if (cd "$step_cargo_cwd" && "$@" >"$log" 2>&1); then
     echo ok
     return 0
   fi
@@ -1567,10 +1957,12 @@ MESSAGE
 }
 
 gate_package_specs=""
+gate_specs=("${gate_manifest[@]}")
 for package_name in $gate_packages; do
   gate_package_specs="$gate_package_specs -p $package_name"
+  gate_specs+=(-p "$package_name")
 done
-gate_specs="$gate_manifest$gate_package_specs --locked"
+gate_specs+=(--locked)
 gate_reproduce="From a checkout of $gate_sha outside the stack overlay:"
 
 identity_scripts="${prepared_stack_scripts:-$stack_scripts}"
@@ -1584,7 +1976,8 @@ if [ -f "$identity_checker" ]; then
     exit 1
   fi
   if ! identity_target_dir="$(
-    cd "$gate_command_cwd" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+    cd "$gate_cargo_cwd" && cargo metadata --no-deps --format-version 1 \
+      "${gate_manifest[@]}" |
       "$python_bin" -c 'import json, sys
 value = json.load(sys.stdin).get("target_directory")
 if not isinstance(value, str) or not value:
@@ -1619,8 +2012,7 @@ run_identity_sequence() {
   local manifest="${step_manifest:-$gate_manifest_path}"
   local chosen="${step_selection-$gate_packages}"
   local manifest_relative="${manifest#"$root"/}"
-  local command_cwd
-  command_cwd="$(dirname "$manifest")"
+  local command_cwd="${step_command_cwd:-$gate_cargo_cwd}"
   local package_name package_arguments=() selection_arguments=() selection=()
   for package_name in $chosen; do
     package_arguments+=(--package "$package_name")
@@ -1650,11 +2042,13 @@ cast_python="$6"
 cast_gate="$7"
 cast_sites="$8"
 manifest_relative="$9"
-shift 9
+command_cwd="${10}"
+shift 10
 cargo_command="${CARGO:-cargo}"
 printf "%s\n" clippy >"$stage_file"
 if [ -n "$cast_gate" ]; then
-  "$cast_python" "$cast_gate" clippy --export "$command_root" --manifest "$manifest_relative" --sites "$cast_sites" "$@" || exit $?
+  "$cast_python" "$cast_gate" clippy --export "$command_root" --manifest "$manifest_relative" \
+    --command-cwd "$command_cwd" --sites "$cast_sites" "$@" || exit $?
 else
   "$cargo_command" clippy --manifest-path "$manifest" --all-targets --locked "$@" || exit $?
 fi
@@ -1668,7 +2062,7 @@ if [ "$run_rustdoc" = 1 ]; then
 fi
 printf "%s\n" verification >"$stage_file"
 ' atlas-pre-push-sequence "$stage_file" "$manifest" "$run_tests" "$run_rustdoc" \
-    "$root" "$python_bin" "${cast_gate:-}" "${cast_sites:-}" "$manifest_relative"
+    "$root" "$python_bin" "${cast_gate:-}" "${cast_sites:-}" "$manifest_relative" "$command_cwd"
     "${selection[@]}"
   )
   local verdict step_name
@@ -1691,7 +2085,7 @@ MESSAGE
 
 pre-push: $step_name fails for$gate_packages, so the source-identity build did not complete.
 MESSAGE
-      grep -m 1 '^error' "$gate_log" >&2 || true
+      tail -n 20 "$gate_log" >&2
       exit 1
       ;;
     environment)
@@ -1714,9 +2108,11 @@ MESSAGE
 # package the base lacks counts zero; new history has no base and is held to
 # the rows.
 
-# package_names <manifest>: the workspace package names of <manifest>.
+# package_names <manifest> [cargo cwd]: the workspace package names of
+# <manifest>, with Cargo configuration discovered from the optional directory.
 package_names() {
-  (cd "$(dirname "$1")" && cargo metadata --no-deps --format-version 1 --manifest-path "$1") |
+  local manifest="$1" command_cwd="${2:-$(dirname "$1")}"
+  (cd "$command_cwd" && cargo metadata --no-deps --format-version 1 --manifest-path "$manifest") |
     "$python_bin" -c 'import json, sys
 sys.stdout.reconfigure(newline="\n")
 print("\n".join(sorted(p["name"] for p in json.load(sys.stdin)["packages"])))'
@@ -1754,6 +2150,7 @@ run_identity_clippy() {
   shift 2
   local root="${step_root:-$gate_export}"
   local manifest="${step_manifest:-$root/Cargo.toml}"
+  local command_cwd="${step_command_cwd:-${gate_cargo_cwd:-$root}}"
   local chosen="${step_selection-$gate_packages}"
   local package_name package_arguments=() selection_arguments=() selection=()
   for package_name in $packages; do
@@ -1774,7 +2171,7 @@ run_identity_clippy() {
     --profile debug
     --target "$identity_target"
     --manifest "$manifest"
-    --command-cwd "$root"
+    --command-cwd "$command_cwd"
     --command-key "${step_key:-atlas-pre-push}"
     --
     "$@"
@@ -1812,13 +2209,26 @@ MESSAGE
 # cast_base_step <manifest-relative> <packages>: the base's sites for those
 # packages, which then join the base comparison.
 cast_base_step() {
-  local relative="$1" wanted="$2" present="" package_name names sites
+  local relative="$1" wanted="$2" present="" package_name names sites base_cargo_cwd
+  local base_layout_root
   [ -n "$base_export" ] || return 0
+  base_cargo_cwd="$base_export"
+  if [ "$stack_member" = "<meta>" ] && [ -f "$base_export/$relative" ]; then
+    if ! base_layout_root="$(cargo_manifest_layout_root cargo-base "$relative")"; then
+      echo "pre-push: BLOCKED -- could not identify the base Cargo layout for $relative" >&2
+      exit 1
+    fi
+    if ! base_cargo_cwd="$(meta_cargo_command_cwd "$base_export" "$relative" \
+      "$base_layout_root")"; then
+      echo "pre-push: BLOCKED -- could not mirror the base Cargo configuration for $relative" >&2
+      exit 1
+    fi
+  fi
   sites="$(mktemp "$tmp_base/pg-casts.XXXXXX")"
   run_temps+=("$sites")
   printf '[]' > "$sites"
   if [ -f "$base_export/$relative" ]; then
-    names="$(package_names "$base_export/$relative" | tr -d '\r')" || {
+    names="$(package_names "$base_export/$relative" "$base_cargo_cwd" | tr -d '\r')" || {
       echo "pre-push: BLOCKED -- cargo metadata fails for $relative at the pushed base ${gate_base:0:12}, so the cast gate cannot judge it." >&2
       exit 1
     }
@@ -1830,10 +2240,12 @@ cast_base_step() {
   fi
   if [ -n "${present// /}" ]; then
     local status=0
-    step_root="$base_export" step_manifest="$base_export/$relative" step_selection="$present" \
+    step_root="$base_export" step_manifest="$base_export/$relative" \
+      step_command_cwd="$base_cargo_cwd" step_selection="$present" \
       step_key="atlas-pre-push-casts-base" step_ours=return \
       run_identity_clippy "base clippy" "$present" "$python_bin" "$cast_gate" clippy \
-        --export "$base_export" --manifest "$relative" --sites "$sites" --present-only \
+        --export "$base_export" --manifest "$relative" --command-cwd "$base_cargo_cwd" \
+        --sites "$sites" --present-only \
       || status=$?
     if [ "$status" -ne 0 ]; then
       if base_does_not_compile "$gate_log" "$present"; then
@@ -1884,10 +2296,10 @@ if [ -n "$cast_gate" ]; then
     fi
   fi
   if [ -n "${gate_packages// /}" ]; then
-    cast_base_step Cargo.toml "$gate_packages"
+    cast_base_step "$workspace_manifest" "$gate_packages"
   fi
   for standalone_manifest in $standalone_manifests; do
-    standalone_names="$(package_names "$gate_export/$standalone_manifest" | tr -d '\r')" || {
+    standalone_names="$(package_names "$gate_export/$standalone_manifest" "$gate_cargo_cwd" | tr -d '\r')" || {
       echo "pre-push: BLOCKED -- cargo metadata fails for the standalone crate $standalone_manifest, so the cast gate cannot judge it." >&2
       exit 1
     }
@@ -1895,10 +2307,12 @@ if [ -n "$cast_gate" ]; then
     standalone_sites="$(mktemp "$tmp_base/pg-casts.XXXXXX")"
     run_temps+=("$standalone_sites")
     standalone_status=0
-    step_manifest="$gate_export/$standalone_manifest" step_selection="$standalone_names" \
+    step_manifest="$gate_export/$standalone_manifest" step_command_cwd="$gate_cargo_cwd" \
+      step_selection="$standalone_names" \
       step_key="atlas-pre-push-casts-standalone" step_ours=return \
       run_identity_clippy "standalone clippy" "$standalone_names" "$python_bin" "$cast_gate" clippy \
-        --export "$gate_export" --manifest "$standalone_manifest" --sites "$standalone_sites" \
+        --export "$gate_export" --manifest "$standalone_manifest" \
+        --command-cwd "$gate_cargo_cwd" --sites "$standalone_sites" \
       || standalone_status=$?
     if [ "$standalone_status" -ne 0 ]; then
       cat >&2 <<MESSAGE
@@ -1928,7 +2342,8 @@ echo "pre-push: gating${gate_packages}" >&2
 
 # Formatting is workspace-wide and near-instant, and its failure is the
 # cheapest one to find here rather than on a runner.
-if ! (cd "$gate_command_cwd" && cargo fmt --all $gate_manifest -- --check >/dev/null); then
+if ! (cd "$gate_cargo_cwd" \
+  && cargo fmt --all "${gate_manifest[@]}" -- --check >/dev/null); then
   cat >&2 <<MESSAGE
 
 pre-push: \`cargo fmt --check\` fails on $gate_sha, so the architecture validation would.
@@ -1943,14 +2358,14 @@ fi
 # then failed CI on a `// SAFETY:` comment two lines above its block, because
 # nothing here ran the ratchet. It is text-only and fast, so it runs before the
 # compile steps; a member without the script has no ratchet to run.
-safety_ratchet="$gate_command_cwd/scripts/safety_ratchet.py"
+safety_ratchet="$gate_workspace_root/scripts/safety_ratchet.py"
 if [ -f "$safety_ratchet" ]; then
   if [ -z "$python_bin" ]; then
     echo "pre-push: scripts/safety_ratchet.py present but no python interpreter found" >&2
     echo "pre-push: push anyway with SKIP_LOCAL_GATE=1 git push" >&2
     exit 1
   fi
-  if ! (cd "$gate_command_cwd" && "$python_bin" "$safety_ratchet" check >&2); then
+  if ! (cd "$gate_workspace_root" && "$python_bin" "$safety_ratchet" check >&2); then
     cat >&2 <<'MESSAGE'
 
 pre-push: the SAFETY ratchet fails, so CI's workspace job would. Put a
@@ -1994,7 +2409,8 @@ if [ "$identity_enabled" -eq 1 ]; then
   # false` one (consus-python) writes none, so an all-undocumented selection
   # skips the stage; cargo's own target list is the authority.
   if ! documented_packages="$(
-    cd "$gate_command_cwd" && cargo metadata --no-deps --format-version 1 $gate_manifest |
+    cd "$gate_cargo_cwd" && cargo metadata --no-deps --format-version 1 \
+      "${gate_manifest[@]}" |
       "$python_bin" -c 'import json, sys
 sys.stdout.reconfigure(newline="\n")
 documented = {"lib", "rlib", "dylib", "cdylib", "staticlib", "proc-macro", "bin"}
@@ -2041,7 +2457,7 @@ $package_name
     done
   fi
 else
-  case "$(classify_gate_step "$gate_log" cargo clippy $gate_specs --all-targets)" in
+  case "$(classify_gate_step "$gate_log" cargo clippy "${gate_specs[@]}" --all-targets)" in
     ours)
       cat >&2 <<MESSAGE
 
@@ -2064,7 +2480,8 @@ fi
 
 if [ "$identity_enabled" -eq 0 ]; then
   if command -v cargo-nextest >/dev/null 2>&1; then
-    case "$(classify_gate_step "$gate_log" cargo nextest run $gate_specs --no-tests=pass)" in
+    case "$(classify_gate_step "$gate_log" cargo nextest run \
+      "${gate_specs[@]}" --no-tests=pass)" in
       ours)
         cat >&2 <<MESSAGE
 
@@ -2093,7 +2510,8 @@ fi
 # after the merge (a redundant link target from apollo#508 did). The changed
 # packages are documented here the same way.
 if [ "$identity_enabled" -eq 0 ]; then
-  case "$(classify_gate_step "$gate_log" env RUSTDOCFLAGS="-D warnings" cargo doc --no-deps $gate_specs)" in
+  case "$(classify_gate_step "$gate_log" env RUSTDOCFLAGS="-D warnings" \
+    cargo doc --no-deps "${gate_specs[@]}")" in
     ours)
       cat >&2 <<MESSAGE
 
@@ -2119,15 +2537,80 @@ echo "pre-push: local gate passed" >&2
 
 select_meta_cargo_owners() {
   local changed_file="$1" base_manifests="$2" candidate_manifests="$3" output="$4"
-  "$python_bin" - "$changed_file" "$base_manifests" "$candidate_manifests" "$output" <<'PY'
+  "$python_bin" - "$changed_file" "$base_manifests" "$candidate_manifests" "$output" \
+    "$repo_root" "$gate_base" "$gate_sha" <<'PY'
 import pathlib
+import subprocess
 import sys
+import tomllib
 
 changed = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()
 base = set(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8").splitlines())
 candidate = set(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8").splitlines())
 all_manifests = base | candidate
 selected = {}
+repository = pathlib.Path(sys.argv[5])
+base_revision = sys.argv[6]
+candidate_revision = sys.argv[7]
+
+
+def git(*arguments):
+    return subprocess.run(
+        ["git", "-C", str(repository), *arguments],
+        check=True,
+        capture_output=True,
+        timeout=30,
+    ).stdout
+
+
+def config_blob(revision, path):
+    if not revision:
+        return None
+    listing = git("ls-tree", "-z", revision, "--", path)
+    if not listing:
+        return None
+    records = [record for record in listing.split(b"\0") if record]
+    if len(records) != 1:
+        raise ValueError(f"Git listed more than one entry for {path} at {revision}")
+    header, separator, name = records[0].partition(b"\t")
+    fields = header.split()
+    if not separator or len(fields) != 3 or name.decode("utf-8") != path:
+        raise ValueError(f"Git returned an invalid tree entry for {path} at {revision}")
+    mode, kind, object_id = (field.decode("ascii") for field in fields)
+    if mode not in {"100644", "100755"} or kind != "blob":
+        raise ValueError(f"Cargo config {path} at {revision} is not a regular file")
+    return git("cat-file", "blob", object_id)
+
+
+def type_sensitive_equal(left, right):
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(
+            type_sensitive_equal(value, right[name]) for name, value in left.items()
+        )
+    if isinstance(left, list):
+        return len(left) == len(right) and all(
+            type_sensitive_equal(a, b) for a, b in zip(left, right)
+        )
+    return left == right
+
+
+def differs_only_in_patch(path):
+    contents = [
+        config_blob(base_revision, path),
+        config_blob(candidate_revision, path),
+    ]
+    if any(content is None for content in contents):
+        return False
+    parsed = [tomllib.loads(content.decode("utf-8")) for content in contents]
+    if any("include" in data for data in parsed):
+        return False
+    without_patch = [
+        {name: value for name, value in data.items() if name != "patch"}
+        for data in parsed
+    ]
+    return type_sensitive_equal(*without_patch)
 
 def owner(path):
     directory = pathlib.PurePosixPath(path).parent
@@ -2143,11 +2626,14 @@ global_inputs = {
     "rust-toolchain.toml",
     ".config/nextest.toml",
 }
+root_configs = {".cargo/config", ".cargo/config.toml"}
 for path in changed:
     if not path:
         continue
     if path in {"Cargo.toml", "Cargo.lock"}:
         raise SystemExit(f"the Atlas meta root cannot own {path}; Cargo workspaces live below tools/")
+    if path in root_configs and differs_only_in_patch(path):
+        continue
     if path in global_inputs or path.startswith(".cargo/"):
         for manifest in candidate:
             selected.setdefault(manifest, set()).add("Cargo.toml")

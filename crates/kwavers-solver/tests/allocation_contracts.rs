@@ -1,4 +1,3 @@
-use kwavers_alloc_probe::{Change, ThreadScopedAllocator, Window};
 use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_core::error::{KwaversError, SystemError};
 #[cfg(feature = "pinn")]
@@ -16,11 +15,13 @@ use kwavers_solver::forward::viscoacoustic::{ViscoacousticGrid, ViscoacousticMem
 use kwavers_solver::inverse::pinn::{CollocationSampler, CollocationSamplingStrategy};
 use kwavers_source::GridSource;
 use leto::Array3;
+use mnemosyne::counting::{measure, AllocationDelta, CountingAllocator};
+use mnemosyne::Mnemosyne;
 #[cfg(feature = "pinn")]
 use tyche_core::Seed;
 
 #[global_allocator]
-static GLOBAL: ThreadScopedAllocator = ThreadScopedAllocator;
+static GLOBAL: CountingAllocator<Mnemosyne> = CountingAllocator::new(Mnemosyne);
 
 #[cfg(feature = "pinn")]
 #[test]
@@ -31,11 +32,11 @@ fn tyche_designs_allocate_only_their_output_matrix() {
         CollocationSamplingStrategy::Sobol,
     ] {
         let sampler = CollocationSampler::new(domain, strategy, Seed::new(17));
-        let window = Window::open();
-        let points = sampler
-            .sample_interior(257)
-            .expect("addressable collocation output");
-        let change = window.change();
+        let (points, change) = measure(|| {
+            sampler
+                .sample_interior(257)
+                .expect("addressable collocation output")
+        });
         assert_eq!(change.allocations, 1);
         assert_eq!(change.reallocations, 0);
         std::hint::black_box(points);
@@ -58,25 +59,23 @@ fn swe_solver(steps: usize) -> ElasticWaveSolver {
 fn measure_full_history(
     solver: &ElasticWaveSolver,
     displacement: &Array3<f64>,
-) -> (Vec<ElasticWaveField>, Change) {
-    let window = Window::open();
-    let history = solver
-        .propagate_waves(displacement)
-        .expect("valid full-field propagation");
-    let change = window.change();
-    drop(window);
+) -> (Vec<ElasticWaveField>, AllocationDelta) {
+    let (history, change) = measure(|| {
+        solver
+            .propagate_waves(displacement)
+            .expect("valid full-field propagation")
+    });
     (history, change)
 }
 
 fn measure_displacement_history(
     solver: &ElasticWaveSolver,
-) -> (Vec<ElasticDisplacementSnapshot>, Change) {
-    let window = Window::open();
-    let history = solver
-        .propagate_displacement_history_with_body_force_only_override(None)
-        .expect("valid displacement propagation");
-    let change = window.change();
-    drop(window);
+) -> (Vec<ElasticDisplacementSnapshot>, AllocationDelta) {
+    let (history, change) = measure(|| {
+        solver
+            .propagate_displacement_history_with_body_force_only_override(None)
+            .expect("valid displacement propagation")
+    });
     (history, change)
 }
 
@@ -111,7 +110,7 @@ fn swe_displacement_history_avoids_velocity_snapshot_allocations() {
         full_change
             .allocations
             .checked_sub(displacement_change.allocations),
-        Some((EXPECTED_SNAPSHOTS * 3) as u64),
+        Some(EXPECTED_SNAPSHOTS * 3),
         "the projected history must omit exactly three array allocations per snapshot"
     );
     std::hint::black_box((full_history, displacement_history));
@@ -149,26 +148,28 @@ fn tracker_body_force() -> ElasticBodyForceConfig {
 fn measure_full_tracker(
     solver: &ElasticWaveSolver,
     body_force: &ElasticBodyForceConfig,
-) -> (WaveFrontTracker, Change) {
-    let window = Window::open();
-    let (_, tracker) = solver
-        .propagate_volumetric_waves_with_body_forces(std::slice::from_ref(body_force), &[0.0], &[])
-        .expect("valid full-history tracker propagation");
-    let change = window.change();
-    drop(window);
+) -> (WaveFrontTracker, AllocationDelta) {
+    let ((_, tracker), change) = measure(|| {
+        solver
+            .propagate_volumetric_waves_with_body_forces(
+                std::slice::from_ref(body_force),
+                &[0.0],
+                &[],
+            )
+            .expect("valid full-history tracker propagation")
+    });
     (tracker, change)
 }
 
 fn measure_compact_tracker(
     solver: &ElasticWaveSolver,
     body_force: &ElasticBodyForceConfig,
-) -> (WaveFrontTracker, Change) {
-    let window = Window::open();
-    let tracker = solver
-        .track_volumetric_waves_with_body_forces(std::slice::from_ref(body_force), &[0.0])
-        .expect("valid compact tracker propagation");
-    let change = window.change();
-    drop(window);
+) -> (WaveFrontTracker, AllocationDelta) {
+    let (tracker, change) = measure(|| {
+        solver
+            .track_volumetric_waves_with_body_forces(std::slice::from_ref(body_force), &[0.0])
+            .expect("valid compact tracker propagation")
+    });
     (tracker, change)
 }
 
@@ -198,9 +199,9 @@ fn assert_tracker_bits_eq(actual: &WaveFrontTracker, expected: &WaveFrontTracker
 
 #[test]
 fn volumetric_tracker_omits_full_field_snapshot_allocations() {
-    const SNAPSHOTS: u64 = 5;
-    const FULL_FIELD_ARRAYS: u64 = 6;
-    const COMPACT_HISTORY_ARRAYS: u64 = 2;
+    const SNAPSHOTS: usize = 5;
+    const FULL_FIELD_ARRAYS: usize = 6;
+    const COMPACT_HISTORY_ARRAYS: usize = 2;
 
     let solver = volumetric_tracker_solver();
     let body_force = tracker_body_force();
@@ -274,15 +275,9 @@ fn reserved_viscoacoustic_sensor_traces_do_not_allocate_during_stepping() {
         .reserve_sensor_samples(SAMPLES)
         .expect("addressable sensor history");
 
-    let window = Window::open();
-    step_viscoacoustic(&mut reserved, SAMPLES);
-    let first_change = window.change();
-    drop(window);
+    let ((), first_change) = measure(|| step_viscoacoustic(&mut reserved, SAMPLES));
 
-    let window = Window::open();
-    step_viscoacoustic(&mut reference, SAMPLES);
-    let unreserved_change = window.change();
-    drop(window);
+    let ((), unreserved_change) = measure(|| step_viscoacoustic(&mut reference, SAMPLES));
 
     assert_eq!(first_change.allocations, 0);
     assert_eq!(first_change.reallocations, 0);
@@ -294,10 +289,7 @@ fn reserved_viscoacoustic_sensor_traces_do_not_allocate_during_stepping() {
     reserved
         .set_pressure(&initial_pressure)
         .expect("matching pressure shape");
-    let window = Window::open();
-    step_viscoacoustic(&mut reserved, SAMPLES);
-    let repeated_change = window.change();
-    drop(window);
+    let ((), repeated_change) = measure(|| step_viscoacoustic(&mut reserved, SAMPLES));
 
     assert_eq!(repeated_change.allocations, 0);
     assert_eq!(repeated_change.reallocations, 0);
@@ -326,7 +318,7 @@ fn reserved_viscoacoustic_sensor_traces_do_not_allocate_during_stepping() {
 #[test]
 fn warm_construction_matches_inactive_axis_storage_oracle() {
     /// (shape, expected warm allocations, expected retained bytes).
-    const CASES: [([usize; 3], u64, u64); 3] = [
+    const CASES: [([usize; 3], usize, isize); 3] = [
         ([4096, 1, 1], 7, 229_376),
         ([64, 64, 1], 9, 230_400),
         ([16, 16, 16], 12, 295_296),
@@ -349,10 +341,7 @@ fn warm_construction_matches_inactive_axis_storage_oracle() {
         // allocation paths) so the window isolates the constructor itself.
         drop(build());
 
-        let window = Window::open();
-        let mut solver = build();
-        let change = window.change();
-        drop(window);
+        let (mut solver, change) = measure(build);
 
         assert_eq!(
             change.allocations, allocations,
@@ -375,12 +364,11 @@ fn warm_construction_matches_inactive_axis_storage_oracle() {
             solver.step();
         }
 
-        let window = Window::open();
-        for _ in 0..64 {
-            solver.step();
-        }
-        let stepping = window.change();
-        drop(window);
+        let ((), stepping) = measure(|| {
+            for _ in 0..64 {
+                solver.step();
+            }
+        });
 
         assert_eq!(
             stepping.allocations, 0,
@@ -413,10 +401,10 @@ fn warm_homogeneous_construction_matches_uniform_coefficient_oracle() {
     const N: usize = 4_096;
     const DT: f64 = 1.0e-8;
     const ARMS: [(f64, f64); 3] = [(1.5e8, 3.2e-7), (8.0e7, 8.0e-8), (2.2e8, 1.3e-6)];
-    const HOMO_EVENTS: u64 = 11;
-    const HOMO_RETAINED: u64 = 328_640;
-    const HETERO_EVENTS: u64 = 23;
-    const HETERO_RETAINED: u64 = 721_856;
+    const HOMO_EVENTS: usize = 11;
+    const HOMO_RETAINED: isize = 328_640;
+    const HETERO_EVENTS: usize = 23;
+    const HETERO_RETAINED: isize = 721_856;
 
     let build_homogeneous = || {
         ViscoacousticMemorySolver::new_1d(N, 1.0e-4, DT, 1_000.0, 2.25e9, &ARMS)
@@ -425,10 +413,7 @@ fn warm_homogeneous_construction_matches_uniform_coefficient_oracle() {
 
     // Warm caches, then measure the homogeneous constructor.
     drop(build_homogeneous());
-    let window = Window::open();
-    let mut homogeneous = build_homogeneous();
-    let homo = window.change();
-    drop(window);
+    let (mut homogeneous, homo) = measure(build_homogeneous);
     assert_eq!(homo.allocations, HOMO_EVENTS, "homogeneous warm events");
     assert_eq!(homo.reallocations, 0);
     assert_eq!(
@@ -456,10 +441,7 @@ fn warm_homogeneous_construction_matches_uniform_coefficient_oracle() {
         .expect("valid heterogeneous solver parameters")
     };
     drop(build_heterogeneous());
-    let window = Window::open();
-    let mut heterogeneous = build_heterogeneous();
-    let hetero = window.change();
-    drop(window);
+    let (mut heterogeneous, hetero) = measure(build_heterogeneous);
     assert_eq!(
         hetero.allocations, HETERO_EVENTS,
         "heterogeneous warm events must remain unchanged"
@@ -481,12 +463,11 @@ fn warm_homogeneous_construction_matches_uniform_coefficient_oracle() {
         for _ in 0..4 {
             solver.step();
         }
-        let window = Window::open();
-        for _ in 0..32 {
-            solver.step();
-        }
-        let steps = window.change();
-        drop(window);
+        let ((), steps) = measure(|| {
+            for _ in 0..32 {
+                solver.step();
+            }
+        });
         assert_eq!(steps.allocations, 0, "warm stepping events");
         assert_eq!(steps.reallocations, 0, "warm stepping reallocs");
     }
@@ -547,9 +528,8 @@ fn viscoacoustic_sensor_reservation_rejects_unrepresentable_history() {
 /// may be retained: the 1-D warm construction alone retains 327,680 bytes.
 #[test]
 fn viscoacoustic_rejected_construction_allocates_no_solver_state() {
-    let window = Window::open();
-    let r = ViscoacousticMemorySolver::new_1d(8, 1.0e-4, f64::NAN, 1_000.0, 2.25e9, &[]);
-    let change = window.change();
+    let (r, change) =
+        measure(|| ViscoacousticMemorySolver::new_1d(8, 1.0e-4, f64::NAN, 1_000.0, 2.25e9, &[]));
     assert!(
         matches!(r, Err(KwaversError::InvalidInput(_))),
         "NaN dt must be rejected as InvalidInput"
@@ -595,12 +575,11 @@ fn pstd_steps_after_setup_do_not_allocate() {
             solver.step_forward().expect("setup step");
         }
         let before = solver.fields.p.clone();
-        let window = Window::open();
-        for _ in 0..8 {
-            solver.step_forward().expect("stable step");
-        }
-        let change = window.change();
-        drop(window);
+        let ((), change) = measure(|| {
+            for _ in 0..8 {
+                solver.step_forward().expect("stable step");
+            }
+        });
         assert_eq!(change.allocations, 0, "{kspace_method:?}");
         assert_eq!(change.reallocations, 0, "{kspace_method:?}");
         assert_ne!(
@@ -643,12 +622,11 @@ fn fdtd_spectral_steps_after_setup_do_not_allocate() {
         solver.step_forward().expect("setup step");
     }
     let before = solver.fields.p.clone();
-    let window = Window::open();
-    for _ in 0..8 {
-        solver.step_forward().expect("stable step");
-    }
-    let change = window.change();
-    drop(window);
+    let ((), change) = measure(|| {
+        for _ in 0..8 {
+            solver.step_forward().expect("stable step");
+        }
+    });
     assert_eq!(change.allocations, 0);
     assert_eq!(change.reallocations, 0);
     assert_ne!(
@@ -680,12 +658,11 @@ fn spectral_laplacians_after_setup_do_not_allocate() {
         kuznetsov.compute_laplacian_workspace(&field, &mut laplacian);
     }
     laplacian.fill(0.0);
-    let window = Window::open();
-    for _ in 0..8 {
-        kuznetsov.compute_laplacian_workspace(&field, &mut laplacian);
-    }
-    let change = window.change();
-    drop(window);
+    let ((), change) = measure(|| {
+        for _ in 0..8 {
+            kuznetsov.compute_laplacian_workspace(&field, &mut laplacian);
+        }
+    });
     assert_eq!(change.allocations, 0, "Kuznetsov Laplacian");
     assert_eq!(change.reallocations, 0, "Kuznetsov Laplacian");
     assert!(
@@ -703,14 +680,13 @@ fn spectral_laplacians_after_setup_do_not_allocate() {
         std::mem::swap(&mut current, &mut next);
     }
     let before = current.clone();
-    let window = Window::open();
-    for _ in 0..8 {
-        dg.spectral_wave_step_into(&current, 1.0e-8, 1_500.0, &mask, &mut next)
-            .expect("stable step");
-        std::mem::swap(&mut current, &mut next);
-    }
-    let change = window.change();
-    drop(window);
+    let ((), change) = measure(|| {
+        for _ in 0..8 {
+            dg.spectral_wave_step_into(&current, 1.0e-8, 1_500.0, &mask, &mut next)
+                .expect("stable step");
+            std::mem::swap(&mut current, &mut next);
+        }
+    });
     assert_eq!(change.allocations, 0, "DG spectral step");
     assert_eq!(change.reallocations, 0, "DG spectral step");
     assert_ne!(
