@@ -669,7 +669,7 @@ mod tests {
         let second = arr.transmit_receivers(elements);
         let stride = std::mem::size_of_val(&first[0]) * arr.receiver_count();
         assert_eq!(
-            second.as_ptr() as usize - first.as_ptr() as usize,
+            second.as_ptr().addr() - first.as_ptr().addr(),
             stride,
             "consecutive views must occupy adjacent runs of one allocation"
         );
