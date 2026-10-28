@@ -39,11 +39,7 @@ impl FlexibleTransducerArray {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn new(config: FlexibleTransducerConfig, signal: Arc<dyn Signal>) -> KwaversResult<Self> {
-        let geometry_state = GeometryState::flat_array(
-            config.num_elements,
-            // Scalar extraction at the mesh boundary: GeometryState uses raw f64 metres.
-            config.nominal_spacing.in_unit::<Meter>(),
-        );
+        let geometry_state = GeometryState::flat_array(config.num_elements, config.nominal_spacing);
 
         let calibration_processor = CalibrationManager::new();
 
@@ -80,10 +76,12 @@ impl FlexibleTransducerArray {
                 // Self-calibration requires 3D pressure field data
                 // Measurement noise level based on typical ultrasound tracking accuracy
                 // Reference: Mercier et al. (2012) IEEE Trans. Ultrason. Ferroelectr. Freq. Control
-                const TRACKING_NOISE_LEVEL: f64 = 1e-3; // 1mm position uncertainty
+                // 1mm position uncertainty as a typed length; scalar extraction
+                // at the Kalman-filter boundary below.
+                const TRACKING_NOISE_LEVEL: Length<f64> = Length::from_base(1e-3);
                 self.calibration_processor.process_external_tracking(
                     &measurement_data,
-                    TRACKING_NOISE_LEVEL,
+                    TRACKING_NOISE_LEVEL.in_unit::<Meter>(),
                     timestamp.in_unit::<Second>(),
                 )?
             }
