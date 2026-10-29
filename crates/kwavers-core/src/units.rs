@@ -1,17 +1,15 @@
 //! Unit conversion helpers shared across Rust crates and PyO3 bindings.
 
 use crate::constants::numerical::TWO_PI;
+use crate::constants::{DB_TO_NP, NP_TO_DB};
 use crate::error::{KwaversError, KwaversResult};
-
-const NP_PER_DB: f64 = std::f64::consts::LN_10 / 20.0;
-const DB_PER_NP: f64 = 20.0 / std::f64::consts::LN_10;
 const CENTIMETERS_PER_METER: f64 = 100.0;
 const REFERENCE_ANGULAR_FREQUENCY_RAD_S: f64 = TWO_PI * 1.0e6;
 
 /// Convert dB/(MHz^y cm) to Np/(rad/s)^y m.
 #[must_use]
 pub fn db_per_mhz_cm_to_neper_per_rad_s_m(db: f64, power_law_exponent: f64) -> f64 {
-    db * (CENTIMETERS_PER_METER * NP_PER_DB)
+    db * (CENTIMETERS_PER_METER * DB_TO_NP)
         / REFERENCE_ANGULAR_FREQUENCY_RAD_S.powf(power_law_exponent)
 }
 
@@ -19,7 +17,7 @@ pub fn db_per_mhz_cm_to_neper_per_rad_s_m(db: f64, power_law_exponent: f64) -> f
 #[must_use]
 pub fn neper_per_rad_s_m_to_db_per_mhz_cm(neper: f64, power_law_exponent: f64) -> f64 {
     neper
-        * (DB_PER_NP / CENTIMETERS_PER_METER)
+        * (NP_TO_DB / CENTIMETERS_PER_METER)
         * REFERENCE_ANGULAR_FREQUENCY_RAD_S.powf(power_law_exponent)
 }
 
@@ -50,7 +48,7 @@ pub fn alpha_db_per_mhz_cm_to_np_per_m(
     frequency_mhz: f64,
     power_law_exponent: f64,
 ) -> f64 {
-    alpha_db_cm * frequency_mhz.powf(power_law_exponent) * CENTIMETERS_PER_METER / DB_PER_NP
+    alpha_db_cm * frequency_mhz.powf(power_law_exponent) * CENTIMETERS_PER_METER / NP_TO_DB
 }
 
 #[cfg(test)]
@@ -75,6 +73,19 @@ mod tests {
     fn frequency_to_wavenumber_matches_definition() {
         let got = frequency_to_wavenumber(1.0e6, 1500.0).unwrap();
         let expected = TWO_PI * 1.0e6 / 1500.0;
+        assert_eq!(got, expected);
+    }
+
+    /// The conversion uses the single canonical `NP_TO_DB` definition
+    /// bit-for-bit: no second `20 / ln(10)` evaluation may drift by a ULP.
+    #[test]
+    fn alpha_conversion_uses_canonical_np_to_db_bitwise() {
+        let alpha_db_cm = 0.5;
+        let frequency_mhz = 2.25;
+        let exponent = 1.5;
+        let got = alpha_db_per_mhz_cm_to_np_per_m(alpha_db_cm, frequency_mhz, exponent);
+        let expected =
+            alpha_db_cm * frequency_mhz.powf(exponent) * CENTIMETERS_PER_METER / NP_TO_DB;
         assert_eq!(got, expected);
     }
 
