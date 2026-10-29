@@ -35,8 +35,8 @@ apollo = { package = "apollo-fft", version = "0.29.3", git = "https://github.com
 # athena: Atlas SSOT for Krylov recurrences, the linear-operator and
 # preconditioner seams, and convergence policy (Atlas ADR 0033).
 # athena-core = backend-neutral contracts, athena-leto = Leto CPU backend.
-athena-core = { version = "0.3.2", git = "https://github.com/ryancinsight/athena" }
-athena-leto = { version = "0.3.2", git = "https://github.com/ryancinsight/athena" }
+athena-core = { version = "0.3.3", git = "https://github.com/ryancinsight/athena" }
+athena-leto = { version = "0.3.3", git = "https://github.com/ryancinsight/athena" }
 hephaestus-core = { version = "0.28.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
 hephaestus-wgpu = { version = "0.28.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false, features = ["decomposition"] }
 hephaestus-cuda = { version = "0.28.0", git = "https://github.com/ryancinsight/hephaestus.git", default-features = false }
