@@ -3,7 +3,9 @@
 //! This module defines the configuration structures and enums for flexible
 //! transducer arrays, following SSOT and SOLID principles.
 
-use aequitas::systems::si::quantities::{Frequency, Length, Pressure, SpringStiffness, Time};
+use aequitas::systems::si::quantities::{
+    Dimensionless, Frequency, Length, Pressure, SpringStiffness, Time,
+};
 use aequitas::systems::si::units::{Hertz, Meter, Pascal, Second};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use serde::{Deserialize, Serialize};
@@ -39,7 +41,7 @@ impl Default for FlexibleTransducerConfig {
             frequency: Frequency::from_unit::<Hertz>(2.5 * MHZ_TO_HZ),
             flexibility: FlexibilityModel::Elastic {
                 young_modulus: Pressure::from_unit::<Pascal>(2e9), // 2 GPa for flexible materials
-                poisson_ratio: 0.3,
+                poisson_ratio: Dimensionless::from_base(0.3),
                 thickness: Length::from_unit::<Meter>(0.5e-3), // 0.5 mm
             },
             calibration_method: CalibrationMethod::SelfCalibration {
@@ -61,7 +63,7 @@ pub enum FlexibilityModel {
         /// Young's modulus of the substrate.
         young_modulus: Pressure<f64>,
         /// Poisson ratio (dimensionless).
-        poisson_ratio: f64,
+        poisson_ratio: Dimensionless<f64>,
         /// Substrate thickness.
         thickness: Length<f64>,
     },
@@ -96,7 +98,7 @@ pub enum CalibrationMethod {
     /// Image-based calibration.
     ImageBased {
         /// Detection threshold (dimensionless).
-        feature_detection_threshold: f64,
+        feature_detection_threshold: Dimensionless<f64>,
         /// Correlation window half-width in samples.
         correlation_window_size: usize,
     },
@@ -136,4 +138,25 @@ pub enum TrackingSystem {
         /// IMU sampling rate.
         sampling_rate: Frequency<f64>,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use aequitas::systems::si::units::Pascal;
+
+    #[test]
+    fn default_elastic_model_carries_typed_material_ratios() {
+        let FlexibilityModel::Elastic {
+            young_modulus,
+            poisson_ratio,
+            thickness,
+        } = FlexibleTransducerConfig::default().flexibility
+        else {
+            panic!("default flexibility model is elastic");
+        };
+        assert_eq!(young_modulus.in_unit::<Pascal>(), 2e9);
+        assert_eq!(poisson_ratio.into_base(), 0.3);
+        assert_eq!(thickness.in_unit::<Meter>(), 0.5e-3);
+    }
 }

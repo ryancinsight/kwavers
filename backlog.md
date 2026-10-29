@@ -49,8 +49,8 @@
 <a id="kw-sol-054"></a>- [KW-SOL-054](backlog/kw-sol-054.md) — Repair AVX-512 FDTD layout contract [patch] — todo
 <a id="kw-swe-edge-growth-2026-09-17"></a>- [KW-SWE-EDGE-GROWTH-2026-09-17](backlog/kw-swe-edge-growth-2026-09-17.md) — Elastic displacement grows without bound when the initial field reaches the edges [patch] [fix] — todo
 <a id="kwavers-aeq-met-66"></a>- [KWAVERS-AEQ-MET-66](backlog/kwavers-aeq-met-66.md) — Type thermal-diffusion quantities [major] [arch] — blocked
-<a id="kwavers-aeq-met-69"></a>- [KWAVERS-AEQ-MET-69](backlog/kwavers-aeq-met-69.md) — Type B-mode scan-conversion geometry [major] [arch] — in-progress
-<a id="kwavers-aeq-met-flex"></a>- [KWAVERS-AEQ-MET-FLEX](backlog/kwavers-aeq-met-flex.md) — Type the flexible-array dynamic metrics [arch] [major] — blocked
+<a id="kwavers-aeq-met-69"></a>- [KWAVERS-AEQ-MET-69](backlog/kwavers-aeq-met-69.md) — Type B-mode scan-conversion geometry [major] [arch] — done
+<a id="kwavers-aeq-met-flex"></a>- [KWAVERS-AEQ-MET-FLEX](backlog/kwavers-aeq-met-flex.md) — Type the flexible-array dynamic metrics [arch] [major] — done
 <a id="kwavers-coupling-contract-001"></a>- [KWAVERS-COUPLING-CONTRACT-001](backlog/kwavers-coupling-contract-001.md) — Medium-aware field-coupling inputs [minor] — todo
 <a id="kw-cbr-selection-direction"></a>- [KW-CBR-SELECTION-DIRECTION](backlog/kw-cbr-selection-direction.md) — CBR-based clutter rank selection compares in a direction its estimate cannot satisfy [patch] [fix] — todo
 <a id="kw-clippy-pinn-gpu"></a>- [KW-CLIPPY-PINN-GPU](backlog/kw-clippy-pinn-gpu.md) — `cargo clippy --features pinn,gpu` is not warning-clean outside the solver [patch] — todo
