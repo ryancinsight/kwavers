@@ -192,6 +192,7 @@ impl Source for LinearArray {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_signal::NullSignal;
     use kwavers_source::RectangularApodization;
 
@@ -202,7 +203,7 @@ mod tests {
             8,
             (0.0, 0.0, 0.0),
             Arc::new(NullSignal),
-            1500.0,
+            SOUND_SPEED_WATER_SIM,
             500.0e3,
             RectangularApodization,
         );

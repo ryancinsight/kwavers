@@ -240,6 +240,7 @@ mod tests {
     use aequitas::systems::si::units::{
         KilogramPerCubicMeter, Meter, MeterPerSecond, Pascal, PerMeter, Volt, Watt,
     };
+    use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
     fn meters(value: f64) -> Length<f64> {
         Length::from_unit::<Meter>(value)
@@ -331,8 +332,8 @@ mod tests {
         let cmut = CmutCell::silicon(meters(60e-6), meters(2.0e-6), meters(0.2e-6)).unwrap();
         let pmut =
             PmutCell::new(meters(60e-6), meters(2e-6), meters(4e-6), PiezoFilm::Pzt).unwrap();
-        let rho = MassDensity::from_unit::<KilogramPerCubicMeter>(1000.0);
-        let c = speed(1500.0);
+        let rho = MassDensity::from_unit::<KilogramPerCubicMeter>(DENSITY_WATER_NOMINAL);
+        let c = speed(SOUND_SPEED_WATER_SIM);
 
         // flat, rigid backing
         let flat = evaluate_therapy(

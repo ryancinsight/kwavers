@@ -435,6 +435,7 @@ impl CmutCell {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
     fn meters(value: f64) -> Length<f64> {
         Length::from_unit::<Meter>(value)
@@ -544,7 +545,7 @@ mod tests {
     fn biased_capacitance_rises_and_resonance_softens_to_collapse() {
         let c = CmutCell::silicon(meters(60e-6), meters(2.0e-6), meters(0.2e-6)).unwrap();
         let vc = c.collapse_voltage().in_unit::<Volt>();
-        let rho = MassDensity::from_unit::<KilogramPerCubicMeter>(1000.0); // water
+        let rho = MassDensity::from_unit::<KilogramPerCubicMeter>(DENSITY_WATER_NOMINAL); // water
 
         // Capacitance C₀/(1−u) exceeds C₀ and grows with bias.
         let c0 = c.capacitance().in_unit::<Farad>();
@@ -626,8 +627,8 @@ mod tests {
         // Therapy-scale CMUT (~3 MHz): larger membrane, sub-micron gap.
         let c = CmutCell::silicon(meters(60e-6), meters(2.0e-6), meters(0.2e-6)).unwrap();
         let (rho, cs) = (
-            MassDensity::from_unit::<KilogramPerCubicMeter>(1000.0),
-            Velocity::from_unit::<MeterPerSecond>(1500.0),
+            MassDensity::from_unit::<KilogramPerCubicMeter>(DENSITY_WATER_NOMINAL),
+            Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_WATER_SIM),
         ); // water
         let p13 = c
             .max_output_pressure(rho, cs, Dimensionless::from_base(1.0 / 3.0))
