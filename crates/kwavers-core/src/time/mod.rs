@@ -9,6 +9,24 @@ pub struct Time {
     pub t_max: f64,     // Total duration (seconds)
 }
 
+/// Relaxed k-space stability factor.
+///
+/// The k-space pseudospectral scheme tolerates Courant numbers above the
+/// classic finite-difference limit; the fleet convention caps the step at the
+/// diagonal-transit time `min_dx / (c * sqrt(2))`, i.e. the time for a wave to
+/// cross one cell along a 2D diagonal. Dimensions: `[m] / ([m/s]) = [s]`.
+const KSPACE_DIAGONAL_FACTOR: f64 = std::f64::consts::SQRT_2;
+
+/// Largest stable step in seconds for a grid of minimum spacing `min_dx`
+/// metres and sound speed `sound_speed` metres per second.
+///
+/// Centralizes the k-space CFL bound `min_dx / (sound_speed * sqrt(2))` so the
+/// three call sites (`from_grid_and_duration`, `is_stable`,
+/// `adjust_for_stability`) cannot drift apart.
+fn cfl_max_dt(min_dx: f64, sound_speed: f64) -> f64 {
+    min_dx / (sound_speed * KSPACE_DIAGONAL_FACTOR)
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct StabilityConstraints {
     pub max_dt: Option<f64>,
@@ -50,7 +68,7 @@ impl Time {
     ) -> Self {
         assert!(dx > 0.0 && dy > 0.0 && dz > 0.0 && sound_speed > 0.0 && duration > 0.0);
         let min_dx = dx.min(dy).min(dz);
-        let max_dt = min_dx / (sound_speed * 1.414); // Relaxed CFL for k-space
+        let max_dt = cfl_max_dt(min_dx, sound_speed);
         let dt = max_dt * 0.9;
         let n_steps = (duration / dt).ceil() as usize;
         Self::new(dt, n_steps)
@@ -81,13 +99,12 @@ impl Time {
     #[must_use]
     pub fn is_stable(&self, dx: f64, dy: f64, dz: f64, sound_speed: f64) -> bool {
         let min_dx = dx.min(dy).min(dz);
-        let max_dt = min_dx / (sound_speed * 1.414);
-        self.dt <= max_dt
+        self.dt <= cfl_max_dt(min_dx, sound_speed)
     }
 
     pub fn adjust_for_stability(&mut self, dx: f64, dy: f64, dz: f64, sound_speed: f64) {
         let min_dx = dx.min(dy).min(dz);
-        let max_dt = min_dx / (sound_speed * 1.414);
+        let max_dt = cfl_max_dt(min_dx, sound_speed);
         if self.dt > max_dt {
             self.dt = max_dt * 0.9;
             self.n_steps = (self.t_max / self.dt).ceil() as usize + 1;
@@ -97,5 +114,49 @@ impl Time {
                 self.dt, self.n_steps
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use eunomia::F64;
+
+    /// The CFL bound is the diagonal-transit time: `[m] / ([m/s]) = [s]`.
+    #[test]
+    fn cfl_bound_matches_diagonal_transit_definition() {
+        let min_dx = 0.5e-3;
+        let sound_speed = 1500.0;
+        let expected = min_dx / (sound_speed * std::f64::consts::SQRT_2);
+        assert_eq!(cfl_max_dt(min_dx, sound_speed), expected);
+    }
+
+    /// `from_grid_and_duration` applies the documented 0.9 safety factor and
+    /// the resulting grid is stable by the same bound it was built from.
+    #[test]
+    fn grid_duration_applies_safety_factor_and_is_stable() {
+        let dx = 0.5e-3;
+        let sound_speed = 1500.0;
+        let time = Time::from_grid_and_duration(dx, dx, dx, sound_speed, 1.0e-3);
+        let expected_dt = cfl_max_dt(dx, sound_speed) * 0.9;
+        assert_eq!(time.dt, expected_dt);
+        assert!(time.is_stable(dx, dx, dx, sound_speed));
+    }
+
+    /// `adjust_for_stability` clamps an oversized step back under the bound
+    /// while preserving the simulated span.
+    #[test]
+    fn adjust_for_stability_clamps_and_preserves_span() {
+        let dx = 0.5e-3;
+        let sound_speed = 1500.0;
+        let mut time = Time::new(cfl_max_dt(dx, sound_speed) * 2.0, 100);
+        let original_span = time.duration();
+        assert_eq!(original_span, cfl_max_dt(dx, sound_speed) * 2.0 * 99.0);
+        time.adjust_for_stability(dx, dx, dx, sound_speed);
+        assert!(time.is_stable(dx, dx, dx, sound_speed));
+        assert!(time.duration() >= original_span);
+        // n_steps is hundreds here, far below the 2^53 exactness bound of
+        // `F64::from_count`; the pre-push cast gate owns the baseline.
+        assert_eq!(time.t_max, time.dt * F64::from_count(time.n_steps - 1).0);
     }
 }
