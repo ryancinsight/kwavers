@@ -4,7 +4,7 @@
 //! transducer arrays, following SSOT and SOLID principles.
 
 use aequitas::systems::si::quantities::{
-    Dimensionless, Frequency, Length, Pressure, SpringStiffness, Time,
+    Dimensionless, Frequency, Length, MagneticFluxDensity, Pressure, SpringStiffness, Time,
 };
 use aequitas::systems::si::units::{Hertz, Meter, Pascal, Second};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
@@ -125,11 +125,8 @@ pub enum TrackingSystem {
     Electromagnetic {
         /// Sensor mesh coordinates `[x, y, z]` in metres.
         sensor_positions: Vec<[f64; 3]>,
-        /// Magnetic field strength in Tesla.
-        ///
-        /// Kept as raw `f64` — Aequitas does not yet define a
-        /// `MagneticFluxDensity` quantity.
-        field_strength: f64,
+        /// Magnetic flux density of the tracking field.
+        field_strength: MagneticFluxDensity<f64>,
     },
     /// Inertial measurement units.
     IMU {
