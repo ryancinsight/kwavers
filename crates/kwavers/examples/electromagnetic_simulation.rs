@@ -57,6 +57,11 @@ fn empty_physics_parameters() -> PinnDomainPhysicsParameters {
 }
 
 /// Example: Electrostatic parallel plate capacitor
+///
+/// # Errors
+///
+/// Returns [`Err`] if the PINN backend fails to initialize, the capacitor
+/// domain is rejected at registration, or the electrostatic solve fails.
 #[cfg(feature = "pinn")]
 pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
     let _ = writeln!(
@@ -116,6 +121,11 @@ pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
 }
 
 /// Example: Magnetostatic current-carrying wire
+///
+/// # Errors
+///
+/// Returns [`Err`] if the PINN backend fails to initialize, the wire domain
+/// is rejected at registration, or the magnetostatic solve fails.
 #[cfg(feature = "pinn")]
 pub fn magnetostatic_wire_example() -> KwaversResult<()> {
     let _ = writeln!(
@@ -173,6 +183,11 @@ pub fn magnetostatic_wire_example() -> KwaversResult<()> {
 }
 
 /// Example: Electromagnetic wave propagation in free space
+///
+/// # Errors
+///
+/// Returns [`Err`] if the PINN backend fails to initialize, the free-space
+/// domain is rejected at registration, or the wave-propagation solve fails.
 #[cfg(feature = "pinn")]
 pub fn wave_propagation_example() -> KwaversResult<()> {
     let _ = writeln!(std::io::stdout().lock(), "=== Wave Propagation Example ===");
@@ -225,6 +240,11 @@ pub fn wave_propagation_example() -> KwaversResult<()> {
 }
 
 /// Example: Lossy dielectric waveguide
+///
+/// # Errors
+///
+/// Returns [`Err`] if the PINN backend fails to initialize, the waveguide
+/// domain is rejected at registration, or the lossy-dielectric solve fails.
 #[cfg(feature = "pinn")]
 pub fn lossy_waveguide_example() -> KwaversResult<()> {
     let _ = writeln!(std::io::stdout().lock(), "=== Lossy Waveguide Example ===");
@@ -280,6 +300,11 @@ pub fn lossy_waveguide_example() -> KwaversResult<()> {
 }
 
 /// Example: Quasi-static electromagnetic induction
+///
+/// # Errors
+///
+/// Returns [`Err`] if the PINN backend fails to initialize, the induction
+/// domain is rejected at registration, or the quasi-static solve fails.
 #[cfg(feature = "pinn")]
 pub fn quasi_static_induction_example() -> KwaversResult<()> {
     let _ = writeln!(

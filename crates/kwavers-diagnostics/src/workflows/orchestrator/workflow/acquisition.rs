@@ -10,7 +10,6 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
-#[cfg(not(feature = "gpu"))]
 use super::super::super::config::QualityPreference;
 #[cfg(not(feature = "gpu"))]
 use super::super::super::simulation::generate_realistic_rf_volume;
@@ -46,6 +45,12 @@ impl ClinicalWorkflowOrchestrator {
                 tgc_enabled: true,
             };
 
+            let volume_dims = match self.config.quality_preference {
+                QualityPreference::Quality => (256, 256, 128),
+                QualityPreference::Balanced => (128, 128, 64),
+                QualityPreference::Speed => (64, 64, 32),
+            };
+
             let beamforming_config = BeamformingConfig3D {
                 base_config: kwavers_transducer::beamforming::BeamformingCoreConfig {
                     sound_speed: Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_TISSUE),
@@ -55,7 +60,7 @@ impl ClinicalWorkflowOrchestrator {
                     num_snapshots: 100,
                     spatial_smoothing: None,
                 },
-                volume_dims: (256, 256, 128),
+                volume_dims,
                 voxel_spacing: (0.001, 0.001, 0.001),
                 num_elements_3d: (64, 64, 1),
                 element_spacing_3d: (0.0003, 0.0003, 0.0),
