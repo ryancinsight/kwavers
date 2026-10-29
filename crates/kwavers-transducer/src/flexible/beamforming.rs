@@ -159,6 +159,7 @@ mod tests {
     use super::*;
     use aequitas::systems::si::quantities::{Length, Velocity};
     use aequitas::systems::si::units::{Meter, MeterPerSecond, PerMeter, Second};
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use leto::Array2;
 
     fn meters(value: f64) -> Length<f64> {
@@ -182,7 +183,7 @@ mod tests {
     }
 
     fn sound_speed() -> Velocity<f64> {
-        Velocity::from_unit::<MeterPerSecond>(1500.0)
+        Velocity::from_unit::<MeterPerSecond>(SOUND_SPEED_WATER_SIM)
     }
 
     /// The defining property: focusing delays make every element arrive at the
@@ -205,7 +206,7 @@ mod tests {
         let arrival: Vec<f64> = (0..5)
             .map(|i| {
                 let r = [pos[[i, 0]], pos[[i, 1]], pos[[i, 2]]];
-                distance(r, [0.0, 0.0, 10e-3]) / 1500.0 + tau[i].in_unit::<Second>()
+                distance(r, [0.0, 0.0, 10e-3]) / SOUND_SPEED_WATER_SIM + tau[i].in_unit::<Second>()
             })
             .collect();
         let a0 = arrival[0];
