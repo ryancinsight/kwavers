@@ -43,6 +43,8 @@ hephaestus-wgpu = { workspace = true, optional = true }
 # bounds its params on eunomia::layout::marker::Pod, so provider param structs
 # must implement the same marker trait instance (not bytemuck's).
 eunomia = { workspace = true, optional = true }
+# aequitas units for the Hephaestus FDTD provider contract (typed quantities).
+aequitas = { workspace = true, optional = true }
 hephaestus-cuda = { workspace = true, optional = true }
 moirai-parallel = { workspace = true, optional = true }
 rand = { version = "0.8", optional = true }
@@ -66,6 +68,7 @@ gpu = [
     "dep:hephaestus-core",
     "dep:hephaestus-wgpu",
     "dep:eunomia",
+    "dep:aequitas",
     "dep:kwavers-analysis",
     "dep:moirai-parallel",
     "dep:rand",

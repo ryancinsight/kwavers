@@ -1,4 +1,5 @@
 use super::{EquivalenceReport, EquivalenceValidator};
+use aequitas::systems::si::quantities::{Length, MassDensity, Time, Velocity};
 use hephaestus_core::{ComputeDevice, Fdtd3dOps, Fdtd3dParams, FdtdMedium, FdtdVelocity};
 use hephaestus_wgpu::{WgpuDevice, WgpuFdtd3dOps};
 use kwavers_core::error::{KwaversError, SystemError, ValidationError};
@@ -54,10 +55,10 @@ fn provider_params(grid: &Grid, dt: f64) -> Result<Fdtd3dParams, KwaversError> {
         nx,
         ny,
         nz,
-        provider_f32("dx", grid.dx)?,
-        provider_f32("dy", grid.dy)?,
-        provider_f32("dz", grid.dz)?,
-        provider_f32("dt", dt)?,
+        Length::from_base(provider_f32("dx", grid.dx)?),
+        Length::from_base(provider_f32("dy", grid.dy)?),
+        Length::from_base(provider_f32("dz", grid.dz)?),
+        Time::from_base(provider_f32("dt", dt)?),
     )
     .map_err(|error| KwaversError::InvalidInput(format!("FDTD provider parameters: {error}")))
 }
@@ -70,9 +71,14 @@ fn medium_values(grid: &Grid, medium: &dyn Medium) -> Result<Vec<FdtdMedium>, Kw
     for z in 0..grid.nz {
         for y in 0..grid.ny {
             for x in 0..grid.nx {
-                let density = provider_f32("density", medium.density(x, y, z).into_base())?;
-                let sound_speed =
-                    provider_f32("sound speed", medium.sound_speed(x, y, z).into_base())?;
+                let density = MassDensity::from_base(provider_f32(
+                    "density",
+                    medium.density(x, y, z).into_base(),
+                )?);
+                let sound_speed = Velocity::from_base(provider_f32(
+                    "sound speed",
+                    medium.sound_speed(x, y, z).into_base(),
+                )?);
                 let cell = FdtdMedium::new(density, sound_speed).map_err(|error| {
                     KwaversError::InvalidInput(format!(
                         "FDTD medium at ({x}, {y}, {z}) is invalid: {error}"
