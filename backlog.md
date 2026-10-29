@@ -56,7 +56,6 @@
 <a id="kw-clippy-pinn-gpu"></a>- [KW-CLIPPY-PINN-GPU](backlog/kw-clippy-pinn-gpu.md) — `cargo clippy --features pinn,gpu` is not warning-clean outside the solver [patch] — todo
 <a id="kw-validate-core"></a>- [KW-VALIDATE-CORE](backlog/kw-validate-core.md) — Consolidate positive/finite validators in kwavers-core [patch] — todo
 <a id="kw-time-typed-step"></a>- [KW-TIME-TYPED-STEP](backlog/kw-time-typed-step.md) — Type the kwavers-core time boundary with Aequitas quantities [patch] — todo
-<a id="kw-db-per-np-duplicate"></a>- [KW-DB-PER-NP-DUPLICATE](backlog/kw-db-per-np-duplicate.md) — kwavers-core defines 20/ln 10 twice, one ULP apart [patch] — todo
 <a id="kw-dep-zip-advisory"></a>- [KW-DEP-ZIP-ADVISORY](backlog/kw-dep-zip-advisory.md) — The Security Audit fails on zip < 9 through gaia-mesh and consus-npy [patch] — todo
 <a id="kw-examples-oversized-923"></a>- [KW-EXAMPLES-OVERSIZED-923](backlog/kw-examples-oversized-923.md) — Examples and tests grown or touched by #923 stay over the 500-line target [patch] — todo
 <a id="kw-gpu-host-tests-unrun"></a>- [KW-GPU-HOST-TESTS-UNRUN](backlog/kw-gpu-host-tests-unrun.md) — CI runs no kwavers-gpu test, including the host-only ones [patch] — todo
