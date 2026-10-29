@@ -489,10 +489,13 @@ mod tests {
     ///
     #[test]
     fn test_db_to_np_exact_value() {
-        let exact = std::f64::consts::LN_10 / 20.0;
-        assert!(
-            (DB_TO_NP - exact).abs() < f64::EPSILON * 10.0,
-            "DB_TO_NP = {DB_TO_NP}, expected ln(10)/20 = {exact}"
+        // ln(10)/20 rounded to nearest from a 60-digit value: 0x1.d791c5f888822p-4.
+        // Computing `LN_10 / 20.0` instead rounds twice and lands one ULP high.
+        const CORRECTLY_ROUNDED_BITS: u64 = 0x3FBD_791C_5F88_8822;
+        assert_eq!(
+            DB_TO_NP.to_bits(),
+            CORRECTLY_ROUNDED_BITS,
+            "DB_TO_NP = {DB_TO_NP}"
         );
     }
 
@@ -502,10 +505,13 @@ mod tests {
     ///
     #[test]
     fn test_np_to_db_exact_value() {
-        let exact = 20.0 / std::f64::consts::LN_10;
-        assert!(
-            (NP_TO_DB - exact).abs() < f64::EPSILON * 10.0,
-            "NP_TO_DB = {NP_TO_DB}, expected 20/ln(10) = {exact}"
+        // 20/ln(10) rounded to nearest from a 60-digit value: 0x1.15f2ced384f29p+3.
+        // Computing `20.0 / LN_10` instead lands one ULP low.
+        const CORRECTLY_ROUNDED_BITS: u64 = 0x4021_5F2C_ED38_4F29;
+        assert_eq!(
+            NP_TO_DB.to_bits(),
+            CORRECTLY_ROUNDED_BITS,
+            "NP_TO_DB = {NP_TO_DB}"
         );
     }
 

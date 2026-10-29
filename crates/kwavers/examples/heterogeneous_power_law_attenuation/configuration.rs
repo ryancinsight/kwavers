@@ -2,9 +2,6 @@ use std::f64::consts::TAU;
 
 pub(crate) const OUT_DIR: &str = "target/fullwave_attenuation";
 
-/// 1 dB = 1/8.685889638 Np; cm⁻¹ → m⁻¹ multiplies by 100.
-const NEPER_PER_DB: f64 = 1.0 / 8.685_889_638_065_035;
-
 // One-dimensional water-like column. The spacing resolves 5 MHz at about ten
 // points per wavelength, inside the pseudospectral solver's Nyquist limit.
 pub(crate) const N: usize = 1536;
@@ -36,7 +33,7 @@ pub(crate) const ALPHA0_DB: [f64; 3] = [0.25, 0.5, 0.75];
 pub(crate) const GAMMAS: [f64; 5] = [0.4, 0.7, 1.0, 1.3, 1.6];
 
 pub(crate) fn alpha_np_m(alpha0_db: f64) -> f64 {
-    alpha0_db * NEPER_PER_DB * 100.0
+    alpha0_db * kwavers_core::constants::acoustic_parameters::DB_TO_NP * 100.0
 }
 
 /// CFL-limited step for the pseudospectral Nyquist wavenumber.

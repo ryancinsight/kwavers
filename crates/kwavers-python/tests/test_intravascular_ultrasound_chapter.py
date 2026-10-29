@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -166,7 +167,7 @@ def test_chapter30_rust_backed_helpers_match_closed_forms():
         1.2e-3,
     )
     expected_intensity = 1.0e12 / (2.0 * 1000.0 * 1500.0)
-    alpha_eff = 100.0 / 8.686 * 2.0
+    alpha_eff = 100.0 * math.log(10.0) / 20.0 * 2.0
     expected_delta = 2.0 * alpha_eff * expected_intensity * 0.25 * 0.50 / (1000.0 * 4000.0)
     expected_ratio = (1.0 - np.exp(-3.0)) / (1.0 - np.exp(-0.6))
     assert np.allclose(response["intensity_w_m2"], [expected_intensity, expected_intensity], rtol=1.0e-12)
@@ -270,7 +271,7 @@ def test_chapter30_rust_backed_helpers_match_closed_forms():
             0.22e-3,
         )
     )
-    expected_attenuation = np.exp(-2.0 * (3.0 * 100.0 / 8.686) * 20.0 * 0.55e-3)
+    expected_attenuation = np.exp(-2.0 * (3.0 * 100.0 * math.log(10.0) / 20.0) * 20.0 * 0.55e-3)
     expected_ring = 0.10 * np.exp(-((0.55e-3 / 0.22e-3) ** 2))
     assert np.allclose(rf, [4.10, 4.0 * expected_attenuation + expected_ring], rtol=1.0e-12, atol=1.0e-12)
 

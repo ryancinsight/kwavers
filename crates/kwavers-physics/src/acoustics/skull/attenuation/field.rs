@@ -88,7 +88,7 @@ impl SkullAttenuation {
 
     /// Convert attenuation coefficient to dB/cm for clinical use
     ///
-    /// Conversion: α_dB = α_Np · 8.686 (Np → dB conversion)
+    /// Conversion: α_dB = α_Np · `NP_TO_DB` (Np → dB conversion, `NP_TO_DB` = 20/ln(10))
     ///
     /// # Arguments
     ///

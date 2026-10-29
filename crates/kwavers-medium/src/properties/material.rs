@@ -40,6 +40,7 @@
 //! assert!(titanium.sound_speed > 5000.0);
 //! ```
 
+use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, ROOM_TEMPERATURE_C};
@@ -353,8 +354,8 @@ impl AcousticMaterialProperties {
     #[must_use]
     pub fn attenuation_db_cm(&self, frequency: f64) -> f64 {
         let alpha = self.absorption_at_frequency(frequency);
-        // Convert Np/m to dB/cm: dB = 20·log₁₀(e) · Np · 0.01
-        alpha * 20.0 * std::f64::consts::LOG10_E * 0.01
+        // Np/m to dB/cm: NP_TO_DB = 20·log₁₀(e) dB per Np, 0.01 m per cm.
+        alpha * NP_TO_DB * 0.01
     }
 }
 

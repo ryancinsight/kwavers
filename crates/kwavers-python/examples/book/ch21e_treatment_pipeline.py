@@ -158,8 +158,8 @@ _C_LIVER, _RHO_LIVER, _ALPHA_DB, _BA, _Z_LIVER_MRAYL = kw.tissue_properties("liv
 _C_FAT, _RHO_FAT, _, _, _Z_FAT_MRAYL = kw.tissue_properties("fat")
 C_LIVER, RHO_LIVER = _C_LIVER, _RHO_LIVER
 Z_LIVER, Z_FAT = _Z_LIVER_MRAYL * 1e6, _Z_FAT_MRAYL * 1e6
-# α at 1 MHz [Np/m] = α₀[dB/cm/MHz^y]·1^y · (ln10/20)·100.
-ALPHA_LIVER_NP_M = _ALPHA_DB * (np.log(10.0) / 20.0) * 100.0
+# α at 1 MHz [Np/m] = α₀[dB/cm/MHz^y]·1^y · 100 · ln(10)/20; y = 0 is the pure unit scale.
+ALPHA_LIVER_NP_M = kw.db2neper(_ALPHA_DB, 0.0)
 BETA_LIVER = 1.0 + _BA / 2.0                       # coefficient of nonlinearity
 CP_LIVER, K_LIVER, _ = kw.tissue_thermal_properties("liver")   # [J/kgK], [W/mK]
 YIELD_STRESS_PA, P_T_1MHZ_PA, _T_SLOPE, SIGMA_T_PA = kw.histotripsy_tissue_properties("liver")

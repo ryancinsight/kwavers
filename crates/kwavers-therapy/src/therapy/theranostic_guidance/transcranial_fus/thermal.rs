@@ -39,7 +39,8 @@
 //! - Brain : 3.5  dB·cm⁻¹·MHz⁻¹.
 //! - Water : 0.002 dB·cm⁻¹·MHz⁻¹.
 //!
-//! Conversion: α\_Np\_m = α\_dB\_cm\_MHz · f\_MHz · 100/8.686.
+//! Conversion: α\_Np\_m = α\_dB\_cm\_MHz · f\_MHz · 100 · ln(10)/20
+//! ([`DB_TO_NP`]).
 //!
 //! # CEM43 thermal dose
 //!
@@ -64,6 +65,7 @@
 //! - Duck, F. A. (1990). Physical Properties of Tissue. Academic Press.
 
 use aequitas::systems::si::quantities::Time;
+use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_core::constants::fundamental::DENSITY_WATER;
 use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
@@ -97,8 +99,8 @@ const WATER_ALPHA_DB_CM_MHZ: f64 = 0.002;
 
 // SSOT: DENSITY_BLOOD=1060.0 kg/m³ (ICRU-44/Duck 1990), SPECIFIC_HEAT_BLOOD_PLASMA=3840.0 J/(kg·K)
 
-/// 1 Np/m = 8.686 dB/m; 1 dB/cm = 100 dB/m → α_Np_m = α_dB_cm·100/8.686.
-const DB_CM_TO_NP_M: f64 = 100.0 / 8.686;
+/// 1 dB = ln(10)/20 Np ([`DB_TO_NP`]); 1 dB/cm = 100 dB/m → α_Np_m = α_dB_cm·100·ln(10)/20.
+const DB_CM_TO_NP_M: f64 = 100.0 * DB_TO_NP;
 
 /// CEM43 lesion threshold in equivalent minutes — Dewhirst et al. (2003).
 const CEM43_LESION_THRESHOLD: f64 = THERMAL_DOSE_THRESHOLD;

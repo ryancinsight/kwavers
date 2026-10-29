@@ -77,9 +77,9 @@ pub struct KzkAbsorptionOperator {
     ///
     /// Converted from the clinical unit dB/(cm·MHz^y) during construction.
     /// The conversion is:  α₀_[Np/(m·Hz^y)] = α₀_[dB/(cm·MHz^y)]
-    ///                                          × (100 / 8.686) / (1e6)^y
+    ///                                          × 100 / `NP_TO_DB` / (1e6)^y
     ///
-    /// Note: the 1/8.686 converts dB → Np (1 Np = 8.686 dB),
+    /// Note: the 1/`NP_TO_DB` converts dB → Np (1 Np = 20/ln(10) dB),
     ///       the ×100 converts cm⁻¹ → m⁻¹,
     ///       the /(1e6)^y absorbs the MHz^y into Hz^y.
     alpha0_np_per_m_per_hz_y: f64,
@@ -109,13 +109,13 @@ impl KzkAbsorptionOperator {
     /// # Unit conversion
     ///
     /// ```text
-    /// α₀ [Np/(m·Hz^y)] = α₀ [dB/(cm·MHz^y)] × 100 / 8.686 / (1e6)^y
+    /// α₀ [Np/(m·Hz^y)] = α₀ [dB/(cm·MHz^y)] × 100 / NP_TO_DB / (1e6)^y
     /// ```
     #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
         // Convert dB/(cm·MHz^y) → Np/(m·Hz^y) using SSOT conversion constants:
         //   / CM_TO_M     : cm⁻¹ → m⁻¹             (CM_TO_M = 0.01, divide)
-        //   / NP_TO_DB    : dB → Np                (NP_TO_DB = 20/ln10 ≈ 8.686)
+        //   / NP_TO_DB    : dB → Np                (NP_TO_DB = 20/ln10)
         //   / MHZ_TO_HZ^y : MHz^y → Hz^y           (MHZ_TO_HZ = 1e6)
         let alpha0_np = config.alpha0 / CM_TO_M / NP_TO_DB / MHZ_TO_HZ.powf(config.alpha_power);
 

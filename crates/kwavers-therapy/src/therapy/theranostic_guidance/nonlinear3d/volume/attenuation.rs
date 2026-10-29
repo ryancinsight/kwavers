@@ -65,11 +65,10 @@ pub(super) fn attenuation_power_law_y_from_hu(hu: f64, label: i16, body: bool) -
 mod tests {
     use super::*;
 
-    const NEPER_PER_DB: f64 = 8.685_889_638_065_036;
-    const SOFT_TISSUE_ALPHA_NP_PER_M_AT_1MHZ: f64 = 0.5 * 100.0 / NEPER_PER_DB;
-    const ORGAN_ALPHA_NP_PER_M_AT_1MHZ: f64 = 0.6 * 100.0 / NEPER_PER_DB;
-    const SKULL_BASE_ALPHA_NP_PER_M_AT_1MHZ: f64 = 13.0 * 100.0 / NEPER_PER_DB;
-    const SKULL_DENSE_ALPHA_NP_PER_M_AT_1MHZ: f64 = 20.0 * 100.0 / NEPER_PER_DB;
+    const SOFT_TISSUE_ALPHA_NP_PER_M_AT_1MHZ: f64 = 0.5 * 100.0 / NP_TO_DB;
+    const ORGAN_ALPHA_NP_PER_M_AT_1MHZ: f64 = 0.6 * 100.0 / NP_TO_DB;
+    const SKULL_BASE_ALPHA_NP_PER_M_AT_1MHZ: f64 = 13.0 * 100.0 / NP_TO_DB;
+    const SKULL_DENSE_ALPHA_NP_PER_M_AT_1MHZ: f64 = 20.0 * 100.0 / NP_TO_DB;
 
     fn assert_close(actual: f64, expected: f64, abs_tol: f64) {
         assert!(
@@ -103,7 +102,7 @@ mod tests {
         let alpha = attenuation_np_per_m_mhz_from_hu(1500.0, 0, true);
         assert_close(alpha, SKULL_DENSE_ALPHA_NP_PER_M_AT_1MHZ, 1.0e-6);
         let midpoint = attenuation_np_per_m_mhz_from_hu(900.0, 0, true);
-        let expected_midpoint = 16.5 * 100.0 / NEPER_PER_DB;
+        let expected_midpoint = 16.5 * 100.0 / NP_TO_DB;
         assert_close(midpoint, expected_midpoint, 1.0e-6);
     }
 

@@ -17,7 +17,7 @@ Compensation scheme
 -------------------
 The CW angular spectrum applies absorption Eq. 11 of Zeng & McGough (2008):
     H_abs(kx,ky) = exp(−α_Np · z_m · k / kz)
-where α_Np [Np/m] = α₀ × 100 / 8.686 × (f₀/1e6)^y.
+where α_Np [Np/m] = α₀ × 100 × ln(10)/20 × (f₀/1e6)^y.
 
 For on-axis propagating waves (kz ≈ k):
     H_abs ≈ exp(−α_Np · z_m)
@@ -76,7 +76,7 @@ ALPHA0_DB_MHZ_CM = 3.0   # [dB/(MHz·cm)]  → 9 dB one-way at f₀, z_m
 ALPHA_POWER      = 1.0
 
 # One-way α at f₀ in Np/m
-ALPHA_NP = ALPHA0_DB_MHZ_CM * 100.0 / (20.0 / np.log(10.0)) * (F0 / 1.0e6) ** ALPHA_POWER
+ALPHA_NP = pkw.db2neper(ALPHA0_DB_MHZ_CM, ALPHA_POWER) * (2.0 * np.pi * F0) ** ALPHA_POWER
 
 # Parity thresholds
 TOL_PSNR_COMP    = 45.0   # [dB] minimum PSNR after compensation

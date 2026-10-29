@@ -732,7 +732,7 @@ density is $\mathbf{f} = 2\alpha_{\mathrm{Np}} I / c$.
 
 For diagnostic intensities $I = 100\;\text{W/cm}^2 = 10^6\;\text{W/m}^2$,
 $\alpha_{\mathrm{Np}} \approx 34\;\text{Np/m}$ (0.3 dB/cm/MHz at 5 MHz,
-converting 0.3 dB/cm = 0.3/8.686 Np/cm $\approx$ 3.45 Np/m, then ×5 MHz ×
+converting 0.3 dB/cm = 0.3 · ln(10)/20 Np/cm $\approx$ 3.45 Np/m, then ×5 MHz ×
 distance-dependent correction), $c = 1500\;\text{m/s}$:
 
 $$f \approx \frac{2 \times 3.45 \times 10^6}{1500} \approx 4600\;\text{N/m}^3.$$
