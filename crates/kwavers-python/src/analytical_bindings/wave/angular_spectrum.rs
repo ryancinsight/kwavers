@@ -9,7 +9,7 @@
 use crate::array_utils::{leto2_to_pyarray2, leto3_to_pyarray3, pyarray2_to_leto2};
 use eunomia::Complex64;
 use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m;
-use kwavers_solver::analytical::angular_spectrum::{CwMedium, backproject_cw, propagate_cw};
+use kwavers_solver::analytical::angular_spectrum::{backproject_cw, propagate_cw, CwMedium};
 use numpy::{PyArray2, PyArray3, PyReadonlyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -100,16 +100,8 @@ pub fn backward_angular_spectrum_cw<'py>(
     angular_restriction: bool,
 ) -> PyResult<Py<PyArray2<Complex64>>> {
     let measurement = pyarray2_to_leto2(&measurement_plane)?;
-    let out = py.detach(|| {
-        backproject_cw(
-            &measurement,
-            dx,
-            z_m,
-            f0,
-            sound_speed,
-            angular_restriction,
-        )
-    });
+    let out =
+        py.detach(|| backproject_cw(&measurement, dx, z_m, f0, sound_speed, angular_restriction));
     let out = out.map_err(|e| PyValueError::new_err(e.to_string()))?;
     leto2_to_pyarray2(py, out)
 }
