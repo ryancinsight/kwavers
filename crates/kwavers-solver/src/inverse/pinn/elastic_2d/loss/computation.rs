@@ -38,6 +38,11 @@ impl LossComputer {
     /// # Returns
     ///
     /// Mean squared residual
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
     pub fn pde_loss<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         residual_x: &Var<f32, B>,
@@ -65,6 +70,11 @@ impl LossComputer {
     /// # Returns
     ///
     /// Mean squared error
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
     pub fn boundary_loss<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         predicted: &Var<f32, B>,
@@ -88,6 +98,11 @@ impl LossComputer {
     /// # Returns
     ///
     /// Combined MSE for displacement and velocity
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
     pub fn initial_loss<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         predicted_u: &Var<f32, B>,
@@ -119,6 +134,11 @@ impl LossComputer {
     /// # Returns
     ///
     /// Mean squared error
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
     pub fn data_loss<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         predicted: &Var<f32, B>,
@@ -142,6 +162,11 @@ impl LossComputer {
     /// # Returns
     ///
     /// Weighted sum of all losses
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
     pub fn total_loss<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         pde: &Var<f32, B>,
