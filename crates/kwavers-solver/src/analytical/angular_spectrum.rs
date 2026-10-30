@@ -64,13 +64,16 @@ fn dk(n: usize, dx: f64) -> f64 {
 }
 
 /// FFT-order (zero frequency first) wavenumber coordinate of index `j`.
-/// Index `n / 2` is exactly zero, mirroring the DC round-off removal in the
-/// reference (`k_vec[N // 2] = 0.0` before `ifftshift`).
+///
+/// Mirrors the reference exactly: the centred vector holds
+/// `(i - N/2)·dk`, the `N/2` entry is assigned `0.0`, and `ifftshift` moves
+/// that entry to index 0 — so index 0 is exactly zero and index `N/2` keeps
+/// the negative-Nyquist coordinate `-(N/2)·dk` (evanescent, decaying), never
+/// zero. Zeroing the Nyquist bin instead would give it a unit propagator and
+/// leak spectral energy into every pixel, growing with `z`.
 fn fft_freq(j: usize, n: usize, dk: f64) -> f64 {
     if j < n / 2 {
         f64::from_count(j) * dk
-    } else if j == n / 2 {
-        0.0
     } else {
         -f64::from_count(n - j) * dk
     }

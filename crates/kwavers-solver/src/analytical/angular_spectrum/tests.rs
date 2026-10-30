@@ -1,6 +1,6 @@
 //! Tests for the CW angular-spectrum propagator.
 
-use super::{CwMedium, backproject_cw, fft_len, propagate_cw};
+use super::{CwMedium, backproject_cw, fft_freq, fft_len, propagate_cw};
 use apollo::{Complex64, fft_2d_complex, ifft_2d_complex};
 use eunomia::FloatElement;
 use kwavers_core::error::{ConfigError, KwaversError};
@@ -50,6 +50,26 @@ fn test_fft_len_matches_reference() {
     for (dim, want) in [(1, 2), (2, 4), (3, 8), (100, 256), (128, 256), (129, 512)] {
         assert_eq!(fft_len(dim), want, "fft_len({dim})");
     }
+}
+
+/// FFT-order wavenumber grid: DC exactly at index 0, negative Nyquist at
+/// index N/2 (the reference's centred `k_vec[N // 2] = 0.0` lands at index 0
+/// after `ifftshift`; the Nyquist bin keeps `-(N/2)·dk` and stays evanescent).
+#[test]
+fn test_fft_freq_matches_ifftshifted_reference() {
+    let n = 256;
+    let dx = 0.15e-3;
+    let step = 2.0 * std::f64::consts::PI / (f64::from_count(n) * dx);
+    assert_eq!(fft_freq(0, n, step), 0.0, "DC must be exactly zero");
+    assert_eq!(
+        fft_freq(n / 2, n, step),
+        -(f64::from_count(n) / 2.0) * step,
+        "Nyquist bin must stay negative"
+    );
+    assert!(
+        fft_freq(n / 2, n, step) < 0.0,
+        "Nyquist bin must be evanescent-side"
+    );
 }
 
 /// A zero-distance plane returns the input bit-for-bit (no FFT round-off).
