@@ -122,7 +122,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         let priorities_vec: Vec<f32> = self.priorities.clone();
 
         if (points_vec.len()) < 3 || (points_vec.len()) / 3 != (priorities_vec.len()) {
-            return self.create_fallback_regions();
+            return Self::create_fallback_regions();
         }
 
         let num_points = (points_vec.len()) / 3;
@@ -188,7 +188,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         regions
     }
 
-    pub(super) fn create_fallback_regions(&self) -> Vec<HighResidualRegion> {
+    pub(super) fn create_fallback_regions() -> Vec<HighResidualRegion> {
         let mut regions = Vec::new();
 
         for i in 0..2 {

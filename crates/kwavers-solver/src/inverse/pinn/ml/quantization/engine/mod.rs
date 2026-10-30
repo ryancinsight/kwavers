@@ -43,7 +43,7 @@ impl MlQuantizer {
         B::DeviceBuffer<f32>:
             coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
     {
-        let layers = self.analyze_model_layers(model)?;
+        let layers = Self::analyze_model_layers(model)?;
 
         let _calibration_data = match &self.scheme {
             QuantizationScheme::Static8Bit { calibration_data } => calibration_data.clone(),
@@ -53,7 +53,7 @@ impl MlQuantizer {
 
         let quantized_weights = self.quantize_weights(model)?;
 
-        let validation_result = self.validate_quantization(model, &quantized_weights)?;
+        let validation_result = Self::validate_quantization(model, &quantized_weights)?;
         if validation_result.accuracy_loss > self.accuracy_tolerance {
             return Err(KwaversError::System(
                 kwavers_core::error::SystemError::InvalidConfiguration {
@@ -67,8 +67,8 @@ impl MlQuantizer {
         }
 
         let quantization_params = QuantizationParams {
-            global_scale: self.calculate_global_scale(&quantized_weights),
-            layer_scales: self.calculate_layer_scales(&layers, &quantized_weights),
+            global_scale: Self::calculate_global_scale(&quantized_weights),
+            layer_scales: Self::calculate_layer_scales(&layers, &quantized_weights),
             scheme: self.scheme.clone(),
         };
 
@@ -88,7 +88,7 @@ impl MlQuantizer {
     }
 
     /// Compute global scale: maximum scale across all quantized weight tensors.
-    pub(super) fn calculate_global_scale(&self, quantized_weights: &[QuantizedTensor]) -> f32 {
+    pub(super) fn calculate_global_scale(quantized_weights: &[QuantizedTensor]) -> f32 {
         quantized_weights
             .iter()
             .map(|t| t.scale)
@@ -97,7 +97,6 @@ impl MlQuantizer {
 
     /// Compute per-layer scales from the first weight tensor for each layer.
     pub(super) fn calculate_layer_scales(
-        &self,
         layers: &[LayerInfo],
         quantized_weights: &[QuantizedTensor],
     ) -> HashMap<String, f32> {

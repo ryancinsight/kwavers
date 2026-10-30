@@ -152,7 +152,7 @@ where
         let mut predictions = Vec::new();
 
         for model in &self.ensemble {
-            let prediction = self.model_prediction(model, input)?;
+            let prediction = Self::model_prediction(model, input)?;
             predictions.push(prediction);
         }
 
@@ -200,7 +200,7 @@ where
             })
             .collect();
 
-        let entropy = self.compute_predictive_entropy(mean_variance);
+        let entropy = Self::compute_predictive_entropy(mean_variance);
         let reliability = self.compute_reliability_score(mean_variance);
 
         self.uncertainty_history.update(mean_variance);
@@ -225,7 +225,6 @@ where
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn model_prediction(
-        &self,
         model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         input: &[f32],
     ) -> KwaversResult<Vec<f32>> {
@@ -255,7 +254,7 @@ where
     }
 
     /// Compute predictive entropy.
-    fn compute_predictive_entropy(&self, mean_variance: f32) -> f32 {
+    fn compute_predictive_entropy(mean_variance: f32) -> f32 {
         0.5 * (1.0 + (2.0 * std::f32::consts::PI * mean_variance).ln())
     }
 

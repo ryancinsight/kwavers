@@ -42,7 +42,6 @@ fn test_hardware_capabilities() {
 
 #[test]
 fn test_data_type_quantization() {
-    let runtime = EdgeRuntime::new(64);
     let input = vec![1.0, -1.0, 0.5, -0.5];
     let kernel = ExecutionKernel {
         id: "test".to_string(),
@@ -56,7 +55,7 @@ fn test_data_type_quantization() {
         memory_required: 1024,
     };
 
-    let result = runtime.software_quantize(&input, &kernel);
+    let result = EdgeRuntime::software_quantize(&input, &kernel);
 
     let quantized = result.unwrap();
     assert_eq!((quantized.len()), 4);

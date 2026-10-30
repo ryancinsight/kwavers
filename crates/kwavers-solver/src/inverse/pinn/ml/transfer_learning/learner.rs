@@ -38,11 +38,11 @@ where
         let target_model = self.initialize_target_model(&source_features)?;
 
         let initial_accuracy =
-            self.evaluate_accuracy(&target_model, target_geometry, target_conditions)?;
+            Self::evaluate_accuracy(&target_model, target_geometry, target_conditions)?;
         let (final_model, convergence_epochs) =
             self.fine_tune_model(target_model, target_geometry, target_conditions)?;
         let final_accuracy =
-            self.evaluate_accuracy(&final_model, target_geometry, target_conditions)?;
+            Self::evaluate_accuracy(&final_model, target_geometry, target_conditions)?;
 
         let training_time = start_time.elapsed();
 
@@ -124,7 +124,7 @@ where
         let mut convergence_epochs = 0;
 
         for epoch in 0..self.config.fine_tune_epochs {
-            let training_data = self.generate_training_data(target_geometry, target_conditions)?;
+            let training_data = Self::generate_training_data(target_geometry, target_conditions)?;
 
             let current_accuracy = self.fine_tune_step(&mut model, &training_data)?;
 
@@ -153,11 +153,10 @@ where
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn generate_training_data(
-        &self,
         geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         _conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
     ) -> KwaversResult<TrainingData> {
-        let collocation_points = self.generate_collocation_points(geometry);
+        let collocation_points = Self::generate_collocation_points(geometry);
         if collocation_points.is_empty() {
             return Err(KwaversError::InvalidInput(
                 "Failed to generate any collocation points inside target geometry".to_string(),
@@ -169,7 +168,6 @@ where
 
     /// Generate collocation points within geometry
     pub(super) fn generate_collocation_points(
-        &self,
         geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
     ) -> Vec<(f64, f64, f64)> {
         let mut points = Vec::new();

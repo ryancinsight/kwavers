@@ -34,13 +34,13 @@ fn test_geometry_with_obstacle() {
 
 #[test]
 fn test_point_in_geometry() {
-    let solver = UniversalPINNSolver::<coeus_core::MoiraiBackend>::new().unwrap();
+    type Solver = UniversalPINNSolver<coeus_core::MoiraiBackend>;
     let geometry = UniversalSolverGeometry2D::rectangle(0.0, 1.0, 0.0, 1.0)
         .with_circle_obstacle((0.5, 0.5), 0.2);
 
-    assert!(solver.is_point_in_geometry(0.8, 0.8, &geometry));
-    assert!(!solver.is_point_in_geometry(1.5, 0.5, &geometry));
-    assert!(!solver.is_point_in_geometry(0.5, 0.5, &geometry));
+    assert!(Solver::is_point_in_geometry(0.8, 0.8, &geometry));
+    assert!(!Solver::is_point_in_geometry(1.5, 0.5, &geometry));
+    assert!(!Solver::is_point_in_geometry(0.5, 0.5, &geometry));
 }
 
 #[test]

@@ -39,7 +39,7 @@ impl JitCompiler {
 
         let start_time = std::time::Instant::now();
 
-        let model_info = self.analyze_model(model)?;
+        let model_info = Self::analyze_model(model)?;
         let kernel_id = format!("{}_{}", kernel_name, model_info.hash);
 
         let execution_plan = self.generate_execution_plan(&model_info, geometry)?;
@@ -70,7 +70,7 @@ impl JitCompiler {
         Ok(kernel)
     }
 
-    fn analyze_model(&self, _model: &dyn std::any::Any) -> KwaversResult<ModelInfo> {
+    fn analyze_model(_model: &dyn std::any::Any) -> KwaversResult<ModelInfo> {
         Ok(ModelInfo {
             input_dims: vec![3],
             output_dims: vec![1],
