@@ -122,12 +122,6 @@ pub enum ElementShape {
         start_angle: f64,
         end_angle: f64,
     },
-    /// Disc/circular element
-    Disc {
-        position: (f64, f64, f64),
-        diameter: f64,
-        focus_position: Option<(f64, f64, f64)>,
-    },
     /// Disc/circular element with finite-source surface profile.
     ProfiledDisc {
         position: (f64, f64, f64),

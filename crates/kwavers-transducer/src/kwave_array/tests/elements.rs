@@ -373,3 +373,53 @@ fn planar_rectangle_conserves_area_and_stays_in_its_footprint() {
     );
     assert_eq!(array.compute_total_surface_area(), width * height,);
 }
+
+/// A one-sample disc sits at its centre (ADR 136 disc acceptance): a disc
+/// smaller than one radial step emits exactly the centre sample carrying
+/// the full per-sample scale, so a degenerate disc never drifts off-centre.
+///
+/// # Panics
+/// - Panics if `grid`.
+#[test]
+fn test_single_sample_disc_lattice_sits_at_centre() {
+    use kwavers_grid::Grid;
+
+    let dx = 1.0e-3;
+    let grid = Grid::new(16, 16, 16, dx, dx, dx).expect("grid");
+    let center = (8.0e-3, 8.0e-3, 8.0e-3);
+    let radius = dx / 4.0;
+    let mut points = Vec::new();
+    let mut scales = Vec::new();
+    KWaveArray::rasterize_framed_disc_points(
+        &grid,
+        center,
+        radius,
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        DiscSourceProfile::uniform(),
+        |point, scale| {
+            points.push(point);
+            scales.push(scale);
+        },
+    );
+    assert_eq!(
+        points.len(),
+        1,
+        "a sub-cell disc must emit exactly one sample"
+    );
+    for (axis, (got, want)) in points[0]
+        .iter()
+        .zip([center.0, center.1, center.2].iter())
+        .enumerate()
+    {
+        assert!(
+            (got - want).abs() == 0.0,
+            "single disc sample axis {axis}: {got:.6e} must equal centre {want:.6e} exactly"
+        );
+    }
+    let expected_scale = std::f64::consts::PI * radius * radius / (dx * dx);
+    assert!(
+        (scales[0] - expected_scale).abs() == 0.0,
+        "single disc sample must carry the full per-sample scale"
+    );
+}

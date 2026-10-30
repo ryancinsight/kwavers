@@ -265,20 +265,40 @@ impl KWaveArray {
     /// * `position`       - Center position `[x, y, z]` in metres
     /// * `diameter`       - Disc diameter in metres
     /// * `focus_position` - Optional focus point defining the disc normal
+    /// Add a disc-shaped element (ADR 136 follow-up for discs).
+    ///
+    /// Builds a `PlanarApertureShape::Disk` under `SurfaceConvention::KWave`:
+    /// the disc normal derives from `focus_position` exactly as the retired
+    /// `ElementShape::Disc` path (`(focus − center)/‖…‖`, or `e_z`
+    /// unfocused), and the in-plane frame is the legacy disc-basis tangent,
+    /// so the rasterized spiral coincides with the retired path. Unlike the
+    /// rectangle fold this changes no signature: there was no dead
+    /// parameter to remove.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the diameter is not positive and finite, the position is
+    /// not finite, or a focus coincides with the disc centre.
     pub fn add_disc_element(
         &mut self,
         position: (f64, f64, f64),
         diameter: f64,
         focus_position: Option<(f64, f64, f64)>,
     ) -> &mut Self {
-        self.elements.push(
-            ElementShape::Disc {
-                position,
-                diameter,
-                focus_position,
-            }
-            .into(),
-        );
+        use crate::transducers::physics::{PlanarApertureShape, SurfaceConvention};
+
+        let (first, _, normal) = Self::disc_basis(position, focus_position);
+        let geometry = PlanarApertureGeometry::oriented_with_convention(
+            [position.0, position.1, position.2],
+            normal,
+            first,
+            PlanarApertureShape::Disk {
+                radius_m: diameter / 2.0,
+            },
+            SurfaceConvention::KWave,
+        )
+        .expect("add_disc_element: diameter must be positive and finite");
+        self.elements.push(KWaveElement::PlanarAperture(geometry));
         self
     }
 

@@ -35,13 +35,6 @@ impl KWaveArray {
                         *end_angle,
                     );
                 }
-                ElementShape::Disc {
-                    position,
-                    diameter,
-                    focus_position,
-                } => {
-                    Self::rasterize_disc(&mut mask, grid, *position, *diameter, *focus_position);
-                }
                 ElementShape::ProfiledDisc {
                     position,
                     diameter,
@@ -99,19 +92,6 @@ impl KWaveArray {
                     diameter,
                 } => {
                     Self::rasterize_bowl_weighted(&mut mask, grid, *position, *radius, *diameter);
-                }
-                ElementShape::Disc {
-                    position,
-                    diameter,
-                    focus_position,
-                } => {
-                    Self::rasterize_disc_weighted(
-                        &mut mask,
-                        grid,
-                        *position,
-                        *diameter,
-                        *focus_position,
-                    );
                 }
                 ElementShape::ProfiledDisc {
                     position,

@@ -127,23 +127,6 @@ impl KWaveArray {
         });
     }
 
-    pub(super) fn rasterize_disc_weighted(
-        mask: &mut Array3<f64>,
-        grid: &kwavers_grid::Grid,
-        center: (f64, f64, f64),
-        diameter: f64,
-        focus_position: Option<(f64, f64, f64)>,
-    ) {
-        Self::rasterize_profiled_disc_weighted(
-            mask,
-            grid,
-            center,
-            diameter,
-            focus_position,
-            DiscSourceProfile::uniform(),
-        );
-    }
-
     pub(super) fn rasterize_profiled_disc_weighted(
         mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
@@ -205,19 +188,42 @@ impl KWaveArray {
         diameter: f64,
         focus_position: Option<(f64, f64, f64)>,
         profile: DiscSourceProfile,
+        visit: F,
+    ) where
+        F: FnMut([f64; 3], f64),
+    {
+        let (u, v, _) = Self::disc_basis(center, focus_position);
+        Self::rasterize_framed_disc_points(grid, center, diameter / 2.0, u, v, profile, visit);
+    }
+
+    /// Emit the disc spiral on an explicit orthonormal frame (ADR 136
+    /// follow-up): the k-wave-python radial-Fibonacci lattice with its
+    /// centre sample, mapped through `(u, v)` about `center`, under the
+    /// legacy `area/dx^2` sample budget. Counts convert through the
+    /// conversion module, never bare `as`.
+    pub(super) fn rasterize_framed_disc_points<F>(
+        grid: &kwavers_grid::Grid,
+        center: (f64, f64, f64),
+        radius: f64,
+        u: [f64; 3],
+        v: [f64; 3],
+        profile: DiscSourceProfile,
         mut visit: F,
     ) where
         F: FnMut([f64; 3], f64),
     {
-        let radius = diameter / 2.0;
         let area = std::f64::consts::PI * radius * radius;
         let m_grid = area / (grid.dx * grid.dx);
-        let target_points = (m_grid * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0) as usize;
-        let num_radial =
-            ((target_points as f64 / std::f64::consts::PI).sqrt().ceil() as usize).max(1);
+        let target_points =
+            usize::from_truncated((m_grid * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0));
+        let num_radial = usize::from_truncated(
+            (f64::from_count(target_points) / std::f64::consts::PI)
+                .sqrt()
+                .ceil(),
+        )
+        .max(1);
         let num_points = Self::disc_sample_count(num_radial);
-        let scale = m_grid / num_points as f64;
-        let (u, v, _) = Self::disc_basis(center, focus_position);
+        let scale = m_grid / f64::from_count(num_points);
 
         let mut emit = |x_local: f64, y_local: f64| {
             let point = [
@@ -237,16 +243,18 @@ impl KWaveArray {
             return;
         }
 
-        let radial_denom = (num_radial - 1) as f64;
+        let radial_denom = f64::from_count(num_radial - 1);
         let radial_step = (radius - radius / (2.0 * radial_denom)) / radial_denom;
 
         for ring_idx in 1..num_radial {
-            let ring_radius = ring_idx as f64 * radial_step;
-            let num_theta = ((ring_idx as f64) * super::math::DISC_PACKING_NUMBER)
-                .round()
-                .max(1.0) as usize;
+            let ring_radius = f64::from_count(ring_idx) * radial_step;
+            let num_theta = usize::from_truncated(
+                (f64::from_count(ring_idx) * super::math::DISC_PACKING_NUMBER)
+                    .round()
+                    .max(1.0),
+            );
             for theta_idx in 0..num_theta {
-                let theta = TWO_PI * theta_idx as f64 / num_theta as f64;
+                let theta = TWO_PI * f64::from_count(theta_idx) / f64::from_count(num_theta);
                 emit(ring_radius * theta.cos(), ring_radius * theta.sin());
             }
         }
@@ -298,6 +306,32 @@ impl KWaveArray {
             );
             return;
         }
+        if let (SurfaceConvention::KWave, PlanarApertureShape::Disk { radius_m }) =
+            (geometry.surface(), geometry.shape())
+        {
+            let second = Self::second_axis(geometry.normal(), geometry.first_axis());
+            Self::rasterize_framed_disc_points(
+                grid,
+                center,
+                radius_m,
+                geometry.first_axis(),
+                second,
+                DiscSourceProfile::uniform(),
+                |point, scale| {
+                    Self::map_surface_sample(
+                        grid,
+                        &x_vec,
+                        &y_vec,
+                        &z_vec,
+                        point,
+                        scale,
+                        true,
+                        |i, j, k, _| mask[[i, j, k]] = true,
+                    );
+                },
+            );
+            return;
+        }
         Self::rasterize_planar_aperture_points(grid, geometry, center, |point, scale| {
             Self::map_surface_sample(
                 grid,
@@ -333,6 +367,32 @@ impl KWaveArray {
                 height_m,
                 geometry.first_axis(),
                 second,
+                |point, scale| {
+                    Self::map_surface_sample(
+                        grid,
+                        &x_vec,
+                        &y_vec,
+                        &z_vec,
+                        point,
+                        scale,
+                        false,
+                        |i, j, k, weight| mask[[i, j, k]] += weight,
+                    );
+                },
+            );
+            return;
+        }
+        if let (SurfaceConvention::KWave, PlanarApertureShape::Disk { radius_m }) =
+            (geometry.surface(), geometry.shape())
+        {
+            let second = Self::second_axis(geometry.normal(), geometry.first_axis());
+            Self::rasterize_framed_disc_points(
+                grid,
+                center,
+                radius_m,
+                geometry.first_axis(),
+                second,
+                DiscSourceProfile::uniform(),
                 |point, scale| {
                     Self::map_surface_sample(
                         grid,
@@ -533,6 +593,34 @@ impl KWaveArray {
                 );
                 return;
             }
+            if let (SurfaceConvention::KWave, PlanarApertureShape::Disk { radius_m }) =
+                (geometry.surface(), geometry.shape())
+            {
+                let second = Self::second_axis(geometry.normal(), geometry.first_axis());
+                Self::rasterize_framed_disc_points(
+                    grid,
+                    center,
+                    radius_m,
+                    geometry.first_axis(),
+                    second,
+                    DiscSourceProfile::uniform(),
+                    |point, scale| {
+                        Self::map_surface_sample(
+                            grid,
+                            &x_vec,
+                            &y_vec,
+                            &z_vec,
+                            point,
+                            scale,
+                            false,
+                            |ix, iy, iz, weight| {
+                                visit(ix, iy, iz, weight);
+                            },
+                        );
+                    },
+                );
+                return;
+            }
             Self::rasterize_planar_aperture_points(grid, *geometry, center, |point, scale| {
                 Self::map_area_conserving_surface_sample(
                     grid, &x_vec, &y_vec, &z_vec, point, scale, &mut visit,
@@ -565,19 +653,6 @@ impl KWaveArray {
                 diameter,
             } => {
                 Self::rasterize_bowl_points(grid, *position, *radius, *diameter, &mut visit_point);
-            }
-            ElementShape::Disc {
-                position,
-                diameter,
-                focus_position,
-            } => {
-                Self::rasterize_disc_points(
-                    grid,
-                    *position,
-                    *diameter,
-                    *focus_position,
-                    &mut visit_point,
-                );
             }
             ElementShape::ProfiledDisc {
                 position,

@@ -2,6 +2,16 @@
 
 Status: Accepted
 
+- Revision 2026-10-30 (disc fold, item KW-DISC-PLANAR-CONSOLIDATION):
+  `ElementShape::Disc` folds into `PlanarApertureShape::Disk` under
+  `SurfaceConvention::KWave` the same way: the disc spiral runs on the
+  stored frame through `rasterize_framed_disc_points`, so the k-Wave
+  reference mass (28.339929259209097) and the centre sample hold unchanged.
+  `ProfiledDisc` keeps its variant (no planar profile slot exists).
+  `add_disc_element` keeps its signature — there was no dead parameter —
+  and the installed array transform moves disc centres like every other
+  planar element.
+
 ## Context
 
 `kwave_array::ElementShape::Rect` and `PlanarApertureShape::Rectangle`
