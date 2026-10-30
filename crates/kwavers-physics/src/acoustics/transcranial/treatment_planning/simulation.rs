@@ -7,17 +7,20 @@ use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::medical::{
     BLOOD_PERFUSION_RATE_BRAIN, BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_THRESHOLD,
 };
-use kwavers_core::constants::numerical::CM_TO_M;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN, SOUND_SPEED_BRAIN};
-use kwavers_core::constants::{BODY_TEMPERATURE_C, NP_TO_DB};
+use kwavers_core::constants::BODY_TEMPERATURE_C;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::Array3;
 
 const MILLIMETERS_TO_METERS: f64 = 1.0e-3;
 // SSOT: SOUND_SPEED_BRAIN and DENSITY_BRAIN imported from core::constants::tissue_acoustics
-// dB/(cm·MHz) → Np/m at 1 MHz: divide by NP_TO_DB then by CM_TO_M (SSOT).
-const BRAIN_ABSORPTION_NP_PER_M: f64 = ACOUSTIC_ABSORPTION_TISSUE / NP_TO_DB / CM_TO_M;
+// dB/(cm·MHz) → Np/m at 1 MHz through the `const`-capable owner beside
+// `PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS).
+const BRAIN_ABSORPTION_NP_PER_M: f64 =
+    kwavers_medium::absorption::power_law::db_per_cm_mhz_to_np_per_m_mhz(
+        ACOUSTIC_ABSORPTION_TISSUE,
+    );
 const ABSORPTION_RATE_PER_INTENSITY: f64 = 0.5;
 
 impl TreatmentPlanner {

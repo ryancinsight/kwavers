@@ -125,7 +125,7 @@ impl KzkPlugin {
         let alpha_power = medium.alpha_power(0.0, 0.0, 0.0, grid);
         // KZKConfig carries the k-Wave dB prefactor; convert the SI boundary
         // value back at f_ref, where the power ratio is exactly 1.
-        let alpha0 = kwavers_physics::acoustics::mechanics::absorption::np_m_to_power_law_db_cm(
+        let alpha0 = kwavers_medium::absorption::power_law::np_m_to_power_law_db_cm(
             medium.alpha_coefficient(0.0, 0.0, 0.0, grid).into_base(),
             kwavers_core::constants::MHZ_TO_HZ,
             alpha_power,

@@ -109,8 +109,9 @@ impl AcousticProperties for HeterogeneousMedium {
     ///   α(f) = α₀_Np · (f / f_ref)^y
     /// ```
     ///
-    /// where α₀_Np is the reference absorption in Np/m (converted from
-    /// dB/(MHz^y cm) via `DB_TO_NP * 100 * f_ref_MHz^y`), and y is the
+    /// where α₀_Np is the reference absorption in Np/m stored in
+    /// `self.absorption` (dB prefactors convert `× DB_TO_NP × 100` at every
+    /// fill; see the storage convention in `crate::core`), and y is the
     /// per-voxel power-law exponent stored in `self.alpha_power`.  Both α₀
     /// and y are trilinearly interpolated when `use_trilinear_interpolation`
     /// is set.

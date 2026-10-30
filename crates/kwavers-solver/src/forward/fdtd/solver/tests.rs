@@ -535,7 +535,7 @@ fn check_absorption_power_law(scheme: TemporalScheme) {
 
         let phase_speed = omega / k0;
         let measured = decay / phase_speed;
-        let expected = kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_m(
+        let expected = kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
             ALPHA0_DB,
             y,
             omega / TAU,

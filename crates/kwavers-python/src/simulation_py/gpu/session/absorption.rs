@@ -14,7 +14,7 @@ pub(super) fn build_absorption_kernels(
     dz: f64,
     alpha_power: f64,
 ) -> PyResult<(Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>)> {
-    use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
+    use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
     use std::f64::consts::PI;
 
     let total = nx * ny * nz;

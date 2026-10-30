@@ -103,13 +103,16 @@ mod utils_bindings;
 
 /// Convert k-Wave absorption units dB/(MHz^y·cm) to Np/m at the given frequency.
 ///
-/// This follows the standard scalar conversion
-/// `alpha_np_m = alpha_db_cm * f_mhz^y * 100 / (20 / ln(10))`.
-/// The helper remains local for the frequency-domain utility tests; the GPU
-/// PSTD path uses the shared kwavers spectral conversion helper.
+/// Routes through the single owner beside `PowerLawAbsorption`
+/// (`kwavers_medium::absorption::power_law`); the independent `20/ln(10)`
+/// evaluation in the test below cross-checks it.
 #[allow(dead_code)]
 fn alpha_db_cm_to_np_m(alpha_db_cm: f64, frequency_mhz: f64, alpha_power: f64) -> f64 {
-    kwavers_core::units::alpha_db_per_mhz_cm_to_np_per_m(alpha_db_cm, frequency_mhz, alpha_power)
+    kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+        alpha_db_cm,
+        alpha_power,
+        frequency_mhz * 1.0e6,
+    )
 }
 
 #[cfg(test)]

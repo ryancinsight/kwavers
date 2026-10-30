@@ -16,7 +16,7 @@
 //! Attenuation: 0.5 dB/cm/MHz → `α_soft = 0.5 × 100 × ln10/20 Np/m/MHz`.
 
 use kwavers_core::constants::acoustic_parameters::{
-    NP_TO_DB, SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ, SOUND_SPEED_SKULL,
+    SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ, SOUND_SPEED_SKULL,
 };
 use kwavers_core::constants::ct_acoustics::HU_BONE_THRESHOLD;
 use kwavers_core::constants::fundamental::{
@@ -219,8 +219,9 @@ fn brain_speed(hu: f64) -> f64 {
 
 /// Soft-tissue attenuation in Np/(m·MHz).
 ///
-/// Converts `ACOUSTIC_ABSORPTION_TISSUE` (0.5 dB/(cm·MHz)) using
-/// `α [Np/(m·MHz)] = α [dB/(cm·MHz)] × 100 / NP_TO_DB`.
+/// Converts `ACOUSTIC_ABSORPTION_TISSUE` (0.5 dB/(cm·MHz)) through the
+/// `const`-capable owner beside `PowerLawAbsorption`
+/// (KW-POWER-LAW-INVERSE-FORMS).
 fn soft_attenuation() -> f64 {
-    ACOUSTIC_ABSORPTION_TISSUE * 100.0 / NP_TO_DB
+    kwavers_medium::absorption::power_law::db_per_cm_mhz_to_np_per_m_mhz(ACOUSTIC_ABSORPTION_TISSUE)
 }

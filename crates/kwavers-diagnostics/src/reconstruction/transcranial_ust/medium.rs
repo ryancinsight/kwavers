@@ -1,8 +1,6 @@
 //! CT slice preparation and CT-to-acoustic property mapping.
 
-use kwavers_core::constants::acoustic_parameters::{
-    NP_TO_DB, SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ,
-};
+use kwavers_core::constants::acoustic_parameters::SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ;
 use kwavers_core::constants::ct_acoustics::{
     HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD, SOUND_SPEED_SOFT_TISSUE_MAX,
 };
@@ -14,9 +12,12 @@ use leto::{Array2, Array3};
 use super::config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
 /// Soft-tissue attenuation in Np/(m·MHz) derived from `ACOUSTIC_ABSORPTION_TISSUE`
-/// (0.5 dB/(cm·MHz)): α = 0.5 × 100 / NP_TO_DB.
+/// (0.5 dB/(cm·MHz)) through the `const`-capable owner beside
+/// `PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS).
 pub(super) const SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ: f64 =
-    ACOUSTIC_ABSORPTION_TISSUE * 100.0 / NP_TO_DB;
+    kwavers_medium::absorption::power_law::db_per_cm_mhz_to_np_per_m_mhz(
+        ACOUSTIC_ABSORPTION_TISSUE,
+    );
 
 /// CT slice resampled to the square transcranial UST inversion domain.
 #[derive(Clone, Debug)]
