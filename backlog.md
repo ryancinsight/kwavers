@@ -56,6 +56,5 @@
 <a id="kw-gpu-velocity-source-scale"></a>- [KW-GPU-VELOCITY-SOURCE-SCALE](backlog/kw-gpu-velocity-source-scale.md) — GPU PSTD adds velocity sources without the 2c₀Δt/Δx scale [patch] — todo
 <a id="kw-origin-sampled-medium"></a>- [KW-ORIGIN-SAMPLED-MEDIUM](backlog/kw-origin-sampled-medium.md) — Non-PSTD paths read a heterogeneous medium at the origin [patch] — todo
 <a id="kw-pstd-unit-exponent-backends"></a>- [KW-PSTD-UNIT-EXPONENT-BACKENDS](backlog/kw-pstd-unit-exponent-backends.md) — CPU and GPU PSTD disagree on a configured y = 1 under causal dispersion [patch] — todo
-<a id="kw-subspace-jacobi-eigen"></a>- [KW-SUBSPACE-JACOBI-EIGEN](backlog/kw-subspace-jacobi-eigen.md) — MUSIC and ESMV beamformers still use the classical Jacobi Hermitian eigensolver [patch] [perf] — todo
 <a id="kw-test-cpml-thicknesses-budget"></a>- [KW-TEST-CPML-THICKNESSES-BUDGET](backlog/kw-test-cpml-thicknesses-budget.md) — `test_cpml_stable_across_thicknesses` runs 45 s against a 10 s slow bound [patch] [perf] — todo
 <a id="kw-wallclock-test-assertions"></a>- [KW-WALLCLOCK-TEST-ASSERTIONS](backlog/kw-wallclock-test-assertions.md) — Three test files still assert on elapsed time and sleep to synchronize [patch] — todo
