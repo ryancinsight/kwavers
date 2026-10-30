@@ -8,6 +8,12 @@ use kwavers_core::error::KwaversResult;
 // Independent field tensors and physical parameters with no cohesive
 // sub-grouping; bundling would not clarify the call site.
 #[allow(clippy::too_many_arguments)]
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
+///
 pub fn wave_propagation_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     model: &PinnWave2D<B>, // Changed from outputs to model
     x: &Var<f32, B>,
