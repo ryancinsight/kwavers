@@ -12,7 +12,7 @@
 //! - [`backproject_cw`]: time-reversed reconstruction of a source plane.
 //! - [`CwMedium`]: homogeneous-medium parameters (sound speed, Np/m absorption).
 
-use apollo::{Complex64, fft_2d_complex, ifft_2d_complex};
+use apollo::{fft_2d_complex, ifft_2d_complex, Complex64};
 use eunomia::FloatElement;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
@@ -124,21 +124,28 @@ impl Propagator {
 
     /// Forward propagator `H = conj(exp(i·z·kz))`, with the Zeng–McGough
     /// absorption factor and optional angular restriction applied.
-    fn forward(&self, z: f64, alpha_np_per_m: f64, angular_restriction: bool, dx: f64) -> Array2<Complex64> {
+    fn forward(
+        &self,
+        z: f64,
+        alpha_np_per_m: f64,
+        angular_restriction: bool,
+        dx: f64,
+    ) -> Array2<Complex64> {
         let mut h = Array2::zeros((self.n, self.n));
         for i in 0..self.n {
             for j in 0..self.n {
                 let kz = self.kz[[i, j]];
                 let mut hij = (Complex64::new(0.0, z) * kz).exp().conj();
                 if alpha_np_per_m != 0.0 {
-                    hij = hij * (Complex64::new(-alpha_np_per_m * z * self.k, 0.0) / kz).exp();
+                    hij *= (Complex64::new(-alpha_np_per_m * z * self.k, 0.0) / kz).exp();
                 }
                 h[[i, j]] = hij;
             }
         }
         if angular_restriction {
             let diameter = f64::from_count(self.n - 1) * dx;
-            let kc = self.k * (0.5 * diameter * diameter / (0.5 * diameter * diameter + z * z)).sqrt();
+            let kc =
+                self.k * (0.5 * diameter * diameter / (0.5 * diameter * diameter + z * z)).sqrt();
             zero_beyond(&mut h, &self.radial, kc);
         }
         h
@@ -273,7 +280,7 @@ pub fn propagate_cw(
         let mut product = spectrum.clone();
         for i in 0..n {
             for j in 0..n {
-                product[[i, j]] = product[[i, j]] * h[[i, j]];
+                product[[i, j]] *= h[[i, j]];
             }
         }
         let projected = ifft_2d_complex(&product);
@@ -337,7 +344,7 @@ pub fn backproject_cw(
     let mut product = spectrum.clone();
     for i in 0..n {
         for j in 0..n {
-            product[[i, j]] = product[[i, j]] * h[[i, j]];
+            product[[i, j]] *= h[[i, j]];
         }
     }
     let full = ifft_2d_complex(&product);
