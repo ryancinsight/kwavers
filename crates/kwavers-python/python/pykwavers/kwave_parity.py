@@ -3,11 +3,17 @@
 # ============================================================================
 # Pure-Python k-Wave parity utilities
 # ============================================================================
-# These functions match the k-Wave/k-wave-python API and are implemented here
-# in pure NumPy/SciPy — no Rust binding required since they are post-processing
-# utilities that operate on NumPy arrays.
+# These functions match the k-Wave/k-wave-python API. Post-processing
+# utilities that operate on NumPy arrays stay in pure NumPy; the spectral
+# propagators (`angular_spectrum_cw`, `backward_angular_spectrum_cw`) are
+# thin facades over the Rust owner
+# (`kwavers_solver::analytical::angular_spectrum`) — all FFT, propagator,
+# absorption, and restriction math lives there.
 
 import numpy as _np
+
+from pykwavers._pykwavers import angular_spectrum_cw as _rust_angular_spectrum_cw
+from pykwavers._pykwavers import backward_angular_spectrum_cw as _rust_backward_angular_spectrum_cw
 
 
 def gaussian(N: int, var: float, magnitude: float = 1.0) -> "_np.ndarray":
@@ -270,91 +276,29 @@ def angular_spectrum_cw(
     Zeng & McGough (2008). "Evaluation of the angular spectrum approach for
     simulations of near-field pressures." JASA, 123(1), 68-76.
     """
-    # Parse medium
+    # Signature parsing only: every floating-point operation of the
+    # propagation lives in the Rust owner. The medium dict keeps its
+    # k-wave-python shape; the dB/MHz^y/cm conversion runs in Rust via the
+    # canonical single-owner conversion.
     if isinstance(medium, dict):
         c0 = float(medium["sound_speed"])
-        absorbing = "alpha_coeff" in medium and "alpha_power" in medium
-        if absorbing:
-            # Convert dB·MHz^{-y}·cm^{-1} to Np/m at f0
-            alpha_coeff = medium["alpha_coeff"]
-            alpha_power = medium["alpha_power"]
-            # db2neper converts dB/m at 1 Hz^y; multiply by f^y to get Np/m
-            alpha_neper_per_m = (
-                alpha_coeff
-                * (100.0)  # cm^{-1} → m^{-1}: ×100
-                / (8.686)  # dB→Np
-                * (1e-6 * f0) ** alpha_power  # scale by (MHz)^y
-            )
+        if "alpha_coeff" in medium and "alpha_power" in medium:
+            alpha_db = (float(medium["alpha_coeff"]), float(medium["alpha_power"]))
         else:
-            alpha_neper_per_m = 0.0
+            alpha_db = None
     else:
         c0 = float(medium)
-        absorbing = False
-        alpha_neper_per_m = 0.0
-
-    if dx > c0 / (2.0 * f0):
-        raise ValueError(
-            f"dx={dx} m exceeds Nyquist limit {c0 / (2 * f0):.4g} m at f0={f0} Hz."
-        )
-
-    input_plane = _np.asarray(input_plane, dtype=complex)
-    Nx, Ny = input_plane.shape
-    z_pos_arr = _np.atleast_1d(_np.asarray(z_pos, dtype=float))
-    Nz = len(z_pos_arr)
-
-    # Optional zero-pad
-    if grid_expansion > 0:
-        pad = grid_expansion
-        input_plane = _np.pad(input_plane, ((pad, pad), (pad, pad)), mode="constant")
-        Nx, Ny = input_plane.shape
-
-    # FFT length: next power of 2 above max(Nx, Ny), then doubled
-    N = int(2 ** (_np.ceil(_np.log2(max(Nx, Ny))) + 1))
-
-    # Wavenumber vector (centred, then shifted to FFT order)
-    if N % 2 == 0:
-        k_vec = _np.arange(-N // 2, N // 2) * (2.0 * _np.pi / (N * dx))
-    else:
-        k_vec = _np.arange(-(N - 1) // 2, (N - 1) // 2 + 1) * (2.0 * _np.pi / (N * dx))
-    k_vec[N // 2] = 0.0  # remove floating-point round-off at DC
-    k_vec = _np.fft.ifftshift(k_vec)
-
-    k = 2.0 * _np.pi * f0 / c0
-
-    # 2-D wavenumber grids (indexing='ij' matches Nx×Ny layout)
-    ky, kx = _np.meshgrid(k_vec, k_vec, indexing="ij")
-    kz = _np.sqrt((k**2 - kx**2 - ky**2).astype(complex))
-    sqrt_kx2_ky2 = _np.sqrt(kx**2 + ky**2)
-
-    pressure = _np.zeros((Nx, Ny, Nz), dtype=complex)
-
-    input_plane_fft = _np.fft.fft2(input_plane, (N, N))
-
-    for z_idx in range(Nz):
-        z = z_pos_arr[z_idx]
-        if z == 0.0:
-            pressure[:, :, z_idx] = input_plane
-        else:
-            # Spectral propagator — conjugate matches k-wave-python (Eq. 6)
-            H = _np.conj(_np.exp(1j * z * kz))
-
-            if absorbing:
-                # Eq. 11 of Zeng & McGough: H *= exp(-alpha * z * k / kz)
-                H = H * _np.exp(-alpha_neper_per_m * z * k / kz)
-
-            if angular_restriction:
-                D = (N - 1) * dx
-                kc = k * _np.sqrt(0.5 * D**2 / (0.5 * D**2 + z**2))
-                H[sqrt_kx2_ky2 > kc] = 0.0
-
-            projected = _np.fft.ifft2(input_plane_fft * H, (N, N))
-            pressure[:, :, z_idx] = projected[:Nx, :Ny]
-
-    if grid_expansion > 0:
-        pad = grid_expansion
-        pressure = pressure[pad:-pad, pad:-pad, :]
-
-    return pressure
+        alpha_db = None
+    return _rust_angular_spectrum_cw(
+        _np.ascontiguousarray(input_plane, dtype=complex),
+        float(dx),
+        [float(z) for z in _np.atleast_1d(_np.asarray(z_pos, dtype=float))],
+        float(f0),
+        c0,
+        alpha_db=alpha_db,
+        angular_restriction=bool(angular_restriction),
+        grid_expansion=int(grid_expansion),
+    )
 
 
 def backward_angular_spectrum_cw(
@@ -406,38 +350,18 @@ def backward_angular_spectrum_cw(
     """
     c0 = float(medium["sound_speed"]) if isinstance(medium, dict) else float(medium)
 
-    measurement_plane = _np.asarray(measurement_plane, dtype=complex)
-    Nx, Ny = measurement_plane.shape
-
-    N = int(2 ** (_np.ceil(_np.log2(max(Nx, Ny))) + 1))
-
-    if N % 2 == 0:
-        k_vec = _np.arange(-N // 2, N // 2) * (2.0 * _np.pi / (N * dx))
-    else:
-        k_vec = _np.arange(-(N - 1) // 2, (N - 1) // 2 + 1) * (2.0 * _np.pi / (N * dx))
-    k_vec[N // 2] = 0.0
-    k_vec = _np.fft.ifftshift(k_vec)
-
-    k = 2.0 * _np.pi * f0 / c0
-
-    ky, kx = _np.meshgrid(k_vec, k_vec, indexing="ij")
-    kz = _np.sqrt((k**2 - kx**2 - ky**2).astype(complex))
-    sqrt_kx2_ky2 = _np.sqrt(kx**2 + ky**2)
-
-    P_meas_fft = _np.fft.fft2(measurement_plane, (N, N))
-
-    # Backward propagator: conjugate of H_fwd = exp(-j·kz·z_m)
-    H_back = _np.exp(1j * z_m * kz)
-
-    if angular_restriction:
-        D = (N - 1) * dx
-        kc = k * _np.sqrt(0.5 * D**2 / (0.5 * D**2 + z_m**2))
-        H_back[sqrt_kx2_ky2 > kc] = 0.0
-    else:
-        H_back[sqrt_kx2_ky2 > k] = 0.0
-
-    p_recon_full = _np.fft.ifft2(P_meas_fft * H_back, (N, N))
-    return p_recon_full[:Nx, :Ny]
+    # Signature parsing only: the backprojection lives in the Rust owner.
+    # The medium keeps its k-wave-python shape (scalar or dict); only the
+    # sound speed is consumed, exactly as before.
+    c0 = float(medium["sound_speed"]) if isinstance(medium, dict) else float(medium)
+    return _rust_backward_angular_spectrum_cw(
+        _np.ascontiguousarray(measurement_plane, dtype=complex),
+        float(dx),
+        float(z_m),
+        float(f0),
+        c0,
+        angular_restriction=bool(angular_restriction),
+    )
 
 
 def gaussian_source_2d(

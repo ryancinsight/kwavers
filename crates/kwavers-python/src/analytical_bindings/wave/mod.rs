@@ -4,7 +4,9 @@
 //! - `propagation`: standing/plane/spherical waves, reflection, power-law attenuation
 //! - `dispersion`: FDTD/PSTD phase error, k-space correction, CFL limit
 //! - `nonlinear`: Fubini harmonics, shock physics, tone burst, Westervelt evolution
+//! - `angular_spectrum`: CW angular-spectrum forward/backward propagation
 
+pub mod angular_spectrum;
 pub mod dispersion;
 pub mod nonlinear;
 pub mod propagation;
@@ -22,6 +24,7 @@ pub use nonlinear::{
     shock_heat_source_density, shock_vapor_pulse_waveform, shock_waveform_pressure,
     tone_burst_waveform, westervelt_harmonic_evolution,
 };
+pub use angular_spectrum::{angular_spectrum_cw, backward_angular_spectrum_cw};
 pub use propagation::{
     absorption_power_law_db_cm, dalembert_split_solution_1d, gaussian_modulated_pulse_1d,
     geometric_spreading_intensity_envelopes, plane_wave_pressure_1d,
