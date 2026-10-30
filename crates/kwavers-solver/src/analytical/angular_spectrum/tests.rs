@@ -78,11 +78,13 @@ fn test_zero_distance_returns_input_exactly() {
 /// both ways.
 #[test]
 fn test_forward_backward_round_trip_recovers_source() {
+    // Wide domain, short range: the diffracted beam stays inside the
+    // window, so cropping loses no energy and the round trip is exact.
     for angular_restriction in [true, false] {
-        let nx = 32;
+        let nx = 64;
         let dx = 0.15e-3;
         let src = gaussian(nx, nx, dx, 0.6e-3);
-        let z = 10.0e-3;
+        let z = 3.0e-3;
         let fwd = propagate_cw(
             &src,
             dx,
