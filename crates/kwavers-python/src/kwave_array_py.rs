@@ -66,7 +66,7 @@ impl KWaveArray {
         }
         self.inner
             .add_disc_element(position, diameter, focus_position)
-            .map_err(PyValueError::new_err)?;
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(())
     }
 
@@ -136,7 +136,7 @@ impl KWaveArray {
     fn add_rect_element(&mut self, position: (f64, f64, f64), dims: (f64, f64)) -> PyResult<()> {
         self.inner
             .add_rect_element(position, dims.0, dims.1)
-            .map_err(PyValueError::new_err)?;
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(())
     }
 
@@ -169,7 +169,7 @@ impl KWaveArray {
     ) -> PyResult<()> {
         self.inner
             .add_rect_rot_element(position, dims.0, dims.1, euler_xyz_deg)
-            .map_err(PyValueError::new_err)?;
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(())
     }
 
@@ -218,7 +218,7 @@ impl KWaveArray {
     ) -> PyResult<()> {
         self.inner
             .add_annular_element(position, radius, inner_diameter, outer_diameter)
-            .map_err(PyValueError::new_err)?;
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(())
     }
 
@@ -238,7 +238,7 @@ impl KWaveArray {
     ) -> PyResult<()> {
         self.inner
             .add_annular_array(position, radius, &diameters)
-            .map_err(PyValueError::new_err)?;
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(())
     }
 
