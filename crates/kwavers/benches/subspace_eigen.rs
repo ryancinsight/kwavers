@@ -28,9 +28,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use eunomia::Complex64;
-use kwavers_analysis::signal_processing::beamforming::adaptive::subspace::{
-    EigenspaceMV, MUSIC,
-};
+use kwavers_analysis::signal_processing::beamforming::adaptive::subspace::{EigenspaceMV, MUSIC};
 use leto::{Array1, Array2};
 use leto_ops::application::linalg::{
     hermitian_eigen_jacobi, hermitian_eigen_qr, HermitianEigenConfig,
