@@ -77,7 +77,11 @@ where
     /// `α = 1.0` initialisation converges faster — the smaller-α
     /// init bakes in an extra linear-region scaling that interacts
     /// badly with the cosine-annealed LR's high-LR exploration phase.
-    #[must_use]
+    ///
+    /// # Errors
+    ///
+    /// Returns the backend error when any scalar `[1]` leaf tensor
+    /// (`α`, `γ`, or `β`) fails to construct.
     pub fn new() -> KwaversResult<Self> {
         Self::with_init(1.0, 1.0, 0.0)
     }
@@ -85,7 +89,11 @@ where
     /// Construct with caller-specified scalar initialisation values.
     /// Useful for ablations (e.g. `α = 1.0` recovers vanilla `tanh`
     /// with a learnable γ on top).
-    #[must_use]
+    ///
+    /// # Errors
+    ///
+    /// Returns the backend error when any scalar `[1]` leaf tensor
+    /// (`α`, `γ`, or `β`) fails to construct.
     pub fn with_init(alpha: f32, gamma: f32, beta: f32) -> KwaversResult<Self> {
         let backend = B::default();
         let leaf = |v: f32| -> KwaversResult<Var<f32, B>> {
@@ -118,6 +126,11 @@ where
     /// Broadcasting: `α, γ, β` are scalar `[1]` `Var`s; `coeus_autograd`
     /// arithmetic ops broadcast them across the `[batch, F]` shape and
     /// reduce gradients back to `[1]` on the backward pass.
+    ///
+    /// # Errors
+    ///
+    /// Returns the backend error when the scale, `tanh`, or affine
+    /// combination step fails (shape mismatch or allocation failure).
     pub fn forward(&self, x: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
         let scaled = be(coeus_autograd::mul(x, &self.alpha))?;
         let activated = be(coeus_autograd::tanh(&scaled))?;

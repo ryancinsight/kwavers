@@ -1,5 +1,6 @@
 use super::MetaLearner;
 use crate::inverse::pinn::be;
+use crate::inverse::pinn::ml::CoordinateVars;
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLoss;
 use crate::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskData};
 use crate::inverse::pinn::ml::wave_equation_2d::{LossWeights2D, PinnWave2D};
@@ -81,7 +82,7 @@ where
         &self,
         data: &[(f64, f64, f64)],
         backend: &B,
-    ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
+    ) -> KwaversResult<CoordinateVars<B>> {
         let n = (data.len()).max(1);
         if data.is_empty() {
             let dummy = || -> KwaversResult<Var<f32, B>> {

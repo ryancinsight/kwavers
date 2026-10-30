@@ -1,5 +1,6 @@
 use super::super::{DistributedPinnTrainer, TrainingState};
 use crate::inverse::pinn::be;
+use crate::inverse::pinn::ml::CoordinateVars;
 use crate::inverse::pinn::ml::{TrainingMetrics2D, TrainingMetrics2D as Metrics};
 use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
@@ -45,7 +46,7 @@ where
         fn to_xyz_vars<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
             pts: &[(f64, f64, f64)],
             backend: &B,
-        ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
+        ) -> KwaversResult<CoordinateVars<B>> {
             let n = (pts.len()).max(1);
             let xv: Vec<f32> = pts.iter().map(|p| p.0 as f32).collect();
             let yv: Vec<f32> = pts.iter().map(|p| p.1 as f32).collect();
