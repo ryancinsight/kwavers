@@ -7,6 +7,7 @@
 use crate::array_utils::{
     leto1_to_pyarray1, leto2_to_pyarray2, leto3_to_pyarray3, linspace_vec, vec_to_pyarray1,
 };
+use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_grid::Grid as KwaversGrid;
 use kwavers_simulation::SimulationRunResult as KwaversSimulationRunResult;
 use numpy::{PyArray1, PyArray2, PyArray3};
@@ -299,11 +300,12 @@ pub(crate) fn build_simulation_result(
             (None, None, None, None, None, None, None, None, None)
         };
 
-    // Thermal fields
+    // Thermal fields. The solver holds Kelvin; the Python boundary owns the
+    // single K → °C conversion (mirrors `simulation_py/solvers/result.rs`).
     let thermal_temperature = result
         .thermal_temperature
         .as_ref()
-        .map(|d| leto3_to_pyarray3(py, d.clone()))
+        .map(|d| leto3_to_pyarray3(py, d.mapv(|v| v - KELVIN_OFFSET_C)))
         .transpose()?;
     let thermal_dose = result
         .thermal_dose

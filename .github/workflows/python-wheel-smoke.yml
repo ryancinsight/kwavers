@@ -211,7 +211,8 @@ jobs:
           source wheel-smoke/bin/activate
           python -m pytest --import-mode=importlib --disable-warnings --maxfail=1 -q \
             source/crates/kwavers-python/tests/test_kwave_comparison.py \
-            source/crates/kwavers-python/tests/test_angular_spectrum_parity.py
+            source/crates/kwavers-python/tests/test_angular_spectrum_parity.py \
+            source/crates/kwavers-python/tests/test_thermal_acoustic_coupling.py
 
       - name: Run runtime export-inventory oracle against the installed wheel
         # The generated _generated_surface.json ships in the wheel; this proves
