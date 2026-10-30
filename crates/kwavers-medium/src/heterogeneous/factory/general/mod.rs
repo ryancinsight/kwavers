@@ -11,6 +11,7 @@ mod tests;
 use crate::heterogeneous::core::HeterogeneousMedium;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K;
+use kwavers_core::constants::DB_TO_NP;
 use kwavers_core::traversal::zip_mut_indexed;
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -33,7 +34,8 @@ impl HeterogeneousFactory {
     /// # Arguments
     /// * `sound_speed`          - 3D array of sound speeds (m/s)
     /// * `density`              - 3D array of densities [kg/m³]
-    /// * `absorption`           - Optional 3D array of α₀ [dB/(MHz^y cm)]
+    /// * `absorption`           - Optional 3D array of α₀ [dB/(MHz^y cm)];
+    ///   converted to Np/m on store (storage convention in `crate::core`)
     /// * `alpha_power`          - Optional 3D array of power-law exponent y (default 1.0)
     /// * `nonlinearity`         - Optional 3D array of B/A parameters
     /// * `reference_frequency`  - Reference frequency for absorption (Hz)
@@ -65,7 +67,11 @@ impl HeterogeneousFactory {
         }
         check_shape!(density, "density");
 
-        let absorption = absorption.unwrap_or_else(|| Array3::zeros([nx, ny, nz]));
+        // Caller contract stays dB α₀; storage is Np/m (storage convention in
+        // `crate::core`).
+        let absorption = absorption
+            .map(|a| a * DB_TO_NP * 100.0)
+            .unwrap_or_else(|| Array3::zeros([nx, ny, nz]));
         let alpha_power = alpha_power.unwrap_or_else(|| Array3::from_elem([nx, ny, nz], 1.0));
         let nonlinearity = nonlinearity.unwrap_or_else(|| Array3::zeros([nx, ny, nz]));
 
@@ -115,7 +121,8 @@ impl HeterogeneousFactory {
     /// * `grid` - Computational grid defining the domain
     /// * `sound_speed_fn` - Function f(x, y, z) -> sound speed (m/s)
     /// * `density_fn` - Function f(x, y, z) -> density [kg/m³]
-    /// * `absorption_fn` - Optional function f(x, y, z) -> absorption [dB/(MHz·cm)]
+    /// * `absorption_fn` - Optional function f(x, y, z) -> absorption [dB/(MHz·cm)];
+    ///   converted to Np/m on store (storage convention in `crate::core`)
     /// * `nonlinearity_fn` - Optional function f(x, y, z) -> B/A parameter
     /// * `reference_frequency` - Reference frequency for absorption (Hz)
     /// * `alpha_power_fn` - Optional function y(x,y,z) → power-law exponent (default 1.0)
@@ -162,8 +169,9 @@ impl HeterogeneousFactory {
             *v = density_fn(x[i], y[j], z[k]);
         });
         if let Some(ref abs_fn) = absorption_fn {
+            // dB α₀ in, Np/m stored (storage convention in `crate::core`).
             zip_mut_indexed(absorption.view_mut(), (), |[i, j, k], v, ()| {
-                *v = abs_fn(x[i], y[j], z[k]);
+                *v = abs_fn(x[i], y[j], z[k]) * DB_TO_NP * 100.0;
             });
         }
         if let Some(ref yf) = alpha_power_fn {

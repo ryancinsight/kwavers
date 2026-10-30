@@ -2,6 +2,18 @@
 //!
 //! This module provides fundamental traits that all medium types must implement,
 //! establishing a Single Source of Truth (SSOT) for medium behaviors.
+//!
+//! ## Absorption storage convention (KW-MEDIUM-ABSORPTION-STORAGE-UNITS)
+//!
+//! The Szabo power-law prefactor α₀ in `dB/(MHz^y·cm)` lives only in
+//! user-facing inputs (factory arguments, `absorption_fn` closures, HU-model
+//! tables). Every stored absorption field and every accessor reports Np/m at
+//! the medium's reference frequency: fills convert with
+//! `× DB_TO_NP × 100` ([`kwavers_core::constants::DB_TO_NP`], Szabo 1994), the
+//! typed [`CoreMedium::absorption`] point getter and the raw
+//! [`ArrayAccess::absorption_array`] view agree with
+//! `AcousticProperties::absorption_coefficient` evaluated at the reference
+//! frequency, and frequency scaling stays in `absorption_coefficient(f)`.
 
 use aequitas::systems::si::quantities::{
     Dimensionless, Frequency, MassDensity, ReciprocalLength, Velocity,
@@ -72,7 +84,9 @@ pub trait ArrayAccess: CoreMedium {
     /// Get density as an array view
     fn density_array(&self) -> ArrayView3<'_, f64>;
 
-    /// Get absorption as an array view
+    /// Get absorption as an array view, in nepers per metre at the medium's
+    /// reference frequency (same values as [`CoreMedium::absorption`); see the
+    /// module-level storage convention.
     fn absorption_array(&self) -> ArrayView3<'_, f64>;
 
     /// Get nonlinearity as an array view

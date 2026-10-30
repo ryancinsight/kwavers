@@ -125,29 +125,22 @@ impl AcousticProperties for HeterogeneousMedium {
         let base_absorption = self.lookup_field(&self.absorption, x, y, z, grid);
         let exponent = self.lookup_field(&self.alpha_power, x, y, z, grid);
         let freq_ratio = frequency / self.reference_frequency;
-        // Storage is the power-law prefactor α₀ [dB/(cm·MHz^y)] (see
-        // `alpha_coefficient`); convert dB/cm to Np/m like the tissue
-        // implementor: × 100 [cm/m] × DB_TO_NP [Np/dB] (Szabo 1994).
-        ReciprocalLength::from_base(
-            base_absorption * freq_ratio.powf(exponent) * kwavers_core::constants::DB_TO_NP * 100.0,
-        )
+        // Storage is already Np/m at the reference frequency (storage
+        // convention in `crate::core`); scale to the requested frequency
+        // here (Szabo 1994).
+        ReciprocalLength::from_base(base_absorption * freq_ratio.powf(exponent))
     }
 
     /// Power-law prefactor α₀ in Np/m at the 1 MHz reference, at the given
     /// continuous coordinates.
     ///
     /// Returns the spatially interpolated absorption prefactor from
-    /// `self.absorption`, converted from its dB storage to Np/m at this
-    /// boundary. The default trait implementation returns 0 (lossless), so
-    /// this override is required for the solver to pick up the medium's field.
-    /// The solver's former `effective_alpha_db` rule now resolves the SI
-    /// prefactor here.
+    /// `self.absorption`, which stores Np/m (dB inputs convert at every fill;
+    /// see the storage convention in `crate::core`). The default trait
+    /// implementation returns 0 (lossless), so this override is required for
+    /// the solver to pick up the medium's field.
     fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ReciprocalLength<f64> {
-        ReciprocalLength::from_base(
-            self.lookup_field(&self.absorption, x, y, z, grid)
-                * kwavers_core::constants::DB_TO_NP
-                * 100.0,
-        )
+        ReciprocalLength::from_base(self.lookup_field(&self.absorption, x, y, z, grid))
     }
 
     /// Per-voxel power-law exponent y at the given continuous coordinates.

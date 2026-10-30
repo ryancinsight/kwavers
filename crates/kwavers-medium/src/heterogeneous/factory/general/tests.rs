@@ -1,4 +1,5 @@
 use super::*;
+use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_core::constants::fundamental::{
     DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
@@ -33,7 +34,8 @@ fn test_from_arrays_with_optional() {
         HeterogeneousFactory::from_arrays(c, rho, Some(alpha), Some(yexp), Some(ba), MHZ_TO_HZ)
             .unwrap();
 
-    assert_eq!(medium.absorption[[0, 0, 0]], 0.5);
+    // Caller passes the dB α₀ prefactor; storage is Np/m.
+    assert_eq!(medium.absorption[[0, 0, 0]], 0.5 * DB_TO_NP * 100.0);
     assert_eq!(medium.alpha_power[[0, 0, 0]], 1.5);
     assert_eq!(medium.nonlinearity[[0, 0, 0]], 6.0);
 }

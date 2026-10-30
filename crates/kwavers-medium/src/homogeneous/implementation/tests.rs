@@ -5,6 +5,7 @@ use crate::{
     thermal::ThermalProperties,
     viscous::ViscousProperties,
 };
+use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::{
     DENSITY_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
@@ -56,6 +57,36 @@ fn water_absorption_is_np_per_m_at_reference() {
         .absorption_coefficient(0.0, 0.0, 0.0, &grid, 2.0e6)
         .into_base();
     assert!((alpha_2mhz - 4.0 * alpha_1mhz).abs() <= 1e-12 * alpha_2mhz);
+}
+
+/// Storage-convention agreement (KW-MEDIUM-ABSORPTION-STORAGE-UNITS): the
+/// typed point getter and the raw array must agree with
+/// `absorption_coefficient` evaluated at the reference frequency — all three
+/// report water α(1 MHz) = 0.02533 Np/m (Szabo 1994), never the dB prefactor.
+#[test]
+fn absorption_point_array_and_coefficient_agree_at_reference() {
+    use kwavers_core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0;
+    let grid = Grid::new(4, 4, 4, 0.001, 0.001, 0.001).unwrap();
+    let water = HomogeneousMedium::water(&grid);
+    let expected = WATER_ABSORPTION_ALPHA_0 * DB_TO_NP * 100.0;
+    let f_ref = water.reference_frequency().into_base();
+    let point = water.absorption(2, 1, 0).into_base();
+    assert!(
+        (point - expected).abs() <= 1e-12 * expected,
+        "absorption() = {point} Np/m, expected {expected} Np/m"
+    );
+    let array = water.absorption_array()[[2, 1, 0]];
+    assert!(
+        (array - expected).abs() <= 1e-12 * expected,
+        "absorption_array() = {array} Np/m, expected {expected} Np/m"
+    );
+    let coeff = water
+        .absorption_coefficient(0.002, 0.001, 0.0, &grid, f_ref)
+        .into_base();
+    assert!(
+        (coeff - expected).abs() <= 1e-12 * expected,
+        "absorption_coefficient(f_ref) = {coeff} Np/m, expected {expected} Np/m"
+    );
 }
 
 /// γ is by definition Cp/Cv: the default ratio must equal the ratio of
@@ -254,9 +285,13 @@ fn lazy_cache_arrays_are_realized_on_demand_with_grid_shape() {
     medium
         .set_acoustic_properties(0.5, 1.2, 3.0)
         .expect("valid acoustic properties");
+    // Np/m storage: the dB/cm prefactor value converted once (storage
+    // convention in `crate::core`).
     let expected_alpha = 0.5
         * (kwavers_core::constants::REFERENCE_FREQUENCY_HZ / kwavers_core::constants::MHZ_TO_HZ)
-            .powf(1.2);
+            .powf(1.2)
+        * DB_TO_NP
+        * 100.0;
     assert!((medium.absorption_array()[[0, 0, 0]] - expected_alpha).abs() < 1e-12);
     assert!((medium.nonlinearity_array()[[0, 0, 0]] - 3.0).abs() < 1e-12);
 }

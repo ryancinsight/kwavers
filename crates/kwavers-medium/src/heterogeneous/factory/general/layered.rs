@@ -4,6 +4,7 @@ use super::HeterogeneousFactory;
 use crate::heterogeneous::core::HeterogeneousMedium;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K;
+use kwavers_core::constants::DB_TO_NP;
 use kwavers_grid::Grid;
 
 impl HeterogeneousFactory {
@@ -13,7 +14,9 @@ impl HeterogeneousFactory {
     ///
     /// # Arguments
     /// * `grid` - Computational grid
-    /// * `layers` - Vector of (z_start, z_end, sound_speed, density, absorption, nonlinearity)
+    /// * `layers` - Vector of (z_start, z_end, sound_speed, density, absorption, nonlinearity);
+    ///   per-layer absorption is the dB α₀ prefactor, converted to Np/m on
+    ///   store (storage convention in `crate::core`)
     /// * `reference_frequency` - Reference frequency for absorption (Hz)
     ///
     /// # Example
@@ -46,7 +49,9 @@ impl HeterogeneousFactory {
                         if z >= z_start && z < z_end {
                             sound_speed[[i, j, k]] = c;
                             density[[i, j, k]] = rho;
-                            absorption[[i, j, k]] = alpha;
+                            // Caller passes dB α₀; storage is Np/m (storage
+                            // convention in `crate::core`).
+                            absorption[[i, j, k]] = alpha * DB_TO_NP * 100.0;
                             nonlinearity[[i, j, k]] = ba;
                             break;
                         }

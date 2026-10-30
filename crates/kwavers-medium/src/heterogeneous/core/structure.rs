@@ -56,6 +56,10 @@ pub struct HeterogeneousMedium {
     pub bubble_velocity: Array3<f64>,
 
     // Acoustic parameters
+    //
+    // `absorption` stores Np/m at `reference_frequency` (storage convention in
+    // `crate::core`); every fill converts the dB α₀ prefactor once. `alpha0`
+    // is legacy write-only scratch (nothing reads it); do not add readers.
     pub alpha0: Array3<f64>,
     pub delta: Array3<f64>,
     pub b_a: Array3<f64>,

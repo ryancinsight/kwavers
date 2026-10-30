@@ -4,6 +4,7 @@ use aequitas::systems::si::quantities::{
 use leto::{Array3, ArrayView3, ArrayViewMut3};
 
 use crate::core::{ArrayAccess, CoreMedium};
+use kwavers_core::constants::{DB_TO_NP, MHZ_TO_HZ};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 
@@ -23,7 +24,15 @@ impl CoreMedium for HomogeneousMedium {
     }
 
     fn absorption(&self, _i: usize, _j: usize, _k: usize) -> ReciprocalLength<f64> {
-        ReciprocalLength::from_base(self.absorption_alpha)
+        // Storage is the Szabo prefactor α₀ [dB/(cm·MHz^y)] at the 1 MHz
+        // reference; report Np/m at the reference frequency like
+        // `absorption_coefficient` (× 100 [cm/m] × DB_TO_NP [Np/dB]).
+        ReciprocalLength::from_base(
+            self.absorption_alpha
+                * (self.reference_frequency / MHZ_TO_HZ).powf(self.absorption_power)
+                * DB_TO_NP
+                * 100.0,
+        )
     }
 
     fn nonlinearity(&self, _i: usize, _j: usize, _k: usize) -> Dimensionless<f64> {
@@ -81,10 +90,14 @@ impl ArrayAccess for HomogeneousMedium {
     }
 
     fn absorption_array(&self) -> ArrayView3<'_, f64> {
+        // Np/m at the reference frequency (storage-convention note in
+        // `crate::core`): the dB/cm prefactor value converted like the point
+        // getter above, so the array and `absorption_coefficient(f_ref)` agree.
         self.absorption_cache.get_or_init_with(|| {
             let alpha_at_ref = self.absorption_alpha
-                * (self.reference_frequency / kwavers_core::constants::MHZ_TO_HZ)
-                    .powf(self.absorption_power);
+                * (self.reference_frequency / MHZ_TO_HZ).powf(self.absorption_power)
+                * DB_TO_NP
+                * 100.0;
             Array3::from_elem(self.grid_shape, alpha_at_ref)
         })
     }

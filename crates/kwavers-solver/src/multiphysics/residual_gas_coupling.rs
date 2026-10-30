@@ -15,7 +15,6 @@ use kwavers_medium::Medium;
 use kwavers_physics::acoustics::bubble_dynamics::{
     commander_prosperetti_attenuation, wood_sound_speed,
 };
-use kwavers_physics::acoustics::mechanics::absorption::np_m_to_power_law_db_cm;
 use leto::{Array3, ArrayView3};
 
 /// Liquid/gas acoustic properties for the residual-gas medium coupling.
@@ -179,19 +178,19 @@ pub fn apply_residual_gas_wood_in_place(
 ///
 /// For each voxel with gas void fraction `β > 0`:
 /// * sound speed ← Wood (1930) mixture speed (impedance mismatch + slowdown);
-/// * absorption prefactor ← `α₀ + Δα₀`, where `Δα₀` is the Commander–Prosperetti
-///   (1989) excess attenuation `[Np/m]` at the drive frequency, converted to the
-///   medium's power-law prefactor units `dB/(MHz^y·cm)` via
-///   [`np_m_to_power_law_db_cm`] so the operator reproduces that attenuation at
-///   `f` (and scales as `f^y` off-frequency).
+/// * absorption ← `α + Δα`, where `Δα` is the Commander–Prosperetti (1989)
+///   excess attenuation `[Np/m]` at the drive frequency, rescaled to the
+///   medium's reference frequency as `Δα·(f_ref/f_drive)^y` so the stored
+///   Np/m field reproduces that attenuation at `f` (and scales as `f^y`
+///   off-frequency).
 ///
-/// `alpha_power` is the medium's power-law exponent `y` used for the conversion.
+/// `alpha_power` is the medium's power-law exponent `y` used for the rescaling.
 /// Returns `true` if the medium exposed mutable arrays and shielding was applied;
 /// `false` (no-op) for homogeneous media without mutable-array access.
 ///
-/// The absorption array stores the power-law prefactor (k-Wave `α₀`,
-/// `dB/(MHz^y·cm)`), not `Np/m` — hence the conversion. Sound speed is in SI and
-/// written directly.
+/// The absorption array stores Np/m at the medium's reference frequency
+/// (storage convention in `kwavers_medium::core`), so the SI excess is added
+/// directly. Sound speed is in SI and written directly.
 ///
 /// # Attenuation accuracy and double-counting
 /// Both the sound-speed (Wood, quasi-static) and the absorption (CP folded into a
@@ -230,8 +229,15 @@ pub fn apply_residual_gas_shielding_in_place(
     // Sound speed: Wood collapse (impedance / refraction).
     let mut applied = apply_residual_gas_wood_in_place(medium, void_fraction, props);
 
-    // Absorption: add the Commander–Prosperetti excess (converted to the medium's
-    // power-law prefactor units) using the base liquid sound speed snapshot.
+    // Absorption: add the Commander–Prosperetti excess, rescaled from the drive
+    // frequency to the medium's reference frequency, using the base liquid
+    // sound speed snapshot.
+    let f_ref = medium.reference_frequency().into_base();
+    let ref_scale = if props.frequency > 0.0 {
+        (f_ref / props.frequency).powf(alpha_power)
+    } else {
+        0.0
+    };
     if let Some(mut a_arr) = medium.absorption_array_mut() {
         if a_arr.shape() == dim {
             for k in 0..dim[2] {
@@ -251,8 +257,7 @@ pub fn apply_residual_gas_shielding_in_place(
                                 props.p0,
                                 props.polytropic,
                             );
-                            a_arr[[i, j, k]] +=
-                                np_m_to_power_law_db_cm(alpha_np_m, props.frequency, alpha_power);
+                            a_arr[[i, j, k]] += alpha_np_m * ref_scale;
                         }
                     }
                 }
@@ -322,13 +327,13 @@ mod tests {
 
     #[test]
     fn in_place_shielding_modifies_heterogeneous_medium_pstd_inputs() {
+        use kwavers_core::constants::acoustic_parameters::{DB_TO_NP, WATER_ABSORPTION_ALPHA_0};
         use kwavers_grid::Grid;
         use kwavers_medium::heterogeneous::tissue::{
             AbsorptionTissueType, HeterogeneousTissueMedium,
         };
         use kwavers_medium::{ArrayAccess, CoreMedium};
         use kwavers_physics::acoustics::bubble_dynamics::commander_prosperetti_attenuation;
-        use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
 
         let nx = 11usize;
         let grid = Grid::new(nx, 1, 1, 0.5e-3, 0.5e-3, 0.5e-3).expect("valid grid");
@@ -365,19 +370,25 @@ mod tests {
             "voxel outside the gas band is untouched"
         );
 
-        // Absorption prefactor raised inside the band.
+        // Absorption raised inside the band.
         let a_after = medium.absorption_array()[[5, 0, 0]];
         assert!(
             a_after > a_before,
-            "prefactor raised: {a_before} -> {a_after}"
+            "absorption raised: {a_before} -> {a_after}"
         );
 
-        // End-to-end operator proof: the SI absorption the fractional-Laplacian
-        // operators (τ, η) are built from must rise by EXACTLY the injected
-        // Commander–Prosperetti attenuation at the drive frequency.
-        let omega_pow = (2.0 * std::f64::consts::PI * props.frequency).powf(y);
-        let alpha_si_before = power_law_db_cm_to_np_omega_m(a_before, y) * omega_pow;
-        let alpha_si_after = power_law_db_cm_to_np_omega_m(a_after, y) * omega_pow;
+        // Storage convention: the array holds Np/m at the 1 MHz reference, so
+        // the unshielded water voxel reads the converted Szabo prefactor
+        // α(1 MHz) = 0.02533 Np/m directly (Szabo 1994).
+        let expected_water_si = WATER_ABSORPTION_ALPHA_0 * DB_TO_NP * 100.0;
+        assert!(
+            (a_before - expected_water_si).abs() <= 1e-12 * expected_water_si,
+            "unshielded water voxel: {a_before} Np/m, expected {expected_water_si} Np/m"
+        );
+
+        // End-to-end operator proof: the stored Np/m absorption must rise by
+        // EXACTLY the injected Commander–Prosperetti attenuation rescaled from
+        // the drive frequency to the reference frequency.
         let alpha_cp_expected = commander_prosperetti_attenuation(
             props.frequency,
             1e-4,
@@ -388,11 +399,13 @@ mod tests {
             props.p0,
             props.polytropic,
         );
-        let delta = alpha_si_after - alpha_si_before;
+        let f_ref = medium.reference_frequency().into_base();
+        let expected_delta = alpha_cp_expected * (f_ref / props.frequency).powf(y);
+        let delta = a_after - a_before;
         assert!(alpha_cp_expected > 0.0, "CP attenuation is positive");
         assert!(
-            (delta - alpha_cp_expected).abs() <= 1e-6 * alpha_cp_expected.max(1.0),
-            "SI absorption rises by exactly the CP excess: Δ={delta:.6} Np/m, expected={alpha_cp_expected:.6} Np/m"
+            (delta - expected_delta).abs() <= 1e-6 * expected_delta.max(1.0),
+            "SI absorption rises by exactly the rescaled CP excess: Δ={delta:.6} Np/m, expected={expected_delta:.6} Np/m"
         );
     }
 
