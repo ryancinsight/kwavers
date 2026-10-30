@@ -7,6 +7,8 @@
 //! - Francois & Garrison (1982): Absorption model
 //! - Pinkerton (1949): Simplified absorption model
 
+use super::acoustic_parameters::DB_TO_NP;
+
 /// Water properties and attenuation models
 #[derive(Debug)]
 pub struct WaterProperties;
@@ -207,8 +209,33 @@ impl WaterProperties {
         let p3 = (4.9e-10 * d).mul_add(d, 3.83e-5f64.mul_add(-d, 1.0));
         let water = a3 * p3 * f * f;
 
-        // Total absorption in dB/km, convert to Np/m
+        // Total absorption in dB/km, convert to Np/m with the exact
+        // dB -> Np factor (DB_TO_NP); the 0.1151 truncation deviates
+        // by up to 0.033%.
         let alpha_db_per_km = boric + magnesium + water;
-        alpha_db_per_km * 0.1151 / 1e3 // Convert to Np/m
+        alpha_db_per_km * DB_TO_NP / 1e3
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WaterProperties;
+
+    /// Francois-Garrison absorption is positive, finite, and strictly
+    /// increasing with frequency across the 10 kHz–1 MHz ocean band at
+    /// standard conditions (all three relaxation/pure-water terms grow
+    /// with `f` there). Factor exactness holds by construction: this is
+    /// the only remaining `0.1151` site and it now uses `DB_TO_NP`,
+    /// whose bits are pinned by `test_db_to_np_exact_value`.
+    #[test]
+    fn francois_garrison_positive_monotone_in_frequency() {
+        // Standard ocean: 20 C, 35 ppt, 1000 m depth, pH 8.
+        let (t, d, s, ph) = (20.0, 1000.0, 35.0, 8.0);
+        let mut prev = 0.0;
+        for f in [10e3, 50e3, 100e3, 500e3, 1e6] {
+            let a = WaterProperties::absorption_coefficient(f, t, d, s, ph);
+            assert!(a.is_finite() && a > prev, "non-monotone at {f} Hz: {a}");
+            prev = a;
+        }
     }
 }
