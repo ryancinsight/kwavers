@@ -7,6 +7,7 @@
 //! handling only.
 
 use crate::array_utils::{leto2_to_pyarray2, leto3_to_pyarray3, pyarray2_to_leto2};
+use Complex64;
 use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m;
 use kwavers_solver::analytical::angular_spectrum::{CwMedium, backproject_cw, propagate_cw};
 use numpy::{PyArray2, PyArray3, PyReadonlyArray2};
@@ -41,7 +42,7 @@ use pyo3::prelude::*;
 #[allow(clippy::too_many_arguments)]
 pub fn angular_spectrum_cw<'py>(
     py: Python<'py>,
-    input_plane: PyReadonlyArray2<'py, eunomia::Complex64>,
+    input_plane: PyReadonlyArray2<'py, Complex64>,
     dx: f64,
     z_planes: Vec<f64>,
     f0: f64,
@@ -49,7 +50,7 @@ pub fn angular_spectrum_cw<'py>(
     alpha_db: Option<(f64, f64)>,
     angular_restriction: bool,
     grid_expansion: usize,
-) -> PyResult<Py<PyArray3<eunomia::Complex64>>> {
+) -> PyResult<Py<PyArray3<Complex64>>> {
     let input = pyarray2_to_leto2(&input_plane)?;
     let alpha_np_per_m = alpha_db
         .map(|(coeff, power)| power_law_db_cm_to_np_m(coeff, power, f0))
@@ -91,13 +92,13 @@ pub fn angular_spectrum_cw<'py>(
 #[pyo3(signature = (measurement_plane, dx, z_m, f0, sound_speed, angular_restriction=true))]
 pub fn backward_angular_spectrum_cw<'py>(
     py: Python<'py>,
-    measurement_plane: PyReadonlyArray2<'py, eunomia::Complex64>,
+    measurement_plane: PyReadonlyArray2<'py, Complex64>,
     dx: f64,
     z_m: f64,
     f0: f64,
     sound_speed: f64,
     angular_restriction: bool,
-) -> PyResult<Py<PyArray2<eunomia::Complex64>>> {
+) -> PyResult<Py<PyArray2<Complex64>>> {
     let measurement = pyarray2_to_leto2(&measurement_plane)?;
     let out = py.detach(|| {
         backproject_cw(
