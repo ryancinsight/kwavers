@@ -1,6 +1,7 @@
 //! Apodization window tests for [`KWaveArray`].
 
 use super::super::{KWaveArray, KwaveApodizationWindow};
+use eunomia::FloatElement;
 
 /// Rectangular apodization returns all-ones.
 /// # Panics
@@ -11,7 +12,7 @@ fn test_apodization_rectangular_all_ones() {
     let mut array = KWaveArray::new();
     for i in 0..8 {
         array
-            .add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None)
+            .add_disc_element((f64::from_count(i) * 0.001, 0.0, 0.0), 0.001, None)
             .expect("valid element");
     }
     let weights = array.get_apodization(KwaveApodizationWindow::Rectangular);
@@ -30,7 +31,7 @@ fn test_apodization_hann_endpoints_near_zero() {
     let mut array = KWaveArray::new();
     for i in 0..9 {
         array
-            .add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None)
+            .add_disc_element((f64::from_count(i) * 0.001, 0.0, 0.0), 0.001, None)
             .expect("valid element");
     }
     let weights = array.get_apodization(KwaveApodizationWindow::Hann);
@@ -61,7 +62,7 @@ fn test_apodization_hamming_range_and_symmetry() {
     let mut array = KWaveArray::new();
     for i in 0..7 {
         array
-            .add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None)
+            .add_disc_element((f64::from_count(i) * 0.001, 0.0, 0.0), 0.001, None)
             .expect("valid element");
     }
     let weights = array.get_apodization(KwaveApodizationWindow::Hamming);
@@ -92,7 +93,7 @@ fn test_apodization_blackman_endpoints_and_symmetry() {
     let mut array = KWaveArray::new();
     for i in 0..9 {
         array
-            .add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None)
+            .add_disc_element((f64::from_count(i) * 0.001, 0.0, 0.0), 0.001, None)
             .expect("valid element");
     }
     let weights = array.get_apodization(KwaveApodizationWindow::Blackman);
@@ -126,7 +127,7 @@ fn test_apodization_tukey_limits_and_flat_top() {
     let mut array = KWaveArray::new();
     for i in 0..9 {
         array
-            .add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None)
+            .add_disc_element((f64::from_count(i) * 0.001, 0.0, 0.0), 0.001, None)
             .expect("valid element");
     }
     // r = 0 ≡ rectangular.
