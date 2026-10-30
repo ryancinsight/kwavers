@@ -36,8 +36,12 @@ fn test_set_array_position_matches_manual_position_rotation() {
             rotated_local.1 + world_translation.1,
             rotated_local.2 + world_translation.2,
         );
-        manual.add_rect_rot_element(world, dims.0, dims.1, per_element_euler);
-        native.add_rect_rot_element(local, dims.0, dims.1, per_element_euler);
+        manual
+            .add_rect_rot_element(world, dims.0, dims.1, per_element_euler)
+            .expect("valid element");
+        native
+            .add_rect_rot_element(local, dims.0, dims.1, per_element_euler)
+            .expect("valid element");
     }
     native.set_array_position(world_translation, global_euler);
 
@@ -70,7 +74,9 @@ fn test_rect_rotation_90_swaps_width_and_height() {
 
     let grid = Grid::new(41, 41, 5, 1.0e-4, 1.0e-4, 1.0e-4).expect("grid");
     let mut unrot = KWaveArray::new();
-    unrot.add_rect_element((20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4), 8.0e-4, 2.0e-4);
+    unrot
+        .add_rect_element((20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4), 8.0e-4, 2.0e-4)
+        .expect("valid element");
     let unrot_mask = unrot.get_array_binary_mask(&grid);
 
     let mut rot = KWaveArray::new();
@@ -79,7 +85,8 @@ fn test_rect_rotation_90_swaps_width_and_height() {
         8.0e-4,
         2.0e-4,
         (0.0, 0.0, 90.0),
-    );
+    )
+    .expect("valid element");
     let rot_mask = rot.get_array_binary_mask(&grid);
 
     let unrot_count: usize = unrot_mask.iter().filter(|&&b| b).count();
@@ -114,12 +121,14 @@ fn test_rect_weighted_mask_matches_kwave_python_reference_mass() {
 
     let grid = Grid::new(41, 41, 5, 1.0e-4, 1.0e-4, 1.0e-4).expect("grid");
     let mut array = KWaveArray::new();
-    array.add_rect_rot_element(
-        (20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4),
-        8.0e-4,
-        2.0e-4,
-        (0.0, 0.0, 90.0),
-    );
+    array
+        .add_rect_rot_element(
+            (20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4),
+            8.0e-4,
+            2.0e-4,
+            (0.0, 0.0, 90.0),
+        )
+        .expect("valid element");
     let weights = array.get_array_weighted_mask(&grid);
     let expected = 16.036_130_608_724_637_f64;
     assert!(
@@ -159,11 +168,13 @@ fn convex_array_elements_face_along_their_layout_normals() {
         ConvexArrayGeometry::from_angular_pitch(radius, elements, pitch).expect("geometry");
 
     let mut array = KWaveArray::new();
-    array.add_convex_array(
-        &geometry,
-        Length::from_unit::<Meter>(4.0e-3),
-        Length::from_unit::<Meter>(3.0e-3),
-    );
+    array
+        .add_convex_array(
+            &geometry,
+            Length::from_unit::<Meter>(4.0e-3),
+            Length::from_unit::<Meter>(3.0e-3),
+        )
+        .expect("valid element");
     assert_eq!(
         array.num_elements(),
         elements,

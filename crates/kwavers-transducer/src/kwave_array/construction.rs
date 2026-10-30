@@ -2,6 +2,7 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::error::KwaversResult;
 
 use aequitas::systems::si::quantities::{Angle, Length};
 use aequitas::systems::si::units::{Degree, Meter};
@@ -9,6 +10,30 @@ use aequitas::systems::si::units::{Degree, Meter};
 use super::{ArrayTransform, DiscSourceProfile, ElementShape, KWaveArray, KWaveElement};
 use crate::curvilinear::ConvexArrayGeometry;
 use crate::transducers::physics::PlanarApertureGeometry;
+use kwavers_core::error::{ConfigError, KwaversError};
+
+/// Build the `Config::InvalidValue` error this module's constructors return
+/// for rejected inputs, naming the offending parameter.
+fn invalid_value(parameter: &str, value: String, constraint: &str) -> KwaversError {
+    KwaversError::Config(ConfigError::InvalidValue {
+        parameter: parameter.to_owned(),
+        value,
+        constraint: constraint.to_owned(),
+    })
+}
+
+/// Reject a NaN or infinite element position with a typed error.
+fn check_finite_position(parameter: &str, position: (f64, f64, f64)) -> KwaversResult<()> {
+    if position.0.is_finite() && position.1.is_finite() && position.2.is_finite() {
+        Ok(())
+    } else {
+        Err(invalid_value(
+            parameter,
+            format!("({}, {}, {})", position.0, position.1, position.2),
+            "all coordinates must be finite",
+        ))
+    }
+}
 
 impl KWaveArray {
     /// Create a new empty `KWaveArray`.
@@ -145,10 +170,10 @@ impl KWaveArray {
     /// * `width`    - Width in x-direction (m)
     /// * `height`   - Height in y-direction (m)
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics when the dimensions are not positive and finite, or the
-    /// position is not finite.
+    /// Returns `KwaversError::Config` when the dimensions are not positive
+    /// and finite, or the position is not finite.
     ///
     /// # Breaking change
     ///
@@ -159,7 +184,7 @@ impl KWaveArray {
         position: (f64, f64, f64),
         width: f64,
         height: f64,
-    ) -> &mut Self {
+    ) -> KwaversResult<&mut Self> {
         self.add_rect_rot_element(position, width, height, (0.0, 0.0, 0.0))
     }
 
@@ -174,10 +199,10 @@ impl KWaveArray {
     /// `(first_axis, normal)`, so the rasterized values match the retired
     /// `ElementShape::Rect` path at the k-Wave reference tolerance.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics when the dimensions are not positive and finite, or the
-    /// position is not finite.
+    /// Returns `KwaversError::Config` when the dimensions are not positive
+    /// and finite, or the position is not finite.
     ///
     /// # Breaking change
     ///
@@ -189,10 +214,38 @@ impl KWaveArray {
         width: f64,
         height: f64,
         euler_xyz_deg: (f64, f64, f64),
-    ) -> &mut Self {
+    ) -> KwaversResult<&mut Self> {
         use super::math::{apply_matrix, euler_xyz_rotation_matrix};
         use crate::transducers::physics::{PlanarApertureShape, SurfaceConvention};
 
+        // Validate inputs up front so every rejection below is a `Config`
+        // error naming the parameter; the `?` on the aperture build then
+        // only guards unreachable residuals (a finite Euler rotation always
+        // yields a unit frame, and the bounds were just checked).
+        check_finite_position("position", position)?;
+        if !(width.is_finite() && width > 0.0) {
+            return Err(invalid_value(
+                "width_m",
+                width.to_string(),
+                "must be finite and positive",
+            ));
+        }
+        if !(height.is_finite() && height > 0.0) {
+            return Err(invalid_value(
+                "height_m",
+                height.to_string(),
+                "must be finite and positive",
+            ));
+        }
+        for (axis, angle) in [
+            ("euler_x_deg", euler_xyz_deg.0),
+            ("euler_y_deg", euler_xyz_deg.1),
+            ("euler_z_deg", euler_xyz_deg.2),
+        ] {
+            if !angle.is_finite() {
+                return Err(invalid_value(axis, angle.to_string(), "must be finite"));
+            }
+        }
         let rotation = euler_xyz_rotation_matrix(euler_xyz_deg);
         let (first_x, first_y, first_z) = apply_matrix(&rotation, (1.0, 0.0, 0.0));
         let (normal_x, normal_y, normal_z) = apply_matrix(&rotation, (0.0, 0.0, 1.0));
@@ -205,10 +258,9 @@ impl KWaveArray {
                 height_m: height,
             },
             SurfaceConvention::KWave,
-        )
-        .expect("add_rect_*: width/height must be positive and finite");
+        )?;
         self.elements.push(KWaveElement::PlanarAperture(geometry));
-        self
+        Ok(self)
     }
 
     /// Add every element of a convex (curvilinear) array.
@@ -234,12 +286,17 @@ impl KWaveArray {
     /// * `geometry`       - Convex array layout
     /// * `element_width`  - Element extent along the array (m)
     /// * `element_height` - Element extent across the array, elevation (m)
+    ///
+    /// # Errors
+    ///
+    /// Returns `KwaversError::Config` when the element dimensions are not
+    /// positive and finite (propagated from `add_rect_rot_element`).
     pub fn add_convex_array(
         &mut self,
         geometry: &ConvexArrayGeometry,
         element_width: Length<f64>,
         element_height: Length<f64>,
-    ) -> &mut Self {
+    ) -> KwaversResult<&mut Self> {
         let width = element_width.in_unit::<Meter>();
         let height = element_height.in_unit::<Meter>();
         for i in 0..geometry.num_elements() {
@@ -254,9 +311,9 @@ impl KWaveArray {
                 width,
                 height,
                 (0.0, theta_deg, 0.0),
-            );
+            )?;
         }
-        self
+        Ok(self)
     }
 
     /// Add a disc-shaped element.
@@ -275,18 +332,44 @@ impl KWaveArray {
     /// rectangle fold this changes no signature: there was no dead
     /// parameter to remove.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics when the diameter is not positive and finite, the position is
-    /// not finite, or a focus coincides with the disc centre.
+    /// Returns `KwaversError::Config` when the diameter is not positive and
+    /// finite, the position is not finite, or a focus coincides with the
+    /// disc centre.
     pub fn add_disc_element(
         &mut self,
         position: (f64, f64, f64),
         diameter: f64,
         focus_position: Option<(f64, f64, f64)>,
-    ) -> &mut Self {
+    ) -> KwaversResult<&mut Self> {
+        use super::math::DISC_AXIS_EPSILON;
         use crate::transducers::physics::{PlanarApertureShape, SurfaceConvention};
 
+        check_finite_position("position", position)?;
+        if !(diameter.is_finite() && diameter > 0.0) {
+            return Err(invalid_value(
+                "diameter",
+                diameter.to_string(),
+                "must be finite and positive",
+            ));
+        }
+        // Reject a coincident focus up front with a typed error, using the
+        // same comparison `disc_basis` asserts on, so its assert is
+        // unreachable from this constructor.
+        if let Some((fx, fy, fz)) = focus_position {
+            let nx = fx - position.0;
+            let ny = fy - position.1;
+            let nz = fz - position.2;
+            let norm = nz.mul_add(nz, nx.mul_add(nx, ny * ny)).sqrt();
+            if norm <= DISC_AXIS_EPSILON {
+                return Err(invalid_value(
+                    "focus_position",
+                    format!("focus=({fx}, {fy}, {fz})"),
+                    "focus must differ from the disc centre",
+                ));
+            }
+        }
         let (first, _, normal) = Self::disc_basis(position, focus_position);
         let geometry = PlanarApertureGeometry::oriented_with_convention(
             [position.0, position.1, position.2],
@@ -296,10 +379,9 @@ impl KWaveArray {
                 radius_m: diameter / 2.0,
             },
             SurfaceConvention::KWave,
-        )
-        .expect("add_disc_element: diameter must be positive and finite");
+        )?;
         self.elements.push(KWaveElement::PlanarAperture(geometry));
-        self
+        Ok(self)
     }
 
     /// Add a disc-shaped element with a finite-source surface profile.
@@ -362,8 +444,12 @@ impl KWaveArray {
     /// and outer aperture diameters. Mirrors k-wave-python's
     /// `add_annular_element`. Uses the same orientation convention as
     /// `add_bowl_element`.
-    /// # Panics
-    /// - Panics if `inner_diameter >= outer_diameter` or `inner_diameter < 0`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `KwaversError::Config` when the diameters violate
+    /// `0 ≤ inner_diameter < outer_diameter` (NaN fails the comparison and
+    /// is rejected the same way the retired `assert!` rejected it).
     ///
     pub fn add_annular_element(
         &mut self,
@@ -371,12 +457,15 @@ impl KWaveArray {
         radius: f64,
         inner_diameter: f64,
         outer_diameter: f64,
-    ) -> &mut Self {
-        assert!(
-            outer_diameter > inner_diameter && inner_diameter >= 0.0,
-            "annulus requires 0 ≤ inner_diameter < outer_diameter \
-             (got inner={inner_diameter}, outer={outer_diameter})",
-        );
+    ) -> KwaversResult<&mut Self> {
+        check_finite_position("position", position)?;
+        if !(outer_diameter > inner_diameter && inner_diameter >= 0.0) {
+            return Err(invalid_value(
+                "inner_diameter/outer_diameter",
+                format!("inner={inner_diameter}, outer={outer_diameter}"),
+                "0 ≤ inner_diameter < outer_diameter",
+            ));
+        }
         self.elements.push(
             ElementShape::Annulus {
                 position,
@@ -386,22 +475,28 @@ impl KWaveArray {
             }
             .into(),
         );
-        self
+        Ok(self)
     }
 
     /// Add a concentric annular array (sequence of annuli sharing a common
     /// center of curvature). Each `(inner_diameter, outer_diameter)` pair
     /// becomes one `ElementShape::Annulus`, matching k-wave-python's
     /// `add_annular_array`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `KwaversError::Config` when any pair violates
+    /// `0 ≤ inner_diameter < outer_diameter`; no element is added for the
+    /// failing pair or any later pair.
     pub fn add_annular_array(
         &mut self,
         position: (f64, f64, f64),
         radius: f64,
         diameters: &[(f64, f64)],
-    ) -> &mut Self {
+    ) -> KwaversResult<&mut Self> {
         for &(inner_d, outer_d) in diameters {
-            self.add_annular_element(position, radius, inner_d, outer_d);
+            self.add_annular_element(position, radius, inner_d, outer_d)?;
         }
-        self
+        Ok(self)
     }
 }

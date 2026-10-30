@@ -7,7 +7,9 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 #[test]
 fn test_kwave_array_setters_preserve_elements() {
     let mut array = KWaveArray::new();
-    array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
+    array
+        .add_disc_element((0.0, 0.0, 0.0), 0.005, None)
+        .expect("valid element");
     array.set_frequency(2.0 * MHZ_TO_HZ);
     array.set_sound_speed(1600.0);
     assert_eq!(array.num_elements(), 1);
@@ -20,8 +22,12 @@ fn test_kwave_array_setters_preserve_elements() {
 #[test]
 fn test_focus_delays() {
     let mut array = KWaveArray::with_params(MHZ_TO_HZ, SOUND_SPEED_WATER_SIM);
-    array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
-    array.add_disc_element((0.01, 0.0, 0.0), 0.005, None);
+    array
+        .add_disc_element((0.0, 0.0, 0.0), 0.005, None)
+        .expect("valid element");
+    array
+        .add_disc_element((0.01, 0.0, 0.0), 0.005, None)
+        .expect("valid element");
     let delays = array.get_focus_delays((0.005, 0.0, 0.02));
     assert_eq!(delays.len(), 2);
     assert!(delays[0] > 0.0);
@@ -35,8 +41,12 @@ fn test_focus_delays() {
 #[test]
 fn test_get_element_delays_symmetric_array() {
     let mut array = KWaveArray::with_params(MHZ_TO_HZ, SOUND_SPEED_WATER_SIM);
-    array.add_disc_element((-0.005, 0.0, 0.0), 0.002, None);
-    array.add_disc_element((0.005, 0.0, 0.0), 0.002, None);
+    array
+        .add_disc_element((-0.005, 0.0, 0.0), 0.002, None)
+        .expect("valid element");
+    array
+        .add_disc_element((0.005, 0.0, 0.0), 0.002, None)
+        .expect("valid element");
     let delays = array.get_element_delays((0.0, 0.0, 0.02));
     assert_eq!(delays.len(), 2);
     assert!(
@@ -52,9 +62,15 @@ fn test_get_element_delays_symmetric_array() {
 #[test]
 fn test_get_element_delays_non_negative_min_zero() {
     let mut array = KWaveArray::with_params(MHZ_TO_HZ, SOUND_SPEED_WATER_SIM);
-    array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
-    array.add_disc_element((0.01, 0.0, 0.0), 0.005, None);
-    array.add_disc_element((0.02, 0.0, 0.0), 0.005, None);
+    array
+        .add_disc_element((0.0, 0.0, 0.0), 0.005, None)
+        .expect("valid element");
+    array
+        .add_disc_element((0.01, 0.0, 0.0), 0.005, None)
+        .expect("valid element");
+    array
+        .add_disc_element((0.02, 0.0, 0.0), 0.005, None)
+        .expect("valid element");
     let delays = array.get_element_delays((0.01, 0.0, 0.03));
     assert_eq!(delays.len(), 3);
     for &d in &delays {
