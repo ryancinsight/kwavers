@@ -85,11 +85,13 @@ fn test_forward_backward_round_trip_recovers_source() {
         let dx = 0.15e-3;
         let src = gaussian(nx, nx, dx, 0.6e-3);
         let z = 3.0e-3;
+        // f0 = 2 MHz concentrates the Gaussian spectrum (sigma_k/k = 0.2)
+        // well inside every cutoff, isolating operator error from filter loss.
         let fwd = propagate_cw(
             &src,
             dx,
             &[z],
-            1.0e6,
+            2.0e6,
             CwMedium::lossless(1500.0),
             angular_restriction,
             0,
@@ -101,7 +103,7 @@ fn test_forward_backward_round_trip_recovers_source() {
                 meas[[i, j]] = fwd[[i, j, 0]];
             }
         }
-        let recon = backproject_cw(&meas, dx, z, 1.0e6, 1500.0, angular_restriction)
+        let recon = backproject_cw(&meas, dx, z, 2.0e6, 1500.0, angular_restriction)
             .expect("valid backprojection");
         let mut num = 0.0;
         let mut den = 0.0;
