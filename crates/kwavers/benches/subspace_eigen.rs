@@ -7,6 +7,24 @@
 //! eigensolve share falls out as solver-time over call-time. The measurement
 //! decides whether the callers adopt the QR path; see the backlog item for the
 //! acceptance bound (eigenvalues/subspace agreement, unchanged peak positions).
+//!
+//! # Measured outcome (2026-10-30, `HermitianEigenConfig::default`)
+//!
+//! Direct solver time on Gram covariances `R = A Aᴴ + 0.5I`:
+//!
+//! - n = 8: Jacobi 30.6 µs, QR 31.0 µs (QR delegates to Jacobi at n ≤ 32).
+//! - n = 32: Jacobi 2.99 ms, QR 3.44 ms (delegation + double validation).
+//! - n = 120: Jacobi 168.6 ms (6 sweeps, off-diagonal 5e-14). QR does **not**
+//!   converge: it exhausts all 1000 iterations with off-diagonal norm ≈ 6e3
+//!   (≈ 57 s per call) and returns eigenvalues wrong by 80% relative on two
+//!   independent covariance fixtures (Gram and Toeplitz-like). The MUSIC, ESMV,
+//!   localization, and PAM callers therefore keep the Jacobi path; adopting
+//!   the upstream QR implementation would be a correctness regression, not
+//!   just a slowdown. The non-convergence is an upstream leto defect to report
+//!   there, not a local copy to work around.
+//!
+//! The `qr/120` case is kept so the comparison stays reproducible, but the
+//! group measurement budget is capped below so a full run stays in minutes.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use eunomia::Complex64;
@@ -17,6 +35,7 @@ use leto::{Array1, Array2};
 use leto_ops::application::linalg::{
     hermitian_eigen_jacobi, hermitian_eigen_qr, HermitianEigenConfig,
 };
+use std::time::Duration;
 
 /// Covariance sizes at the beamformer operating points.
 const SIZES: [usize; 3] = [8, 32, 120];
@@ -66,6 +85,12 @@ fn steering_vector(n: usize) -> Array1<Complex64> {
 
 fn bench_eigensolvers(c: &mut Criterion) {
     let mut group = c.benchmark_group("subspace_eigensolver");
+    // The non-convergent `qr/120` case costs ~1 min per iteration; cap the
+    // budget so a full run stays in minutes while the fast cases keep
+    // enough samples for tight intervals.
+    group
+        .sample_size(10)
+        .measurement_time(Duration::from_secs(60));
     for n in SIZES {
         let r = hermitian_covariance(n);
         let config = HermitianEigenConfig::default();
