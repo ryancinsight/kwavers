@@ -7,7 +7,7 @@
 //! handling only.
 
 use crate::array_utils::{leto2_to_pyarray2, leto3_to_pyarray3, pyarray2_to_leto2};
-use Complex64;
+use eunomia::Complex64;
 use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m;
 use kwavers_solver::analytical::angular_spectrum::{CwMedium, backproject_cw, propagate_cw};
 use numpy::{PyArray2, PyArray3, PyReadonlyArray2};
