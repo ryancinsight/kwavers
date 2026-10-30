@@ -48,8 +48,6 @@ mod aperture;
 
 pub use aperture::{ApertureElement, ApertureKernel};
 
-use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
-use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::numerics::convolution::{convolve_into, SupportSamples};
 use leto::Array2;
@@ -492,9 +490,15 @@ impl ScattererCloud {
                 )));
             }
         }
+        // dB/(cm·MHz) → Np/m at the centre frequency through the single owner
+        // beside `PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS): the
+        // linear (y = 1) law the phantom pins.
         Ok(if config.attenuation_db_cm_mhz > 0.0 {
-            config.attenuation_db_cm_mhz * (config.center_frequency_hz / MHZ_TO_HZ) * 100.0
-                / NP_TO_DB
+            kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+                config.attenuation_db_cm_mhz,
+                1.0,
+                config.center_frequency_hz,
+            )
         } else {
             0.0
         })

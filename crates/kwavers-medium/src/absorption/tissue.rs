@@ -8,7 +8,7 @@ use kwavers_core::constants::fundamental::{
     DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
 use kwavers_core::constants::medical::IEC_TISSUE_SPECIFIC_HEAT;
-use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
+use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use kwavers_core::constants::tissue_acoustics::{
     B_OVER_A_BLOOD, B_OVER_A_BONE, B_OVER_A_BRAIN, B_OVER_A_BREAST_GLAND, B_OVER_A_FAT,
@@ -23,7 +23,6 @@ use kwavers_core::constants::tissue_thermal::{
     SPECIFIC_HEAT_FAT, SPECIFIC_HEAT_KIDNEY, SPECIFIC_HEAT_LIVER, SPECIFIC_HEAT_LUNG,
     SPECIFIC_HEAT_MUSCLE, SPECIFIC_HEAT_SKIN, THERMAL_EXPANSION_SOFT_TISSUE,
 };
-use kwavers_core::constants::DB_TO_NP;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -380,12 +379,13 @@ impl TissueAbsorption {
     /// Calculate absorption coefficient at given frequency
     #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
-        // Convert dB/(MHz^y cm) → Np/m:
-        //   α [Np/m] = α [dB/cm] · (1/CM_TO_M) [cm/m] · DB_TO_NP [Np/dB]
-        let f_mhz = frequency / MHZ_TO_HZ;
-        let alpha_db = self.properties.alpha_0 * f_mhz.powf(self.properties.y);
-
-        alpha_db * DB_TO_NP / CM_TO_M
+        // One law with a typed prefactor (KW-POWER-LAW-INVERSE-FORMS): the
+        // owner converts the dB α₀ prefactor to Np/m at `frequency`.
+        super::power_law::power_law_db_cm_to_np_m(
+            self.properties.alpha_0,
+            self.properties.y,
+            frequency,
+        )
     }
 
     /// Get attenuation in dB for given frequency and distance

@@ -30,8 +30,6 @@
 //!   Acoustical Society of America Press, §2.3.
 
 use super::HASConfig;
-use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
-use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use kwavers_core::error::KwaversResult;
 use leto::{Array2, Array3};
 
@@ -88,10 +86,13 @@ impl HasAbsorptionOperator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply(&self, pressure: &Array3<f64>, dz: f64) -> KwaversResult<Array3<f64>> {
-        let freq_mhz = self.reference_freq / MHZ_TO_HZ;
-        // dB/(cm·MHz^y) → Np/m: divide by NP_TO_DB and CM_TO_M (SSOT).
-        let alpha_db_cm = self.attenuation_coeff * freq_mhz.powf(self.power_law_exp);
-        let alpha_np_m = alpha_db_cm / NP_TO_DB / CM_TO_M;
+        // dB/(cm·MHz^y) → Np/m through the single owner beside
+        // `PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS).
+        let alpha_np_m = kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+            self.attenuation_coeff,
+            self.power_law_exp,
+            self.reference_freq,
+        );
         let factor = (-alpha_np_m * dz).exp();
         Ok(pressure.mapv(|p| p * factor))
     }
@@ -124,10 +125,13 @@ impl HasAbsorptionOperator {
     /// ## References
     /// - Hamilton MF, Blackstock DT (2008). *Nonlinear Acoustics*. ASA Press, §2.3.
     pub fn apply_broadband(&self, harmonics: &mut [Array2<f64>], dz: f64, f0: f64) {
-        let freq_mhz = f0 / MHZ_TO_HZ;
-        // α₀ at f₀ in Np/m (SSOT unit conversions).
-        let alpha_np_f0 =
-            self.attenuation_coeff * freq_mhz.powf(self.power_law_exp) / NP_TO_DB / CM_TO_M;
+        // α₀ at f₀ in Np/m through the single owner beside
+        // `PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS).
+        let alpha_np_f0 = kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+            self.attenuation_coeff,
+            self.power_law_exp,
+            f0,
+        );
         for (n, plane) in harmonics.iter_mut().enumerate() {
             let harmonic_order = (n + 1) as f64; // n=0 → 1st harmonic
                                                  // α_n = α₀ · n^y  (power-law frequency scaling)

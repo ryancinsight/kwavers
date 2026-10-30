@@ -6,10 +6,9 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
+use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_physics::acoustics::mechanics::absorption::{
-    power_law_db_cm_to_np_omega_m, AbsorptionMode,
-};
+use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 
 #[test]
 fn test_power_law_initialization() {
@@ -128,7 +127,7 @@ fn test_nabla_operators_correct_power() {
 ///         = (negative, magnitude ≈ 6.357e-5)
 #[test]
 fn test_absorption_model_physics_validation() {
-    use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
+    use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
     use std::f64::consts::PI;
 
     let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4).unwrap();

@@ -4,11 +4,10 @@
 //! extracorporeal shock wave lithotripsy (ESWL), including thermal and mechanical
 //! bioeffects evaluation.
 
-use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::medical::{
     IEC_TISSUE_ABSORPTION_DB_CM_MHZ, MI_LIMIT_SOFT_TISSUE, TI_LIMIT_SOFT_TISSUE,
 };
-use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ, MPA_TO_PA};
+use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::constants::thermodynamic::THERMAL_CONDUCTIVITY_WATER;
 use leto::Array3;
 
@@ -201,8 +200,14 @@ impl BioeffectsModel {
         //  temperature. For quantitative dose use the Pennes bioheat solver
         //  (`solver::forward::thermal_diffusion`). gap_audit CLD-6.
         let i_spta = intensity.iter().copied().fold(0.0_f64, f64::max);
-        // IEC 62127 absorption: α [Np/m] = 0.3 dB/(cm·MHz) / NP_TO_DB / CM_TO_M × f_MHz
-        let alpha_np_per_m = IEC_TISSUE_ABSORPTION_DB_CM_MHZ * f_mhz / NP_TO_DB / CM_TO_M;
+        // IEC 62127 absorption through the single owner beside
+        // `PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS): linear law at
+        // the active frequency.
+        let alpha_np_per_m = kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+            IEC_TISSUE_ABSORPTION_DB_CM_MHZ,
+            1.0,
+            f_mhz * MHZ_TO_HZ,
+        );
         let depth_m = 0.01; // reference depth 1 cm
         let delta_t = 2.0 * alpha_np_per_m * i_spta * depth_m / THERMAL_CONDUCTIVITY_WATER;
         let ti = delta_t; // TI ≈ ΔT / 1°C

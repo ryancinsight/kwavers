@@ -3,9 +3,8 @@
 //! Implements B-mode, Doppler, elastography, synthetic aperture, plane wave, and coded excitation imaging
 
 use eunomia::Complex;
-use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_TISSUE};
-use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ, TWO_PI};
+use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array2;
 
 pub mod advanced;
@@ -84,8 +83,13 @@ fn apply_tgc_with_sampling(
 ) -> leto::Array1<f64> {
     let n = signal.len();
     let mut compensated = signal.clone();
-    // α[Np/m] = α[dB/(cm·MHz)] × f[MHz] × (1/CM_TO_M) [cm/m] × (1/NP_TO_DB) [Np/dB]
-    let alpha_np = ACOUSTIC_ABSORPTION_TISSUE * (frequency / MHZ_TO_HZ) / CM_TO_M / NP_TO_DB;
+    // α[Np/m] through the single owner beside `PowerLawAbsorption`
+    // (KW-POWER-LAW-INVERSE-FORMS): linear (y = 1) law at `frequency`.
+    let alpha_np = kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+        ACOUSTIC_ABSORPTION_TISSUE,
+        1.0,
+        frequency,
+    );
     for i in 0..n {
         let depth = i as f64 * SOUND_SPEED_TISSUE / (2.0 * sampling_frequency);
         let gain = (2.0 * alpha_np * depth).exp();

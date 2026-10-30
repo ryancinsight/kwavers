@@ -1,6 +1,5 @@
 //! HAS solver configuration.
 
-use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::tissue_acoustics::B_OVER_A_SOFT_TISSUE;
@@ -120,11 +119,15 @@ impl HASConfig {
         self.density * self.sound_speed
     }
 
-    /// Attenuation at `frequency` Hz using power-law model (Np/m).
+    /// Attenuation at `frequency` Hz using power-law model (Np/m), through the
+    /// single owner beside `PowerLawAbsorption`
+    /// (KW-POWER-LAW-INVERSE-FORMS).
     #[must_use]
     pub fn attenuation_at_frequency(&self, frequency: f64) -> f64 {
-        let freq_mhz = frequency / MHZ_TO_HZ;
-        let db_per_cm = self.attenuation_coeff * freq_mhz.powf(self.power_law_exponent);
-        db_per_cm * 100.0 / NP_TO_DB
+        kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+            self.attenuation_coeff,
+            self.power_law_exponent,
+            frequency,
+        )
     }
 }

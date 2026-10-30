@@ -33,13 +33,15 @@ let impedance = DENSITY_WATER * C_WATER;
 assert!((impedance - 1.48e6).abs() < 0.1e6);
 ```
 
-Absorption coefficients are published in dB/(MHz^y · cm) but integrated in SI:
+Absorption coefficients are published in dB/(MHz^y · cm) but integrated in SI.
+The conversions are owned by `kwavers_medium::absorption::power_law` beside
+`PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS):
 
 ```rust
-use kwavers_core::units::db_per_mhz_cm_to_neper_per_rad_s_m;
+use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
 
 // Water: alpha_0 = 0.0022 dB/(MHz^2 cm), power law exponent y = 2.
-let alpha_si = db_per_mhz_cm_to_neper_per_rad_s_m(0.0022, 2.0);
+let alpha_si = power_law_db_cm_to_np_omega_m(0.0022, 2.0);
 assert!(alpha_si > 0.0);
 ```
 

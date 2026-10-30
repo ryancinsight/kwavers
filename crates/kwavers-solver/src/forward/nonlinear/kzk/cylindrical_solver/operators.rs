@@ -1,8 +1,6 @@
 //! Internal absorption and nonlinear sub-operators for the cylindrical KZK solver.
 
 use apollo::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64 as ApolloComplex64};
-use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
-use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use kwavers_math::fft::Complex64;
 use leto::{Array1 as LetoArray1, Array2};
 
@@ -17,7 +15,12 @@ pub(super) struct CylindricalAbsorption {
 impl CylindricalAbsorption {
     #[must_use]
     pub(super) fn new(config: &CylindricalKZKConfig) -> Self {
-        let alpha0_np = config.alpha0 / CM_TO_M / NP_TO_DB / MHZ_TO_HZ.powf(config.alpha_power);
+        // dB/(cm·MHz^y) → Np/(m·Hz^y) through the single owner beside
+        // `PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS).
+        let alpha0_np = kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m_hz(
+            config.alpha0,
+            config.alpha_power,
+        );
         let h_mask_half = Self::build_mask(
             alpha0_np,
             config.alpha_power,
