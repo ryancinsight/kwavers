@@ -2,6 +2,12 @@
 
 Status: Accepted
 
+- Revision 2026-10-30 (rigid transform, salvaged from superseded PR
+  #967): the installed array transform moves every planar centre by
+  `R·p + t`, but the orientation now follows the surface convention —
+  centre-only under `KWave` (k-wave-python parity), full rigid rotation
+  under `AreaConserving` via `apply_transform_planar`. Ported its two
+  contract tests (rigid frame, per-element paths).
 - Revision 2026-10-30 (disc fold, item KW-DISC-PLANAR-CONSOLIDATION):
   `ElementShape::Disc` folds into `PlanarApertureShape::Disk` under
   `SurfaceConvention::KWave` the same way: the disc spiral runs on the
