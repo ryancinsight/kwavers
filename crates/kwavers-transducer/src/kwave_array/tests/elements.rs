@@ -28,7 +28,9 @@ fn test_annulus_is_subset_of_bowl_same_outer_diameter() {
     let bowl_mask = bowl.get_array_binary_mask(&grid);
 
     let mut annulus = KWaveArray::new();
-    annulus.add_annular_element((cx, cy, cz), radius, inner_d, outer_d);
+    annulus
+        .add_annular_element((cx, cy, cz), radius, inner_d, outer_d)
+        .expect("valid annulus");
     let annulus_mask = annulus.get_array_binary_mask(&grid);
 
     let bowl_count: usize = bowl_mask.iter().filter(|&&b| b).count();
@@ -68,8 +70,10 @@ fn test_build_per_element_source_superposition() {
     let cz = 30.0 * dx;
 
     let mut arr = KWaveArray::new();
-    arr.add_annular_element((cx, cy, cz), 15.0e-3, 0.0, 4.0e-3);
-    arr.add_annular_element((cx, cy, cz), 15.0e-3, 6.0e-3, 10.0e-3);
+    arr.add_annular_element((cx, cy, cz), 15.0e-3, 0.0, 4.0e-3)
+        .expect("valid annulus");
+    arr.add_annular_element((cx, cy, cz), 15.0e-3, 6.0e-3, 10.0e-3)
+        .expect("valid annulus");
     assert_eq!(arr.num_elements(), 2);
 
     let n_times = 4;
@@ -135,7 +139,9 @@ fn test_profiled_disc_enters_per_element_source_weights() {
     let diameter = 6.0e-3;
 
     let mut uniform = KWaveArray::new();
-    uniform.add_disc_element(center, diameter, None);
+    uniform
+        .add_disc_element(center, diameter, None)
+        .expect("valid element");
     let uniform_weights = uniform.get_array_weighted_mask(&grid);
 
     let mut profiled = KWaveArray::new();

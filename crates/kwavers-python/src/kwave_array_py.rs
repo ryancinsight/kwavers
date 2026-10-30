@@ -65,7 +65,8 @@ impl KWaveArray {
             ));
         }
         self.inner
-            .add_disc_element(position, diameter, focus_position);
+            .add_disc_element(position, diameter, focus_position)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(())
     }
 
@@ -127,8 +128,16 @@ impl KWaveArray {
     ///     Center position [x, y, z] in meters
     /// dims : tuple[float, float]
     ///     Dimensions [width, height] in meters
-    fn add_rect_element(&mut self, position: (f64, f64, f64), dims: (f64, f64)) {
-        self.inner.add_rect_element(position, dims.0, dims.1);
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If the dimensions are not positive and finite.
+    fn add_rect_element(&mut self, position: (f64, f64, f64), dims: (f64, f64)) -> PyResult<()> {
+        self.inner
+            .add_rect_element(position, dims.0, dims.1)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(())
     }
 
     /// Add a rectangular element rotated about its center by intrinsic X-Y-Z
@@ -147,14 +156,21 @@ impl KWaveArray {
     ///     Dimensions [width, height] in meters.
     /// euler_xyz_deg : tuple[float, float, float]
     ///     Intrinsic X-Y-Z Euler angles in degrees.
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If the dimensions are not positive and finite.
     fn add_rect_rot_element(
         &mut self,
         position: (f64, f64, f64),
         dims: (f64, f64),
         euler_xyz_deg: (f64, f64, f64),
-    ) {
+    ) -> PyResult<()> {
         self.inner
-            .add_rect_rot_element(position, dims.0, dims.1, euler_xyz_deg);
+            .add_rect_rot_element(position, dims.0, dims.1, euler_xyz_deg)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(())
     }
 
     /// Install a global translation + intrinsic X-Y-Z Euler rotation (degrees)
@@ -188,27 +204,42 @@ impl KWaveArray {
     /// Mirrors k-wave-python's `kWaveArray.add_annular_element`: a spherical
     /// cap between `inner_diameter` and `outer_diameter` apertures on a bowl
     /// of curvature `radius`.
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If the diameters violate ``0 <= inner_diameter < outer_diameter``.
     fn add_annular_element(
         &mut self,
         position: (f64, f64, f64),
         radius: f64,
         inner_diameter: f64,
         outer_diameter: f64,
-    ) {
+    ) -> PyResult<()> {
         self.inner
-            .add_annular_element(position, radius, inner_diameter, outer_diameter);
+            .add_annular_element(position, radius, inner_diameter, outer_diameter)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(())
     }
 
     /// Add a concentric annular array — one `ElementShape::Annulus` per
     /// `(inner_diameter, outer_diameter)` pair, all sharing `position` and
     /// `radius`. Mirrors `kWaveArray.add_annular_array`.
+    ///
+    /// Raises
+    /// ------
+    /// ValueError
+    ///     If any pair violates ``0 <= inner_diameter < outer_diameter``.
     fn add_annular_array(
         &mut self,
         position: (f64, f64, f64),
         radius: f64,
         diameters: Vec<(f64, f64)>,
-    ) {
-        self.inner.add_annular_array(position, radius, &diameters);
+    ) -> PyResult<()> {
+        self.inner
+            .add_annular_array(position, radius, &diameters)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(())
     }
 
     /// Number of elements in the array.

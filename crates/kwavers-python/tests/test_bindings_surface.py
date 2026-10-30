@@ -287,6 +287,37 @@ def test_kwave_array_disc_focus_rejects_coincident_axis():
         )
 
 
+def test_kwave_array_constructors_reject_degenerate_inputs_as_value_error():
+    # Rust constructors return KwaversError::Config (no panics); the binding
+    # maps every rejection to ValueError.
+    centre = (1.0e-3, 1.0e-3, 1.0e-3)
+    with pytest.raises(ValueError, match="inner_diameter"):
+        kw.KWaveArray().add_annular_element(
+            position=centre, radius=15.0e-3,
+            inner_diameter=6.0e-3, outer_diameter=4.0e-3,
+        )
+    with pytest.raises(ValueError, match="inner_diameter"):
+        kw.KWaveArray().add_annular_array(
+            position=centre, radius=15.0e-3,
+            diameters=[(0.0, 4.0e-3), (6.0e-3, 4.0e-3)],
+        )
+    with pytest.raises(ValueError, match="width_m"):
+        kw.KWaveArray().add_rect_element(
+            position=centre, dims=(0.0, 2.0e-4),
+        )
+    with pytest.raises(ValueError, match="height_m"):
+        kw.KWaveArray().add_rect_rot_element(
+            position=centre, dims=(8.0e-4, -1.0e-4),
+            euler_xyz_deg=(0.0, 0.0, 30.0),
+        )
+    with pytest.raises(ValueError, match="diameter"):
+        kw.KWaveArray().add_disc_element(position=centre, diameter=0.0)
+    with pytest.raises(ValueError, match="focus must differ"):
+        kw.KWaveArray().add_disc_element(
+            position=centre, diameter=0.5e-3, focus_position=centre,
+        )
+
+
 def test_simulation_cpu_surface_runs_end_to_end():
     grid = kw.Grid(nx=16, ny=16, nz=16, dx=0.1e-3, dy=0.1e-3, dz=0.1e-3)
     medium = kw.Medium.homogeneous(sound_speed=1500.0, density=1000.0)
