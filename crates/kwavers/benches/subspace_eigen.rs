@@ -23,6 +23,18 @@
 //!   just a slowdown. The non-convergence is an upstream leto defect to report
 //!   there, not a local copy to work around.
 //!
+//! Full-call time (`MUSIC::pseudospectrum`, `EigenspaceMV::compute_weights`,
+//! two sources) and eigensolve share (solver time over call time):
+//!
+//! - n = 8: MUSIC 31.1 µs (share ≈ 98%), ESMV 34.9 µs (share ≈ 88%).
+//! - n = 32: MUSIC 2.95 ms, ESMV 2.95 ms (share ≈ 100%).
+//! - n = 120: MUSIC 156.5 ms, ESMV 175.1 ms (share ≈ 100%).
+//!
+//! The eigensolve dominates both calls at every operating size, which would
+//! argue for adopting the faster path — except the only upstream alternative
+//! is non-convergent. Verdict: keep the Jacobi path everywhere, no caller
+//! changes.
+//!
 //! The `qr/120` case is kept so the comparison stays reproducible, but the
 //! group measurement budget is capped below so a full run stays in minutes.
 
