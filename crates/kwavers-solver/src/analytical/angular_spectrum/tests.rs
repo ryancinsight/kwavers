@@ -1,7 +1,7 @@
 //! Tests for the CW angular-spectrum propagator.
 
-use super::{CwMedium, backproject_cw, fft_freq, fft_len, propagate_cw};
-use apollo::{Complex64, fft_2d_complex, ifft_2d_complex};
+use super::{backproject_cw, fft_freq, fft_len, propagate_cw, CwMedium};
+use apollo::{fft_2d_complex, ifft_2d_complex, Complex64};
 use eunomia::FloatElement;
 use kwavers_core::error::{ConfigError, KwaversError};
 use leto::Array2;
@@ -167,7 +167,10 @@ fn test_absorption_attenuates_on_axis_pressure() {
     .expect("valid lossy propagation");
     let c = nx / 2;
     let mag = |v: Complex64| (v.re * v.re + v.im * v.im).sqrt();
-    assert!(mag(free[[c, c, 0]]) > 0.0, "lossless centre must be nonzero");
+    assert!(
+        mag(free[[c, c, 0]]) > 0.0,
+        "lossless centre must be nonzero"
+    );
     assert!(
         mag(lossy[[c, c, 0]]) < mag(free[[c, c, 0]]),
         "absorption must attenuate the on-axis pressure"

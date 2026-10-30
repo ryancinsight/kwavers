@@ -13,6 +13,7 @@ pub mod propagation;
 
 // Re-export all public items so call sites in analytical_bindings.rs
 // continue to use `wave::function_name` without modification.
+pub use angular_spectrum::{angular_spectrum_cw, backward_angular_spectrum_cw};
 pub use dispersion::{
     centered_fd_modified_wavenumber, fdtd_cfl_limit, fdtd_cfl_stability_region_2d,
     fdtd_phase_error_1d, kspace_correction_error, kspace_temporal_correction, pstd_phase_error,
@@ -24,7 +25,6 @@ pub use nonlinear::{
     shock_heat_source_density, shock_vapor_pulse_waveform, shock_waveform_pressure,
     tone_burst_waveform, westervelt_harmonic_evolution,
 };
-pub use angular_spectrum::{angular_spectrum_cw, backward_angular_spectrum_cw};
 pub use propagation::{
     absorption_power_law_db_cm, dalembert_split_solution_1d, gaussian_modulated_pulse_1d,
     geometric_spreading_intensity_envelopes, plane_wave_pressure_1d,
