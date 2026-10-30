@@ -20,14 +20,20 @@ Validation criteria:
 5. acoustic-only run → both thermal fields are None
 """
 
-import sys
+import os
 import numpy as np
 
-try:
-    import pykwavers as kw
-except ModuleNotFoundError:
-    print("SKIP: pykwavers not installed in this environment", file=sys.stderr)
-    sys.exit(0)
+import pytest
+
+_ = pytest.importorskip("pykwavers")
+
+import pykwavers as kw
+
+if os.getenv("KWAVERS_RUN_SLOW", "0") != "1":
+    pytest.skip(
+        "Set KWAVERS_RUN_SLOW=1 to run the PSTD thermal coupling suite",
+        allow_module_level=True,
+    )
 
 
 def _make_point_source(Nx: int, Ny: int, Nz: int, ix: int, iy: int, iz: int,
@@ -206,8 +212,52 @@ def test_acoustic_only_run_has_no_thermal_fields():
     print("PASS  acoustic-only run → thermal_temperature=None, thermal_dose=None")
 
 
+def test_thermal_initial_equals_initial_temperature():
+    """At t≈0 the field must equal initial_temperature: five steps deposit
+    at most ~1e-10 K, so 1e-6 K tolerance proves the K→°C boundary, not physics."""
+    Nx, Ny, Nz = 16, 16, 16
+    dx = 1e-3
+    c0 = 1540.0
+    rho = 1050.0
+    cp = 3600.0
+    T0_c = 37.0
+
+    grid = kw.Grid(Nx, Ny, Nz, dx, dx, dx)
+    medium = kw.Medium.homogeneous(c0, rho)
+
+    cfl = 0.3
+    dt = cfl * dx / (c0 * np.sqrt(3.0))
+    Nt = 5
+
+    source = _make_point_source(Nx, Ny, Nz, 4, Ny // 2, Nz // 2, Nt, dt, 1e6, 1e5)
+    sensor = _make_centre_sensor(Nx, Ny, Nz)
+
+    sim = kw.Simulation(grid, medium, source, sensor, solver=kw.SolverType.PSTD)
+    sim.set_thermal(
+        center_frequency=1e6,
+        thermal_conductivity=0.6,
+        density=rho,
+        specific_heat=cp,
+        initial_temperature=T0_c,      # °C
+        n_acoustic_per_thermal=5,
+        enable_bioheat=False,
+        track_thermal_dose=False,
+    )
+
+    result = sim.run(time_steps=Nt, dt=dt)
+
+    T_c = np.asarray(result.thermal_temperature)
+    dev = np.abs(T_c - T0_c).max()
+    assert dev < 1.0e-6, (
+        f"initial field deviates {dev:.3e} K from {T0_c} °C "
+        "(a 273.15 K deviation means the K→°C boundary is missing)"
+    )
+    print(f"PASS  initial field == T0 within {dev:.2e} K")
+
+
 if __name__ == "__main__":
     test_acoustic_only_run_has_no_thermal_fields()
     test_thermal_dose_not_returned_when_disabled()
     test_thermal_coupling_temperature_rise()
+    test_thermal_initial_equals_initial_temperature()
     print("\nAll thermal validation tests passed.")
