@@ -4,13 +4,16 @@
 //! - `propagation`: standing/plane/spherical waves, reflection, power-law attenuation
 //! - `dispersion`: FDTD/PSTD phase error, k-space correction, CFL limit
 //! - `nonlinear`: Fubini harmonics, shock physics, tone burst, Westervelt evolution
+//! - `angular_spectrum`: CW angular-spectrum forward/backward propagation
 
+pub mod angular_spectrum;
 pub mod dispersion;
 pub mod nonlinear;
 pub mod propagation;
 
 // Re-export all public items so call sites in analytical_bindings.rs
 // continue to use `wave::function_name` without modification.
+pub use angular_spectrum::{angular_spectrum_cw, backward_angular_spectrum_cw};
 pub use dispersion::{
     centered_fd_modified_wavenumber, fdtd_cfl_limit, fdtd_cfl_stability_region_2d,
     fdtd_phase_error_1d, kspace_correction_error, kspace_temporal_correction, pstd_phase_error,

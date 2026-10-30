@@ -36,7 +36,6 @@
 <a id="kw-manifest-implementation-2026-09-09"></a>- [KW-MANIFEST-IMPLEMENTATION-2026-09-09](backlog/kw-manifest-implementation-2026-09-09.md) — Reduce the implementation-bearing manifests [patch] [arch] — in-progress
 <a id="kw-mat-043"></a>- [KW-MAT-043](backlog/kw-mat-043.md) — Direct FWI L-BFGS provider ownership [patch] [arch] — in-progress
 <a id="kw-medium-ct-001"></a>- [KW-MEDIUM-CT-001](backlog/kw-medium-ct-001.md) — Own complete CT medium assembly [arch] — review
-<a id="kw-power-law-inverse-forms"></a>- [KW-POWER-LAW-INVERSE-FORMS](backlog/kw-power-law-inverse-forms.md) — Inverse, rad/s and constant power-law conversions still spell the factors [patch] — todo
 <a id="kw-prose-pr-unmergeable-2026-09-16"></a>- [KW-PROSE-PR-UNMERGEABLE-2026-09-16](backlog/kw-prose-pr-unmergeable-2026-09-16.md) — A prose-only pull request can never satisfy the required checks [patch] [ci] — blocked
 <a id="kw-py-angular-spectrum"></a>- [KW-PY-ANGULAR-SPECTRUM](backlog/kw-py-angular-spectrum.md) — The k-Wave parity helper propagates angular spectra in Python [patch] — todo
 <a id="kw-py-thermal-offset"></a>- [KW-PY-THERMAL-OFFSET](backlog/kw-py-thermal-offset.md) — PSTD thermal output from Python sits 273.15 K above the initial temperature [patch] — todo
@@ -56,10 +55,7 @@
 <a id="kw-examples-oversized-923"></a>- [KW-EXAMPLES-OVERSIZED-923](backlog/kw-examples-oversized-923.md) — Examples and tests grown or touched by #923 stay over the 500-line target [patch] — todo
 <a id="kw-gpu-host-tests-unrun"></a>- [KW-GPU-HOST-TESTS-UNRUN](backlog/kw-gpu-host-tests-unrun.md) — CI runs no kwavers-gpu test, including the host-only ones [patch] — todo
 <a id="kw-py-gpu-absorption"></a>- [KW-PY-GPU-ABSORPTION](backlog/kw-py-gpu-absorption.md) — Python PSTD bindings keep a second absorption construction and the origin-sampled exponent [patch] — todo
-<a id="kw-rect-planar-consolidation"></a>- [KW-RECT-PLANAR-CONSOLIDATION](backlog/kw-rect-planar-consolidation.md) — One rectangle element in the k-Wave array [arch] [major] — todo
-<a id="kw-disc-planar-consolidation"></a>- [KW-DISC-PLANAR-CONSOLIDATION](backlog/kw-disc-planar-consolidation.md) — One disc element in the k-Wave array [arch] — todo
 <a id="kw-gpu-velocity-source-scale"></a>- [KW-GPU-VELOCITY-SOURCE-SCALE](backlog/kw-gpu-velocity-source-scale.md) — GPU PSTD adds velocity sources without the 2c₀Δt/Δx scale [patch] — todo
-<a id="kw-annular-element-panics"></a>- [KW-ANNULAR-ELEMENT-PANICS](backlog/kw-annular-element-panics.md) — add_annular_element panics on invalid input [patch] — todo
 <a id="kw-origin-sampled-medium"></a>- [KW-ORIGIN-SAMPLED-MEDIUM](backlog/kw-origin-sampled-medium.md) — Non-PSTD paths read a heterogeneous medium at the origin [patch] — todo
 <a id="kw-pstd-unit-exponent-backends"></a>- [KW-PSTD-UNIT-EXPONENT-BACKENDS](backlog/kw-pstd-unit-exponent-backends.md) — CPU and GPU PSTD disagree on a configured y = 1 under causal dispersion [patch] — todo
 <a id="kw-subspace-jacobi-eigen"></a>- [KW-SUBSPACE-JACOBI-EIGEN](backlog/kw-subspace-jacobi-eigen.md) — MUSIC and ESMV beamformers still use the classical Jacobi Hermitian eigensolver [patch] [perf] — todo
