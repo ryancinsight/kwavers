@@ -81,7 +81,7 @@ fn test_forward_backward_round_trip_recovers_source() {
     for angular_restriction in [true, false] {
         let nx = 32;
         let dx = 0.15e-3;
-        let src = gaussian(nx, nx, dx, 3.0e-3);
+        let src = gaussian(nx, nx, dx, 0.6e-3);
         let z = 10.0e-3;
         let fwd = propagate_cw(
             &src,
@@ -124,7 +124,7 @@ fn test_forward_backward_round_trip_recovers_source() {
 fn test_absorption_attenuates_on_axis_pressure() {
     let nx = 32;
     let dx = 0.15e-3;
-    let src = gaussian(nx, nx, dx, 3.0e-3);
+    let src = gaussian(nx, nx, dx, 0.6e-3);
     let z = [20.0e-3];
     let free = propagate_cw(&src, dx, &z, 1.0e6, CwMedium::lossless(1500.0), true, 0)
         .expect("valid lossless propagation");
