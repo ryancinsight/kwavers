@@ -127,8 +127,7 @@ fn bench_esmv_weights(c: &mut Criterion) {
         let steering = steering_vector(n);
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, _| {
             b.iter(|| {
-                esmv
-                    .compute_weights(black_box(&r), black_box(&steering))
+                esmv.compute_weights(black_box(&r), black_box(&steering))
                     .expect("weights finite")
             });
         });
