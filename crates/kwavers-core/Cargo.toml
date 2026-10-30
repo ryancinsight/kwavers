@@ -13,6 +13,9 @@ repository = "https://github.com/ryancinsight/kwavers"
 # crate) are optional + feature-gated so the foundation stays a clean leaf; the
 # `kwavers` facade enables the features it needs (see features below).
 [dependencies]
+# Aequitas quantities for the typed construction boundary (`time`); a no-std
+# foundation crate in the same lightweight class as the other required deps.
+aequitas = { workspace = true }
 moirai-parallel = { workspace = true }
 leto = { workspace = true }
 mnemosyne-arena = { workspace = true }

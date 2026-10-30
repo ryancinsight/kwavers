@@ -2839,6 +2839,7 @@ dependencies = [
 name = "kwavers-core"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "eunomia",
  "flume",
