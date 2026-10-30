@@ -1,4 +1,5 @@
 // time/mod.rs
+use aequitas::systems::si::quantities::{Length, Time as TimeQuantity, Velocity};
 use leto::Array1;
 use log::debug;
 
@@ -72,6 +73,31 @@ impl Time {
         let dt = max_dt * 0.9;
         let n_steps = (duration / dt).ceil() as usize;
         Self::new(dt, n_steps)
+    }
+
+    /// Typed successor of [`Time::from_grid_and_duration`]: grid spacings as
+    /// [`Length`], sound speed as [`Velocity`], span as [`TimeQuantity`].
+    /// Quantities convert to base units (metres, metres per second, seconds)
+    /// at the boundary; the stored clock and the hot loop stay `f64`.
+    /// # Panics
+    /// - Panics under the same precondition as `from_grid_and_duration`
+    ///   (positive spacings, speed, and duration in base units).
+    ///
+    #[must_use]
+    pub fn from_quantities(
+        dx: Length,
+        dy: Length,
+        dz: Length,
+        sound_speed: Velocity,
+        duration: TimeQuantity,
+    ) -> Self {
+        Self::from_grid_and_duration(
+            *dx.as_base(),
+            *dy.as_base(),
+            *dz.as_base(),
+            *sound_speed.as_base(),
+            *duration.as_base(),
+        )
     }
 
     #[must_use]
@@ -158,5 +184,48 @@ mod tests {
         // n_steps is hundreds here, far below the 2^53 exactness bound of
         // `F64::from_count`; the pre-push cast gate owns the baseline.
         assert_eq!(time.t_max, time.dt * F64::from_count(time.n_steps - 1).0);
+    }
+
+    /// The typed successor builds exactly what the untyped one builds from
+    /// the same physical inputs in base units.
+    #[test]
+    fn from_quantities_matches_untyped_successor() {
+        let dx = 0.5e-3;
+        let sound_speed = 1500.0;
+        let duration = 1.0e-3;
+        let expected = Time::from_grid_and_duration(dx, dx, dx, sound_speed, duration);
+        let typed = Time::from_quantities(
+            Length::from_base(dx),
+            Length::from_base(dx),
+            Length::from_base(dx),
+            Velocity::from_base(sound_speed),
+            TimeQuantity::from_base(duration),
+        );
+        assert_eq!(typed.dt, expected.dt);
+        assert_eq!(typed.n_steps, expected.n_steps);
+        assert_eq!(typed.t_max, expected.t_max);
+        assert_eq!(typed.dt, cfl_max_dt(dx, sound_speed) * 0.9);
+        assert!(typed.is_stable(dx, dx, dx, sound_speed));
+    }
+
+    /// Unit invariance at the boundary: millimetre/millisecond inputs build
+    /// the identical clock to metre/second inputs, including anisotropic
+    /// spacings where the minimum is not the first axis.
+    #[test]
+    fn from_quantities_is_unit_invariant() {
+        use aequitas::systems::si::units::{Millimeter, Millisecond};
+
+        let base = Time::from_grid_and_duration(2.0e-3, 1.0e-3, 0.5e-3, 1500.0, 1.0e-3);
+        let typed = Time::from_quantities(
+            Length::from_unit::<Millimeter>(2.0),
+            Length::from_unit::<Millimeter>(1.0),
+            Length::from_unit::<Millimeter>(0.5),
+            Velocity::from_base(1500.0),
+            TimeQuantity::from_unit::<Millisecond>(1.0),
+        );
+        assert_eq!(typed.dt, base.dt);
+        assert_eq!(typed.n_steps, base.n_steps);
+        assert_eq!(typed.t_max, base.t_max);
+        assert_eq!(typed.dt, cfl_max_dt(0.5e-3, 1500.0) * 0.9);
     }
 }
