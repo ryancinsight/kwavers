@@ -19,6 +19,7 @@
 use super::green::GreenOperatorKind;
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::validation::validate_positive_finite;
 use leto::Array3;
 
 /// Compute the real Helmholtz scattering potential.
@@ -98,8 +99,8 @@ pub fn pstd_temporal_angular_frequency_squared(
     omega_rad_s: f64,
     time_step_s: f64,
 ) -> KwaversResult<f64> {
-    validate_positive_finite(omega_rad_s, "CBS omega")?;
-    validate_positive_finite(time_step_s, "PSTD time step")?;
+    validate_positive_finite("CBS omega", omega_rad_s, "must be finite and positive")?;
+    validate_positive_finite("PSTD time step", time_step_s, "must be finite and positive")?;
     Ok(4.0 * (0.5 * omega_rad_s * time_step_s).sin().powi(2) / time_step_s.powi(2))
 }
 
@@ -124,7 +125,7 @@ pub fn scattering_slowness_derivative_factor_for_operator(
 }
 
 fn helmholtz_frequency_factor(omega_rad_s: f64) -> KwaversResult<f64> {
-    validate_positive_finite(omega_rad_s, "CBS omega")?;
+    validate_positive_finite("CBS omega", omega_rad_s, "must be finite and positive")?;
     Ok(omega_rad_s * omega_rad_s)
 }
 
@@ -133,7 +134,11 @@ fn real_scattering_potential_from_factor(
     slowness_s_per_m: &Array3<f64>,
     reference_slowness_s_per_m: f64,
 ) -> KwaversResult<Vec<f64>> {
-    validate_positive_finite(frequency_factor, "CBS frequency factor")?;
+    validate_positive_finite(
+        "CBS frequency factor",
+        frequency_factor,
+        "must be finite and positive",
+    )?;
     if !reference_slowness_s_per_m.is_finite() || reference_slowness_s_per_m <= 0.0 {
         return Err(KwaversError::InvalidInput(format!(
             "CBS reference slowness must be positive and finite, got {reference_slowness_s_per_m}"
@@ -158,16 +163,6 @@ fn real_scattering_potential_from_factor(
             }
         })
         .collect()
-}
-
-fn validate_positive_finite(value: f64, label: &str) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(KwaversError::InvalidInput(format!(
-            "{label} must be positive and finite, got {value}"
-        )))
-    }
 }
 
 /// Return `epsilon = max(||V||_infinity, f64::EPSILON)`.

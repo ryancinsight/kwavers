@@ -4,6 +4,7 @@ use super::continuous_wave::{ContinuousWaveDoppler, CwDopplerConfig};
 use super::vector_flow::{VectorFlowEstimator, VectorVelocity};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::validation::validate_positive_finite;
 use leto::Array1;
 
 /// Continuous-wave spectrum and vector-flow recovery fixture.
@@ -36,9 +37,9 @@ pub struct ContinuousWaveVectorFlowFixture {
 /// recovers a 2-D velocity vector with [`VectorFlowEstimator`].
 ///
 /// # Errors
-/// Returns `KwaversError::InvalidInput` for non-finite or nonpositive
-/// frequencies/rates/sound speed, zero baseband bins, non-finite velocities, or
-/// invalid/collinear beam angles.
+/// Returns a validation error for non-finite or nonpositive
+/// frequencies/rates/sound speed, and `KwaversError::InvalidInput` for zero
+/// baseband bins, non-finite velocities, or invalid/collinear beam angles.
 #[allow(clippy::too_many_arguments)]
 pub fn continuous_wave_vector_flow_fixture(
     center_frequency_hz: f64,
@@ -51,11 +52,31 @@ pub fn continuous_wave_vector_flow_fixture(
     true_velocity_m_s: VectorVelocity,
     beam_angles_rad: &[f64],
 ) -> KwaversResult<ContinuousWaveVectorFlowFixture> {
-    validate_positive_finite("center_frequency_hz", center_frequency_hz)?;
-    validate_positive_finite("sampling_rate_hz", sampling_rate_hz)?;
-    validate_positive_finite("baseband_rate_hz", baseband_rate_hz)?;
-    validate_positive_finite("pulsed_prf_hz", pulsed_prf_hz)?;
-    validate_positive_finite("sound_speed_m_s", sound_speed_m_s)?;
+    validate_positive_finite(
+        "center_frequency_hz",
+        center_frequency_hz,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
+        "sampling_rate_hz",
+        sampling_rate_hz,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
+        "baseband_rate_hz",
+        baseband_rate_hz,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
+        "pulsed_prf_hz",
+        pulsed_prf_hz,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
+        "sound_speed_m_s",
+        sound_speed_m_s,
+        "must be finite and positive",
+    )?;
     if n_baseband_bins == 0 {
         return Err(KwaversError::InvalidInput(
             "n_baseband_bins must be greater than zero".to_owned(),
@@ -117,13 +138,4 @@ pub fn continuous_wave_vector_flow_fixture(
         recovered_velocity_m_s,
         vector_error_m_s,
     })
-}
-
-fn validate_positive_finite(name: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        return Ok(());
-    }
-    Err(KwaversError::InvalidInput(format!(
-        "{name} must be finite and greater than zero"
-    )))
 }

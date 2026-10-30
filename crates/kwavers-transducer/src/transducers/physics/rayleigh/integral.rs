@@ -1,12 +1,13 @@
 //! The Rayleigh integral over planar apertures: quadrature specification and kernel.
 
 use super::aperture::PlanarAperture;
-use super::input::{invalid, validate_point};
+use super::input::invalid;
 use super::path::{RayleighLayer, RayleighPropagationPath};
 use super::quadrature::surface_rule;
 use super::vector::{add, cross, dot, norm, scale, subtract};
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::validation::validate_finite_point;
 use std::f64::consts::TAU;
 
 pub(super) const MAX_SURFACE_SAMPLES: usize = 1 << 16;
@@ -142,7 +143,7 @@ pub fn rayleigh_pressure(
     spec: &RayleighIntegralSpec,
 ) -> KwaversResult<Vec<Complex64>> {
     for &point in points_m {
-        validate_point("observation_point_m", point)?;
+        validate_finite_point("observation_point_m", point, "all coordinates finite")?;
     }
     let prefactor = Complex64::new(0.0, -spec.wavenumber_rad_m() / TAU);
     let mut pressure = vec![Complex64::new(0.0, 0.0); points_m.len()];

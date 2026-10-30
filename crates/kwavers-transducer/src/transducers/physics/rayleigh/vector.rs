@@ -1,7 +1,7 @@
 //! Three-vector arithmetic and plane frames.
 
-use super::input::{validate_point, validate_positive};
 use kwavers_core::error::KwaversResult;
+use kwavers_core::validation::{validate_finite_point, validate_positive_finite};
 
 pub(super) fn plane_basis(normal: [f64; 3]) -> ([f64; 3], [f64; 3]) {
     let seed = if normal[0].abs() < 0.9 {
@@ -14,9 +14,9 @@ pub(super) fn plane_basis(normal: [f64; 3]) -> ([f64; 3], [f64; 3]) {
 }
 
 pub(super) fn normalized_normal(normal: [f64; 3]) -> KwaversResult<[f64; 3]> {
-    validate_point("normal", normal)?;
+    validate_finite_point("normal", normal, "all coordinates finite")?;
     let normal_norm = norm(normal);
-    validate_positive("normal_norm", normal_norm)?;
+    validate_positive_finite("normal_norm", normal_norm, "must be finite and positive")?;
     Ok(scale(normal, 1.0 / normal_norm))
 }
 

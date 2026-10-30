@@ -212,7 +212,7 @@ fn bone_properties_reject_non_physical_values() {
     ];
 
     for result in invalid {
-        assert!(matches!(result, Err(KwaversError::InvalidInput(_))));
+        assert!(matches!(result, Err(KwaversError::Validation(_))));
     }
 }
 

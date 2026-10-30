@@ -9,6 +9,7 @@ use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use kwavers_core::constants::{MHZ_TO_HZ, SECONDS_PER_MINUTE};
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::validation::{validate_nonnegative_finite, validate_positive_finite};
 use kwavers_physics::acoustics::analysis::calculate_mechanical_index;
 use kwavers_physics::thermal::response::{
     cem43_equivalent_minutes, cem43_rate_per_minute, cem43_reference_celsius,
@@ -82,17 +83,30 @@ impl FocalSpot {
     /// validate against the FDTD/k-space field (see `gap_audit.md` CLD-3).
     ///
     /// # Errors
-    /// Returns `KwaversError::InvalidInput` when the transducer frequency,
+    /// Returns a validation error when the transducer frequency,
     /// focal length, aperture, power, or efficiency is outside its physical
     /// domain.
     pub fn estimate_from_transducer(transducer: &ClinicalHIFUTransducer) -> KwaversResult<Self> {
-        validate_positive_finite("transducer.frequency", transducer.frequency)?;
-        validate_positive_finite("transducer.focal_length_mm", transducer.focal_length_mm)?;
+        validate_positive_finite(
+            "transducer.frequency",
+            transducer.frequency,
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "transducer.focal_length_mm",
+            transducer.focal_length_mm,
+            "must be finite and positive",
+        )?;
         validate_positive_finite(
             "transducer.aperture_diameter_mm",
             transducer.aperture_diameter_mm,
+            "must be finite and positive",
         )?;
-        validate_nonnegative_finite("transducer.power", transducer.power)?;
+        validate_nonnegative_finite(
+            "transducer.power",
+            transducer.power,
+            "must be finite and nonnegative",
+        )?;
         validate_unit_interval("transducer.efficiency", transducer.efficiency)?;
 
         let wavelength = SOUND_SPEED_WATER_SIM / transducer.frequency;
@@ -216,7 +230,7 @@ impl FocalSpotDoseEstimate {
     /// `R = 0.25` below 43 C. The returned `cem43` is in equivalent minutes.
     ///
     /// # Errors
-    /// Returns `KwaversError::InvalidInput` when the pressure, frequency,
+    /// Returns a validation error when the pressure, frequency,
     /// duty cycle, or duration is outside its physical domain.
     pub fn estimate_from_focal_spot(
         focal_spot: &FocalSpot,
@@ -227,10 +241,18 @@ impl FocalSpotDoseEstimate {
         let specific_heat = SPECIFIC_HEAT_TISSUE;
         const PERFUSION_RATE: f64 = 0.01;
 
-        validate_nonnegative_finite("focal_spot.peak_pressure_pa", focal_spot.peak_pressure_pa)?;
-        validate_positive_finite("frequency_hz", frequency_hz)?;
+        validate_nonnegative_finite(
+            "focal_spot.peak_pressure_pa",
+            focal_spot.peak_pressure_pa,
+            "must be finite and nonnegative",
+        )?;
+        validate_positive_finite("frequency_hz", frequency_hz, "must be finite and positive")?;
         validate_unit_interval("duty_cycle", duty_cycle)?;
-        validate_nonnegative_finite("treatment_duration_s", treatment_duration_s)?;
+        validate_nonnegative_finite(
+            "treatment_duration_s",
+            treatment_duration_s,
+            "must be finite and nonnegative",
+        )?;
 
         let frequency_mhz = frequency_hz / MHZ_TO_HZ;
         let alpha_np_per_m = ACOUSTIC_ABSORPTION_TISSUE * frequency_mhz * 100.0 * DB_TO_NP;
@@ -315,26 +337,6 @@ impl TreatmentFeasibility {
 impl Default for TreatmentFeasibility {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-fn validate_positive_finite(name: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(KwaversError::InvalidInput(format!(
-            "{name} must be finite and positive, got {value}"
-        )))
-    }
-}
-
-fn validate_nonnegative_finite(name: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value >= 0.0 {
-        Ok(())
-    } else {
-        Err(KwaversError::InvalidInput(format!(
-            "{name} must be finite and nonnegative, got {value}"
-        )))
     }
 }
 

@@ -1,7 +1,8 @@
 //! Vector sonogenetics pipelines shared by Rust callers and PyO3 bindings.
 
 use kwavers_core::constants::fundamental::BOLTZMANN as K_B;
-use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::validation::validate_positive_finite;
 use leto::{Array1, Array3};
 
 use super::{
@@ -44,26 +45,6 @@ pub struct LifResponseProbability {
     pub response_probability: Vec<f64>,
 }
 
-fn invalid_value(parameter: &'static str, value: f64, reason: &'static str) -> KwaversError {
-    KwaversError::Validation(ValidationError::InvalidValue {
-        parameter: parameter.to_owned(),
-        value,
-        reason: reason.to_owned(),
-    })
-}
-
-fn validate_positive(parameter: &'static str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(invalid_value(
-            parameter,
-            value,
-            "must be finite and strictly positive",
-        ))
-    }
-}
-
 /// Convert acoustic pressure samples `Pa` to membrane tension [mN/m].
 ///
 /// Formula: `I = p^2 / (2 rho c)`, then `Delta T = I R / (2 c)`.
@@ -83,9 +64,21 @@ pub fn pressure_to_membrane_tension_mn_m(
     sound_speed_m_s: f64,
     cell_radius_m: f64,
 ) -> KwaversResult<Vec<f64>> {
-    validate_positive("density_kg_m3", density_kg_m3)?;
-    validate_positive("sound_speed_m_s", sound_speed_m_s)?;
-    validate_positive("cell_radius_m", cell_radius_m)?;
+    validate_positive_finite(
+        "density_kg_m3",
+        density_kg_m3,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
+        "sound_speed_m_s",
+        sound_speed_m_s,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
+        "cell_radius_m",
+        cell_radius_m,
+        "must be finite and positive",
+    )?;
     if pressure_pa.iter().any(|v| !v.is_finite()) {
         return Err(KwaversError::InvalidInput(
             "pressure_pa contains non-finite values".to_owned(),
@@ -132,8 +125,12 @@ pub fn boltzmann_open_probability_from_tension_mn_m(
     slope_mn_m: f64,
     temperature_k: f64,
 ) -> KwaversResult<Vec<f64>> {
-    validate_positive("temperature_k", temperature_k)?;
-    validate_positive("slope_mn_m", slope_mn_m)?;
+    validate_positive_finite(
+        "temperature_k",
+        temperature_k,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite("slope_mn_m", slope_mn_m, "must be finite and positive")?;
     if tension_mn_m.iter().any(|v| !v.is_finite()) {
         return Err(KwaversError::InvalidInput(
             "tension_mn_m contains non-finite values".to_owned(),
@@ -237,11 +234,15 @@ pub fn gaussian_beam_pressure_field(
     lateral_fwhm_m: f64,
     axial_fwhm_m: f64,
 ) -> KwaversResult<GaussianBeamPressureField> {
-    validate_positive("dx_m", dx_m)?;
-    validate_positive("dy_m", dy_m)?;
-    validate_positive("dz_m", dz_m)?;
-    validate_positive("lateral_fwhm_m", lateral_fwhm_m)?;
-    validate_positive("axial_fwhm_m", axial_fwhm_m)?;
+    validate_positive_finite("dx_m", dx_m, "must be finite and positive")?;
+    validate_positive_finite("dy_m", dy_m, "must be finite and positive")?;
+    validate_positive_finite("dz_m", dz_m, "must be finite and positive")?;
+    validate_positive_finite(
+        "lateral_fwhm_m",
+        lateral_fwhm_m,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite("axial_fwhm_m", axial_fwhm_m, "must be finite and positive")?;
 
     let fwhm_to_sigma = (2.0 * (2.0_f64 * std::f64::consts::LN_2).sqrt()).recip();
     let sigma_lat = lateral_fwhm_m * fwhm_to_sigma;
@@ -290,7 +291,7 @@ pub fn simulate_lif_trace(
     dt_s: f64,
     params: LifParams,
 ) -> KwaversResult<LifTrace> {
-    validate_positive("dt_s", dt_s)?;
+    validate_positive_finite("dt_s", dt_s, "must be finite and positive")?;
     if !params.is_valid() {
         return Err(KwaversError::InvalidInput(
             "LifParams are not physically valid".to_owned(),
@@ -334,9 +335,13 @@ pub fn lif_response_probability(
             "n_samples must be greater than zero".to_owned(),
         ));
     }
-    validate_positive("dt_s", dt_s)?;
-    validate_positive("smoothing_sigma_s", smoothing_sigma_s)?;
-    validate_positive("f_max_hz", f_max_hz)?;
+    validate_positive_finite("dt_s", dt_s, "must be finite and positive")?;
+    validate_positive_finite(
+        "smoothing_sigma_s",
+        smoothing_sigma_s,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite("f_max_hz", f_max_hz, "must be finite and positive")?;
     if spike_times_s.iter().any(|value| !value.is_finite()) {
         return Err(KwaversError::InvalidInput(
             "spike_times_s contains non-finite values".to_owned(),
