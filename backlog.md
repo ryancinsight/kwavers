@@ -37,7 +37,6 @@
 <a id="kw-mat-043"></a>- [KW-MAT-043](backlog/kw-mat-043.md) — Direct FWI L-BFGS provider ownership [patch] [arch] — in-progress
 <a id="kw-medium-ct-001"></a>- [KW-MEDIUM-CT-001](backlog/kw-medium-ct-001.md) — Own complete CT medium assembly [arch] — review
 <a id="kw-prose-pr-unmergeable-2026-09-16"></a>- [KW-PROSE-PR-UNMERGEABLE-2026-09-16](backlog/kw-prose-pr-unmergeable-2026-09-16.md) — A prose-only pull request can never satisfy the required checks [patch] [ci] — blocked
-<a id="kw-py-thermal-offset"></a>- [KW-PY-THERMAL-OFFSET](backlog/kw-py-thermal-offset.md) — PSTD thermal output from Python sits 273.15 K above the initial temperature [patch] — todo
 <a id="kw-py-uvlock-stale-2026-09-21"></a>- [KW-PY-UVLOCK-STALE-2026-09-21](backlog/kw-py-uvlock-stale-2026-09-21.md) — The Python dev lockfile is stale against its own pyproject [patch] — todo
 <a id="kw-ray-040"></a>- [KW-RAY-040](backlog/kw-ray-040.md) — Layered focus-path contract [minor] — in-progress
 <a id="kw-release-crates-01"></a>- [KW-RELEASE-CRATES-01](backlog/kw-release-crates-01.md) — Publish the Rust package closure [patch] — blocked
