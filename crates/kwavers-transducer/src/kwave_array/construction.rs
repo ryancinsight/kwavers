@@ -7,33 +7,10 @@ use kwavers_core::error::KwaversResult;
 use aequitas::systems::si::quantities::{Angle, Length};
 use aequitas::systems::si::units::{Degree, Meter};
 
+use super::validation::{check_finite_position, check_positive_finite, invalid_value};
 use super::{ArrayTransform, DiscSourceProfile, ElementShape, KWaveArray, KWaveElement};
 use crate::curvilinear::ConvexArrayGeometry;
 use crate::transducers::physics::PlanarApertureGeometry;
-use kwavers_core::error::{ConfigError, KwaversError};
-
-/// Build the `Config::InvalidValue` error this module's constructors return
-/// for rejected inputs, naming the offending parameter.
-fn invalid_value(parameter: &str, value: String, constraint: &str) -> KwaversError {
-    KwaversError::Config(ConfigError::InvalidValue {
-        parameter: parameter.to_owned(),
-        value,
-        constraint: constraint.to_owned(),
-    })
-}
-
-/// Reject a NaN or infinite element position with a typed error.
-fn check_finite_position(parameter: &str, position: (f64, f64, f64)) -> KwaversResult<()> {
-    if position.0.is_finite() && position.1.is_finite() && position.2.is_finite() {
-        Ok(())
-    } else {
-        Err(invalid_value(
-            parameter,
-            format!("({}, {}, {})", position.0, position.1, position.2),
-            "all coordinates must be finite",
-        ))
-    }
-}
 
 impl KWaveArray {
     /// Create a new empty `KWaveArray`.
@@ -223,20 +200,8 @@ impl KWaveArray {
         // only guards unreachable residuals (a finite Euler rotation always
         // yields a unit frame, and the bounds were just checked).
         check_finite_position("position", position)?;
-        if !(width.is_finite() && width > 0.0) {
-            return Err(invalid_value(
-                "width_m",
-                width.to_string(),
-                "must be finite and positive",
-            ));
-        }
-        if !(height.is_finite() && height > 0.0) {
-            return Err(invalid_value(
-                "height_m",
-                height.to_string(),
-                "must be finite and positive",
-            ));
-        }
+        check_positive_finite("width_m", width)?;
+        check_positive_finite("height_m", height)?;
         for (axis, angle) in [
             ("euler_x_deg", euler_xyz_deg.0),
             ("euler_y_deg", euler_xyz_deg.1),
@@ -347,13 +312,7 @@ impl KWaveArray {
         use crate::transducers::physics::{PlanarApertureShape, SurfaceConvention};
 
         check_finite_position("position", position)?;
-        if !(diameter.is_finite() && diameter > 0.0) {
-            return Err(invalid_value(
-                "diameter",
-                diameter.to_string(),
-                "must be finite and positive",
-            ));
-        }
+        check_positive_finite("diameter", diameter)?;
         // Reject a coincident focus up front with a typed error, using the
         // same comparison `disc_basis` asserts on, so its assert is
         // unreachable from this constructor.

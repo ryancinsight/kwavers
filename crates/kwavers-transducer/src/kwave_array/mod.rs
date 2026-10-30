@@ -14,6 +14,7 @@
 //! - `rasterizer_curved`: arc, bowl, and annulus element rasterizers.
 //! - `rasterizer_planar`: rect, disc, and per-element rasterizers.
 //! - `accessors`: public query methods (masks, delays, apodization, etc.).
+//! - `validation`: typed `Config` errors for constructor input validation.
 
 mod accessors;
 mod bli_kernel;
@@ -23,6 +24,7 @@ pub(crate) mod math;
 mod rasterizer_curved;
 mod rasterizer_planar;
 mod transform;
+mod validation;
 
 use crate::transducers::physics::PlanarApertureGeometry;
 
