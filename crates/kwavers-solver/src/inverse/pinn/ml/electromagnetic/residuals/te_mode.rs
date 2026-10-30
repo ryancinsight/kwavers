@@ -32,6 +32,12 @@ use kwavers_core::error::KwaversResult;
 /// # References
 /// - Jackson, J.D. (1999). *Classical Electrodynamics* (3rd ed.). §6.2.
 /// - Pozar, D.M. (2011). *Microwave Engineering* (4th ed.). §1.3.
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
+///
 pub fn te_mode_faraday_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     model_ex: &PinnWave2D<B>,
     model_ey: &PinnWave2D<B>,
@@ -84,6 +90,11 @@ where
 /// Setting = 0: εμω² = ky² (dispersion). ✓
 ///
 /// # References — see `te_mode_faraday_residual`.
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
 pub fn te_mode_ampere_x_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     model_ex: &PinnWave2D<B>,
     model_hz: &PinnWave2D<B>,
@@ -129,6 +140,11 @@ where
 /// Note the **+∂Hz/∂x** sign: in 2D TE, (∇×H)_y = +∂Hz/∂x (no ∂Hx/∂z term).
 ///
 /// # References — see `te_mode_faraday_residual`.
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
 pub fn te_mode_ampere_y_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     model_ey: &PinnWave2D<B>,
     model_hz: &PinnWave2D<B>,
@@ -178,6 +194,12 @@ where
 ///
 /// # References
 /// - Jackson, J.D. (1999). *Classical Electrodynamics* (3rd ed.). §6.1.
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
+///
 pub fn te_mode_gauss_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     model_ex: &PinnWave2D<B>,
     model_ey: &PinnWave2D<B>,

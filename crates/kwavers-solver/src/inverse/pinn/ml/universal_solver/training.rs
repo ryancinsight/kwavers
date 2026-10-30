@@ -54,7 +54,7 @@ where
             .cloned()
             .unwrap_or_default();
 
-        let collocation_points = self.generate_collocation_points(
+        let collocation_points = Self::generate_collocation_points(
             geometry,
             domain,
             config.collocation_points,
@@ -123,7 +123,6 @@ where
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn generate_collocation_points(
-        &self,
         geometry: &UniversalSolverGeometry2D,
         _domain: &dyn SimulationPhysicsDomain<B>,
         num_points: usize,
@@ -137,7 +136,7 @@ where
             let x = x_min + (x_max - x_min) * rng.gen::<f64>();
             let y = y_min + (y_max - y_min) * rng.gen::<f64>();
             let t = rng.gen::<f64>();
-            if self.is_point_in_geometry(x, y, geometry) {
+            if Self::is_point_in_geometry(x, y, geometry) {
                 points.push((x, y, t));
             }
         }
@@ -147,7 +146,6 @@ where
 
     /// Check if a point is within the geometric domain
     pub(super) fn is_point_in_geometry(
-        &self,
         x: f64,
         y: f64,
         geometry: &UniversalSolverGeometry2D,

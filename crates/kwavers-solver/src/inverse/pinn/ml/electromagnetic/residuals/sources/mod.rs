@@ -39,6 +39,12 @@ mod tests;
 ///
 /// - Jackson, J.D. (1999). *Classical Electrodynamics* (3rd ed.). Wiley. §1.5.
 /// - Griffiths, D.J. (2017). *Introduction to Electrodynamics* (4th ed.). §2.3.
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
+///
 pub fn compute_charge_density<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     x: &Var<f32, B>,
     y: &Var<f32, B>,
@@ -123,6 +129,12 @@ pub fn compute_charge_density<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBack
 /// - Jackson, J.D. (1999). *Classical Electrodynamics* (3rd ed.). Wiley. §6.7.
 /// - Pozar, D.M. (2011). *Microwave Engineering* (4th ed.). Wiley. §1.3.
 /// - Balanis, C.A. (2012). *Advanced Engineering Electromagnetics* (2nd ed.). §3.4.
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
+///
 pub fn compute_current_density_z<
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
 >(

@@ -172,6 +172,12 @@ where
     /// - Initial: ||r||² ~ 1e0 - 1e1
     /// - Mid-training: ||r||² ~ 1e-2 - 1e-3
     /// - Well-trained: ||r||² < 1e-4
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from model forwards
+    ///   and autograd ops.
+    ///
     pub fn compute_pde_residual(
         &self,
         x: &Var<f32, B>,
@@ -253,6 +259,12 @@ where
     ///
     /// Tuple of `(total_loss, data_loss, pde_loss, bc_loss)` where each is a
     /// scalar tensor with shape `[1]`.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the component
+    ///   loss evaluations and autograd ops.
+    ///
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::type_complexity)] // 4 independent scalar losses (total, data, pde, bc); no cohesive grouping
     pub fn compute_physics_loss(

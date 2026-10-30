@@ -34,9 +34,9 @@ where
             task_losses.push(task_loss);
             physics_losses.push(physics_loss);
 
-            let valid_data = self.generate_task_data(task)?;
+            let valid_data = Self::generate_task_data(task)?;
             let (_val_loss, val_grads) =
-                self.compute_gradients_and_loss(&adapted_model, &valid_data, task)?;
+                Self::compute_gradients_and_loss(&adapted_model, &valid_data, task)?;
 
             accumulated_grads = add_gradients(accumulated_grads, &val_grads);
         }
@@ -83,7 +83,7 @@ where
             0.0
         };
 
-        let generalization_score = self.compute_generalization_score(&task_losses);
+        let generalization_score = Self::compute_generalization_score(&task_losses);
 
         let meta_loss = MetaLoss {
             total_loss: if !tasks.is_empty() {
@@ -129,14 +129,14 @@ where
         crate::inverse::pinn::ml::wave_equation_2d::PinnWave2D<B>,
     )> {
         let mut task_model = self.base_model.clone();
-        let task_data = self.generate_task_data(task)?;
+        let task_data = Self::generate_task_data(task)?;
         let optimizer = SimpleOptimizer2D::new(self.config.inner_lr as f32);
 
         let mut task_loss = 0.0;
         let mut physics_loss = 0.0;
 
         for _ in 0..self.config.adaptation_steps {
-            let (loss, _grads) = self.compute_gradients_and_loss(&task_model, &task_data, task)?;
+            let (loss, _grads) = Self::compute_gradients_and_loss(&task_model, &task_data, task)?;
             task_model = optimizer.step(task_model)?;
             task_loss = loss.total_loss;
             physics_loss = loss.physics_loss;
@@ -146,7 +146,7 @@ where
     }
 
     /// Compute generalization score across tasks
-    pub(super) fn compute_generalization_score(&self, task_losses: &[f64]) -> f64 {
+    pub(super) fn compute_generalization_score(task_losses: &[f64]) -> f64 {
         let mean = task_losses.iter().sum::<f64>() / (task_losses.len()) as f64;
         let variance = task_losses
             .iter()

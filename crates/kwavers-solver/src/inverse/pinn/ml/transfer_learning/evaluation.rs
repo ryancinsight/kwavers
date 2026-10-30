@@ -11,12 +11,11 @@ where
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn evaluate_accuracy(
-        &self,
         model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
     ) -> KwaversResult<f32> {
-        let test_points = self.generate_test_points(geometry, 1000)?;
+        let test_points = Self::generate_test_points(geometry, 1000)?;
         let mut total_residual = 0.0;
         let mut total_boundary_error = 0.0;
 
@@ -25,12 +24,12 @@ where
             let y_arr = leto::Array1::from_elem([1], point.y);
             let t_arr = leto::Array1::from_elem([1], 0.0);
             let _prediction = model.predict(&x_arr, &y_arr, &t_arr)?;
-            let residual = self.compute_pde_residual(model, point.x, point.y, 0.0)?;
+            let residual = Self::compute_pde_residual(model, point.x, point.y, 0.0)?;
             total_residual += residual * residual;
         }
 
         for condition in conditions {
-            let boundary_error = self.evaluate_boundary_condition(model, *condition, geometry)?;
+            let boundary_error = Self::evaluate_boundary_condition(model, *condition, geometry)?;
             total_boundary_error += boundary_error * boundary_error;
         }
 
@@ -48,7 +47,6 @@ where
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn generate_test_points(
-        &self,
         geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         num_points: usize,
     ) -> KwaversResult<Vec<TestPoint>> {
@@ -72,7 +70,6 @@ where
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn compute_pde_residual(
-        &self,
         model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         x: f64,
         y: f64,
@@ -116,7 +113,6 @@ where
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn evaluate_boundary_condition(
-        &self,
         model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         condition: crate::inverse::pinn::ml::BoundaryCondition2D,
         geometry: &crate::inverse::pinn::ml::WaveGeometry2D,

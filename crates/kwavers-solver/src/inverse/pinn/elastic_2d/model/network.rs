@@ -198,6 +198,12 @@ where
     ///
     /// Concatenates inputs to `[batch, 3]`, applies tanh-activated fully connected layers,
     /// then a linear output projection.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions,
+    ///   including the input/hidden/output layer forwards.
+    ///
     pub fn forward(
         &self,
         x: &Var<f32, B>,
@@ -219,6 +225,11 @@ where
     }
 
     /// Return λ as a scalar tensor; uses `fixed_value` when not optimizing.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
     pub fn get_lambda(&self, fixed_value: f64) -> KwaversResult<coeus_tensor::Tensor<f32, B>> {
         Ok(match &self.lambda {
             Some(p) => p.tensor.clone(),
@@ -234,6 +245,11 @@ where
     }
 
     /// Return μ as a scalar tensor; uses `fixed_value` when not optimizing.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
     pub fn get_mu(&self, fixed_value: f64) -> KwaversResult<coeus_tensor::Tensor<f32, B>> {
         Ok(match &self.mu {
             Some(p) => p.tensor.clone(),
@@ -249,6 +265,11 @@ where
     }
 
     /// Return ρ as a scalar tensor; uses `fixed_value` when not optimizing.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
     pub fn get_rho(&self, fixed_value: f64) -> KwaversResult<coeus_tensor::Tensor<f32, B>> {
         Ok(match &self.rho {
             Some(p) => p.tensor.clone(),

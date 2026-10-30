@@ -145,6 +145,12 @@ where
     /// Forward pass through the network
     ///
     /// `u = NN(x, y, z, t) = be(tanh(W_L be(tanh(...tanh(W_1[x, y, z, t] + b_1)...))? + b_L))?`.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from concatenation,
+    ///   the layer forwards, and autograd ops.
+    ///
     pub fn forward(
         &self,
         x: &Var<f32, B>,

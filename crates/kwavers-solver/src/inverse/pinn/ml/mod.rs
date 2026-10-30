@@ -143,6 +143,16 @@ pub mod meta_learning;
 #[cfg(feature = "pinn")]
 pub mod physics;
 
+/// Coordinate `(x, y, t)` leaf-`Var` triple shared by the point-upload
+/// helpers (`distributed_training` epoch builder, `meta_learning` tensor
+/// loader). One definition so the two call sites cannot drift apart.
+#[cfg(feature = "pinn")]
+pub(crate) type CoordinateVars<B> = (
+    coeus_autograd::Var<f32, B>,
+    coeus_autograd::Var<f32, B>,
+    coeus_autograd::Var<f32, B>,
+);
+
 // Beamforming provider adapter moved to analysis layer
 // See: src/analysis/signal_processing/beamforming/neural/backends/pinn_adapter.rs
 

@@ -91,6 +91,12 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResidualBl
     /// Forward pass through residual block.
     ///
     /// `out = x + LayerNorm(linear2(GELU(LayerNorm(linear1(x)))))`
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the layer
+    ///   forwards and autograd ops.
+    ///
     pub fn forward(&self, x: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
         let out = map_forward(self.linear1.forward(x), "PINN residual linear layer")?;
         let out = map_forward(self.norm1.forward(&out), "PINN residual normalization")?;

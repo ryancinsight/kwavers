@@ -78,7 +78,7 @@ impl EdgeRuntime {
         operations as f64 * adjusted_time
     }
 
-    pub(super) fn estimate_kernel_memory(&self, layer: &LayerInfo) -> usize {
+    pub(super) fn estimate_kernel_memory(layer: &LayerInfo) -> usize {
         let weight_memory = layer.input_size * layer.output_size * std::mem::size_of::<i8>();
         let bias_memory = layer.output_size * std::mem::size_of::<f32>();
         let intermediate_memory = layer.output_size * std::mem::size_of::<f32>() * 2;

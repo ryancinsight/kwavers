@@ -3,6 +3,7 @@ use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLoss;
 use crate::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskData};
 use crate::inverse::pinn::ml::wave_equation_2d::{LossWeights2D, PinnWave2D};
+use crate::inverse::pinn::ml::CoordinateVars;
 use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 
@@ -20,16 +21,15 @@ where
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn compute_gradients_and_loss(
-        &self,
         model: &PinnWave2D<B>,
         data: &TaskData,
         task: &PhysicsTask,
     ) -> KwaversResult<(MetaLoss, Vec<Option<Vec<f32>>>)> {
         let backend = B::default();
 
-        let (x_colloc, y_colloc, t_colloc) = self.to_vars_3(&data.collocation_points, &backend)?;
-        let (x_bc, y_bc, t_bc, u_bc) = self.to_vars_4(&data.boundary_data, &backend)?;
-        let (x_ic, y_ic, t_ic, u_ic) = self.to_vars_5_to_4(&data.initial_data, &backend)?;
+        let (x_colloc, y_colloc, t_colloc) = Self::to_vars_3(&data.collocation_points, &backend)?;
+        let (x_bc, y_bc, t_bc, u_bc) = Self::to_vars_4(&data.boundary_data, &backend)?;
+        let (x_ic, y_ic, t_ic, u_ic) = Self::to_vars_5_to_4(&data.initial_data, &backend)?;
 
         for p in model.parameters() {
             be(p.zero_grad())?;
@@ -78,10 +78,9 @@ where
     }
 
     pub(super) fn to_vars_3(
-        &self,
         data: &[(f64, f64, f64)],
         backend: &B,
-    ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
+    ) -> KwaversResult<CoordinateVars<B>> {
         let n = (data.len()).max(1);
         if data.is_empty() {
             let dummy = || -> KwaversResult<Var<f32, B>> {
@@ -115,7 +114,6 @@ where
 
     #[allow(clippy::type_complexity)] // (x, y, t, u) tensors, no cohesive grouping
     pub(super) fn to_vars_4(
-        &self,
         data: &[(f64, f64, f64, f64)],
         backend: &B,
     ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
@@ -157,7 +155,6 @@ where
 
     #[allow(clippy::type_complexity)] // (x, y, t, u) tensors, no cohesive grouping
     pub(super) fn to_vars_5_to_4(
-        &self,
         data: &[(f64, f64, f64, f64, f64)],
         backend: &B,
     ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>)> {

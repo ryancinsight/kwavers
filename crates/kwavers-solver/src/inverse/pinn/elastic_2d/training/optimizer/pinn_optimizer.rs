@@ -105,6 +105,12 @@ where
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
 {
     /// Create a plain SGD optimizer.
+    ///
+    /// # Errors
+    ///
+    /// Returns the optimizer-backend error when `SGD::new` rejects the
+    /// model parameters (e.g. empty parameter set).
+    ///
     pub fn sgd(
         model: &ElasticPINN2D<B>,
         learning_rate: f64,
@@ -123,6 +129,12 @@ where
     }
 
     /// Create an SGD-with-momentum optimizer (`coeus_optim::SGD`, velocity-accumulating).
+    ///
+    /// # Errors
+    ///
+    /// Returns the optimizer-backend error when `SGD::new` rejects the
+    /// model parameters (e.g. empty parameter set).
+    ///
     pub fn sgd_momentum(
         model: &ElasticPINN2D<B>,
         learning_rate: f64,
@@ -145,6 +157,12 @@ where
     ///
     /// `weight_decay > 0` adds coupled L2 regularization; use [`Self::adamw`] for
     /// decoupled weight decay.
+    ///
+    /// # Errors
+    ///
+    /// Returns the optimizer-backend error when `Adam::new` rejects the
+    /// model parameters (e.g. empty parameter set).
+    ///
     pub fn adam(
         model: &ElasticPINN2D<B>,
         learning_rate: f64,
@@ -168,6 +186,12 @@ where
     }
 
     /// Create an AdamW optimizer (`coeus_optim::AdamW`, decoupled weight decay).
+    ///
+    /// # Errors
+    ///
+    /// Returns the optimizer-backend error when `AdamW::new` rejects the
+    /// model parameters (e.g. empty parameter set).
+    ///
     pub fn adamw(
         model: &ElasticPINN2D<B>,
         learning_rate: f64,

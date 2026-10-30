@@ -27,6 +27,12 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> FourierFeatures<B> {
     /// Create Fourier feature embedding.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the frequency
+    ///   tensor construction.
+    ///
     pub fn new(input_dim: usize, num_features: usize, scale: f32) -> KwaversResult<Self> {
         let backend = B::default();
         let freq_data: Vec<f32> = (0..input_dim * num_features)
@@ -59,6 +65,12 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> FourierFea
     ///
     /// Maps `x` ∈ ℝ^{batch × input_dim} to
     /// `[cos(scale·x·f), sin(scale·x·f)]` ∈ ℝ^{batch × 2·num_features}.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the scale,
+    ///   matmul, cos/sin, and concat ops.
+    ///
     pub fn forward(&self, x: &Var<f32, B>) -> KwaversResult<Var<f32, B>>
     where
         B::DeviceBuffer<f32>:

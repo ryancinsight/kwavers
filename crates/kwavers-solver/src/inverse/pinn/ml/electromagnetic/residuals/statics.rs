@@ -7,6 +7,12 @@ use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub, Var};
 use kwavers_core::error::KwaversResult;
 
 /// Compute electrostatic residual: ∇·(ε∇φ) = -ρ
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
+///
 pub fn electrostatic_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     model: &PinnWave2D<B>,
     x: &Var<f32, B>,
@@ -72,6 +78,12 @@ where
 }
 
 /// Compute magnetostatic residual: ∇×(ν∇×A) = μ₀J
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
+///
 pub fn magnetostatic_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     model: &PinnWave2D<B>,
     x: &Var<f32, B>,
@@ -141,6 +153,12 @@ where
 // Independent field tensors and physical parameters with no cohesive
 // sub-grouping; bundling would not clarify the call site.
 #[allow(clippy::too_many_arguments)]
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
+///
 pub fn quasi_static_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     model: &PinnWave2D<B>,
     x: &Var<f32, B>,

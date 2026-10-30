@@ -68,7 +68,7 @@ impl EdgeRuntime {
             let quantized_input = if self.hardware_caps.has_fpu {
                 self.quantize_input_for_kernel(&current_input, kernel)?
             } else {
-                self.fixed_point_inference(&current_input, kernel)?
+                Self::fixed_point_inference(&current_input, kernel)?
             };
 
             current_input = self.execute_kernel(&quantized_input, kernel)?;
@@ -153,7 +153,7 @@ impl EdgeRuntime {
                     output_dtype: DataType::Float32,
                 },
                 estimated_time_us: self.estimate_kernel_time(layer),
-                memory_required: self.estimate_kernel_memory(layer),
+                memory_required: Self::estimate_kernel_memory(layer),
             };
 
             self.kernel_cache.insert(kernel.id.clone(), kernel);

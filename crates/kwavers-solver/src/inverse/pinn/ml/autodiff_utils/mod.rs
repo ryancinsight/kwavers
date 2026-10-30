@@ -32,6 +32,12 @@ use kwavers_core::error::KwaversResult;
 /// `KwaversResult<Var>` so backend and input-contract failures remain visible.
 pub trait ForwardOutput<B: coeus_ops::BackendOps<f32> + Default>: Sized {
     /// Convert the forward result into the solver error contract.
+    ///
+    /// # Errors
+    ///
+    /// Implementations forward backend and input-contract failures as
+    /// [`crate::KwaversError`].
+    ///
     fn into_forward_result(self) -> KwaversResult<Var<f32, B>>;
 }
 

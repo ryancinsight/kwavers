@@ -25,6 +25,12 @@ mod tests;
 /// ∂Ez/∂y = 0 → R_Fx = μ·0 + 0 = 0. ✓
 ///
 /// # References — Jackson (1999) §6.2; Pozar (2011) §1.3.
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
+///
 pub fn tm_mode_faraday_x_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     model_ez: &PinnWave2D<B>,
     model_hx: &PinnWave2D<B>,
@@ -66,6 +72,12 @@ where
 /// ∂Ez/∂x = Ak·cos(kx−ωt). R_Fy = 0 ✓
 ///
 /// # References — Jackson (1999) §6.2; Pozar (2011) §1.3.
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
+///
 pub fn tm_mode_faraday_y_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     model_ez: &PinnWave2D<B>,
     model_hy: &PinnWave2D<B>,
@@ -117,6 +129,12 @@ where
 // Independent per-component models, field tensors, and parameters with no
 // cohesive sub-grouping; bundling would not clarify the call site.
 #[allow(clippy::too_many_arguments)]
+///
+/// # Errors
+///
+/// - Propagates any [`crate::KwaversError`] returned by the model
+///   forwards and autograd ops.
+///
 pub fn tm_mode_ampere_z_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     model_ez: &PinnWave2D<B>,
     model_hx: &PinnWave2D<B>,

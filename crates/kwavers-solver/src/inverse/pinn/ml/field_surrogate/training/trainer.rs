@@ -85,6 +85,12 @@ where
     /// Returns the data, Helmholtz, and total loss for the batch.
     /// Mutates `self.network` in place by consuming and replacing it
     /// with the updated network from the optimiser.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from gradient reset,
+    ///   the network forward, or the loss autograd ops.
+    ///
     pub fn step(&mut self, batch: TrainingBatch<B>) -> KwaversResult<StepMetrics> {
         for p in self.network.parameters() {
             be(p.zero_grad())?;
@@ -225,6 +231,11 @@ where
     /// Run `n_steps` training iterations, calling `make_batch(step)`
     /// each iteration to produce the batch. Returns the running
     /// per-epoch metrics across the entire run.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by [`Self::step`].
+    ///
     pub fn run<F>(
         &mut self,
         n_steps: usize,

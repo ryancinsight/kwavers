@@ -66,6 +66,12 @@ where
     /// # Errors
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics if `hidden_layers` is empty; the guard above returns
+    /// `InvalidInput` first, so the indexing and `last().unwrap()`
+    /// below are unreachable on that input.
+    ///
     pub fn new(config: PinnConfig) -> KwaversResult<Self> {
         if config.hidden_layers.is_empty() {
             return Err(KwaversError::InvalidInput(
@@ -145,6 +151,12 @@ where
     /// # Returns
     ///
     /// Predicted field values u(x,t) [batch_size, 1]
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from concatenation,
+    ///   the labelled layer forwards, and autograd ops.
+    ///
     pub fn forward(&self, x: &Var<f32, B>, t: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
         let input = be(coeus_autograd::cat(&[x, t], 1))?;
         let mut h = map_forward(self.input_layer.forward(&input), "PINN 1D input layer")?;
@@ -170,6 +182,11 @@ where
     /// - `Err(KwaversError::InvalidInput)` if x and t have different lengths
     /// # Errors
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the network output length differs from the input
+    /// length, so `from_shape_vec([n, 1], ...)` rejects the shape.
     ///
     pub fn predict(&self, x: &Array1<f64>, t: &Array1<f64>) -> KwaversResult<Array2<f64>> {
         if (x.len()) != (t.len()) {
