@@ -14,7 +14,6 @@ impl LiverAssessmentWorkflow {
     }
 
     pub(super) fn calculate_fibrosis_metrics(
-        &self,
         stiffness_map: &Array3<f32>,
         nonlinear_analysis: &NonlinearParameterMap,
     ) -> FibrosisMetrics {
@@ -44,10 +43,7 @@ impl LiverAssessmentWorkflow {
         }
     }
 
-    pub(super) fn calculate_perfusion_metrics(
-        &self,
-        perfusion_map: &Array3<f32>,
-    ) -> PerfusionMetrics {
+    pub(super) fn calculate_perfusion_metrics(perfusion_map: &Array3<f32>) -> PerfusionMetrics {
         let peak_enhancement = perfusion_map.iter().copied().fold(0.0_f32, f32::max);
         let mean_perfusion = perfusion_map.iter().sum::<f32>() / perfusion_map.size() as f32;
 

@@ -7,7 +7,6 @@ use super::{
 
 impl LiverAssessmentWorkflow {
     pub(super) fn generate_clinical_diagnosis(
-        &self,
         swe_result: &SWEResult,
         ceus_result: &CEUSResult,
         uncertainty: &UncertaintyAnalysis,
@@ -43,7 +42,7 @@ impl LiverAssessmentWorkflow {
         }
     }
 
-    pub(super) fn generate_treatment_plan(&self, diagnosis: &ClinicalDiagnosis) -> TreatmentPlan {
+    pub(super) fn generate_treatment_plan(diagnosis: &ClinicalDiagnosis) -> TreatmentPlan {
         let plan = match diagnosis.fibrosis_stage {
             0 => "Routine monitoring - Annual ultrasound screening".to_string(),
             1 => {
