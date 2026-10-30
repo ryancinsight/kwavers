@@ -262,12 +262,12 @@ impl KWaveArray {
 
     // ─── Validated planar aperture ─────────────────────────────────────────
 
-    /// Effective piston centre: the stored centre moved by the installed
-    /// array transform (full rigid motion, orientation kept), per the
-    /// k-wave-python `set_array_position` contract (ADR 136).
-    fn effective_center(&self, geometry: PlanarApertureGeometry) -> (f64, f64, f64) {
-        let [x, y, z] = geometry.center_m();
-        self.apply_transform_point((x, y, z))
+    /// Geometry after the installed array transform: the centre always
+    /// takes the full rigid motion while the orientation follows the
+    /// element's surface convention (centre-only under `KWave`, rigid
+    /// under `AreaConserving`).
+    fn effective_geometry(&self, geometry: PlanarApertureGeometry) -> PlanarApertureGeometry {
+        self.apply_transform_planar(geometry, geometry.surface())
     }
 
     pub(super) fn rasterize_planar_aperture(
@@ -276,7 +276,9 @@ impl KWaveArray {
         grid: &kwavers_grid::Grid,
         geometry: PlanarApertureGeometry,
     ) {
-        let center = self.effective_center(geometry);
+        let geometry = self.effective_geometry(geometry);
+        let [cx, cy, cz] = geometry.center_m();
+        let center = (cx, cy, cz);
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
@@ -352,7 +354,9 @@ impl KWaveArray {
         grid: &kwavers_grid::Grid,
         geometry: PlanarApertureGeometry,
     ) {
-        let center = self.effective_center(geometry);
+        let geometry = self.effective_geometry(geometry);
+        let [cx, cy, cz] = geometry.center_m();
+        let center = (cx, cy, cz);
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
@@ -562,7 +566,9 @@ impl KWaveArray {
         if let KWaveElement::PlanarAperture(geometry) = element {
             // The single-element path honors the stored surface convention,
             // exactly like the full-mask weighted path (ADR 136).
-            let center = self.effective_center(*geometry);
+            let geometry = self.effective_geometry(*geometry);
+            let [cx, cy, cz] = geometry.center_m();
+            let center = (cx, cy, cz);
             if let (
                 SurfaceConvention::KWave,
                 PlanarApertureShape::Rectangle { width_m, height_m },
@@ -621,7 +627,7 @@ impl KWaveArray {
                 );
                 return;
             }
-            Self::rasterize_planar_aperture_points(grid, *geometry, center, |point, scale| {
+            Self::rasterize_planar_aperture_points(grid, geometry, center, |point, scale| {
                 Self::map_area_conserving_surface_sample(
                     grid, &x_vec, &y_vec, &z_vec, point, scale, &mut visit,
                 );

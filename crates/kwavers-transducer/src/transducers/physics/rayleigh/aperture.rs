@@ -268,6 +268,26 @@ impl PlanarApertureGeometry {
         self.shape
     }
 
+    /// Re-frame a validated aperture without revalidation (salvaged from the
+    /// superseded one-rectangle-element attempt, PR #967): a rigid motion of
+    /// a validated frame stays valid, so rasterization-time transform
+    /// application needs no fallible path.
+    #[must_use]
+    pub(crate) const fn with_frame(
+        &self,
+        center_m: [f64; 3],
+        normal: [f64; 3],
+        first_axis: [f64; 3],
+    ) -> Self {
+        Self {
+            center_m,
+            normal,
+            first_axis,
+            shape: self.shape,
+            surface: self.surface,
+        }
+    }
+
     /// Surface-sampling contract (ADR 136).
     #[must_use]
     pub const fn surface(&self) -> SurfaceConvention {
