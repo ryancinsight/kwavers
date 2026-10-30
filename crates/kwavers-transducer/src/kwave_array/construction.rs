@@ -132,55 +132,82 @@ impl KWaveArray {
         self
     }
 
-    /// Add an axis-aligned rectangular element.
+    /// Add an axis-aligned rectangular element (ADR 136).
+    ///
+    /// Builds a `PlanarApertureShape::Rectangle` under
+    /// `SurfaceConvention::KWave`: the rect-canonical lattice deposited
+    /// through the raw k-Wave BLI stencil, bit-for-bit the retired
+    /// `ElementShape::Rect` path. The legacy `length` parameter is gone
+    /// (nothing consumed it); this is a breaking change, see below.
     ///
     /// # Arguments
     /// * `position` - Center position `[x, y, z]` in metres
     /// * `width`    - Width in x-direction (m)
     /// * `height`   - Height in y-direction (m)
-    /// * `length`   - Length in z-direction (m)
+    ///
+    /// # Panics
+    ///
+    /// Panics when the dimensions are not positive and finite, or the
+    /// position is not finite.
+    ///
+    /// # Breaking change
+    ///
+    /// The `length` parameter of the previous signature is removed; update
+    /// call sites to the 3-argument form.
     pub fn add_rect_element(
         &mut self,
         position: (f64, f64, f64),
         width: f64,
         height: f64,
-        length: f64,
     ) -> &mut Self {
-        self.elements.push(
-            ElementShape::Rect {
-                position,
-                width,
-                height,
-                length,
-                euler_xyz_deg: (0.0, 0.0, 0.0),
-            }
-            .into(),
-        );
-        self
+        self.add_rect_rot_element(position, width, height, (0.0, 0.0, 0.0))
     }
 
     /// Add a rectangular element rotated about its center by intrinsic X-Y-Z
     /// Euler angles (degrees). Matches the upstream k-wave-python
     /// `KWaveArray.add_rect_element` rotation contract used by the linear
     /// array transducer example.
+    ///
+    /// Builds a `PlanarApertureShape::Rectangle` under
+    /// `SurfaceConvention::KWave` (ADR 136): the element frame
+    /// `(R·e_x, R·e_z)` of the Euler rotation becomes the aperture
+    /// `(first_axis, normal)`, so the rasterized values match the retired
+    /// `ElementShape::Rect` path at the k-Wave reference tolerance.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the dimensions are not positive and finite, or the
+    /// position is not finite.
+    ///
+    /// # Breaking change
+    ///
+    /// The `length` parameter of the previous signature is removed; update
+    /// call sites to the 4-argument form.
     pub fn add_rect_rot_element(
         &mut self,
         position: (f64, f64, f64),
         width: f64,
         height: f64,
-        length: f64,
         euler_xyz_deg: (f64, f64, f64),
     ) -> &mut Self {
-        self.elements.push(
-            ElementShape::Rect {
-                position,
-                width,
-                height,
-                length,
-                euler_xyz_deg,
-            }
-            .into(),
-        );
+        use super::math::{apply_matrix, euler_xyz_rotation_matrix};
+        use crate::transducers::physics::{PlanarApertureShape, SurfaceConvention};
+
+        let rotation = euler_xyz_rotation_matrix(euler_xyz_deg);
+        let (first_x, first_y, first_z) = apply_matrix(&rotation, (1.0, 0.0, 0.0));
+        let (normal_x, normal_y, normal_z) = apply_matrix(&rotation, (0.0, 0.0, 1.0));
+        let geometry = PlanarApertureGeometry::oriented_with_convention(
+            [position.0, position.1, position.2],
+            [normal_x, normal_y, normal_z],
+            [first_x, first_y, first_z],
+            PlanarApertureShape::Rectangle {
+                width_m: width,
+                height_m: height,
+            },
+            SurfaceConvention::KWave,
+        )
+        .expect("add_rect_*: width/height must be positive and finite");
+        self.elements.push(KWaveElement::PlanarAperture(geometry));
         self
     }
 
@@ -190,9 +217,10 @@ impl KWaveArray {
     /// centre, and the element's outward normal is produced by rotating the
     /// rectangle about `y` by its own subtended angle.
     ///
-    /// # Why the rotated rect and not the arc (ADR 112)
-    /// `rasterize_rect_points` builds its lattice at `(lx, ly, 0)` before
-    /// applying the Euler rotation, so a rectangle's local normal is `+z`.
+    /// # Why the rotated rect and not the arc (ADR 112, ADR 136)
+    /// The rect lattice is built at `(lx, ly, 0)` before applying the Euler
+    /// rotation, so a rectangle's local normal is `+z`. The planar aperture
+    /// stores that rotated frame as `(first_axis, normal)`.
     /// `euler_xyz_rotation_matrix` composes `Rz·Ry·Rx`, whose `y` block sends
     /// `+z` to `[sin β, 0, cos β]` — exactly
     /// [`ConvexArrayGeometry::element_normal`] at `β = θᵢ`, with no sign flip
@@ -225,7 +253,6 @@ impl KWaveArray {
                 (position[0], position[1], position[2]),
                 width,
                 height,
-                0.0,
                 (0.0, theta_deg, 0.0),
             );
         }

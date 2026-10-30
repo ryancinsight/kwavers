@@ -173,7 +173,7 @@ def test_heterogeneous_medium_and_mask_sensor_surface():
 def test_kwave_array_and_transducer_surface():
     arr = kw.KWaveArray()
     arr.add_disc_element(position=(1.0e-3, 1.0e-3, 0.0), diameter=0.5e-3)
-    arr.add_rect_element(position=(2.0e-3, 1.0e-3, 0.0), dims=(0.5e-3, 0.5e-3, 1.0e-3))
+    arr.add_rect_element(position=(2.0e-3, 1.0e-3, 0.0), dims=(0.5e-3, 0.5e-3))
     assert arr.num_elements == 2
 
     transducer = kw.TransducerArray2D(

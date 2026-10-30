@@ -20,6 +20,8 @@ mod quadrature;
 mod tests;
 mod vector;
 
-pub use aperture::{PlanarAperture, PlanarApertureGeometry, PlanarApertureShape};
+pub use aperture::{
+    PlanarAperture, PlanarApertureGeometry, PlanarApertureShape, SurfaceConvention,
+};
 pub use integral::{rayleigh_pressure, RayleighIntegralSpec};
 pub use path::{RayleighLayer, RayleighPropagationPath};

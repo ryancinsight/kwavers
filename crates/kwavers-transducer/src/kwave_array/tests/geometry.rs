@@ -11,7 +11,7 @@ fn test_set_array_position_matches_manual_position_rotation() {
     let translation = (5.0e-3, 0.0, 2.0e-3);
     let global_euler = (0.0, 20.0, 0.0);
     let per_element_euler = (0.0, 5.0, 0.0);
-    let dims = (1.0e-3, 1.0e-3, 5.0e-4);
+    let dims = (1.0e-3, 1.0e-3);
 
     let grid_center = (
         grid.nx as f64 * grid.dx / 2.0,
@@ -35,8 +35,8 @@ fn test_set_array_position_matches_manual_position_rotation() {
             rotated_local.1 + world_translation.1,
             rotated_local.2 + world_translation.2,
         );
-        manual.add_rect_rot_element(world, dims.0, dims.1, dims.2, per_element_euler);
-        native.add_rect_rot_element(local, dims.0, dims.1, dims.2, per_element_euler);
+        manual.add_rect_rot_element(world, dims.0, dims.1, per_element_euler);
+        native.add_rect_rot_element(local, dims.0, dims.1, per_element_euler);
     }
     native.set_array_position(world_translation, global_euler);
 
@@ -69,12 +69,7 @@ fn test_rect_rotation_90_swaps_width_and_height() {
 
     let grid = Grid::new(41, 41, 5, 1.0e-4, 1.0e-4, 1.0e-4).expect("grid");
     let mut unrot = KWaveArray::new();
-    unrot.add_rect_element(
-        (20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4),
-        8.0e-4,
-        2.0e-4,
-        1.0e-4,
-    );
+    unrot.add_rect_element((20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4), 8.0e-4, 2.0e-4);
     let unrot_mask = unrot.get_array_binary_mask(&grid);
 
     let mut rot = KWaveArray::new();
@@ -82,7 +77,6 @@ fn test_rect_rotation_90_swaps_width_and_height() {
         (20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4),
         8.0e-4,
         2.0e-4,
-        1.0e-4,
         (0.0, 0.0, 90.0),
     );
     let rot_mask = rot.get_array_binary_mask(&grid);
@@ -123,7 +117,6 @@ fn test_rect_weighted_mask_matches_kwave_python_reference_mass() {
         (20.0 * 1.0e-4, 20.0 * 1.0e-4, 2.0 * 1.0e-4),
         8.0e-4,
         2.0e-4,
-        1.0e-4,
         (0.0, 0.0, 90.0),
     );
     let weights = array.get_array_weighted_mask(&grid);
@@ -140,23 +133,20 @@ fn test_rect_weighted_mask_matches_kwave_python_reference_mass() {
 /// stores rotates the rectangle's local `+z` onto that element's outward
 /// normal, and the stored centre is the element's layout position.
 ///
-/// ## Why this is the oracle (ADR 112)
-/// The wiring maps each element onto a rotated rectangle at Euler
-/// `(0, θᵢ°, 0)`, derived from the rect's `+z` local normal and the `Rz·Ry·Rx`
-/// composition. A wrong sign, a swapped Euler slot, or a radian/degree slip
+/// ## Why this is the oracle (ADR 112, ADR 136)
+/// The wiring maps each element onto a `Rectangle` planar aperture whose
+/// stored `(first_axis, normal)` frame derives from the Euler `(0, θᵢ°, 0)`
+/// rotation. A wrong sign, a swapped Euler slot, or a radian/degree slip
 /// would still produce a full, plausible-looking element mask — just facing the
-/// wrong way. This drives the stored orientation through the same
-/// `euler_xyz_rotation_matrix` the rasterizer uses and compares the result
-/// against the layout's own `element_normal`, so the derivation is asserted
-/// rather than trusted.
+/// wrong way. This compares the stored frame directly against the layout's
+/// own `element_normal`, so the derivation is asserted rather than trusted.
 ///
 /// θ is non-trivial and asymmetric (7 elements, 9° pitch) so a sign error
 /// cannot cancel, and the centre element (θ = 0) is included so a mapping that
 /// only works at the apex is still caught by its neighbours.
 #[test]
 fn convex_array_elements_face_along_their_layout_normals() {
-    use super::super::math::{apply_matrix, euler_xyz_rotation_matrix};
-    use super::super::{ElementShape, KWaveElement};
+    use super::super::KWaveElement;
     use crate::curvilinear::ConvexArrayGeometry;
     use aequitas::systems::si::quantities::Length;
     use aequitas::systems::si::units::Meter;
@@ -180,20 +170,21 @@ fn convex_array_elements_face_along_their_layout_normals() {
     );
 
     for i in 0..elements {
-        let KWaveElement::Shape(ElementShape::Rect {
-            position,
-            euler_xyz_deg,
-            ..
-        }) = &array.elements[i]
-        else {
-            panic!("element {i} is not a rotated rect; the convex wiring must use that primitive");
+        let KWaveElement::PlanarAperture(aperture) = &array.elements[i] else {
+            panic!(
+                "element {i} is not a planar aperture; the convex wiring must use that primitive"
+            );
         };
 
         let expected_centre = geometry.element_position(i);
-        for (axis, (got, want)) in [position.0, position.1, position.2]
-            .iter()
-            .zip(expected_centre.iter())
-            .enumerate()
+        for (axis, (got, want)) in [
+            aperture.center_m()[0],
+            aperture.center_m()[1],
+            aperture.center_m()[2],
+        ]
+        .iter()
+        .zip(expected_centre.iter())
+        .enumerate()
         {
             assert!(
                 (got - want).abs() <= 1e-15,
@@ -201,8 +192,7 @@ fn convex_array_elements_face_along_their_layout_normals() {
             );
         }
 
-        let rotation = euler_xyz_rotation_matrix(*euler_xyz_deg);
-        let (nx, ny, nz) = apply_matrix(&rotation, (0.0, 0.0, 1.0));
+        let [nx, ny, nz] = aperture.normal();
         let want = geometry.element_normal(i);
         let worst = (nx - want[0])
             .abs()

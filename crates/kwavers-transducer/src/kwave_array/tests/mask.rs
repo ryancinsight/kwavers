@@ -6,7 +6,7 @@ use super::super::KWaveArray;
 fn test_kwave_array_creation() {
     let mut array = KWaveArray::new();
     array.add_disc_element((0.0, 0.0, 0.0), 0.01, None);
-    array.add_rect_element((0.01, 0.0, 0.0), 0.005, 0.005, 0.001);
+    array.add_rect_element((0.01, 0.0, 0.0), 0.005, 0.005);
     assert_eq!(array.num_elements(), 2);
 }
 

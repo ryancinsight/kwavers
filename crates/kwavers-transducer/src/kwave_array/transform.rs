@@ -25,22 +25,4 @@ impl KWaveArray {
             None => p_local,
         }
     }
-
-    /// Compose the global array transform with a per-element Rect pose,
-    /// returning the effective `(position, euler_xyz_deg)` to feed into the
-    /// rasterizer. k-wave-python applies the global transform to the rectangle
-    /// center only and keeps the per-element Euler unchanged.
-    pub(super) fn apply_transform_rect(
-        &self,
-        position: (f64, f64, f64),
-        euler_xyz_deg: (f64, f64, f64),
-    ) -> ((f64, f64, f64), (f64, f64, f64)) {
-        match self.array_transform {
-            Some(_) => {
-                let pos_eff = self.apply_transform_point(position);
-                (pos_eff, euler_xyz_deg)
-            }
-            None => (position, euler_xyz_deg),
-        }
-    }
 }

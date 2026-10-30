@@ -20,7 +20,6 @@ impl KWaveArray {
                     }
                     KWaveElement::Shape(shape) => match shape {
                         ElementShape::Arc { position, .. }
-                        | ElementShape::Rect { position, .. }
                         | ElementShape::Disc { position, .. }
                         | ElementShape::ProfiledDisc { position, .. }
                         | ElementShape::Bowl { position, .. }
@@ -34,9 +33,9 @@ impl KWaveArray {
 
     /// Compute the total geometric measure of all elements.
     ///
-    /// Bowl and disc elements contribute area; arc elements contribute arc
-    /// length; rect elements contribute `width × height`; annuli contribute
-    /// the spherical-ring area.
+    /// Bowl, disc, and rectangular planar-aperture elements contribute area;
+    /// arc elements contribute arc length; annuli contribute the
+    /// spherical-ring area.
     #[must_use]
     pub fn compute_total_surface_area(&self) -> f64 {
         self.elements
@@ -55,11 +54,6 @@ impl KWaveArray {
                     ElementShape::ProfiledDisc { diameter: d, .. } => {
                         std::f64::consts::PI * (d / 2.0).powi(2)
                     }
-                    ElementShape::Rect {
-                        width: w,
-                        height: h,
-                        ..
-                    } => w * h,
                     ElementShape::Arc {
                         radius: r,
                         start_angle: s,

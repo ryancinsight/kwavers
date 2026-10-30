@@ -116,17 +116,19 @@ impl KWaveArray {
             .add_arc_element_with_angles(position, radius, diameter, start_angle, end_angle);
     }
 
-    /// Add a rectangular element.
+    /// Add a rectangular element (ADR 136).
+    ///
+    /// BREAKING CHANGE: ``dims`` drops the unused ``length`` component;
+    /// pass ``(width, height)`` instead of ``(width, height, length)``.
     ///
     /// Parameters
     /// ----------
     /// position : tuple[float, float, float]
     ///     Center position [x, y, z] in meters
-    /// dims : tuple[float, float, float]
-    ///     Dimensions [width, height, length] in meters
-    fn add_rect_element(&mut self, position: (f64, f64, f64), dims: (f64, f64, f64)) {
-        self.inner
-            .add_rect_element(position, dims.0, dims.1, dims.2);
+    /// dims : tuple[float, float]
+    ///     Dimensions [width, height] in meters
+    fn add_rect_element(&mut self, position: (f64, f64, f64), dims: (f64, f64)) {
+        self.inner.add_rect_element(position, dims.0, dims.1);
     }
 
     /// Add a rectangular element rotated about its center by intrinsic X-Y-Z
@@ -134,22 +136,25 @@ impl KWaveArray {
     /// ``KWaveArray.add_rect_element`` rotation used by the
     /// ``at_linear_array_transducer`` example.
     ///
+    /// BREAKING CHANGE: ``dims`` drops the unused ``length`` component;
+    /// pass ``(width, height)`` instead of ``(width, height, length)``.
+    ///
     /// Parameters
     /// ----------
     /// position : tuple[float, float, float]
     ///     Center position [x, y, z] in meters.
-    /// dims : tuple[float, float, float]
-    ///     Dimensions [width, height, length] in meters.
+    /// dims : tuple[float, float]
+    ///     Dimensions [width, height] in meters.
     /// euler_xyz_deg : tuple[float, float, float]
     ///     Intrinsic X-Y-Z Euler angles in degrees.
     fn add_rect_rot_element(
         &mut self,
         position: (f64, f64, f64),
-        dims: (f64, f64, f64),
+        dims: (f64, f64),
         euler_xyz_deg: (f64, f64, f64),
     ) {
         self.inner
-            .add_rect_rot_element(position, dims.0, dims.1, dims.2, euler_xyz_deg);
+            .add_rect_rot_element(position, dims.0, dims.1, euler_xyz_deg);
     }
 
     /// Install a global translation + intrinsic X-Y-Z Euler rotation (degrees)

@@ -330,14 +330,20 @@ fn planar_rectangle_conserves_area_and_stays_in_its_footprint() {
     let expected_mass = width * height / (dx * dx);
     let (mut samples, mut total) = (0_usize, 0.0);
     let mut inside = true;
-    KWaveArray::rasterize_planar_aperture_points(&grid, geometry, |point, scale| {
-        samples += 1;
-        total += scale;
-        // Width along the first axis (y), height along normal × first (−x).
-        inside &= (point[1] - center[1]).abs() < 0.5 * width
-            && (point[0] - center[0]).abs() < 0.5 * height
-            && point[2] == center[2];
-    });
+    let lattice_center = (center[0], center[1], center[2]);
+    KWaveArray::rasterize_planar_aperture_points(
+        &grid,
+        geometry,
+        lattice_center,
+        |point, scale| {
+            samples += 1;
+            total += scale;
+            // Width along the first axis (y), height along normal × first (−x).
+            inside &= (point[1] - center[1]).abs() < 0.5 * width
+                && (point[0] - center[0]).abs() < 0.5 * height
+                && point[2] == center[2];
+        },
+    );
     assert!(inside, "a sample left the rectangle");
     let rounding_bound = f64::from_count(samples + 6) * 0.5 * f64::EPSILON * expected_mass;
     assert!(
