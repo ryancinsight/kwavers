@@ -17,6 +17,7 @@
 use crate::heterogeneous::HeterogeneousMedium;
 use crate::HomogeneousMedium;
 use kwavers_core::constants::hu_mapping::HuAcousticModel;
+use kwavers_core::constants::DB_TO_NP;
 use kwavers_core::error::{KwaversError, KwaversResult, MediumError};
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -87,13 +88,14 @@ impl<'a> CtMediumBuilder<'a> {
             })?;
 
         // Overwrite every acoustic field with the per-voxel HU mapping. These are
-        // exactly the fields the solver's acoustic traits read: `absorption` is
-        // the α₀ prefactor in dB storage (reported as Np/m by
-        // alpha_coefficient), `alpha_power` the exponent y, and
+        // exactly the fields the solver's acoustic traits read: `absorption`
+        // stores Np/m at the reference frequency (the HU model's dB α₀
+        // prefactor converted here; see the storage convention in
+        // `crate::core`), `alpha_power` the exponent y, and
         // `nonlinearity`/`b_a` the B/A parameter.
         medium.density = self.ct.mapv(|hu| model.density(hu));
         medium.sound_speed = self.ct.mapv(|hu| model.sound_speed(hu));
-        medium.absorption = self.ct.mapv(|hu| model.absorption(hu));
+        medium.absorption = self.ct.mapv(|hu| model.absorption(hu) * DB_TO_NP * 100.0);
         medium.alpha0 = medium.absorption.clone();
         medium.alpha_power = self.ct.mapv(|hu| model.power_law_exponent(hu));
         medium.nonlinearity = self.ct.mapv(|hu| model.nonlinearity(hu));

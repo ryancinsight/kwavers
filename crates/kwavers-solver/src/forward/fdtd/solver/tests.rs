@@ -50,6 +50,7 @@
 use crate::forward::fdtd::config::FdtdConfig;
 use crate::forward::fdtd::config::{FdtdAbsorption, TemporalScheme};
 use crate::forward::fdtd::solver::FdtdSolver;
+use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
@@ -1253,7 +1254,9 @@ fn fullwave_scatterer_experiment_medium_fits_both_exponents() {
         // `absorption`, not `alpha0`, though the struct exposes both. Setting
         // only `alpha0` yields a silently *lossless* medium: the solver builds
         // no relaxation state and the run looks fine.
-        let alpha = if inside { 0.75 } else { 0.5 };
+        // Np/m storage (storage convention in `kwavers_medium::core`); the
+        // relaxation fit below sees identical SI spectra, only converted once.
+        let alpha = (if inside { 0.75 } else { 0.5 }) * DB_TO_NP * 100.0;
         medium.absorption[[i, 0, 0]] = alpha;
         medium.alpha0[[i, 0, 0]] = alpha;
         medium.alpha_power[[i, 0, 0]] = if inside { 1.1 } else { 1.0 };

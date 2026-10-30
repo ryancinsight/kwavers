@@ -289,6 +289,7 @@ impl MediumBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
     use kwavers_core::constants::fundamental::{
         DENSITY_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE,
     };
@@ -316,7 +317,11 @@ mod tests {
         assert_eq!(medium.sound_speed(0, 0, 0).into_base(), SOUND_SPEED_TISSUE);
         assert_eq!(medium.sound_speed(2, 2, 2).into_base(), SOUND_SPEED_TISSUE);
         assert_eq!(medium.density(1, 1, 1).into_base(), DENSITY_BRAIN);
-        assert_eq!(medium.absorption(2, 1, 0).into_base(), 0.45);
+        // Builder input is the dB α₀ prefactor; the typed getter reports Np/m.
+        assert_eq!(
+            medium.absorption(2, 1, 0).into_base(),
+            0.45 * DB_TO_NP * 100.0
+        );
         assert_eq!(
             medium.nonlinearity(0, 2, 1).into_base(),
             B_OVER_A_SOFT_TISSUE

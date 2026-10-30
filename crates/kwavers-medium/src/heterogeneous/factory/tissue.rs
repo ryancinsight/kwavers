@@ -22,6 +22,7 @@ use kwavers_core::constants::tissue_thermal::{
     SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_DIFFUSIVITY_TISSUE,
     THERMAL_EXPANSION_SOFT_TISSUE,
 };
+use kwavers_core::constants::DB_TO_NP;
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -119,9 +120,11 @@ impl TissueFactory {
         let lame_lambda =
             lame_mu.mapv(|mu| (2.0_f64 / 3.0).mul_add(-mu, default_bulk_modulus).max(1.0));
 
-        // The bsorption field is the α₀ prefactor itself (see struct contract);
-        // precomputing α(180 kHz) here made PSTD read 0.09 as the 1 MHz α₀ (5.6x low).
-        let absorption = alpha0.clone();
+        // The absorption field stores Np/m at the 1 MHz reference (storage
+        // convention in `crate::core`): the dB α₀ prefactor converted once here.
+        // Precomputing α(180 kHz) here made PSTD read 0.09 as the 1 MHz α₀
+        // (5.6x low); leaving dB behind made typed getters 11.5x low.
+        let absorption = alpha0.mapv(|a| a * DB_TO_NP * 100.0);
         let nonlinearity = b_a.clone();
 
         debug!(
