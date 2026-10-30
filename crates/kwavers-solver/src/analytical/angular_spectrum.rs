@@ -216,7 +216,6 @@ fn check_scalars(dx: f64, f0: f64, sound_speed: f64) -> KwaversResult<f64> {
 /// Returns `KwaversError::Config` when a scalar input is non-positive or
 /// non-finite, `dx` violates Nyquist, the absorption is negative or
 /// non-finite, a `z` plane is non-finite, or the input plane is empty.
-#[allow(clippy::too_many_arguments)]
 pub fn propagate_cw(
     input: &Array2<Complex64>,
     dx: f64,

@@ -39,7 +39,6 @@ use pyo3::prelude::*;
 #[pyo3(
     signature = (input_plane, dx, z_planes, f0, sound_speed, alpha_db=None, angular_restriction=true, grid_expansion=0)
 )]
-#[allow(clippy::too_many_arguments)]
 pub fn angular_spectrum_cw<'py>(
     py: Python<'py>,
     input_plane: PyReadonlyArray2<'py, Complex64>,
