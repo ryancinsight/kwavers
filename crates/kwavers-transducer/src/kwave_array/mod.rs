@@ -122,17 +122,6 @@ pub enum ElementShape {
         start_angle: f64,
         end_angle: f64,
     },
-    /// Rectangular element
-    Rect {
-        position: (f64, f64, f64),
-        width: f64,
-        height: f64,
-        /// Retained for API compatibility.
-        length: f64,
-        /// Intrinsic X-Y-Z Euler rotation in degrees applied about the element
-        /// center. `(0.0, 0.0, 0.0)` keeps the rectangle axis-aligned.
-        euler_xyz_deg: (f64, f64, f64),
-    },
     /// Disc/circular element
     Disc {
         position: (f64, f64, f64),

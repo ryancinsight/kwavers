@@ -31,7 +31,7 @@ pub use materials::{
 };
 pub use rayleigh::{
     rayleigh_pressure, PlanarAperture, PlanarApertureGeometry, PlanarApertureShape,
-    RayleighIntegralSpec, RayleighLayer, RayleighPropagationPath,
+    RayleighIntegralSpec, RayleighLayer, RayleighPropagationPath, SurfaceConvention,
 };
 pub use sensitivity::TransducerSensitivity;
 

@@ -11,7 +11,7 @@ impl KWaveArray {
         let mut mask = grid.array_fill(false);
         for element in &self.elements {
             if let KWaveElement::PlanarAperture(geometry) = element {
-                Self::rasterize_planar_aperture(&mut mask, grid, *geometry);
+                self.rasterize_planar_aperture(&mut mask, grid, *geometry);
                 continue;
             }
             let KWaveElement::Shape(element) = element else {
@@ -34,16 +34,6 @@ impl KWaveArray {
                         *start_angle,
                         *end_angle,
                     );
-                }
-                ElementShape::Rect {
-                    position,
-                    width,
-                    height,
-                    length: _,
-                    euler_xyz_deg,
-                } => {
-                    let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
-                    Self::rasterize_rect(&mut mask, grid, pos_eff, *width, *height, euler_eff);
                 }
                 ElementShape::Disc {
                     position,
@@ -96,7 +86,7 @@ impl KWaveArray {
         let mut mask = grid.array_zeros();
         for element in &self.elements {
             if let KWaveElement::PlanarAperture(geometry) = element {
-                Self::rasterize_planar_aperture_weighted(&mut mask, grid, *geometry);
+                self.rasterize_planar_aperture_weighted(&mut mask, grid, *geometry);
                 continue;
             }
             let KWaveElement::Shape(element) = element else {
@@ -153,18 +143,6 @@ impl KWaveArray {
                         *diameter,
                         *start_angle,
                         *end_angle,
-                    );
-                }
-                ElementShape::Rect {
-                    position,
-                    width,
-                    height,
-                    length: _,
-                    euler_xyz_deg,
-                } => {
-                    let (pos_eff, euler_eff) = self.apply_transform_rect(*position, *euler_xyz_deg);
-                    Self::rasterize_rect_weighted(
-                        &mut mask, grid, pos_eff, *width, *height, euler_eff,
                     );
                 }
                 ElementShape::Annulus {
