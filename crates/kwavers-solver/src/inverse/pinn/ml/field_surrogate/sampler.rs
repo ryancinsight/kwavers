@@ -83,6 +83,12 @@ impl KernelCubeSampler {
     /// at inference time — it must match the planner's expected
     /// input range. Pass `None` to derive it from the kernels'
     /// largest spatial extent.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the default linear-transform construction fails;
+    /// that path is an internal invariant (explicit transforms go
+    /// through [`Self::with_transforms`], which returns `Err`).
     pub fn new(kernels: &[FocalKernel], coord_halves_override: Option<CoordHalves>) -> Self {
         // Default construction uses the legacy linear transform so
         // existing tests and downstream callers keep their semantics.
@@ -352,6 +358,12 @@ impl KernelCubeSampler {
     ///
     /// Returns inputs `[batch, 5]`, targets `[batch, 3]`, and per-
     /// sample physical `f0` `[batch]` for the Helmholtz residual.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the batch tensor
+    ///   constructions.
+    ///
     pub fn batch<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         step: u64,

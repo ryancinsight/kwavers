@@ -59,6 +59,12 @@ where
     /// # Errors
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics if `hidden_layers` is empty; the guard above returns
+    /// `InvalidInput` first, so the indexing and `last().unwrap()`
+    /// below are unreachable on that input.
+    ///
     pub fn new(config: PinnConfig2D) -> KwaversResult<Self> {
         if config.hidden_layers.is_empty() {
             return Err(KwaversError::InvalidInput(
@@ -189,6 +195,11 @@ where
     /// # Errors
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics if the network output length differs from the input
+    /// length, so `from_shape_vec([n, 1], ...)` rejects the shape.
+    ///
     pub fn predict(
         &self,
         x: &Array1<f64>,
@@ -316,6 +327,12 @@ where
     /// Compute physics-informed loss function.
     // Independent collocation/boundary/initial tensors plus scalar weights with
     // no cohesive sub-grouping; bundling would not clarify the call site.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the data/PDE/BC/IC
+    ///   loss evaluations and autograd ops.
+    ///
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::type_complexity)] // (total, data, pde, bc, ic) mirrors the previous training API 1:1
     pub fn compute_physics_loss(

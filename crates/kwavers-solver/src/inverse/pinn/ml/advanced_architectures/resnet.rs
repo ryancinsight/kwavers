@@ -140,6 +140,12 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
     }
 
     /// Forward pass through ResNet PINN.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the residual
+    ///   blocks and autograd ops.
+    ///
     pub fn forward(&self, x: &Var<f32, B>, t: &Var<f32, B>) -> KwaversResult<Var<f32, B>>
     where
         B::DeviceBuffer<f32>:
@@ -274,6 +280,12 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ResNetPINN
     }
 
     /// Forward pass through ResNet PINN.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the residual
+    ///   blocks and autograd ops.
+    ///
     pub fn forward(
         &self,
         x: &Var<f32, B>,

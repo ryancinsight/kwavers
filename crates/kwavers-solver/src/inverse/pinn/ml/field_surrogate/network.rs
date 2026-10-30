@@ -69,6 +69,12 @@ where
     /// Returns `KwaversError::InvalidInput` via
     /// [`ParamFieldPINNConfig::validate`] when the config is malformed
     /// (empty hidden stack, zero-width layer, non-positive lr, etc.).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `hidden_layers` is empty (`validate()` rejects such
+    /// configs first) or if the `last()` non-empty expectation is
+    /// violated.
     pub fn new(config: &ParamFieldPINNConfig) -> KwaversResult<Self> {
         config.validate()?;
 
@@ -167,6 +173,12 @@ where
     /// Forward pass on a batch of pre-concatenated inputs.
     ///
     /// `input` shape `[batch, 5]`, output shape `[batch, 3]`.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by the layer
+    ///   forwards (labelled input/hidden/output) and autograd ops.
+    ///
     pub fn forward(&self, input: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
         let input_projection = map_forward(
             self.input_layer.forward(input),
@@ -188,6 +200,12 @@ where
 
     /// Convenience overload accepting the five input columns
     /// separately. Concatenates and dispatches to `forward`.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the concatenation
+    ///   or from [`Self::forward`].
+    ///
     pub fn forward_xyz_params(
         &self,
         x: &Var<f32, B>,

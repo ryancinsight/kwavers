@@ -162,6 +162,12 @@ impl WaveGeometry2D {
     }
 
     /// Generate random points inside the geometry via rejection sampling.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `from_vec` rejects a sampled shape, i.e. the pushed
+    /// point count disagrees with the vector length.
+    ///
     pub fn sample_points(&self, n_points: usize) -> (Array1<f64>, Array1<f64>) {
         let (x_min, x_max, y_min, y_max) = self.bounding_box();
         let mut x_points = Vec::with_capacity(n_points);
