@@ -3,7 +3,7 @@ use super::integral::*;
 use super::path::*;
 use super::quadrature::*;
 use eunomia::Complex64;
-use kwavers_core::error::{ConfigError, KwaversError};
+use kwavers_core::error::{ConfigError, KwaversError, ValidationError};
 use kwavers_math::j1;
 use std::f64::consts::{PI, TAU};
 
@@ -339,7 +339,7 @@ fn rectangle_rejects_non_positive_dimensions() {
     .unwrap_err();
     assert!(matches!(
         error,
-        KwaversError::Config(ConfigError::InvalidValue { ref parameter, .. }) if parameter == "height_m"
+        KwaversError::Validation(ValidationError::InvalidValue { ref parameter, .. }) if parameter == "height_m"
     ));
 }
 

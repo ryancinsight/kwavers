@@ -10,6 +10,7 @@ use kwavers_core::constants::{
     SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
 };
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use kwavers_core::validation::{validate_nonnegative_finite, validate_positive_finite};
 
 /// Physical coefficients for the coupled acoustic-optical-thermal system.
 ///
@@ -88,17 +89,31 @@ impl PhysicsCoefficients {
     /// - Returns [`crate::KwaversError::Validation`] if a coefficient is nonfinite or
     ///   outside the physical domain required by the PDE residual.
     pub(in crate::multiphysics::monolithic) fn validate(&self) -> KwaversResult<()> {
-        validate_positive("PhysicsCoefficients::sound_speed", self.sound_speed)?;
-        validate_positive("PhysicsCoefficients::density", self.density)?;
-        validate_positive("PhysicsCoefficients::specific_heat", self.specific_heat)?;
-        validate_nonnegative(
+        validate_positive_finite(
+            "PhysicsCoefficients::sound_speed",
+            self.sound_speed,
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "PhysicsCoefficients::density",
+            self.density,
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "PhysicsCoefficients::specific_heat",
+            self.specific_heat,
+            "must be finite and positive",
+        )?;
+        validate_nonnegative_finite(
             "PhysicsCoefficients::thermal_conductivity",
             self.thermal_conductivity,
+            "must be finite and nonnegative",
         )?;
         self.diffusion_coefficients()?;
-        validate_nonnegative(
+        validate_nonnegative_finite(
             "PhysicsCoefficients::acoustic_absorption",
             self.acoustic_absorption,
+            "must be finite and nonnegative",
         )?;
 
         if !self.gruneisen.is_finite() {
@@ -129,28 +144,4 @@ fn map_transport_error(error: TransportError<f64>) -> KwaversError {
     KwaversError::Validation(ValidationError::ConstraintViolation {
         message: format!("Hyperion optical transport rejected monolithic coefficients: {error}"),
     })
-}
-
-fn validate_positive(parameter: &str, value: f64) -> KwaversResult<()> {
-    if !value.is_finite() || value <= 0.0 {
-        return Err(KwaversError::Validation(ValidationError::InvalidValue {
-            parameter: parameter.to_owned(),
-            value,
-            reason: "must be finite and positive".to_owned(),
-        }));
-    }
-
-    Ok(())
-}
-
-fn validate_nonnegative(parameter: &str, value: f64) -> KwaversResult<()> {
-    if !value.is_finite() || value < 0.0 {
-        return Err(KwaversError::Validation(ValidationError::InvalidValue {
-            parameter: parameter.to_owned(),
-            value,
-            reason: "must be finite and nonnegative".to_owned(),
-        }));
-    }
-
-    Ok(())
 }

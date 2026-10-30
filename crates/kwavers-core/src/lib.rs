@@ -14,6 +14,7 @@ pub mod time;
 pub mod traversal;
 pub mod units;
 pub mod utils;
+pub mod validation;
 
 /// Base bound for all kwavers component types.
 ///

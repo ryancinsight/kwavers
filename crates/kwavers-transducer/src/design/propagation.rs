@@ -12,6 +12,7 @@ use aequitas::systems::si::units::{
     Ampere, Hertz, Meter, MeterPerSecond, Pascal, Rayl, WattPerSquareMeter,
 };
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
+use kwavers_core::validation::validate_positive_finite;
 
 use super::ArrayDesign;
 
@@ -129,19 +130,30 @@ pub fn propagate_focused_linear_array(
 }
 
 fn validate_spec(spec: &FocusedLinearArrayPropagationSpec) -> KwaversResult<()> {
-    validate_positive("frequency", spec.frequency.in_unit::<Hertz>())?;
-    validate_positive("sound_speed", spec.sound_speed.in_unit::<MeterPerSecond>())?;
-    validate_positive(
+    validate_positive_finite(
+        "frequency",
+        spec.frequency.in_unit::<Hertz>(),
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
+        "sound_speed",
+        spec.sound_speed.in_unit::<MeterPerSecond>(),
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
         "per_channel_peak_current",
         spec.per_channel_peak_current.in_unit::<Ampere>(),
+        "must be finite and positive",
     )?;
-    validate_positive(
+    validate_positive_finite(
         "pressure_per_current",
         spec.pressure_per_current.into_base(),
+        "must be finite and positive",
     )?;
-    validate_positive(
+    validate_positive_finite(
         "acoustic_impedance",
         spec.acoustic_impedance.in_unit::<Rayl>(),
+        "must be finite and positive",
     )?;
     validate_point("center", spec.center)?;
     validate_point("focus", spec.focus)?;
@@ -156,14 +168,6 @@ fn validate_spec(spec: &FocusedLinearArrayPropagationSpec) -> KwaversResult<()> 
         }));
     }
     Ok(())
-}
-
-fn validate_positive(parameter: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(invalid_value(parameter, value, "finite and > 0"))
-    }
 }
 
 fn validate_point(parameter: &str, point: [Length<f64>; 3]) -> KwaversResult<()> {

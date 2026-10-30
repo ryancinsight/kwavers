@@ -9,6 +9,7 @@ use kwavers_core::constants::acoustic_parameters::{
     SOUND_SPEED_SKULL_TRABECULAR,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::validation::{validate_nonnegative_finite, validate_positive_finite};
 
 /// Validated acoustic configuration for a skull-bone phase.
 ///
@@ -45,7 +46,7 @@ impl AcousticSkullProperties {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] when a required value is
+    /// Returns a validation error when a required value is
     /// non-finite or non-positive, or when attenuation is negative.
     pub fn new(
         sound_speed: Velocity<f64>,
@@ -54,15 +55,32 @@ impl AcousticSkullProperties {
         thickness: Length<f64>,
         shear_speed: Option<Velocity<f64>>,
     ) -> KwaversResult<Self> {
-        validate_positive("skull sound speed", *sound_speed.as_base())?;
-        validate_positive("skull density", *density.as_base())?;
-        validate_non_negative(
+        validate_positive_finite(
+            "skull sound speed",
+            *sound_speed.as_base(),
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "skull density",
+            *density.as_base(),
+            "must be finite and positive",
+        )?;
+        validate_nonnegative_finite(
             "skull attenuation at 1 MHz",
             *attenuation_at_one_megahertz.as_base(),
+            "must be finite and nonnegative",
         )?;
-        validate_positive("skull thickness", *thickness.as_base())?;
+        validate_positive_finite(
+            "skull thickness",
+            *thickness.as_base(),
+            "must be finite and positive",
+        )?;
         if let Some(speed) = shear_speed {
-            validate_positive("skull shear speed", *speed.as_base())?;
+            validate_positive_finite(
+                "skull shear speed",
+                *speed.as_base(),
+                "must be finite and positive",
+            )?;
         }
 
         Ok(Self {
@@ -167,14 +185,18 @@ impl AcousticSkullProperties {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] when the incident impedance is
+    /// Returns a validation error when the incident impedance is
     /// non-finite or non-positive.
     pub fn transmission_coefficient(
         &self,
         incident_impedance: AcousticImpedance<f64>,
     ) -> KwaversResult<Dimensionless<f64>> {
         let incident = *incident_impedance.as_base();
-        validate_positive("incident acoustic impedance", incident)?;
+        validate_positive_finite(
+            "incident acoustic impedance",
+            incident,
+            "must be finite and positive",
+        )?;
         let skull = *self.acoustic_impedance().as_base();
         Ok(Dimensionless::from_base(
             4.0 * incident * skull / (incident + skull).powi(2),
@@ -187,37 +209,21 @@ impl AcousticSkullProperties {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] when frequency is non-finite or
+    /// Returns a validation error when frequency is non-finite or
     /// negative.
     pub fn attenuation_at_frequency(
         &self,
         frequency: Frequency<f64>,
     ) -> KwaversResult<ReciprocalLength<f64>> {
         let frequency_megahertz = frequency.in_unit::<Megahertz>();
-        validate_non_negative("attenuation frequency", frequency_megahertz)?;
+        validate_nonnegative_finite(
+            "attenuation frequency",
+            frequency_megahertz,
+            "must be finite and nonnegative",
+        )?;
         Ok(ReciprocalLength::from_base(
             *self.attenuation_at_one_megahertz.as_base() * frequency_megahertz,
         ))
-    }
-}
-
-fn validate_positive(name: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(KwaversError::InvalidInput(format!(
-            "{name} must be finite and positive; got {value}"
-        )))
-    }
-}
-
-fn validate_non_negative(name: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value >= 0.0 {
-        Ok(())
-    } else {
-        Err(KwaversError::InvalidInput(format!(
-            "{name} must be finite and non-negative; got {value}"
-        )))
     }
 }
 

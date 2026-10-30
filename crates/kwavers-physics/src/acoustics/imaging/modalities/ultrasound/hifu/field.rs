@@ -15,7 +15,8 @@
 //! Rayleigh (1896), *The Theory of Sound*, Vol. II.
 
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
+use kwavers_core::validation::validate_positive_finite;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::hifu::DomainHIFUTransducer;
 use kwavers_medium::Medium;
@@ -109,15 +110,35 @@ fn validate_field_inputs(
     grid: &Grid,
     medium: &dyn Medium,
 ) -> KwaversResult<FieldScale> {
-    validate_positive("frequency", transducer.frequency)?;
-    validate_positive("acoustic_power", transducer.acoustic_power)?;
-    validate_positive("focal_length", transducer.focal_length)?;
-    validate_positive("aperture_radius", transducer.aperture_radius)?;
+    validate_positive_finite(
+        "frequency",
+        transducer.frequency,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
+        "acoustic_power",
+        transducer.acoustic_power,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
+        "focal_length",
+        transducer.focal_length,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
+        "aperture_radius",
+        transducer.aperture_radius,
+        "must be finite and positive",
+    )?;
 
     let density = medium.density(grid.nx / 2, grid.ny / 2, 0).into_base();
     let sound_speed = medium.sound_speed(grid.nx / 2, grid.ny / 2, 0).into_base();
-    validate_positive("reference_density", density)?;
-    validate_positive("reference_sound_speed", sound_speed)?;
+    validate_positive_finite("reference_density", density, "must be finite and positive")?;
+    validate_positive_finite(
+        "reference_sound_speed",
+        sound_speed,
+        "must be finite and positive",
+    )?;
 
     let aperture_area = PI * transducer.aperture_radius.powi(2);
     let velocity_amplitude =
@@ -129,16 +150,6 @@ fn validate_field_inputs(
         source_pressure_factor,
         wavenumber,
     })
-}
-
-fn validate_positive(name: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(KwaversError::InvalidInput(format!(
-            "HIFU {name} must be finite and positive, got {value}"
-        )))
-    }
 }
 
 fn aperture_samples(radius: f64, focal_length: f64) -> Vec<ApertureSample> {

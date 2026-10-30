@@ -1,9 +1,10 @@
 //! Validated planar aperture shapes, oriented geometry and surface drive.
 
-use super::input::{invalid, validate_point, validate_positive};
+use super::input::invalid;
 use super::vector::{dot, norm, normalized_normal, plane_basis, scale, subtract};
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::validation::{validate_finite_point, validate_positive_finite};
 use std::f64::consts::TAU;
 
 /// Outline of a planar aperture in its local frame.
@@ -119,10 +120,14 @@ impl PlanarApertureGeometry {
         shape: PlanarApertureShape,
     ) -> KwaversResult<Self> {
         let normal = normalized_normal(normal)?;
-        validate_point("first_axis", first_axis)?;
+        validate_finite_point("first_axis", first_axis, "all coordinates finite")?;
         let planar_axis = subtract(first_axis, scale(normal, dot(first_axis, normal)));
         let axis_norm = norm(planar_axis);
-        validate_positive("first_axis_planar_norm", axis_norm)?;
+        validate_positive_finite(
+            "first_axis_planar_norm",
+            axis_norm,
+            "must be finite and positive",
+        )?;
         Self::from_validated(center_m, normal, scale(planar_axis, 1.0 / axis_norm), shape)
     }
 
@@ -132,9 +137,11 @@ impl PlanarApertureGeometry {
         first_axis: [f64; 3],
         shape: PlanarApertureShape,
     ) -> KwaversResult<Self> {
-        validate_point("center_m", center_m)?;
+        validate_finite_point("center_m", center_m, "all coordinates finite")?;
         match shape {
-            PlanarApertureShape::Disk { radius_m } => validate_positive("radius_m", radius_m)?,
+            PlanarApertureShape::Disk { radius_m } => {
+                validate_positive_finite("radius_m", radius_m, "must be finite and positive")?
+            }
             PlanarApertureShape::AnnularSector {
                 inner_radius_m,
                 outer_radius_m,
@@ -148,7 +155,11 @@ impl PlanarApertureGeometry {
                         "finite and >= 0",
                     ));
                 }
-                validate_positive("outer_radius_m", outer_radius_m)?;
+                validate_positive_finite(
+                    "outer_radius_m",
+                    outer_radius_m,
+                    "must be finite and positive",
+                )?;
                 if inner_radius_m >= outer_radius_m {
                     return Err(invalid(
                         "annular_radii_m",
@@ -172,8 +183,8 @@ impl PlanarApertureGeometry {
                 }
             }
             PlanarApertureShape::Rectangle { width_m, height_m } => {
-                validate_positive("width_m", width_m)?;
-                validate_positive("height_m", height_m)?;
+                validate_positive_finite("width_m", width_m, "must be finite and positive")?;
+                validate_positive_finite("height_m", height_m, "must be finite and positive")?;
             }
         }
         Ok(Self {
