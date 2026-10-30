@@ -26,8 +26,9 @@
 //! - **Order of Accuracy**: Second-order convergence for central differences
 //! - **Harmonic Generation**: Amplitude ratios A₂/A₁ ∝ β, A₃/A₁ ∝ β²
 
+use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_grid::Grid;
-use kwavers_medium::HomogeneousMedium;
+use kwavers_medium::{AcousticProperties, HomogeneousMedium};
 use kwavers_solver::forward::elastic::nonlinear::{
     HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
 };
@@ -991,7 +992,17 @@ mod convergence_tests {
         ];
 
         for (alpha, attenuation_regime) in attenuation_cases {
-            let medium = HomogeneousMedium::new(1000.0, 1500.0, alpha, 1.0, &grid);
+            // Attenuation regimes drive the ACOUSTIC channel (KW-SWE-OPTICAL-
+            // ATTENUATION): the solver seeds from `absorption_coefficient`,
+            // so the optical μa constructor argument is inert here. The dB
+            // prefactor α₀ = α_SI/(DB_TO_NP·100) reproduces the same Np/m
+            // attenuations at the 1 MHz reference the regimes were tuned for.
+            let mut medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 1.0, &grid);
+            let y = medium.alpha_power(0.0, 0.0, 0.0, &grid);
+            let nl = medium.nonlinearity_coefficient();
+            medium
+                .set_acoustic_properties(alpha / (DB_TO_NP * 100.0), y, nl)
+                .unwrap();
             let material = HyperelasticModel::neo_hookean_soft_tissue();
 
             let config = NonlinearSWEConfig {
