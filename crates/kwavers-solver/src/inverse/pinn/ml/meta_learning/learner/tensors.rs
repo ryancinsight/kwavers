@@ -1,9 +1,9 @@
 use super::MetaLearner;
 use crate::inverse::pinn::be;
-use crate::inverse::pinn::ml::CoordinateVars;
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLoss;
 use crate::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskData};
 use crate::inverse::pinn::ml::wave_equation_2d::{LossWeights2D, PinnWave2D};
+use crate::inverse::pinn::ml::CoordinateVars;
 use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 

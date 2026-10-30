@@ -22,7 +22,6 @@ impl EdgeRuntime {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn neon_quantize(
-        
         input: &[f32],
         kernel: &ExecutionKernel,
     ) -> KwaversResult<Vec<f32>> {
@@ -34,7 +33,6 @@ impl EdgeRuntime {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn riscv_quantize(
-        
         input: &[f32],
         kernel: &ExecutionKernel,
     ) -> KwaversResult<Vec<f32>> {
@@ -46,7 +44,6 @@ impl EdgeRuntime {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn software_quantize(
-        
         input: &[f32],
         kernel: &ExecutionKernel,
     ) -> KwaversResult<Vec<f32>> {
@@ -74,7 +71,6 @@ impl EdgeRuntime {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn fixed_point_inference(
-        
         input: &[f32],
         kernel: &ExecutionKernel,
     ) -> KwaversResult<Vec<f32>> {
