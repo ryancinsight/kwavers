@@ -32,12 +32,10 @@
 <a id="kw-gpu-062"></a>- [KW-GPU-062](backlog/kw-gpu-062.md) — GPU PSTD peak-pressure output [major] — review
 <a id="kw-gpu-teardown"></a>- [KW-GPU-TEARDOWN](backlog/kw-gpu-teardown.md) — Dissolve the remaining internal `kwavers/src` into the layered crates [arch] — todo
 <a id="kw-img-045"></a>- [KW-IMG-045](backlog/kw-img-045.md) — Frame-resolved physical I/Q ensemble [minor] — todo
-<a id="kw-lint-047"></a>- [KW-LINT-047](backlog/kw-lint-047.md) — Solver all-feature lint ratchet [patch] — in-progress
 <a id="kw-lint-1"></a>- [KW-LINT-1](backlog/kw-lint-1.md) — Burn down the clippy debt baseline [patch] — todo
 <a id="kw-manifest-implementation-2026-09-09"></a>- [KW-MANIFEST-IMPLEMENTATION-2026-09-09](backlog/kw-manifest-implementation-2026-09-09.md) — Reduce the implementation-bearing manifests [patch] [arch] — in-progress
 <a id="kw-mat-043"></a>- [KW-MAT-043](backlog/kw-mat-043.md) — Direct FWI L-BFGS provider ownership [patch] [arch] — in-progress
 <a id="kw-medium-ct-001"></a>- [KW-MEDIUM-CT-001](backlog/kw-medium-ct-001.md) — Own complete CT medium assembly [arch] — review
-<a id="kw-medium-absorption-units"></a>- [KW-MEDIUM-ABSORPTION-UNITS](backlog/kw-medium-absorption-units.md) — Medium absorption getters return dB/cm under an Np/m contract [patch] [fix] — todo
 <a id="kw-power-law-inverse-forms"></a>- [KW-POWER-LAW-INVERSE-FORMS](backlog/kw-power-law-inverse-forms.md) — Inverse, rad/s and constant power-law conversions still spell the factors [patch] — todo
 <a id="kw-prose-pr-unmergeable-2026-09-16"></a>- [KW-PROSE-PR-UNMERGEABLE-2026-09-16](backlog/kw-prose-pr-unmergeable-2026-09-16.md) — A prose-only pull request can never satisfy the required checks [patch] [ci] — blocked
 <a id="kw-py-angular-spectrum"></a>- [KW-PY-ANGULAR-SPECTRUM](backlog/kw-py-angular-spectrum.md) — The k-Wave parity helper propagates angular spectra in Python [patch] — todo
