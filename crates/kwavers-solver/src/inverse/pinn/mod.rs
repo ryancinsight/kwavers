@@ -188,6 +188,11 @@ pub mod ml;
 ///
 /// This is the module's single `B::Error -> KwaversError` seam: the backend
 /// error type is generic, so no `From` impl can cover it once for `?`.
+///
+/// # Errors
+///
+/// Returns `KwaversError::BackendOp` carrying the backend error text
+/// when the input `r` is `Err`.
 #[cfg(feature = "pinn")]
 pub fn be<T, E: core::fmt::Display>(
     r: Result<T, E>,
