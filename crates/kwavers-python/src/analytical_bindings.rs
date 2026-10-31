@@ -80,6 +80,8 @@ pub fn register_book(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(wave::shock_waveform_pressure, m)?)?;
     m.add_function(wrap_pyfunction!(wave::shock_heat_source_density, m)?)?;
     m.add_function(wrap_pyfunction!(wave::standing_wave_1d, m)?)?;
+    m.add_function(wrap_pyfunction!(wave::angular_spectrum_cw, m)?)?;
+    m.add_function(wrap_pyfunction!(wave::backward_angular_spectrum_cw, m)?)?;
     m.add_function(wrap_pyfunction!(wave::plane_wave_pressure_1d, m)?)?;
     m.add_function(wrap_pyfunction!(wave::plane_wave_pressure_velocity_1d, m)?)?;
     m.add_function(wrap_pyfunction!(wave::gaussian_modulated_pulse_1d, m)?)?;

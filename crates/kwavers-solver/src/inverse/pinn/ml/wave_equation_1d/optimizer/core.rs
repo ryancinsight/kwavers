@@ -9,6 +9,7 @@
 //! - Rumelhart et al. (1986): "Learning representations by back-propagating errors"
 //! - Kingma & Ba (2014): "Adam: A Method for Stochastic Optimization"
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Parameter;
 use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
 use kwavers_core::error::KwaversResult;
@@ -62,7 +63,7 @@ impl SimpleOptimizer {
             .enumerate()
             .map(|(index, var)| Parameter::new(var, format!("p{index}")))
             .collect();
-        let mut opt = SGD::new(parameters, self.learning_rate, 0.0);
+        let mut opt = be(SGD::new(parameters, self.learning_rate, 0.0))?;
         map_backend(opt.step(), "PINN 1D SGD step")?;
         let updated_parameters = opt
             .params

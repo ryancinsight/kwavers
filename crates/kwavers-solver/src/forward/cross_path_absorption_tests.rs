@@ -40,8 +40,9 @@
 
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
+use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_physics::acoustics::mechanics::absorption::{power_law_db_cm_to_np_m, AbsorptionMode};
+use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers_source::GridSource;
 use std::f64::consts::TAU;
 

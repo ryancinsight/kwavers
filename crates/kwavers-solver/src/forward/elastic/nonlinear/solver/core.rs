@@ -26,8 +26,16 @@ impl NonlinearElasticWaveSolver {
         material: HyperelasticModel,
         config: NonlinearSWEConfig,
     ) -> KwaversResult<Self> {
+        // Acoustic attenuation at the medium's reference frequency (Np/m),
+        // not the optical Beer–Lambert μa: the two share dimensions (L⁻¹)
+        // but describe different physics (KW-SWE-OPTICAL-ATTENUATION). The
+        // solver carries no operating frequency, so the reference-frequency
+        // value is the honest single-number attenuation; broadband content
+        // needs the spectral operator, as in the PSTD path.
+        let f_ref = medium.reference_frequency().into_base();
         let attenuation_np_per_m = medium
-            .optical_absorption_coefficient(0.0, 0.0, 0.0, grid)
+            .absorption_coefficient(0.0, 0.0, 0.0, grid, f_ref)
+            .into_base()
             .max(0.0);
 
         let numerics = NumericsOperators::new(grid.clone());

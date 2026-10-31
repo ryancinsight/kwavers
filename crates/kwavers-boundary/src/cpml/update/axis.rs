@@ -10,7 +10,7 @@
 use super::super::memory::CPMLMemory;
 use super::super::profiles::CPMLProfiles;
 use super::CPMLUpdater;
-use leto::{Array1, Array3, SliceArg};
+use leto::{Array1, Array3, ArrayView3, ArrayViewMut3, SliceArg};
 
 /// `axis`-th component of a 3-D dimension tuple.
 #[inline]
@@ -25,9 +25,51 @@ fn axis_range_args(axis: usize, start: usize, end: Option<usize>) -> [SliceArg; 
     args
 }
 
+/// Sweep one strip plane pair through the ψ FMA `ψ ← b·ψ + a·∂f`.
+///
+/// The profile scalars ride outside the inner loop (the per-cell index array
+/// the former indexed sweep built defeated autovectorization). A contiguous
+/// slice fast path was tried and reverted: leto exposes no sound
+/// mutable-window-as-slice API (`into_slice` spans the whole backing buffer,
+/// not the window), so the generic zip is the only correct vehicle here. The
+/// per-cell arithmetic matches the former sweep operand-for-operand, so `ψ`
+/// is unchanged to the bit.
+fn sweep_memory_plane(
+    psi_plane: &mut ArrayViewMut3<'_, f64>,
+    gradient_plane: &ArrayView3<'_, f64>,
+    b: f64,
+    a: f64,
+) {
+    leto_ops::zip_mut_with(psi_plane, gradient_plane, |psi, &g| {
+        *psi = b.mul_add(*psi, a * g);
+    })
+    .expect("invariant: CPML strip planes match");
+}
+
+/// Sweep one strip plane pair through the correction `∂f ← ∂f/κ + ψ`.
+///
+/// Same structure as [`sweep_memory_plane`]; the per-cell division is kept
+/// (not replaced by a precomputed reciprocal), so the corrected gradient is
+/// unchanged to the bit.
+fn sweep_correction_plane(
+    gradient_plane: &mut ArrayViewMut3<'_, f64>,
+    psi_plane: &ArrayView3<'_, f64>,
+    kappa: f64,
+) {
+    leto_ops::zip_mut_with(gradient_plane, psi_plane, |g, &psi| {
+        *g = *g / kappa + psi;
+    })
+    .expect("invariant: CPML strip planes match");
+}
+
 /// Recursive-convolution memory update along `axis`: `ψ ← b·ψ + a·∂f` on both
 /// PML strips. Shared by the pressure- and velocity-gradient paths, which differ
 /// only in which `ψ` buffer is supplied.
+///
+/// Each strip plane is swept with its profile scalars (`b[c]`, `a[c]`) hoisted
+/// out of the inner loop; the per-cell index array the former indexed sweep
+/// built defeated autovectorization and cost ~3x a full-field sweep per strip
+/// cell. The arithmetic per cell is unchanged, so `ψ` is unchanged to the bit.
 fn update_memory_along(
     psi: &mut Array3<f64>,
     gradient: &Array3<f64>,
@@ -39,41 +81,42 @@ fn update_memory_along(
     let thickness = dim_axis(psi.shape(), axis) / 2;
     let left_count = thickness.min(n);
 
-    // Left strip: grid coordinate == in-slice coordinate along `axis`.
-    let left_args = axis_range_args(axis, 0, Some(left_count));
-    let mut psi_left = psi
-        .slice_with_mut::<3>(&left_args)
-        .expect("invariant: valid left CPML memory slice");
-    let gradient_left = gradient
-        .slice_with::<3>(&left_args)
-        .expect("invariant: valid left CPML gradient slice");
-    leto_ops::indexed_zip_mut_with(&mut psi_left, &gradient_left, |[i, j, k], psi, &g| {
-        let c = [i, j, k][axis];
-        *psi = b[c].mul_add(*psi, a[c] * g);
-    })
-    .expect("invariant: left CPML memory and gradient shapes match");
+    // Left strip: ψ plane c aligns with gradient plane c.
+    for c in 0..left_count {
+        let args = axis_range_args(axis, c, Some(c + 1));
+        let mut psi_plane = psi
+            .slice_with_mut::<3>(&args)
+            .expect("invariant: valid left CPML memory plane");
+        let gradient_plane = gradient
+            .slice_with::<3>(&args)
+            .expect("invariant: valid left CPML gradient plane");
+        sweep_memory_plane(&mut psi_plane, &gradient_plane, b[c], a[c]);
+    }
 
-    // Right strip: grid coordinate == right_start + in-slice coordinate.
+    // Right strip: gradient plane c aligns with ψ plane `thickness + (c - right_start)`.
     if n > thickness {
         let right_start = n - thickness;
-        let psi_args = axis_range_args(axis, thickness, None);
-        let gradient_args = axis_range_args(axis, right_start, None);
-        let mut psi_right = psi
-            .slice_with_mut::<3>(&psi_args)
-            .expect("invariant: valid right CPML memory slice");
-        let gradient_right = gradient
-            .slice_with::<3>(&gradient_args)
-            .expect("invariant: valid right CPML gradient slice");
-        leto_ops::indexed_zip_mut_with(&mut psi_right, &gradient_right, |[i, j, k], psi, &g| {
-            let c = right_start + [i, j, k][axis];
-            *psi = b[c].mul_add(*psi, a[c] * g);
-        })
-        .expect("invariant: right CPML memory and gradient shapes match");
+        for p in 0..(n - right_start) {
+            let c = right_start + p;
+            let psi_args = axis_range_args(axis, thickness + p, Some(thickness + p + 1));
+            let gradient_args = axis_range_args(axis, c, Some(c + 1));
+            let mut psi_plane = psi
+                .slice_with_mut::<3>(&psi_args)
+                .expect("invariant: valid right CPML memory plane");
+            let gradient_plane = gradient
+                .slice_with::<3>(&gradient_args)
+                .expect("invariant: valid right CPML gradient plane");
+            sweep_memory_plane(&mut psi_plane, &gradient_plane, b[c], a[c]);
+        }
     }
 }
 
 /// Apply the CPML gradient correction along `axis`: `∂f ← ∂f/κ + ψ` on both PML
 /// strips. Shared by the pressure- and velocity-gradient paths.
+///
+/// Like [`update_memory_along`], each strip plane is swept with its `κ[c]`
+/// hoisted, keeping the per-cell division (bit-identity with the former sweep)
+/// while letting the inner loop vectorize.
 fn apply_correction_along(
     gradient: &mut Array3<f64>,
     psi: &Array3<f64>,
@@ -84,36 +127,33 @@ fn apply_correction_along(
     let thickness = dim_axis(psi.shape(), axis) / 2;
     let left_count = thickness.min(n);
 
-    // Left strip.
-    let left_args = axis_range_args(axis, 0, Some(left_count));
-    let mut gradient_left = gradient
-        .slice_with_mut::<3>(&left_args)
-        .expect("invariant: valid left CPML correction slice");
-    let psi_left = psi
-        .slice_with::<3>(&left_args)
-        .expect("invariant: valid left CPML memory correction slice");
-    leto_ops::indexed_zip_mut_with(&mut gradient_left, &psi_left, |[i, j, k], g, &psi| {
-        let c = [i, j, k][axis];
-        *g = *g / kappa[c] + psi;
-    })
-    .expect("invariant: left CPML correction and memory shapes match");
+    // Left strip: gradient plane c aligns with ψ plane c.
+    for c in 0..left_count {
+        let args = axis_range_args(axis, c, Some(c + 1));
+        let mut gradient_plane = gradient
+            .slice_with_mut::<3>(&args)
+            .expect("invariant: valid left CPML correction plane");
+        let psi_plane = psi
+            .slice_with::<3>(&args)
+            .expect("invariant: valid left CPML memory correction plane");
+        sweep_correction_plane(&mut gradient_plane, &psi_plane, kappa[c]);
+    }
 
-    // Right strip.
+    // Right strip: gradient plane c aligns with ψ plane `thickness + (c - right_start)`.
     if n > thickness {
         let right_start = n - thickness;
-        let gradient_args = axis_range_args(axis, right_start, None);
-        let psi_args = axis_range_args(axis, thickness, None);
-        let mut gradient_right = gradient
-            .slice_with_mut::<3>(&gradient_args)
-            .expect("invariant: valid right CPML correction slice");
-        let psi_right = psi
-            .slice_with::<3>(&psi_args)
-            .expect("invariant: valid right CPML memory correction slice");
-        leto_ops::indexed_zip_mut_with(&mut gradient_right, &psi_right, |[i, j, k], g, &psi| {
-            let c = right_start + [i, j, k][axis];
-            *g = *g / kappa[c] + psi;
-        })
-        .expect("invariant: right CPML correction and memory shapes match");
+        for p in 0..(n - right_start) {
+            let c = right_start + p;
+            let gradient_args = axis_range_args(axis, c, Some(c + 1));
+            let psi_args = axis_range_args(axis, thickness + p, Some(thickness + p + 1));
+            let mut gradient_plane = gradient
+                .slice_with_mut::<3>(&gradient_args)
+                .expect("invariant: valid right CPML correction plane");
+            let psi_plane = psi
+                .slice_with::<3>(&psi_args)
+                .expect("invariant: valid right CPML memory correction plane");
+            sweep_correction_plane(&mut gradient_plane, &psi_plane, kappa[c]);
+        }
     }
 }
 

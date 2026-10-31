@@ -1,7 +1,8 @@
 //! Straight-ray propagation paths: homogeneous or ordered layers.
 
-use super::input::{invalid, validate_positive};
+use super::input::invalid;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::validation::validate_positive_finite;
 
 /// One straight-ray propagation segment, ordered outward from the source.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -36,7 +37,11 @@ impl RayleighLayer {
         attenuation_np_m: f64,
         thickness_m: Option<f64>,
     ) -> KwaversResult<Self> {
-        validate_positive("wavenumber_rad_m", wavenumber_rad_m)?;
+        validate_positive_finite(
+            "wavenumber_rad_m",
+            wavenumber_rad_m,
+            "must be finite and positive",
+        )?;
         if !attenuation_np_m.is_finite() || attenuation_np_m < 0.0 {
             return Err(invalid(
                 "attenuation_np_m",
@@ -45,7 +50,11 @@ impl RayleighLayer {
             ));
         }
         if let Some(thickness) = thickness_m {
-            validate_positive("layer_thickness_m", thickness)?;
+            validate_positive_finite(
+                "layer_thickness_m",
+                thickness,
+                "must be finite and positive",
+            )?;
         }
         Ok(Self {
             wavenumber_rad_m,

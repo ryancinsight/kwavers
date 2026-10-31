@@ -1,4 +1,5 @@
 use super::AdaptiveCollocationSampler;
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 use std::collections::HashMap;
@@ -24,18 +25,22 @@ where
         };
 
         let backend = B::default();
-        let extract_column = |col: usize| -> Var<f32, B> {
+        let extract_column = |col: usize| -> KwaversResult<Var<f32, B>> {
             let values: Vec<f32> = (0..self.total_points)
                 .map(|i| self.active_points[i * 3 + col])
                 .collect();
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![self.total_points, 1], &values, &backend),
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(
+                    vec![self.total_points, 1],
+                    &values,
+                    &backend,
+                ))?,
                 false,
-            )
+            ))
         };
-        let x = extract_column(0);
-        let y = extract_column(1);
-        let t = extract_column(2);
+        let x = extract_column(0)?;
+        let y = extract_column(1)?;
+        let t = extract_column(2)?;
 
         let residuals = self
             .domain
@@ -59,7 +64,7 @@ where
         let min_residual = residuals.iter().cloned().fold(f32::MAX, f32::min);
 
         if (max_residual - min_residual).abs() < 1e-10_f32 {
-            self.priorities = vec![1.0_f32; self.total_points];
+            self.priorities = vec![1.0_f32; self.total_points]
         } else {
             let range = max_residual - min_residual;
             self.priorities = residuals
@@ -95,7 +100,7 @@ where
 
         for &priority in &self.priorities {
             let bin_idx = ((priority * n_bins as f32) as usize).min(n_bins - 1);
-            bins[bin_idx] += 1.0;
+            bins[bin_idx] += 1.0
         }
 
         let total = (self.priorities.len()) as f32;

@@ -25,7 +25,8 @@ pub trait ViscousProperties: CoreMedium {
     /// Get bulk viscosity (Pa·s)
     /// Related to volume changes and compressibility
     fn bulk_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> DynamicViscosity {
-        // Stokes' hypothesis: bulk viscosity = 2.5 * shear viscosity
+        // Water-like default: measured bulk/shear ratio for water is ≈ 2.4–2.8
+        // at 20°C (Holmes et al. 2011). Not Stokes' hypothesis, which sets μ_B = 0.
         DynamicViscosity::from_base(2.5 * self.shear_viscosity(x, y, z, grid).into_base())
     }
 

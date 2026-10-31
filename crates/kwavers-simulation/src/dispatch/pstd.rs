@@ -52,14 +52,25 @@ pub fn power_law_absorption_mode(
             (0..grid.ny).any(|j| {
                 (0..grid.nz).any(|k| {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    medium.alpha_coefficient(x, y, z, grid) > 0.0
+                    medium.alpha_coefficient(x, y, z, grid).into_base() > 0.0
                 })
             })
         });
+    // Without an explicit coefficient the mode carries the medium's origin
+    // exponent when it is non-degenerate; the solver still reads both fields
+    // per voxel, so this only seeds heterogeneous media (ADR 120).
+    let effective_alpha_power = {
+        let y_medium = medium.alpha_power(0.0, 0.0, 0.0, grid);
+        if alpha_coeff_db <= 0.0 && y_medium > 0.0 && (y_medium - 1.0).abs() > 1e-12 {
+            y_medium
+        } else {
+            alpha_power
+        }
+    };
     if absorbs {
         AbsorptionMode::PowerLaw {
             alpha_coeff: (alpha_coeff_db > 0.0).then_some(alpha_coeff_db),
-            alpha_power,
+            alpha_power: effective_alpha_power,
         }
     } else {
         AbsorptionMode::Lossless

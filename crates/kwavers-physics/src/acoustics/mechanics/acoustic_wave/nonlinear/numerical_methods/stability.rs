@@ -72,7 +72,7 @@ impl NonlinearWave {
             let cy = grid.ny / 2;
             let cz = grid.nz / 2;
             let (x, y, z) = grid.indices_to_coordinates(cx, cy, cz);
-            let beta = medium.nonlinearity_coefficient(x, y, z, grid);
+            let beta = medium.nonlinearity_coefficient(x, y, z, grid).into_base();
             min_dx / (beta * max_c)
         } else {
             f64::INFINITY

@@ -96,22 +96,23 @@
 //! let pinn = PinnWave1D::<Backend>::new(config)?;
 //!
 //! // Collocation points for PDE residual (leaf `Var`s over `[N, 1]` tensors)
-//! let x_colloc = Var::new(
+//! let x_colloc = be(Var::new(
 //!     coeus_tensor::Tensor::from_slice_on(vec![3, 1], &[0.5, 0.6, 0.7], &backend),
 //!     false,
-//! );
-//! let t_colloc = Var::new(
+//! ))?;
+//! let t_colloc = be(Var::new(
 //!     coeus_tensor::Tensor::from_slice_on(vec![3, 1], &[0.1, 0.2, 0.3], &backend),
 //!     false,
-//! );
+//! ))?;
 //!
 //! // Compute PDE residual
 //! let residual = pinn.compute_pde_residual(&x_colloc, &t_colloc, 343.0);
 //!
 //! // PDE loss: enforce wave equation
-//! let pde_loss = coeus_autograd::mean(&coeus_autograd::mul(&residual, &residual));
+//! let pde_loss = be(coeus_autograd::mean(&coeus_autograd::mul(&residual, &residual)))?;
 //! ```
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -171,6 +172,12 @@ where
     /// - Initial: ||r||² ~ 1e0 - 1e1
     /// - Mid-training: ||r||² ~ 1e-2 - 1e-3
     /// - Well-trained: ||r||² < 1e-4
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from model forwards
+    ///   and autograd ops.
+    ///
     pub fn compute_pde_residual(
         &self,
         x: &Var<f32, B>,
@@ -178,7 +185,7 @@ where
         wave_speed: f64,
     ) -> KwaversResult<Var<f32, B>> {
         let c_squared = (wave_speed * wave_speed) as f32;
-        let x_grad = Var::new(x.tensor.clone(), true);
+        let x_grad = be(Var::new(x.tensor.clone(), true))?;
         let u_for_x_deriv = self.forward(&x_grad, t)?;
         u_for_x_deriv
             .backward()
@@ -187,7 +194,7 @@ where
             KwaversError::InternalError("1D x derivative did not produce a gradient".into())
         })?;
 
-        let x_grad_2 = Var::new(x.tensor.clone(), true);
+        let x_grad_2 = be(Var::new(x.tensor.clone(), true))?;
         let u_xx = self.forward(&x_grad_2, t)?;
         u_xx.backward().map_err(|error| {
             KwaversError::InternalError(format!("1D x second derivative: {error}"))
@@ -196,7 +203,7 @@ where
             KwaversError::InternalError("1D x second derivative did not produce a gradient".into())
         })?;
 
-        let t_grad = Var::new(t.tensor.clone(), true);
+        let t_grad = be(Var::new(t.tensor.clone(), true))?;
         let u_for_t_deriv = self.forward(x, &t_grad)?;
         u_for_t_deriv
             .backward()
@@ -205,7 +212,7 @@ where
             KwaversError::InternalError("1D t derivative did not produce a gradient".into())
         })?;
 
-        let t_grad_2 = Var::new(t.tensor.clone(), true);
+        let t_grad_2 = be(Var::new(t.tensor.clone(), true))?;
         let u_tt = self.forward(x, &t_grad_2)?;
         u_tt.backward().map_err(|error| {
             KwaversError::InternalError(format!("1D t second derivative: {error}"))
@@ -218,11 +225,11 @@ where
         // leaves: the weight gradients they contribute to the physics loss
         // were already accumulated by the four `backward()` calls above, so
         // this residual value itself does not need further grad-tracking.
-        let d2u_dt2 = Var::new(d2u_dt2, false);
-        let d2u_dx2 = Var::new(d2u_dx2, false);
-        Ok(coeus_autograd::sub(
+        let d2u_dt2 = be(Var::new(d2u_dt2, false))?;
+        let d2u_dx2 = be(Var::new(d2u_dx2, false))?;
+        be(coeus_autograd::sub(
             &d2u_dt2,
-            &coeus_autograd::scalar_mul(&d2u_dx2, c_squared),
+            &be(coeus_autograd::scalar_mul(&d2u_dx2, c_squared))?,
         ))
     }
 
@@ -252,6 +259,12 @@ where
     ///
     /// Tuple of `(total_loss, data_loss, pde_loss, bc_loss)` where each is a
     /// scalar tensor with shape `[1]`.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the component
+    ///   loss evaluations and autograd ops.
+    ///
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::type_complexity)] // 4 independent scalar losses (total, data, pde, bc); no cohesive grouping
     pub fn compute_physics_loss(
@@ -268,23 +281,38 @@ where
         loss_weights: LossWeights,
     ) -> KwaversResult<(Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>)> {
         let u_pred_data = self.forward(x_data, t_data)?;
-        let data_diff = coeus_autograd::sub(&u_pred_data, u_data);
-        let data_loss = coeus_autograd::mean(&coeus_autograd::mul(&data_diff, &data_diff));
+        let data_diff = be(coeus_autograd::sub(&u_pred_data, u_data))?;
+        let data_loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &data_diff, &data_diff,
+        ))?))?;
 
         let residual = self.compute_pde_residual(x_collocation, t_collocation, wave_speed)?;
-        let pde_loss = coeus_autograd::mean(&coeus_autograd::mul(&residual, &residual));
+        let pde_loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &residual, &residual,
+        ))?))?;
 
         let u_pred_boundary = self.forward(x_boundary, t_boundary)?;
-        let bc_diff = coeus_autograd::sub(&u_pred_boundary, u_boundary);
-        let bc_loss = coeus_autograd::mean(&coeus_autograd::mul(&bc_diff, &bc_diff));
+        let bc_diff = be(coeus_autograd::sub(&u_pred_boundary, u_boundary))?;
+        let bc_loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &bc_diff, &bc_diff,
+        ))?))?;
 
-        let total_loss = coeus_autograd::add(
-            &coeus_autograd::add(
-                &coeus_autograd::scalar_mul(&data_loss, loss_weights.data as f32),
-                &coeus_autograd::scalar_mul(&pde_loss, loss_weights.pde as f32),
-            ),
-            &coeus_autograd::scalar_mul(&bc_loss, loss_weights.boundary as f32),
-        );
+        let total_loss = be(coeus_autograd::add(
+            &be(coeus_autograd::add(
+                &be(coeus_autograd::scalar_mul(
+                    &data_loss,
+                    loss_weights.data as f32,
+                ))?,
+                &be(coeus_autograd::scalar_mul(
+                    &pde_loss,
+                    loss_weights.pde as f32,
+                ))?,
+            ))?,
+            &be(coeus_autograd::scalar_mul(
+                &bc_loss,
+                loss_weights.boundary as f32,
+            ))?,
+        ))?;
 
         Ok((total_loss, data_loss, pde_loss, bc_loss))
     }

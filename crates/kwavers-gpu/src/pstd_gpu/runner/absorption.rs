@@ -4,10 +4,9 @@ use crate::pstd_gpu::medium::{
     validate_absorption_coefficient, validate_active_power_law_exponent, PstdMediumSnapshot,
 };
 use eunomia::FloatElement;
-use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::constants::{acoustic_parameters::REFERENCE_FREQUENCY_HZ, numerical::TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
 use kwavers_solver::forward::pstd::config::PowerLawDispersion;
 use std::f64::consts::PI;
 
@@ -44,8 +43,11 @@ impl PowerLawOperators {
 }
 
 /// GPU PSTD power-law absorption operators for one exponent `y` and a
-/// per-voxel coefficient in dB/(MHz^y cm), the one construction the Rust
-/// runner and the Python session share.
+/// per-voxel SI base prefactor (Np/m at the 1 MHz reference, before the
+/// `(1/ω_ref)^y` factor), the one construction the Rust runner and the Python
+/// session share. Callers convert the k-Wave dB field once at their boundary,
+/// as the runner's resolver does, and the medium path pushes its typed values
+/// already converted.
 ///
 /// `τ = −2 α₀ c₀^(y−1)` and `η = 2 α₀ c₀^y tan(πy/2)` (Treeby & Cox 2010,
 /// Eqs. 19–20); without dispersion `η = 0`, which admits `y = 1`.
@@ -63,7 +65,7 @@ pub fn power_law_operators(
     exponent: f64,
     dispersion: PowerLawDispersion,
     c0_flat: &[f32],
-    coefficient_db_at: impl Fn(usize) -> f64,
+    coefficient_si_at: impl Fn(usize) -> f64,
 ) -> KwaversResult<PowerLawOperators> {
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let total = c0_flat.len();
@@ -74,7 +76,7 @@ pub fn power_law_operators(
     }
     let mut absorbs = false;
     for flat in 0..total {
-        let coefficient = coefficient_db_at(flat);
+        let coefficient = coefficient_si_at(flat);
         validate_absorption_coefficient(
             coefficient,
             format_args!("absorption coefficient at flat index {flat}"),
@@ -90,6 +92,8 @@ pub fn power_law_operators(
     let (lx, ly, lz) = grid.physical_size();
     let (dk_x, dk_y, dk_z) = (TWO_PI / lx, TWO_PI / ly, TWO_PI / lz);
     let y = exponent;
+    // Spectral normalizer for the SI base prefactor (Np/m at 1 MHz).
+    let inv_omega_ref = 1.0 / (TWO_PI * REFERENCE_FREQUENCY_HZ);
     let dispersion_factor = match dispersion {
         PowerLawDispersion::Causal => (PI * y / 2.0).tan(),
         PowerLawDispersion::Omitted => 0.0,
@@ -112,7 +116,7 @@ pub fn power_law_operators(
             operators.nabla2[flat] = f32::from_f64(k_mag.powf(y - 1.0));
         }
 
-        let alpha_0_si = power_law_db_cm_to_np_omega_m(coefficient_db_at(flat), y);
+        let alpha_0_si = coefficient_si_at(flat) * inv_omega_ref.powf(y);
         let c0_local = f64::from(c0);
         operators.tau[flat] = f32::from_f64(-2.0 * alpha_0_si * c0_local.powf(y - 1.0));
         operators.eta[flat] =
@@ -145,8 +149,8 @@ mod tests {
     use eunomia::FloatElement;
     use kwavers_core::error::KwaversError;
     use kwavers_grid::Grid;
+    use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
     use kwavers_medium::HomogeneousMedium;
-    use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
     use kwavers_solver::forward::pstd::config::PowerLawDispersion::{self, Causal, Omitted};
 
     fn grid() -> Grid {

@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-08-19
 - Item: `backlog.md#cov-3`
+- Revision 2026-10-30: the `add_rect_*` parity surface is folded into `PlanarApertureShape::Rectangle` (ADR 136); the k-Wave layer survives as `SurfaceConvention::KWave` plus the kept constructor names.
 
 ## Context
 

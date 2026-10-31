@@ -417,9 +417,16 @@ pub struct RotatingOpposedLinearArray {
     /// Flat `[transmission_count]` single-element source positions.
     /// Transmit `t` fires `sources[t]`.
     sources: Vec<ElementPosition>,
-    /// Per-view receiver lists: `receivers_per_view[v]` is the full
-    /// `[2 * elements_per_array]` receiver set at view `v`.
-    receivers_per_view: Vec<Vec<ElementPosition>>,
+    /// Flat `[view_count * 2 * elements_per_array]` receiver positions, laid
+    /// out view-major: view `v` owns the contiguous run
+    /// `receivers[v * 2 * elements_per_array .. (v + 1) * 2 * elements_per_array]`.
+    ///
+    /// One allocation instead of one per view: the inversion reads the
+    /// receiver set of every transmit in turn, and a nested container
+    /// scattered each view's positions across its own heap block, so the
+    /// traversal chased a pointer per view and touched `view_count`
+    /// separate allocations.
+    receivers: Vec<ElementPosition>,
 }
 
 impl RotatingOpposedLinearArray {
@@ -457,7 +464,8 @@ impl RotatingOpposedLinearArray {
 
         let angular_step = TWO_PI / view_count as f64;
 
-        let mut receivers_per_view = Vec::with_capacity(view_count);
+        let receiver_count = 2 * elements_per_array;
+        let mut receivers = Vec::with_capacity(view_count * receiver_count);
         let mut sources = Vec::with_capacity(elements_per_array * view_count);
 
         for view in 0..view_count {
@@ -475,8 +483,6 @@ impl RotatingOpposedLinearArray {
             let c2x = -standoff_m * cos_t;
             let c2y = -standoff_m * sin_t;
 
-            let mut view_receivers = Vec::with_capacity(2 * elements_per_array);
-
             for k in 0..elements_per_array {
                 let offset = (k as f64 - 0.5 * (elements_per_array as f64 - 1.0)) * element_pitch_m;
                 // Array 1 element k — also the source for transmit `view * n + k`.
@@ -486,7 +492,7 @@ impl RotatingOpposedLinearArray {
                     z: Length::from_unit::<Meter>(0.0),
                 };
                 sources.push(p1);
-                view_receivers.push(p1);
+                receivers.push(p1);
             }
             for k in 0..elements_per_array {
                 let offset = (k as f64 - 0.5 * (elements_per_array as f64 - 1.0)) * element_pitch_m;
@@ -495,16 +501,15 @@ impl RotatingOpposedLinearArray {
                     y: Length::from_unit::<Meter>(c2y + arr_y * offset),
                     z: Length::from_unit::<Meter>(0.0),
                 };
-                view_receivers.push(p2);
+                receivers.push(p2);
             }
-            receivers_per_view.push(view_receivers);
         }
 
         Ok(Self {
             elements_per_array,
             view_count,
             sources,
-            receivers_per_view,
+            receivers,
         })
     }
 
@@ -536,7 +541,8 @@ impl RotatingOpposedLinearArray {
     #[must_use]
     pub fn transmit_receivers(&self, t: usize) -> &[ElementPosition] {
         let view = t / self.elements_per_array;
-        &self.receivers_per_view[view]
+        let start = view * self.receiver_count();
+        &self.receivers[start..start + self.receiver_count()]
     }
 
     /// Total transmit events.
@@ -632,6 +638,41 @@ mod tests {
         assert_eq!(arr.receiver_count(), 16);
         assert_eq!(arr.transmit_sources(0).len(), 1);
         assert_eq!(arr.transmit_receivers(0).len(), 16);
+    }
+
+    #[test]
+    fn rotating_array_receivers_are_one_contiguous_view_major_run() {
+        // The receiver sets share one allocation, laid out view-major, so
+        // the inversion's per-transmit traversal reads consecutive views
+        // from adjacent memory instead of chasing a pointer per view. The
+        // per-transmit value assertions above hold for a per-view
+        // container too, so this test pins the layout itself.
+        let elements = 4_usize;
+        let views = 5_usize;
+        let arr =
+            RotatingOpposedLinearArray::new(elements, 1.5e-3, 0.1, views).expect("construction");
+
+        for view in 0..views {
+            let receivers = arr.transmit_receivers(view * elements);
+            assert_eq!(receivers.len(), arr.receiver_count());
+            // Every transmit of a view sees that view's receiver set.
+            for element in 0..elements {
+                assert_eq!(
+                    arr.transmit_receivers(view * elements + element),
+                    receivers,
+                    "view {view} element {element} must see the view's receiver set"
+                );
+            }
+        }
+
+        let first = arr.transmit_receivers(0);
+        let second = arr.transmit_receivers(elements);
+        let stride = std::mem::size_of_val(&first[0]) * arr.receiver_count();
+        assert_eq!(
+            second.as_ptr().addr() - first.as_ptr().addr(),
+            stride,
+            "consecutive views must occupy adjacent runs of one allocation"
+        );
     }
 
     #[test]

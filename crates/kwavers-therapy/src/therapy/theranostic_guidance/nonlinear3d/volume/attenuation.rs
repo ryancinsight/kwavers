@@ -1,6 +1,5 @@
 //! CT-derived attenuation maps for nonlinear 3-D theranostic propagation.
 
-use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::ct_acoustics::HU_BONE_THRESHOLD;
 use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::tissue_acoustics::{
@@ -19,7 +18,8 @@ use kwavers_core::constants::tissue_acoustics::{
 /// - skull bone (cortical): `13 - 20` (Connor & Hynynen 2002)
 /// - lung (air-filled): effectively absorbing
 ///
-/// Conversion: `alpha [Np/m] = alpha_0 [dB/(cm*MHz)] * 100 / NP_TO_DB`.
+/// Conversion through the `const`-capable owner beside `PowerLawAbsorption`
+/// (`kwavers_medium::absorption::power_law::db_per_cm_mhz_to_np_per_m_mhz`).
 pub(super) fn attenuation_np_per_m_mhz_from_hu(hu: f64, label: i16, body: bool) -> f64 {
     /// Skull absorption upper bound [dB/(cm·MHz)] = ACOUSTIC_ABSORPTION_SKULL_MIN + RANGE = 20.
     const SKULL_ABSORPTION_MAX: f64 =
@@ -31,13 +31,17 @@ pub(super) fn attenuation_np_per_m_mhz_from_hu(hu: f64, label: i16, body: bool) 
         let hu_norm = ((hu - HU_BONE_THRESHOLD) / 1200.0).clamp(0.0, 1.0);
         let alpha_db_cm_mhz = ACOUSTIC_ABSORPTION_SKULL_CORTICAL_MIN
             + (SKULL_ABSORPTION_MAX - ACOUSTIC_ABSORPTION_SKULL_CORTICAL_MIN) * hu_norm;
-        alpha_db_cm_mhz * 100.0 / NP_TO_DB
+        kwavers_medium::absorption::power_law::db_per_cm_mhz_to_np_per_m_mhz(alpha_db_cm_mhz)
     } else if hu < -700.0 && label == 0 {
         1000.0
     } else if label > 0 {
-        ACOUSTIC_ABSORPTION_BRAIN_WHITE * 100.0 / NP_TO_DB
+        kwavers_medium::absorption::power_law::db_per_cm_mhz_to_np_per_m_mhz(
+            ACOUSTIC_ABSORPTION_BRAIN_WHITE,
+        )
     } else {
-        ACOUSTIC_ABSORPTION_TISSUE * 100.0 / NP_TO_DB
+        kwavers_medium::absorption::power_law::db_per_cm_mhz_to_np_per_m_mhz(
+            ACOUSTIC_ABSORPTION_TISSUE,
+        )
     }
 }
 

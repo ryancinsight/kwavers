@@ -4,6 +4,7 @@ use super::super::super::super::integration::integrator::calculate_stable_timest
 use super::super::super::super::types::{ElasticWaveConfig, ElasticWaveField};
 use core::alloc::Layout;
 use kwavers_core::error::{KwaversResult, NumericalError, ValidationError};
+use kwavers_core::validation::validate_positive_finite;
 use kwavers_grid::Grid;
 use leto::Array3;
 
@@ -41,7 +42,7 @@ impl PropagationPlan {
         initial_time: f64,
         duration_s: f64,
     ) -> KwaversResult<Self> {
-        validate_finite_positive(
+        validate_positive_finite(
             "duration_s",
             duration_s,
             "must be finite and greater than zero",
@@ -68,7 +69,7 @@ impl PropagationPlan {
         } else {
             config.time_step
         };
-        validate_finite_positive(
+        validate_positive_finite(
             "effective_time_step",
             dt,
             "must be finite and greater than zero",
@@ -137,18 +138,6 @@ fn validate_field_shapes(grid: &Grid, field: &ElasticWaveField) -> KwaversResult
             }
             .into());
         }
-    }
-    Ok(())
-}
-
-fn validate_finite_positive(parameter: &str, value: f64, reason: &str) -> KwaversResult<()> {
-    if !value.is_finite() || value <= 0.0 {
-        return Err(ValidationError::InvalidValue {
-            parameter: parameter.to_owned(),
-            value,
-            reason: reason.to_owned(),
-        }
-        .into());
     }
     Ok(())
 }

@@ -1,3 +1,4 @@
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 
 use kwavers_core::error::{KwaversError, KwaversResult, SystemError, ValidationError};
@@ -104,22 +105,22 @@ where
         }
 
         let backend = B::default();
-        let x_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n, 1], x, &backend),
+        let x_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], x, &backend))?,
             false,
-        );
-        let y_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n, 1], y, &backend),
+        ))?;
+        let y_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], y, &backend))?,
             false,
-        );
-        let z_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n, 1], z, &backend),
+        ))?;
+        let z_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], z, &backend))?,
             false,
-        );
-        let t_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n, 1], t, &backend),
+        ))?;
+        let t_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(vec![n, 1], t, &backend))?,
             false,
-        );
+        ))?;
 
         let u_pred = self.pinn.forward(&x_var, &y_var, &z_var, &t_var)?;
         Self::extract_column_vec(&u_pred)
@@ -184,6 +185,7 @@ where
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+    use kwavers_core::error::KwaversResult;
     type TestBackend = coeus_core::MoiraiBackend;
 
     #[test]

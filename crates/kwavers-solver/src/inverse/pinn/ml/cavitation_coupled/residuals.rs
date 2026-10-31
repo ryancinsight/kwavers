@@ -2,11 +2,13 @@
 
 use super::domain::CavitationCoupledDomain;
 use super::mie_scattering::mie_backscatter_form_function;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use coeus_autograd::Var;
 use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use kwavers_core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
+use kwavers_core::error::KwaversResult;
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> CavitationCoupledDomain<B>
 where
@@ -40,7 +42,7 @@ where
         acoustic_pressure: &Var<f32, B>,
         _bubble_positions: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Var<f32, B> {
+    ) -> KwaversResult<Var<f32, B>> {
         let ambient_pressure = physics_params
             .domain_params
             .get("ambient_pressure")
@@ -54,7 +56,10 @@ where
             .unwrap_or(0.001) as f32;
 
         // pressure_forcing = acoustic_pressure - ambient_pressure
-        let pressure_forcing = coeus_autograd::scalar_add(acoustic_pressure, -ambient_pressure);
+        let pressure_forcing = be(coeus_autograd::scalar_add(
+            acoustic_pressure,
+            -ambient_pressure,
+        ))?;
 
         let r_eq = self.config.bubble_params.r0 as f32;
         let gamma = AIR_POLYTROPIC_INDEX as f32;
@@ -75,22 +80,24 @@ where
 
         let p_internal = p_gas + p_vapor;
         // p_external = ambient_pressure + pressure_forcing + p_surface + p_viscous
-        let p_external =
-            coeus_autograd::scalar_add(&pressure_forcing, ambient_pressure + p_surface + p_viscous);
+        let p_external = be(coeus_autograd::scalar_add(
+            &pressure_forcing,
+            ambient_pressure + p_surface + p_viscous,
+        ))?;
 
         // Pressure-driven acceleration term: (P_int − P_ext) / (ρ_l · R)
         // = -(p_external - p_internal) / (rho_l * r_eq)
-        let accel = coeus_autograd::scalar_mul(
-            &coeus_autograd::scalar_add(&p_external, -p_internal),
+        let accel = be(coeus_autograd::scalar_mul(
+            &be(coeus_autograd::scalar_add(&p_external, -p_internal))?,
             -1.0 / (rho_l * r_eq),
-        );
+        ))?;
         // Inertial term: −(3/2) Ṙ²/R — zero since Ṙ = 0
         let inertial = -1.5_f32 * rdot * rdot / r_eq;
 
-        coeus_autograd::scalar_mul(
-            &coeus_autograd::scalar_add(&accel, inertial),
+        be(coeus_autograd::scalar_mul(
+            &be(coeus_autograd::scalar_add(&accel, inertial))?,
             self.config.coupling_strength as f32,
-        )
+        ))
     }
 
     /// Compute the acoustic scattering residual from bubble cloud.
@@ -117,14 +124,17 @@ where
         &self,
         acoustic_field: &Var<f32, B>,
         bubble_positions: &Var<f32, B>,
-    ) -> Var<f32, B> {
+    ) -> KwaversResult<Var<f32, B>> {
         let backend = B::default();
 
         if !self.config.nonlinear_acoustic {
-            return Var::new(
-                coeus_tensor::Tensor::zeros_on(acoustic_field.tensor.shape(), &backend),
+            return be(Var::new(
+                be(coeus_tensor::Tensor::zeros_on(
+                    acoustic_field.tensor.shape(),
+                    &backend,
+                ))?,
                 false,
-            );
+            ));
         }
 
         // ─── Mie constants (computed once per call, constant across all bubble pairs) ───
@@ -154,7 +164,10 @@ where
 
         for i in 0..n_points {
             let pos_i = (pos_slice[i * 2], pos_slice[i * 2 + 1]);
-            let mut total = Var::new(coeus_tensor::Tensor::zeros_on(vec![1, 1], &backend), false);
+            let mut total = be(Var::new(
+                be(coeus_tensor::Tensor::zeros_on(vec![1, 1], &backend))?,
+                false,
+            ))?;
 
             for j in 0..n_points {
                 if i == j {
@@ -173,14 +186,14 @@ where
                     (f_bs.re * phase.cos() - f_bs.im * phase.sin()) / dist_val.max(1e-6_f32);
 
                 // Incident field at bubble j drives the scattered field at receiver i.
-                let field_j = coeus_autograd::slice(acoustic_field, &[(j, j + 1), (0, 1)]);
-                let contribution = coeus_autograd::scalar_mul(&field_j, scatter_coeff);
-                total = coeus_autograd::add(&total, &contribution);
+                let field_j = be(coeus_autograd::slice(acoustic_field, &[(j, j + 1), (0, 1)]))?;
+                let contribution = be(coeus_autograd::scalar_mul(&field_j, scatter_coeff))?;
+                total = be(coeus_autograd::add(&total, &contribution))?;
             }
             scattered_rows.push(total);
         }
 
         let refs: Vec<&Var<f32, B>> = scattered_rows.iter().collect();
-        coeus_autograd::cat(&refs, 0)
+        be(coeus_autograd::cat(&refs, 0))
     }
 }

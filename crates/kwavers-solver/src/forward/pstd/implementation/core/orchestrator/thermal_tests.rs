@@ -1,11 +1,11 @@
 use crate::forward::pstd::config::{PSTDConfig, PowerLawDispersion};
 use crate::forward::pstd::PSTDSolver;
+use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
+use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_physics::acoustics::mechanics::absorption::{
-    power_law_db_cm_to_np_omega_m, AbsorptionMode,
-};
+use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers_source::GridSource;
 use std::f64::consts::TAU;
 
@@ -55,8 +55,11 @@ fn absorption_at_frequency_scales_each_voxel_by_its_exponent() {
     );
     let mut medium = HeterogeneousMedium::from_homogeneous(&background, &grid).unwrap();
     medium.use_trilinear_interpolation = false;
-    medium.absorption.fill(0.7);
-    medium.alpha0.fill(0.7);
+    // Np/m storage (storage convention in `kwavers_medium::core`): the 0.7
+    // dB/cm prefactor converted once, so `alpha_coefficient` keeps reporting
+    // the same SI values and the expectations below are unchanged.
+    medium.absorption.fill(0.7 * DB_TO_NP * 100.0);
+    medium.alpha0.fill(0.7 * DB_TO_NP * 100.0);
     let exponent_at = |i: usize| if i < 4 { 1.3 } else { 1.7 };
     for ([i, _, _], value) in medium.alpha_power.indexed_iter_mut().unwrap() {
         *value = exponent_at(i);

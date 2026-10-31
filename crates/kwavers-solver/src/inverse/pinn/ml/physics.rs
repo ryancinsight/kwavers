@@ -45,6 +45,12 @@ pub trait SimulationPhysicsDomain<B: coeus_ops::BackendOps<f32> + coeus_ops::Cpu
     }
 
     /// Compute PDE residual for this physics domain
+    ///
+    /// # Errors
+    ///
+    /// Implementations return their domain error; at minimum, any
+    /// [`crate::KwaversError`] from model forwards and autograd ops.
+    ///
     fn pde_residual(
         &self,
         model: &crate::inverse::pinn::ml::PinnWave2D<B>,

@@ -6,6 +6,7 @@
 //! of voxel-coordinates into three `Array3<f64>` outputs without
 //! committing the planner to the training backend tensor API.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use leto::Array3;
 
@@ -185,10 +186,14 @@ where
         }
 
         let backend = B::default();
-        let input = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n, 5], &buf_in, &backend),
+        let input = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n, 5],
+                &buf_in,
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
         let output = network.forward(&input)?;
         // Output is `[n, 3]`; already host-resident f32.
         let out_vec = output.tensor.as_slice();

@@ -11,8 +11,9 @@
 
 use aequitas::systems::si::{
     quantities::{
-        Dimensionless, DynamicViscosity, MassDensity, ReciprocalLength, ReciprocalTemperature,
-        SpecificHeatCapacity, ThermalConductivity, ThermalDiffusivity, Velocity,
+        AreaPerTime, Dimensionless, DynamicViscosity, MassDensity, Pressure, ReciprocalLength,
+        ReciprocalTemperature, SpecificHeatCapacity, SurfaceTension, ThermalConductivity,
+        ThermalDiffusivity, Velocity,
     },
     units::PerMeter,
 };
@@ -60,7 +61,7 @@ fn test_s_wave_velocity() {
     let theoretical_cs = (lame_mu / density).sqrt();
 
     let medium = TestElasticMedium::new(density, lame_lambda, lame_mu);
-    let computed_cs = medium.shear_wave_speed(0.0, 0.0, 0.0, &grid);
+    let computed_cs = medium.shear_wave_speed(0.0, 0.0, 0.0, &grid).into_base();
     assert_relative_eq!(computed_cs, theoretical_cs, epsilon = 1e-6);
 }
 
@@ -137,12 +138,12 @@ impl CoreMedium for TestElasticMedium {
 }
 
 impl ElasticProperties for TestElasticMedium {
-    fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.lame_lambda
+    fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Pressure<f64> {
+        Pressure::from_base(self.lame_lambda)
     }
 
-    fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.lame_mu
+    fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Pressure<f64> {
+        Pressure::from_base(self.lame_mu)
     }
 }
 
@@ -175,23 +176,20 @@ impl AcousticProperties for TestElasticMedium {
         _z: f64,
         _grid: &Grid,
         _frequency: f64,
-    ) -> f64 {
-        0.0 // No absorption in test medium
+    ) -> ReciprocalLength<f64> {
+        // No absorption in test medium
+        ReciprocalLength::from_base(0.0)
     }
 
-    fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        3.5 // Default B/A for water-like media
-    }
-
-    fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        // Acoustic diffusivity = thermal diffusivity / c²
-        let thermal_diff = self.thermal_diffusivity(x, y, z, grid).into_base();
-        // Convert coordinates to indices (simplified for test)
-        let i = (x / grid.dx) as usize;
-        let j = (y / grid.dy) as usize;
-        let k = (z / grid.dz) as usize;
-        let c = self.sound_speed(i, j, k).into_base();
-        thermal_diff / (c * c)
+    fn nonlinearity_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> Dimensionless<f64> {
+        // Default B/A for water-like media
+        Dimensionless::from_base(3.5)
     }
 }
 
@@ -255,8 +253,14 @@ impl ThermalField for TestElasticMedium {
 // Medium trait is automatically implemented via blanket impl
 
 impl MediumOpticalProperties for TestElasticMedium {
-    fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.01
+    fn optical_absorption_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> ReciprocalLength<f64> {
+        ReciprocalLength::from_base(0.01)
     }
 
     fn optical_reduced_scattering_coefficient(
@@ -277,24 +281,30 @@ impl ViscousProperties for TestElasticMedium {
 }
 
 impl BubbleProperties for TestElasticMedium {
-    fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.0728 // N/m for water
+    fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> SurfaceTension<f64> {
+        SurfaceTension::from_base(0.0728) // N/m for water
     }
 
-    fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        101325.0 // Pa (1 atm)
+    fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Pressure<f64> {
+        Pressure::from_base(101325.0) // Pa (1 atm)
     }
 
-    fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        2338.0 // Pa for water at 20°C
+    fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Pressure<f64> {
+        Pressure::from_base(2338.0) // Pa for water at 20°C
     }
 
-    fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        1.4 // Air
+    fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Dimensionless<f64> {
+        Dimensionless::from_base(1.4) // Air
     }
 
-    fn gas_diffusion_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        2e-9 // m²/s for air in water
+    fn gas_diffusion_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> AreaPerTime<f64> {
+        AreaPerTime::from_base(2e-9) // m²/s for air in water
     }
 }
 

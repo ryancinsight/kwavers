@@ -8,6 +8,7 @@
 //! that column-slicing adaptation; the physics and finite-difference
 //! numerics live entirely in `autodiff_utils::elastic`.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
@@ -67,14 +68,18 @@ where
         combined[row * 3 + 1] = x_slice[row];
         combined[row * 3 + 2] = y_slice[row];
     }
-    let input = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &combined, &backend);
+    let input = be(coeus_tensor::Tensor::from_slice_on(
+        vec![batch, 3],
+        &combined,
+        &backend,
+    ))?;
 
     let forward_fn =
         |combined_input: &Var<f32, B>| -> kwavers_core::error::KwaversResult<Var<f32, B>> {
             let n = combined_input.tensor.shape()[0];
-            let t = coeus_autograd::slice(combined_input, &[(0, n), (0, 1)]);
-            let x = coeus_autograd::slice(combined_input, &[(0, n), (1, 2)]);
-            let y = coeus_autograd::slice(combined_input, &[(0, n), (2, 3)]);
+            let t = be(coeus_autograd::slice(combined_input, &[(0, n), (0, 1)]))?;
+            let x = be(coeus_autograd::slice(combined_input, &[(0, n), (1, 2)]))?;
+            let y = be(coeus_autograd::slice(combined_input, &[(0, n), (2, 3)]))?;
             model.forward(&x, &y, &t)
         };
 

@@ -5,6 +5,7 @@
 //! shape `[batch, 3]`. All inputs and outputs are caller-normalised
 //! to `[-1, 1]` to match `tanh` activation dynamics.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use coeus_nn::{Linear, Module};
 
@@ -68,13 +69,19 @@ where
     /// Returns `KwaversError::InvalidInput` via
     /// [`ParamFieldPINNConfig::validate`] when the config is malformed
     /// (empty hidden stack, zero-width layer, non-positive lr, etc.).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `hidden_layers` is empty (`validate()` rejects such
+    /// configs first) or if the `last()` non-empty expectation is
+    /// violated.
     pub fn new(config: &ParamFieldPINNConfig) -> KwaversResult<Self> {
         config.validate()?;
 
         let first_hidden = config.hidden_layers[0];
         let input_layer = Linear::new(INPUT_DIM, first_hidden, true)
             .map_err(|error| crate::inverse::pinn::layer_construction_failed("input", error))?;
-        let input_act = DynamicTanh::new();
+        let input_act = DynamicTanh::new()?;
 
         let mut hidden_layers = Vec::with_capacity((config.hidden_layers.len()).saturating_sub(1));
         let mut hidden_acts = Vec::with_capacity((config.hidden_layers.len()).saturating_sub(1));
@@ -87,7 +94,7 @@ where
                     crate::inverse::pinn::layer_construction_failed("hidden", error)
                 })?,
             );
-            hidden_acts.push(DynamicTanh::new());
+            hidden_acts.push(DynamicTanh::new()?);
         }
 
         let last_hidden = *config
@@ -166,15 +173,21 @@ where
     /// Forward pass on a batch of pre-concatenated inputs.
     ///
     /// `input` shape `[batch, 5]`, output shape `[batch, 3]`.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by the layer
+    ///   forwards (labelled input/hidden/output) and autograd ops.
+    ///
     pub fn forward(&self, input: &Var<f32, B>) -> KwaversResult<Var<f32, B>> {
         let input_projection = map_forward(
             self.input_layer.forward(input),
             "field-surrogate input layer",
         )?;
-        let mut h = self.input_act.forward(&input_projection);
+        let mut h = self.input_act.forward(&input_projection)?;
         for (layer, act) in self.hidden_layers.iter().zip(self.hidden_acts.iter()) {
             let projection = map_forward(layer.forward(&h), "field-surrogate hidden layer")?;
-            h = act.forward(&projection);
+            h = act.forward(&projection)?;
         }
         // Linear output (no activation): regression head; caller maps
         // the [-1, 1]-normalised output back to physical units using
@@ -187,6 +200,12 @@ where
 
     /// Convenience overload accepting the five input columns
     /// separately. Concatenates and dispatches to `forward`.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the concatenation
+    ///   or from [`Self::forward`].
+    ///
     pub fn forward_xyz_params(
         &self,
         x: &Var<f32, B>,
@@ -195,7 +214,7 @@ where
         f0: &Var<f32, B>,
         pnp: &Var<f32, B>,
     ) -> KwaversResult<Var<f32, B>> {
-        let input = coeus_autograd::cat(&[x, y, z, f0, pnp], 1);
+        let input = be(coeus_autograd::cat(&[x, y, z, f0, pnp], 1))?;
         self.forward(&input)
     }
 }

@@ -14,6 +14,7 @@
 //! envelope amplitudes and reused across all batches so the
 //! normalisation is consistent.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -82,6 +83,12 @@ impl KernelCubeSampler {
     /// at inference time — it must match the planner's expected
     /// input range. Pass `None` to derive it from the kernels'
     /// largest spatial extent.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the default linear-transform construction fails;
+    /// that path is an internal invariant (explicit transforms go
+    /// through [`Self::with_transforms`], which returns `Err`).
     pub fn new(kernels: &[FocalKernel], coord_halves_override: Option<CoordHalves>) -> Self {
         // Default construction uses the legacy linear transform so
         // existing tests and downstream callers keep their semantics.
@@ -151,7 +158,7 @@ impl KernelCubeSampler {
         let output_scales = OutputScales {
             p_min_pa: p_max_pa,
             p_max_pa,
-            p_rms_pa: p_max_pa * 0.7, // typical p_rms ≈ p_max / sqrt(2)
+            p_rms_pa: p_max_pa * 0.7, // typical p_rms ≈ p_max / be(sqrt(2))?
         };
 
         // Per-channel transforms: default to the legacy linear divide
@@ -351,11 +358,17 @@ impl KernelCubeSampler {
     ///
     /// Returns inputs `[batch, 5]`, targets `[batch, 3]`, and per-
     /// sample physical `f0` `[batch]` for the Helmholtz residual.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the batch tensor
+    ///   constructions.
+    ///
     pub fn batch<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         step: u64,
         batch_size: usize,
-    ) -> TrainingBatch<B> {
+    ) -> KwaversResult<TrainingBatch<B>> {
         let mut rng = StdRng::seed_from_u64(step);
         let mut input_buf = Vec::with_capacity(batch_size * 5);
         let mut target_buf = Vec::with_capacity(batch_size * 3);
@@ -370,23 +383,39 @@ impl KernelCubeSampler {
             group_buf.push(self.group_ids[idx]);
         }
         let backend = B::default();
-        let inputs = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 5], &input_buf, &backend),
+        let inputs = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 5],
+                &input_buf,
+                &backend,
+            ))?,
             false,
-        );
-        let targets = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 3], &target_buf, &backend),
+        ))?;
+        let targets = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 3],
+                &target_buf,
+                &backend,
+            ))?,
             false,
-        );
-        let f0_phys_hz = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size], &f0_buf, &backend),
+        ))?;
+        let f0_phys_hz = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size],
+                &f0_buf,
+                &backend,
+            ))?,
             false,
-        );
-        let group_ids = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size], &group_buf, &backend),
+        ))?;
+        let group_ids = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size],
+                &group_buf,
+                &backend,
+            ))?,
             false,
-        );
-        TrainingBatch {
+        ))?;
+        Ok(TrainingBatch {
             inputs,
             targets,
             f0_phys_hz,
@@ -398,7 +427,7 @@ impl KernelCubeSampler {
                 self.coord_halves.hz_m,
             ),
             p_max_scale_pa: self.output_scales.p_max_pa,
-        }
+        })
     }
 
     /// Number of distinct source-kernel groups in the flat dataset.

@@ -8,7 +8,9 @@ use crate::{
     acoustic::AcousticProperties,
     core::{ArrayAccess, CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
 };
-use aequitas::systems::si::quantities::{Dimensionless, MassDensity, ReciprocalLength, Velocity};
+use aequitas::systems::si::quantities::{
+    Dimensionless, Frequency, MassDensity, ReciprocalLength, Velocity,
+};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 
@@ -43,8 +45,8 @@ impl CoreMedium for HeterogeneousMedium {
     }
 
     /// Get reference frequency for absorption calculations
-    fn reference_frequency(&self) -> f64 {
-        self.reference_frequency
+    fn reference_frequency(&self) -> Frequency<f64> {
+        Frequency::from_base(self.reference_frequency)
     }
 
     /// Check if medium properties are spatially varying
@@ -107,25 +109,39 @@ impl AcousticProperties for HeterogeneousMedium {
     ///   α(f) = α₀_Np · (f / f_ref)^y
     /// ```
     ///
-    /// where α₀_Np is the reference absorption in Np/m (converted from
-    /// dB/(MHz^y cm) via `DB_TO_NP * 100 * f_ref_MHz^y`), and y is the
+    /// where α₀_Np is the reference absorption in Np/m stored in
+    /// `self.absorption` (dB prefactors convert `× DB_TO_NP × 100` at every
+    /// fill; see the storage convention in `crate::core`), and y is the
     /// per-voxel power-law exponent stored in `self.alpha_power`.  Both α₀
     /// and y are trilinearly interpolated when `use_trilinear_interpolation`
     /// is set.
-    fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
+    fn absorption_coefficient(
+        &self,
+        x: f64,
+        y: f64,
+        z: f64,
+        grid: &Grid,
+        frequency: f64,
+    ) -> ReciprocalLength<f64> {
         let base_absorption = self.lookup_field(&self.absorption, x, y, z, grid);
         let exponent = self.lookup_field(&self.alpha_power, x, y, z, grid);
         let freq_ratio = frequency / self.reference_frequency;
-        base_absorption * freq_ratio.powf(exponent)
+        // Storage is already Np/m at the reference frequency (storage
+        // convention in `crate::core`); scale to the requested frequency
+        // here (Szabo 1994).
+        ReciprocalLength::from_base(base_absorption * freq_ratio.powf(exponent))
     }
 
-    /// Power-law prefactor α₀ [dB/(MHz^y·cm)] at the given continuous coordinates.
+    /// Power-law prefactor α₀ in Np/m at the 1 MHz reference, at the given
+    /// continuous coordinates.
     ///
-    /// Returns the spatially interpolated absorption prefactor from `self.absorption`.
-    /// The default trait implementation returns 0.0 (lossless), so this override is
-    /// required for `effective_alpha_db` in the solver to pick up the medium's field.
-    fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.lookup_field(&self.absorption, x, y, z, grid)
+    /// Returns the spatially interpolated absorption prefactor from
+    /// `self.absorption`, which stores Np/m (dB inputs convert at every fill;
+    /// see the storage convention in `crate::core`). The default trait
+    /// implementation returns 0 (lossless), so this override is required for
+    /// the solver to pick up the medium's field.
+    fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ReciprocalLength<f64> {
+        ReciprocalLength::from_base(self.lookup_field(&self.absorption, x, y, z, grid))
     }
 
     /// Per-voxel power-law exponent y at the given continuous coordinates.
@@ -134,14 +150,5 @@ impl AcousticProperties for HeterogeneousMedium {
     /// coefficient (e.g. fractional-Laplacian PSTD absorber).
     fn alpha_power(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         self.lookup_field(&self.alpha_power, x, y, z, grid)
-    }
-
-    /// Get acoustic diffusivity at continuous coordinates
-    fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let sound_speed = self.lookup_field(&self.sound_speed, x, y, z, grid);
-        let density = self.lookup_field(&self.density, x, y, z, grid);
-        // Acoustic diffusivity: D = c²/ρ (classical fluid mechanics formula)
-        // Exact for homogeneous fluids, per Morse & Ingard (1968) "Theoretical Acoustics"
-        sound_speed * sound_speed / density
     }
 }

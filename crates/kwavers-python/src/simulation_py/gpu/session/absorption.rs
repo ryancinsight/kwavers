@@ -1,5 +1,6 @@
 //! Host power-law absorption operators of the GPU PSTD session.
 
+use kwavers_core::constants::DB_TO_NP;
 use kwavers_gpu::pstd_gpu::{power_law_operators, PowerLawOperators};
 use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::config::PowerLawDispersion;
@@ -13,7 +14,10 @@ use pyo3::prelude::*;
 ///
 /// `absorption` is dB/(MHz^y cm) per voxel, shaped like `grid`; its logical
 /// (C) order is the `[ix][iy][iz]` flat order of `c0_flat`, whatever the
-/// array's memory layout.
+/// array's memory layout. The k-Wave dB field is converted once to the SI
+/// base prefactor (Np/m at 1 MHz, before the reference-frequency power) at
+/// this boundary, matching the Rust runner's resolver, and the shared seam
+/// applies the `(1/ω_ref)^y` factor at use.
 ///
 /// # Errors
 /// Raises `ValueError` when the field shape differs from the grid or the
@@ -37,7 +41,9 @@ pub(super) fn build_absorption_kernels(
             field.dim()
         )));
     }
-    let coefficients: Vec<f64> = field.iter().copied().collect();
+    // User boundary is k-Wave dB; the seam takes the SI base prefactor, the
+    // same `dB * DB_TO_NP * 100` the Rust runner's resolver stores.
+    let coefficients: Vec<f64> = field.iter().map(|&db| db * DB_TO_NP * 100.0).collect();
     power_law_operators(grid, alpha_power, dispersion, c0_flat, |flat| {
         coefficients[flat]
     })
@@ -48,9 +54,10 @@ pub(super) fn build_absorption_kernels(
 mod tests {
     use super::build_absorption_kernels;
     use eunomia::FloatElement;
+    use kwavers_core::constants::DB_TO_NP;
+    use kwavers_core::constants::{acoustic_parameters::REFERENCE_FREQUENCY_HZ, numerical::TWO_PI};
     use kwavers_gpu::pstd_gpu::{power_law_operators, PowerLawOperators};
     use kwavers_grid::Grid;
-    use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
     use kwavers_solver::forward::pstd::config::PowerLawDispersion::{Causal, Omitted};
     use numpy::ndarray::Array3;
     use pyo3::exceptions::PyValueError;
@@ -81,10 +88,13 @@ mod tests {
         let (grid, field, c0) = (grid(), field(), sound_speed());
         let built =
             build_absorption_kernels(&grid, Some(field.view()), &c0, 1.5, Causal).expect("built");
-        // The shared builder reads the field by flat C-order index.
+        // The shared builder reads the field by flat C-order index; the direct
+        // call passes the same boundary-converted SI base prefactors.
         let flat: Vec<f64> = field.iter().copied().collect();
-        let direct =
-            power_law_operators(&grid, 1.5, Causal, &c0, |index| flat[index]).expect("direct");
+        let direct = power_law_operators(&grid, 1.5, Causal, &c0, |index| {
+            flat[index] * DB_TO_NP * 100.0
+        })
+        .expect("direct");
         assert_eq!(built, direct);
         assert!(built.tau.windows(2).any(|pair| pair[0] != pair[1]));
     }
@@ -106,17 +116,19 @@ mod tests {
     }
 
     /// τ = −2 α₀ c₀^(y−1) = −2 α₀ at y = 1, where c₀^0 = 1 exactly, and
-    /// η = 0 without dispersion. α₀ is the shared dB-to-neper conversion of
-    /// each voxel's own coefficient, so the f32 store is the same rounding of
-    /// the same f64.
+    /// η = 0 without dispersion. α₀ is the boundary SI base of each voxel's
+    /// own coefficient times the reference-frequency power, in the seam's
+    /// order (reassociation differs from the one-shot conversion by up to one
+    /// f64 ulp), so the f32 store is the same rounding of the same f64.
     #[test]
     fn unit_exponent_without_dispersion_has_the_closed_form_tau_and_zero_eta() {
         let (grid, field, c0) = (grid(), field(), sound_speed());
         let built =
             build_absorption_kernels(&grid, Some(field.view()), &c0, 1.0, Omitted).expect("built");
         assert!(built.eta.iter().all(|&eta| eta == 0.0));
+        let inv_omega_ref = 1.0 / (TWO_PI * REFERENCE_FREQUENCY_HZ);
         for (flat, (&tau, &coefficient)) in built.tau.iter().zip(field.iter()).enumerate() {
-            let alpha_0 = power_law_db_cm_to_np_omega_m(coefficient, 1.0);
+            let alpha_0 = coefficient * DB_TO_NP * 100.0 * inv_omega_ref.powf(1.0);
             assert!(alpha_0 > 0.0);
             assert_eq!(tau, f32::from_f64(-2.0 * alpha_0), "voxel {flat}");
         }

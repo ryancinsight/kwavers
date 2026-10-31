@@ -1,6 +1,7 @@
 //! Complete Epstein–Plesset gas-diffusion dissolution of a free bubble.
 
 use super::traits::{sealed, DissolutionModel, GasDiffusionParams};
+use aequitas::systems::si::quantities::Velocity;
 use std::f64::consts::PI;
 
 /// Epstein–Plesset (1950) dissolution model for a free gas bubble.
@@ -64,7 +65,7 @@ impl EpsteinPlessetDissolution {
 impl sealed::Sealed for EpsteinPlessetDissolution {}
 
 impl DissolutionModel for EpsteinPlessetDissolution {
-    fn radius_rate(&self, radius_m: f64, time_s: f64) -> f64 {
+    fn radius_rate(&self, radius_m: f64, time_s: f64) -> Velocity<f64> {
         let r = radius_m.max(1e-15);
         let p = &self.params;
         let st = if self.surface_tension {
@@ -86,7 +87,7 @@ impl DissolutionModel for EpsteinPlessetDissolution {
             0.0
         };
         let geom = 1.0 / r + transient;
-        -p.rate_scale() * (numerator / curvature) * geom
+        Velocity::from_base(-p.rate_scale() * (numerator / curvature) * geom)
     }
 
     fn params(&self) -> &GasDiffusionParams {

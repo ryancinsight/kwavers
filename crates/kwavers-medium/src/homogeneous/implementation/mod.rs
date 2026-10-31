@@ -121,7 +121,8 @@ impl HomogeneousMedium {
             grid_shape: [grid.nx, grid.ny, grid.nz],
         }
     }
-    /// Set acoustic properties.
+    /// Set acoustic properties: bsorption_alpha is the Szabo power-law
+    /// prefactor α₀ in dB/(cm·MHz^y) at the 1 MHz reference, bsorption_power is y.
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///

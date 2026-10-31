@@ -1,6 +1,7 @@
 use super::{
     SourceFeatures, TrainingData, TransferLearner, TransferLearningStats, TransferMetrics,
 };
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -37,11 +38,11 @@ where
         let target_model = self.initialize_target_model(&source_features)?;
 
         let initial_accuracy =
-            self.evaluate_accuracy(&target_model, target_geometry, target_conditions)?;
+            Self::evaluate_accuracy(&target_model, target_geometry, target_conditions)?;
         let (final_model, convergence_epochs) =
             self.fine_tune_model(target_model, target_geometry, target_conditions)?;
         let final_accuracy =
-            self.evaluate_accuracy(&final_model, target_geometry, target_conditions)?;
+            Self::evaluate_accuracy(&final_model, target_geometry, target_conditions)?;
 
         let training_time = start_time.elapsed();
 
@@ -83,8 +84,8 @@ where
         let mut _layer_importance = Vec::new();
 
         for param in &params {
-            let squared = coeus_autograd::mul(param, param);
-            let magnitude_var = coeus_autograd::sqrt(&coeus_autograd::sum(&squared));
+            let squared = be(coeus_autograd::mul(param, param))?;
+            let magnitude_var = be(coeus_autograd::sqrt(&be(coeus_autograd::sum(&squared))?))?;
             let magnitude: f32 = magnitude_var.tensor.as_slice()[0];
             _weight_magnitudes.push(magnitude);
             _layer_importance.push(magnitude * 0.5);
@@ -123,7 +124,7 @@ where
         let mut convergence_epochs = 0;
 
         for epoch in 0..self.config.fine_tune_epochs {
-            let training_data = self.generate_training_data(target_geometry, target_conditions)?;
+            let training_data = Self::generate_training_data(target_geometry, target_conditions)?;
 
             let current_accuracy = self.fine_tune_step(&mut model, &training_data)?;
 
@@ -152,11 +153,10 @@ where
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn generate_training_data(
-        &self,
         geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         _conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
     ) -> KwaversResult<TrainingData> {
-        let collocation_points = self.generate_collocation_points(geometry);
+        let collocation_points = Self::generate_collocation_points(geometry);
         if collocation_points.is_empty() {
             return Err(KwaversError::InvalidInput(
                 "Failed to generate any collocation points inside target geometry".to_string(),
@@ -168,7 +168,6 @@ where
 
     /// Generate collocation points within geometry
     pub(super) fn generate_collocation_points(
-        &self,
         geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
     ) -> Vec<(f64, f64, f64)> {
         let mut points = Vec::new();
@@ -209,28 +208,43 @@ where
         }
 
         let batch_size = x_vec.len();
-        let x_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &x_vec, &backend),
+        let x_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 1],
+                &x_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let y_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &y_vec, &backend),
+        ))?;
+        let y_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 1],
+                &y_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let t_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &t_vec, &backend),
+        ))?;
+        let t_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 1],
+                &t_vec,
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
 
         for p in model.parameters() {
-            p.zero_grad();
+            be(p.zero_grad())?;
         }
 
         let pde_residuals =
             model.compute_pde_residual(&x_var, &y_var, &t_var, self.config.wave_speed)?;
 
-        let squared = coeus_autograd::mul(&pde_residuals, &pde_residuals);
-        let total_loss = coeus_autograd::scalar_mul(&coeus_autograd::mean(&squared), 1e-12);
+        let squared = be(coeus_autograd::mul(&pde_residuals, &pde_residuals))?;
+        let total_loss = be(coeus_autograd::scalar_mul(
+            &be(coeus_autograd::mean(&squared))?,
+            1e-12,
+        ))?;
 
         total_loss.backward().map_err(|error| {
             KwaversError::InternalError(format!("transfer-learning backward: {error}"))

@@ -1,8 +1,8 @@
-use kwavers_core::constants::acoustic_parameters::{NP_TO_DB, WATER_ABSORPTION_ALPHA_0};
+use kwavers_core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0;
 use kwavers_core::constants::fundamental::{
     C_WATER, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_TISSUE,
 };
-use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
+use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::tissue_acoustics::{
     B_OVER_A_BRAIN, B_OVER_A_FAT, B_OVER_A_KIDNEY, B_OVER_A_LIVER, B_OVER_A_SOFT_TISSUE,
     B_OVER_A_WATER, DENSITY_BRAIN, DENSITY_FAT, DENSITY_KIDNEY, DENSITY_LIVER, SOUND_SPEED_BRAIN,
@@ -37,8 +37,11 @@ impl NonlinearParameters {
             sound_speed: SOUND_SPEED_TISSUE,
             b_over_a,
             beta: kwavers_medium::properties::coefficient_of_nonlinearity(b_over_a),
-            // 0.5 dB/(cm·MHz) → Np/(m·MHz): / CM_TO_M / NP_TO_DB (SSOT-sourced)
-            attenuation_coeff: 0.5 / CM_TO_M / NP_TO_DB,
+            // 0.5 dB/(cm·MHz^y) → Np/(m·MHz^y) at 1 MHz through the single
+            // owner beside `PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS).
+            attenuation_coeff: kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+                0.5, 1.1, 1.0e6,
+            ),
             attenuation_exponent: 1.1, // Typical for soft tissue
         }
     }
@@ -54,7 +57,11 @@ impl NonlinearParameters {
             b_over_a,
             beta: kwavers_medium::properties::coefficient_of_nonlinearity(b_over_a),
             // WATER_ABSORPTION_ALPHA_0 dB/(cm·MHz²) → Np/(m·MHz²) — water classical f² absorption.
-            attenuation_coeff: WATER_ABSORPTION_ALPHA_0 / CM_TO_M / NP_TO_DB,
+            attenuation_coeff: kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+                WATER_ABSORPTION_ALPHA_0,
+                2.0,
+                1.0e6,
+            ),
             attenuation_exponent: 2.0,
         }
     }
@@ -75,7 +82,9 @@ impl NonlinearParameters {
             sound_speed: SOUND_SPEED_LIVER,
             b_over_a: B_OVER_A_LIVER,
             beta: 1.0 + B_OVER_A_LIVER / 2.0,
-            attenuation_coeff: 0.45 / CM_TO_M / NP_TO_DB,
+            attenuation_coeff: kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+                0.45, 1.05, 1.0e6,
+            ),
             attenuation_exponent: 1.05,
         }
     }
@@ -96,7 +105,9 @@ impl NonlinearParameters {
             sound_speed: SOUND_SPEED_KIDNEY,
             b_over_a: B_OVER_A_KIDNEY,
             beta: 1.0 + B_OVER_A_KIDNEY / 2.0,
-            attenuation_coeff: 1.0 / CM_TO_M / NP_TO_DB,
+            attenuation_coeff: kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+                1.0, 1.0, 1.0e6,
+            ),
             attenuation_exponent: 1.0,
         }
     }
@@ -119,7 +130,9 @@ impl NonlinearParameters {
             sound_speed: SOUND_SPEED_BRAIN,
             b_over_a: B_OVER_A_BRAIN,
             beta: 1.0 + B_OVER_A_BRAIN / 2.0,
-            attenuation_coeff: 0.6 / CM_TO_M / NP_TO_DB,
+            attenuation_coeff: kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+                0.6, 1.3, 1.0e6,
+            ),
             attenuation_exponent: 1.3,
         }
     }
@@ -140,7 +153,9 @@ impl NonlinearParameters {
             sound_speed: SOUND_SPEED_FAT,
             b_over_a: B_OVER_A_FAT,
             beta: 1.0 + B_OVER_A_FAT / 2.0,
-            attenuation_coeff: 0.6 / CM_TO_M / NP_TO_DB,
+            attenuation_coeff: kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
+                0.6, 1.0, 1.0e6,
+            ),
             attenuation_exponent: 1.0,
         }
     }

@@ -8,11 +8,11 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearne
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn generate_task_data(&self, task: &PhysicsTask) -> KwaversResult<TaskData> {
-        let collocation_points = self.generate_collocation_points(task.geometry.as_ref());
+    pub(super) fn generate_task_data(task: &PhysicsTask) -> KwaversResult<TaskData> {
+        let collocation_points = Self::generate_collocation_points(task.geometry.as_ref());
         let boundary_data =
             Self::generate_boundary_data(task.geometry.as_ref(), &task.boundary_conditions);
-        let initial_data = self.generate_initial_conditions(task);
+        let initial_data = Self::generate_initial_conditions(task);
 
         Ok(TaskData {
             collocation_points,
@@ -22,7 +22,6 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearne
     }
 
     fn generate_collocation_points(
-        &self,
         geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
     ) -> Vec<(f64, f64, f64)> {
         let mut points = Vec::new();
@@ -214,10 +213,10 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearne
     /// Generate initial condition data for meta-learning tasks.
     ///
     /// Samples 200 points within geometry using three IC patterns (selected by task ID hash):
-    /// 1. Gaussian pulse: u₀(x,y) = A·exp(-r²/(2σ²))
+    /// 1. Gaussian pulse: u₀(x,y) = A·be(exp(-r²/(2σ²)))?
     /// 2. Plane wave: u₀(x,y) = A·sin(k·r) with wave velocity initial condition
     /// 3. Delta pulse: tighter Gaussian
-    fn generate_initial_conditions(&self, task: &PhysicsTask) -> Vec<(f64, f64, f64, f64, f64)> {
+    fn generate_initial_conditions(task: &PhysicsTask) -> Vec<(f64, f64, f64, f64, f64)> {
         let geometry = &task.geometry;
         let n_ic = 200;
         let (x_samples, y_samples) = geometry.sample_points(n_ic);

@@ -1,3 +1,4 @@
+use crate::inverse::pinn::be;
 use coeus_autograd::Parameter;
 use coeus_optim::scheduler::{CosineAnneal, SchedulerStrategy};
 use coeus_optim::{Adam, Optimizer as CoeusOptimizer};
@@ -51,7 +52,7 @@ where
         config: FieldSurrogateTrainingConfig,
     ) -> KwaversResult<Self> {
         config.validate()?;
-        let optimizer = Adam::new(
+        let optimizer = be(Adam::new(
             network
                 .parameters()
                 .into_iter()
@@ -62,7 +63,7 @@ where
             0.9,
             0.999,
             1e-5,
-        );
+        ))?;
         let lr_schedule = match config.cosine_schedule {
             Some((max_iter, min_lr)) if max_iter > 0 => Some(CosineAnneal {
                 t_max: max_iter,
@@ -84,15 +85,26 @@ where
     /// Returns the data, Helmholtz, and total loss for the batch.
     /// Mutates `self.network` in place by consuming and replacing it
     /// with the updated network from the optimiser.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from gradient reset,
+    ///   the network forward, or the loss autograd ops.
+    ///
     pub fn step(&mut self, batch: TrainingBatch<B>) -> KwaversResult<StepMetrics> {
         for p in self.network.parameters() {
-            p.zero_grad();
+            be(p.zero_grad())?;
         }
 
         let pred = self.network.forward(&batch.inputs)?;
-        let diff = coeus_autograd::sub(&pred, &batch.targets);
-        let data_loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
-        let data_loss_w = coeus_autograd::scalar_mul(&data_loss, self.config.data_weight);
+        let diff = be(coeus_autograd::sub(&pred, &batch.targets))?;
+        let data_loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &diff, &diff,
+        ))?))?;
+        let data_loss_w = be(coeus_autograd::scalar_mul(
+            &data_loss,
+            self.config.data_weight,
+        ))?;
 
         let mut total = data_loss_w;
 
@@ -129,31 +141,33 @@ where
                     }
                 }
                 let Some(idx) = best_idx else { continue };
-                let pred_sel = coeus_autograd::slice(&pred, &[(idx, idx + 1), (1, 2)]);
+                let pred_sel = be(coeus_autograd::slice(&pred, &[(idx, idx + 1), (1, 2)]))?;
                 let target_best_idx = (0..n)
                     .filter(|&i| group_ids[i] as usize == g)
                     .max_by(|&a, &b| {
                         target_pmax_vals[a * 3 + 1].total_cmp(&target_pmax_vals[b * 3 + 1])
                     })
                     .unwrap_or(idx);
-                let target_sel = coeus_autograd::slice(
+                let target_sel = be(coeus_autograd::slice(
                     &batch.targets,
                     &[(target_best_idx, target_best_idx + 1), (1, 2)],
-                );
-                let gap_g = coeus_autograd::sub(&pred_sel, &target_sel);
-                let gap_sq = coeus_autograd::mul(&gap_g, &gap_g);
+                ))?;
+                let gap_g = be(coeus_autograd::sub(&pred_sel, &target_sel))?;
+                let gap_sq = be(coeus_autograd::mul(&gap_g, &gap_g))?;
                 prom_acc = Some(match prom_acc {
-                    Some(acc) => coeus_autograd::add(&acc, &gap_sq),
+                    Some(acc) => be(coeus_autograd::add(&acc, &gap_sq))?,
                     None => gap_sq,
                 });
             }
             let denom = batch.num_groups.max(1) as f32;
             match prom_acc {
                 Some(acc) => {
-                    let prom = coeus_autograd::scalar_mul(&acc, 1.0 / denom);
-                    let prom_w =
-                        coeus_autograd::scalar_mul(&prom, self.config.peak_prominence_weight);
-                    total = coeus_autograd::add(&total, &prom_w);
+                    let prom = be(coeus_autograd::scalar_mul(&acc, 1.0 / denom))?;
+                    let prom_w = be(coeus_autograd::scalar_mul(
+                        &prom,
+                        self.config.peak_prominence_weight,
+                    ))?;
+                    total = be(coeus_autograd::add(&total, &prom_w))?;
                     prom.tensor.as_slice()[0] * self.config.peak_prominence_weight
                 }
                 None => 0.0,
@@ -169,9 +183,12 @@ where
                 self.config.helmholtz_eps_m,
                 self.config.c0_m_per_s,
             )?;
-            let helm = coeus_autograd::mean(&coeus_autograd::mul(&r, &r));
-            let helm_w = coeus_autograd::scalar_mul(&helm, self.config.helmholtz_weight);
-            total = coeus_autograd::add(&total, &helm_w);
+            let helm = be(coeus_autograd::mean(&be(coeus_autograd::mul(&r, &r))?))?;
+            let helm_w = be(coeus_autograd::scalar_mul(
+                &helm,
+                self.config.helmholtz_weight,
+            ))?;
+            total = be(coeus_autograd::add(&total, &helm_w))?;
             helm.tensor.as_slice()[0] * self.config.helmholtz_weight
         } else {
             0.0
@@ -214,6 +231,11 @@ where
     /// Run `n_steps` training iterations, calling `make_batch(step)`
     /// each iteration to produce the batch. Returns the running
     /// per-epoch metrics across the entire run.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by [`Self::step`].
+    ///
     pub fn run<F>(
         &mut self,
         n_steps: usize,

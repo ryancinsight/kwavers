@@ -1,7 +1,9 @@
 use super::super::config::PinnConfig;
 use super::core::PinnWave1D;
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use coeus_core::MoiraiBackend;
+use kwavers_core::error::KwaversResult;
 use kwavers_core::test_support::assert_invalid_input;
 use leto::Array1;
 
@@ -29,7 +31,7 @@ fn test_pinn_invalid_config_empty_layers() {
 }
 
 #[test]
-fn test_pinn_forward_pass() {
+fn test_pinn_forward_pass() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![10, 10],
@@ -37,24 +39,34 @@ fn test_pinn_forward_pass() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[0.5f32], &backend),
+    let x = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![1, 1],
+            &[0.5f32],
+            &backend,
+        ))?,
         false,
-    );
-    let t = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[0.1f32], &backend),
+    ))?;
+    let t = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![1, 1],
+            &[0.1f32],
+            &backend,
+        ))?,
         false,
-    );
+    ))?;
 
     let u = pinn.forward(&x, &t).expect("1D forward");
 
     assert_eq!(u.tensor.shape(), &[1, 1]);
     let u_val = u.tensor.as_slice()[0];
     assert!(u_val.is_finite());
+
+    Ok(())
 }
 
 #[test]
-fn test_pinn_forward_pass_batch() {
+fn test_pinn_forward_pass_batch() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![10, 10],
@@ -62,14 +74,22 @@ fn test_pinn_forward_pass_batch() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![3, 1], &[0.0f32, 0.5, 1.0], &backend),
+    let x = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![3, 1],
+            &[0.0f32, 0.5, 1.0],
+            &backend,
+        ))?,
         false,
-    );
-    let t = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![3, 1], &[0.0f32, 0.1, 0.2], &backend),
+    ))?;
+    let t = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![3, 1],
+            &[0.0f32, 0.1, 0.2],
+            &backend,
+        ))?,
         false,
-    );
+    ))?;
 
     let u = pinn.forward(&x, &t).expect("1D batch forward");
     assert_eq!(u.tensor.shape(), &[3, 1]);
@@ -77,6 +97,8 @@ fn test_pinn_forward_pass_batch() {
     for &val in u.tensor.as_slice() {
         assert!(val.is_finite());
     }
+
+    Ok(())
 }
 
 #[test]

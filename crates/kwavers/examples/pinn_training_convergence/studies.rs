@@ -5,6 +5,7 @@ use super::AutodiffBackend;
 use coeus_autograd::{mean, mul, sub, Var};
 use coeus_tensor::Tensor;
 use kwavers_core::error::KwaversError;
+use kwavers_solver::inverse::pinn::be;
 use kwavers_solver::inverse::pinn::elastic_2d::training::optimizer::PINNOptimizer;
 use kwavers_solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D};
 use std::error::Error;
@@ -49,7 +50,7 @@ pub(crate) fn train_pinn(
         return Err(KwaversError::InvalidInput("epochs must be positive".to_string()).into());
     }
 
-    let mut optimizer = PINNOptimizer::adam(&model, config.learning_rate, 0.0, 0.9, 0.999, 1e-8);
+    let mut optimizer = PINNOptimizer::adam(&model, config.learning_rate, 0.0, 0.9, 0.999, 1e-8)?;
 
     let mut t_data: Vec<f32> = Vec::with_capacity(inputs.len());
     let mut x_data: Vec<f32> = Vec::with_capacity(inputs.len());
@@ -66,30 +67,46 @@ pub(crate) fn train_pinn(
         .collect();
 
     let backend = AutodiffBackend::default();
-    let t_tensor = Var::new(
-        Tensor::from_slice_on(vec![inputs.len(), 1], t_data.as_slice(), &backend),
+    let t_tensor = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![inputs.len(), 1],
+            t_data.as_slice(),
+            &backend,
+        ))?,
         false,
-    );
-    let x_tensor = Var::new(
-        Tensor::from_slice_on(vec![inputs.len(), 1], x_data.as_slice(), &backend),
+    ))?;
+    let x_tensor = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![inputs.len(), 1],
+            x_data.as_slice(),
+            &backend,
+        ))?,
         false,
-    );
-    let y_tensor = Var::new(
-        Tensor::from_slice_on(vec![inputs.len(), 1], y_data.as_slice(), &backend),
+    ))?;
+    let y_tensor = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![inputs.len(), 1],
+            y_data.as_slice(),
+            &backend,
+        ))?,
         false,
-    );
-    let target_tensor = Var::new(
-        Tensor::from_slice_on(vec![targets.len(), 2], target_data.as_slice(), &backend),
+    ))?;
+    let target_tensor = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![targets.len(), 2],
+            target_data.as_slice(),
+            &backend,
+        ))?,
         false,
-    );
+    ))?;
 
     let start_time = Instant::now();
 
     for epoch in 0..config.epochs {
         let predicted = model.forward(&x_tensor, &y_tensor, &t_tensor)?;
-        let diff = sub(&predicted, &target_tensor);
-        let sq = mul(&diff, &diff);
-        let loss = mean(&sq);
+        let diff = be(sub(&predicted, &target_tensor))?;
+        let sq = be(mul(&diff, &diff))?;
+        let loss = be(mean(&sq))?;
         loss.backward()?;
         optimizer.step(&mut model)?;
 
@@ -200,21 +217,33 @@ pub(crate) fn validate_gradients(
     let eps = 1e-5;
     let backend = AutodiffBackend::default();
 
-    let t = Var::new(
-        Tensor::from_slice_on(vec![1, 1], [test_point[0] as f32].as_ref(), &backend),
+    let t = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [test_point[0] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
-    );
-    let x = Var::new(
-        Tensor::from_slice_on(vec![1, 1], [test_point[1] as f32].as_ref(), &backend),
+    ))?;
+    let x = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [test_point[1] as f32].as_ref(),
+            &backend,
+        ))?,
         true,
-    );
-    let y = Var::new(
-        Tensor::from_slice_on(vec![1, 1], [test_point[2] as f32].as_ref(), &backend),
+    ))?;
+    let y = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [test_point[2] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
-    );
+    ))?;
 
     let output = model.forward(&x, &y, &t)?;
-    let u_x = mean(&output);
+    let u_x = be(mean(&output))?;
     u_x.backward()?;
     let x_grad_tensor = x
         .grad()
@@ -224,35 +253,59 @@ pub(crate) fn validate_gradients(
     // Finite-difference gradient
     let mut point_plus = test_point;
     point_plus[1] += eps;
-    let t_plus = Var::new(
-        Tensor::from_slice_on(vec![1, 1], [point_plus[0] as f32].as_ref(), &backend),
+    let t_plus = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_plus[0] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
-    );
-    let x_plus = Var::new(
-        Tensor::from_slice_on(vec![1, 1], [point_plus[1] as f32].as_ref(), &backend),
+    ))?;
+    let x_plus = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_plus[1] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
-    );
-    let y_plus = Var::new(
-        Tensor::from_slice_on(vec![1, 1], [point_plus[2] as f32].as_ref(), &backend),
+    ))?;
+    let y_plus = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_plus[2] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
-    );
+    ))?;
     let output_plus = model.forward(&x_plus, &y_plus, &t_plus)?;
     let u_plus = output_plus.tensor.as_slice()[0] as f64;
 
     let mut point_minus = test_point;
     point_minus[1] -= eps;
-    let t_minus = Var::new(
-        Tensor::from_slice_on(vec![1, 1], [point_minus[0] as f32].as_ref(), &backend),
+    let t_minus = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_minus[0] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
-    );
-    let x_minus = Var::new(
-        Tensor::from_slice_on(vec![1, 1], [point_minus[1] as f32].as_ref(), &backend),
+    ))?;
+    let x_minus = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_minus[1] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
-    );
-    let y_minus = Var::new(
-        Tensor::from_slice_on(vec![1, 1], [point_minus[2] as f32].as_ref(), &backend),
+    ))?;
+    let y_minus = be(Var::new(
+        be(Tensor::from_slice_on(
+            vec![1, 1],
+            [point_minus[2] as f32].as_ref(),
+            &backend,
+        ))?,
         false,
-    );
+    ))?;
     let output_minus = model.forward(&x_minus, &y_minus, &t_minus)?;
     let u_minus = output_minus.tensor.as_slice()[0] as f64;
 

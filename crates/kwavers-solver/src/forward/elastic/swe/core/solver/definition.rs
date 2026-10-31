@@ -33,11 +33,11 @@ impl ElasticWaveSolver {
         });
         let lambda = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-            medium.lame_lambda(x, y, z, grid)
+            medium.lame_lambda(x, y, z, grid).into_base()
         });
         let mu = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-            medium.lame_mu(x, y, z, grid)
+            medium.lame_mu(x, y, z, grid).into_base()
         });
         // Compute σ_max from the medium's maximum P-wave speed so the PML
         // provides the target reflection (1e-4) regardless of wave speed.

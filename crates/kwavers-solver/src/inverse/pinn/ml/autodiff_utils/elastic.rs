@@ -4,6 +4,7 @@
 //! - Achenbach, J.D. (1973): *Wave Propagation in Elastic Solids*. North-Holland.
 //! - Raissi et al. (2019): "Physics-informed neural networks". *J. Comput. Phys.*, 378, 686–707.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 
 use super::second_order::{compute_gradient_of_divergence_2d, compute_laplacian_2d};
@@ -64,10 +65,13 @@ where
 
     let epsilon_xx = du_x_dx;
     let epsilon_yy = du_y_dy;
-    let epsilon_xy = coeus_autograd::scalar_mul(
-        &coeus_autograd::add(&Var::new(du_x_dy, false), &Var::new(du_y_dx, false)),
+    let epsilon_xy = be(coeus_autograd::scalar_mul(
+        &be(coeus_autograd::add(
+            &be(Var::new(du_x_dy, false))?,
+            &be(Var::new(du_y_dx, false))?,
+        ))?,
         0.5,
-    )
+    ))?
     .tensor;
 
     Ok((epsilon_xx, epsilon_yy, epsilon_xy))
@@ -118,22 +122,28 @@ where
     // Inertia: ρ ∂²u/∂t²
     let d2u_x_dt2 = compute_second_time_derivative(forward_fn.clone(), input, 0)?;
     let d2u_y_dt2 = compute_second_time_derivative(forward_fn.clone(), input, 1)?;
-    let accel_x = coeus_autograd::scalar_mul(&d2u_x_dt2, rho);
-    let accel_y = coeus_autograd::scalar_mul(&d2u_y_dt2, rho);
+    let accel_x = be(coeus_autograd::scalar_mul(&d2u_x_dt2, rho))?;
+    let accel_y = be(coeus_autograd::scalar_mul(&d2u_y_dt2, rho))?;
 
     // P-wave term: (λ + 2μ)∇(∇·u)
     let (d_div_dx, d_div_dy) = compute_gradient_of_divergence_2d(forward_fn.clone(), input)?;
-    let p_wave_x = coeus_autograd::scalar_mul(&d_div_dx, p_wave_coeff);
-    let p_wave_y = coeus_autograd::scalar_mul(&d_div_dy, p_wave_coeff);
+    let p_wave_x = be(coeus_autograd::scalar_mul(&d_div_dx, p_wave_coeff))?;
+    let p_wave_y = be(coeus_autograd::scalar_mul(&d_div_dy, p_wave_coeff))?;
 
     // S-wave term: μ∇²u
     let lap_u_x = compute_laplacian_2d(forward_fn.clone(), input, 0)?;
     let lap_u_y = compute_laplacian_2d(forward_fn, input, 1)?;
-    let s_wave_x = coeus_autograd::scalar_mul(&lap_u_x, mu);
-    let s_wave_y = coeus_autograd::scalar_mul(&lap_u_y, mu);
+    let s_wave_x = be(coeus_autograd::scalar_mul(&lap_u_x, mu))?;
+    let s_wave_y = be(coeus_autograd::scalar_mul(&lap_u_y, mu))?;
 
-    let residual_x = coeus_autograd::sub(&coeus_autograd::sub(&accel_x, &p_wave_x), &s_wave_x);
-    let residual_y = coeus_autograd::sub(&coeus_autograd::sub(&accel_y, &p_wave_y), &s_wave_y);
+    let residual_x = be(coeus_autograd::sub(
+        &be(coeus_autograd::sub(&accel_x, &p_wave_x))?,
+        &s_wave_x,
+    ))?;
+    let residual_y = be(coeus_autograd::sub(
+        &be(coeus_autograd::sub(&accel_y, &p_wave_y))?,
+        &s_wave_y,
+    ))?;
 
     Ok((residual_x, residual_y))
 }

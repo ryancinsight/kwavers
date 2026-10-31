@@ -6,7 +6,7 @@
 use aequitas::systems::si::quantities::{
     Dimensionless, EnergyPerVolume, Length, Pressure, ReciprocalLength, Time,
 };
-use aequitas::systems::si::units::{JoulePerCubicMeter, Pascal, PerMeter};
+use aequitas::systems::si::units::{JoulePerCubicMeter, Meter, Pascal, PerMeter};
 use leto::{Array1, Array2};
 use serde::{Deserialize, Serialize};
 
@@ -26,9 +26,13 @@ pub struct GeometryState {
 }
 
 impl GeometryState {
-    /// Create a new geometry state for a flat array
+    /// Create a new geometry state for a flat array.
+    ///
+    /// `spacing` is the element pitch as a typed length; scalar extraction
+    /// happens once here at the mesh-construction boundary.
     #[must_use]
-    pub fn flat_array(num_elements: usize, spacing: f64) -> Self {
+    pub fn flat_array(num_elements: usize, spacing: Length<f64>) -> Self {
+        let spacing = spacing.in_unit::<Meter>();
         let mut positions = Array2::zeros([num_elements, 3]);
         let mut normals = Array2::zeros([num_elements, 3]);
 
@@ -169,7 +173,7 @@ mod tests {
 
     #[test]
     fn flat_geometry_has_zero_inverse_length_curvature() {
-        let geometry = GeometryState::flat_array(5, 1.0e-3);
+        let geometry = GeometryState::flat_array(5, Length::from_unit::<Meter>(1.0e-3));
 
         assert_eq!(geometry.calculate_curvature().in_unit::<PerMeter>(), 0.0);
     }

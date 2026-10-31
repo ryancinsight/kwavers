@@ -17,6 +17,7 @@
 use crate::heterogeneous::HeterogeneousMedium;
 use crate::HomogeneousMedium;
 use kwavers_core::constants::hu_mapping::HuAcousticModel;
+use kwavers_core::constants::DB_TO_NP;
 use kwavers_core::error::{KwaversError, KwaversResult, MediumError};
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -87,12 +88,14 @@ impl<'a> CtMediumBuilder<'a> {
             })?;
 
         // Overwrite every acoustic field with the per-voxel HU mapping. These are
-        // exactly the fields the solver's acoustic traits read: `absorption` is
-        // the α₀ prefactor (alpha_coefficient), `alpha_power` the exponent y, and
+        // exactly the fields the solver's acoustic traits read: `absorption`
+        // stores Np/m at the reference frequency (the HU model's dB α₀
+        // prefactor converted here; see the storage convention in
+        // `crate::core`), `alpha_power` the exponent y, and
         // `nonlinearity`/`b_a` the B/A parameter.
         medium.density = self.ct.mapv(|hu| model.density(hu));
         medium.sound_speed = self.ct.mapv(|hu| model.sound_speed(hu));
-        medium.absorption = self.ct.mapv(|hu| model.absorption(hu));
+        medium.absorption = self.ct.mapv(|hu| model.absorption(hu) * DB_TO_NP * 100.0);
         medium.alpha0 = medium.absorption.clone();
         medium.alpha_power = self.ct.mapv(|hu| model.power_law_exponent(hu));
         medium.nonlinearity = self.ct.mapv(|hu| model.nonlinearity(hu));
@@ -175,8 +178,12 @@ mod tests {
         ct[[3, 3, 3]] = 1000.0;
         let medium = CtMediumBuilder::new(&ct, &grid).build().unwrap();
         let f = 1.0e6;
-        let a_soft = medium.absorption_coefficient(0.0, 0.0, 0.0, &grid, f);
-        let a_bone = medium.absorption_coefficient(3.0e-3, 3.0e-3, 3.0e-3, &grid, f);
+        let a_soft = medium
+            .absorption_coefficient(0.0, 0.0, 0.0, &grid, f)
+            .into_base();
+        let a_bone = medium
+            .absorption_coefficient(3.0e-3, 3.0e-3, 3.0e-3, &grid, f)
+            .into_base();
         assert!(
             a_bone > a_soft && a_soft >= 0.0,
             "soft={a_soft} bone={a_bone}"

@@ -8,6 +8,7 @@ use crate::{
 };
 use aequitas::systems::si::quantities::{Dimensionless, MassDensity, ReciprocalLength, Velocity};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
+use kwavers_core::constants::DB_TO_NP;
 use kwavers_core::error::{KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use leto::{Array3, ArrayView3, ArrayViewMut3};
@@ -25,8 +26,8 @@ mod viscous;
 /// - Per-voxel tissue type mapping with spatial region assignment
 /// - Frequency-dependent absorption: `absorption_coefficient(f)` returns α(f) in Np/m
 ///   via the power law α(f) = α₀·(f/1 MHz)^y (Szabo 1994 eq. 2)
-/// - `alpha_coefficient()` returns the raw α₀ prefactor [dB/(MHz^y·cm)] for use by
-///   the PSTD fractional Laplacian operator (which handles unit conversion internally)
+/// - `alpha_coefficient()` returns the α₀ prefactor in Np/m at 1 MHz for use by
+///   the PSTD fractional Laplacian operator (no dB conversion downstream)
 ///
 /// ## Not yet implemented
 /// - Temperature-dependent attenuation: α(T) = α₀·(1 + γ(T−T₀))
@@ -44,7 +45,8 @@ pub struct HeterogeneousTissueMedium {
     /// Grid structure
     pub(super) grid: Grid,
 
-    // Cached property arrays (required for ArrayAccess)
+    // Cached property arrays (required for ArrayAccess). `absorption` stores
+    // Np/m at the 1 MHz reference (storage convention in `crate::core`).
     pub(super) density: Array3<f64>,
     pub(super) sound_speed: Array3<f64>,
     pub(super) absorption: Array3<f64>,
@@ -74,7 +76,9 @@ impl HeterogeneousTissueMedium {
 
         let density = Array3::from_elem(shape, props.density.max(MIN_PHYSICAL_DENSITY));
         let sound_speed = Array3::from_elem(shape, props.sound_speed.max(MIN_PHYSICAL_SOUND_SPEED));
-        let absorption = Array3::from_elem(shape, props.alpha_0);
+        // Np/m at the 1 MHz reference: the dB α₀ prefactor converted once here
+        // (storage convention in `crate::core`).
+        let absorption = Array3::from_elem(shape, props.alpha_0 * DB_TO_NP * 100.0);
         let nonlinearity = Array3::from_elem(shape, props.nonlinearity);
 
         let temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K); // 37°C default
@@ -126,7 +130,7 @@ impl HeterogeneousTissueMedium {
             if let Some(props) = TISSUE_PROPERTIES.get(tissue_type) {
                 self.density[[i, j, k]] = props.density.max(MIN_PHYSICAL_DENSITY);
                 self.sound_speed[[i, j, k]] = props.sound_speed.max(MIN_PHYSICAL_SOUND_SPEED);
-                self.absorption[[i, j, k]] = props.alpha_0;
+                self.absorption[[i, j, k]] = props.alpha_0 * DB_TO_NP * 100.0;
                 self.nonlinearity[[i, j, k]] = props.nonlinearity;
             }
         }

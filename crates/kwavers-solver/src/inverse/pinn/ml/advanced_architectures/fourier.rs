@@ -1,6 +1,8 @@
 //! `FourierFeatures`: frequency-domain input embedding for PINNs.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 
 /// Fourier feature embedding for improved frequency representation.
 ///
@@ -25,22 +27,28 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> FourierFeatures<B> {
     /// Create Fourier feature embedding.
-    pub fn new(input_dim: usize, num_features: usize, scale: f32) -> Self {
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the frequency
+    ///   tensor construction.
+    ///
+    pub fn new(input_dim: usize, num_features: usize, scale: f32) -> KwaversResult<Self> {
         let backend = B::default();
         let freq_data: Vec<f32> = (0..input_dim * num_features)
             .map(|_| rand::random::<f32>() * scale)
             .collect();
 
-        let frequencies = Var::new(
-            coeus_tensor::Tensor::from_slice_on(
+        let frequencies = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
                 vec![input_dim, num_features],
                 &freq_data,
                 &backend,
-            ),
+            ))?,
             true,
-        );
+        ))?;
 
-        Self { frequencies, scale }
+        Ok(Self { frequencies, scale })
     }
 
     /// Flatten the learnable frequency parameters.
@@ -57,17 +65,23 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> FourierFea
     ///
     /// Maps `x` ∈ ℝ^{batch × input_dim} to
     /// `[cos(scale·x·f), sin(scale·x·f)]` ∈ ℝ^{batch × 2·num_features}.
-    pub fn forward(&self, x: &Var<f32, B>) -> Var<f32, B>
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the scale,
+    ///   matmul, cos/sin, and concat ops.
+    ///
+    pub fn forward(&self, x: &Var<f32, B>) -> KwaversResult<Var<f32, B>>
     where
         B::DeviceBuffer<f32>:
             coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
     {
-        let scaled_x = coeus_autograd::scalar_mul(x, self.scale);
-        let features = coeus_autograd::matmul(&scaled_x, &self.frequencies);
+        let scaled_x = be(coeus_autograd::scalar_mul(x, self.scale))?;
+        let features = be(coeus_autograd::matmul(&scaled_x, &self.frequencies))?;
 
-        let cos_features = coeus_autograd::cos(&features);
-        let sin_features = coeus_autograd::sin(&features);
+        let cos_features = be(coeus_autograd::cos(&features))?;
+        let sin_features = be(coeus_autograd::sin(&features))?;
 
-        coeus_autograd::cat(&[&cos_features, &sin_features], 1)
+        be(coeus_autograd::cat(&[&cos_features, &sin_features], 1))
     }
 }

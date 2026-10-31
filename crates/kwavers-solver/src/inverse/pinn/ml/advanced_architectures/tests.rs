@@ -1,6 +1,8 @@
 //! Tests for advanced PINN architectures.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 
 use super::fourier::FourierFeatures;
 use super::residual::ResidualBlock;
@@ -8,40 +10,46 @@ use super::resnet::{ResNetPINN1D, ResNetPINN2D, ResNetPINNConfig};
 
 type TestBackend = coeus_core::MoiraiBackend;
 
-fn var_row(backend: TestBackend, values: &[f32]) -> Var<f32, TestBackend> {
-    Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![1, (values.len())], values, &backend),
+fn var_row(backend: TestBackend, values: &[f32]) -> KwaversResult<Var<f32, TestBackend>> {
+    be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![1, values.len()],
+            values,
+            &backend,
+        ))?,
         false,
-    )
+    ))
 }
 
 #[test]
-fn test_fourier_features() {
+fn test_fourier_features() -> KwaversResult<()> {
     let backend = TestBackend::default();
-    let fourier = FourierFeatures::<TestBackend>::new(2, 10, 1.0);
+    let fourier = FourierFeatures::<TestBackend>::new(2, 10, 1.0)?;
 
-    let input = var_row(backend, &[0.5, 0.3]);
-    let output = fourier.forward(&input);
+    let input = var_row(backend, &[0.5, 0.3])?;
+    let output = fourier.forward(&input)?;
 
     // Should have 20 features (10 cos + 10 sin).
     assert_eq!(output.tensor.shape(), &[1, 20]);
+    Ok(())
 }
 
 #[test]
-fn test_residual_block() {
+fn test_residual_block() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let block = ResidualBlock::<TestBackend>::new(10, 20)
         .expect("invariant: the fixture's layer dimensions are non-zero");
 
-    let input = var_row(backend, &[0.1f32; 10]);
+    let input = var_row(backend, &[0.1f32; 10])?;
     let output = block.forward(&input).expect("residual block forward");
 
     // Should maintain input dimension.
     assert_eq!(output.tensor.shape(), &[1, 10]);
+    Ok(())
 }
 
 #[test]
-fn test_resnet_pinn_1d() {
+fn test_resnet_pinn_1d() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = ResNetPINNConfig {
         input_dim: 2,
@@ -54,15 +62,16 @@ fn test_resnet_pinn_1d() {
     let pinn = ResNetPINN1D::<TestBackend>::new(&config)
         .expect("invariant: the fixture's layer dimensions are non-zero");
 
-    let x = var_row(backend, &[0.5]);
-    let t = var_row(backend, &[0.1]);
+    let x = var_row(backend, &[0.5])?;
+    let t = var_row(backend, &[0.1])?;
     let output = pinn.forward(&x, &t).expect("1D ResNet forward");
 
     assert_eq!(output.tensor.shape(), &[1, 1]);
+    Ok(())
 }
 
 #[test]
-fn test_resnet_pinn_2d() {
+fn test_resnet_pinn_2d() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = ResNetPINNConfig {
         input_dim: 3,
@@ -75,10 +84,11 @@ fn test_resnet_pinn_2d() {
     let pinn = ResNetPINN2D::<TestBackend>::new(&config)
         .expect("invariant: the fixture's layer dimensions are non-zero");
 
-    let x = var_row(backend, &[0.5]);
-    let y = var_row(backend, &[0.3]);
-    let t = var_row(backend, &[0.1]);
+    let x = var_row(backend, &[0.5])?;
+    let y = var_row(backend, &[0.3])?;
+    let t = var_row(backend, &[0.1])?;
     let output = pinn.forward(&x, &y, &t).expect("2D ResNet forward");
 
     assert_eq!(output.tensor.shape(), &[1, 1]);
+    Ok(())
 }

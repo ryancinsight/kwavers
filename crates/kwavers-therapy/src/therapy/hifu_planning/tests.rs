@@ -5,7 +5,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-use kwavers_core::error::KwaversError;
+use kwavers_core::error::{KwaversError, ValidationError};
 use std::f64::consts::PI;
 
 #[test]
@@ -330,9 +330,12 @@ fn test_sonication_schedule_rejects_nonpositive_target_dimension() {
     let err = SonicationSchedule::plan(&target, &focal_spot, &params, params.frequency)
         .expect_err("zero target dimension must be rejected");
 
-    let KwaversError::InvalidInput(message) = err else {
-        panic!("expected InvalidInput for zero dimension");
+    let KwaversError::Validation(ValidationError::InvalidValue {
+        parameter, reason, ..
+    }) = err
+    else {
+        panic!("expected invalid-value error for zero dimension");
     };
-    assert!(message.contains("target.dimensions_mm.0"));
-    assert!(message.contains("finite and positive"));
+    assert_eq!(parameter, "target.dimensions_mm.0");
+    assert_eq!(reason, "must be finite and positive");
 }

@@ -1,4 +1,5 @@
 use super::*;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 use coeus_autograd::Var;
 
@@ -19,7 +20,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         _t: &Var<f32, B>,
         _params: &PinnDomainPhysicsParameters,
     ) -> kwavers_core::error::KwaversResult<Var<f32, B>> {
-        Ok(coeus_autograd::scalar_mul(x, 0.1))
+        be(coeus_autograd::scalar_mul(x, 0.1))
     }
     fn boundary_conditions(
         &self,

@@ -21,7 +21,7 @@ fn sampling_reproduces_medium_properties() {
     for field in [
         &fields.rho0,
         &fields.c0,
-        &fields.alpha0_db,
+        &fields.alpha0,
         &fields.alpha_power,
         &fields.nonlinearity,
     ] {
@@ -36,8 +36,8 @@ fn sampling_reproduces_medium_properties() {
                 assert_eq!(fields.rho0[index], medium.density(i, j, k).into_base());
                 assert_eq!(fields.c0[index], medium.sound_speed(i, j, k).into_base());
                 assert_eq!(
-                    fields.alpha0_db[index],
-                    medium.alpha_coefficient(x, y, z, &grid)
+                    fields.alpha0[index],
+                    medium.alpha_coefficient(x, y, z, &grid).into_base()
                 );
                 assert_eq!(
                     fields.alpha_power[index],
@@ -82,7 +82,7 @@ fn losslessness_tracks_the_absorption_prefactor() {
     let mut fields = MaterialFields::new((grid.nx, grid.ny, grid.nz));
     assert!(fields.is_lossless(), "a zeroed field set is lossless");
 
-    fields.alpha0_db[[2, 1, 0]] = 0.5;
+    fields.alpha0[[2, 1, 0]] = 0.5;
     assert!(
         !fields.is_lossless(),
         "a single absorbing cell makes the medium lossy"

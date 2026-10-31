@@ -3,6 +3,7 @@
 use leto::Array2;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::validation::{validate_nonnegative_finite, validate_positive_finite};
 
 use super::super::types::{SoundSpeedShiftConfig, SoundSpeedShiftSample};
 
@@ -15,11 +16,27 @@ pub(super) fn validate_inputs(
         .sampling
         .validate()
         .map_err(KwaversError::InvalidInput)?;
-    validate_positive_finite("reference sound speed", config.reference_sound_speed_m_s)?;
-    validate_positive_finite("spacing", config.spacing_m)?;
-    validate_nonnegative_finite("Tikhonov weight", config.tikhonov_weight)?;
-    validate_nonnegative_finite("smoothness weight", config.smoothness_weight)?;
-    validate_nonnegative_finite("sparsity weight", config.sparsity_weight)?;
+    validate_positive_finite(
+        "reference sound speed",
+        config.reference_sound_speed_m_s,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite("spacing", config.spacing_m, "must be finite and positive")?;
+    validate_nonnegative_finite(
+        "Tikhonov weight",
+        config.tikhonov_weight,
+        "must be finite and nonnegative",
+    )?;
+    validate_nonnegative_finite(
+        "smoothness weight",
+        config.smoothness_weight,
+        "must be finite and nonnegative",
+    )?;
+    validate_nonnegative_finite(
+        "sparsity weight",
+        config.sparsity_weight,
+        "must be finite and nonnegative",
+    )?;
     config
         .propagation
         .validate()
@@ -65,26 +82,6 @@ pub(super) fn validate_inputs(
         }
     }
     Ok(())
-}
-
-fn validate_positive_finite(name: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(KwaversError::InvalidInput(format!(
-            "{name} must be finite and positive, got {value}"
-        )))
-    }
-}
-
-fn validate_nonnegative_finite(name: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value >= 0.0 {
-        Ok(())
-    } else {
-        Err(KwaversError::InvalidInput(format!(
-            "{name} must be finite and nonnegative, got {value}"
-        )))
-    }
 }
 
 fn validate_point(name: &str, idx: usize, x_m: f64, y_m: f64) -> KwaversResult<()> {

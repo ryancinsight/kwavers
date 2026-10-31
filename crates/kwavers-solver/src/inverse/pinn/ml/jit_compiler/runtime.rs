@@ -104,12 +104,12 @@ impl OptimizedRuntime {
         result += self.biases[1][0];
 
         let c = kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM as f32;
-        let residual_correction = self.compute_wave_residual_jit(x, y, t, result, c);
+        let residual_correction = Self::compute_wave_residual_jit(x, y, t, result, c);
 
         output[0] = result + self.config.physics_weight * residual_correction;
     }
 
-    fn compute_wave_residual_jit(&self, x: f32, y: f32, t: f32, u: f32, c: f32) -> f32 {
+    fn compute_wave_residual_jit(x: f32, y: f32, t: f32, u: f32, c: f32) -> f32 {
         let dx = 0.01;
         let dt_step = 0.001;
 

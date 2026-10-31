@@ -2,6 +2,7 @@
 
 use super::super::config::{LossWeights2D, PinnConfig2D};
 use super::wave_speed::WaveSpeedFn;
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -57,6 +58,12 @@ where
     /// Create a new homogeneous PINN model.
     /// # Errors
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `hidden_layers` is empty; the guard above returns
+    /// `InvalidInput` first, so the indexing and `last().unwrap()`
+    /// below are unreachable on that input.
     ///
     pub fn new(config: PinnConfig2D) -> KwaversResult<Self> {
         if config.hidden_layers.is_empty() {
@@ -117,11 +124,11 @@ where
         y: &Var<f32, B>,
         t: &Var<f32, B>,
     ) -> KwaversResult<Var<f32, B>> {
-        let input = coeus_autograd::cat(&[x, y, t], 1);
+        let input = be(coeus_autograd::cat(&[x, y, t], 1))?;
         let mut h = map_forward(self.input_layer.forward(&input), "PINN 2D input layer")?;
         for layer in &self.hidden_layers {
             h = map_forward(layer.forward(&h), "PINN 2D hidden layer")?;
-            h = coeus_autograd::tanh(&h);
+            h = be(coeus_autograd::tanh(&h))?;
         }
         map_forward(self.output_layer.forward(&h), "PINN 2D output layer")
     }
@@ -188,6 +195,11 @@ where
     /// # Errors
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
+    /// # Panics
+    ///
+    /// Panics if the network output length differs from the input
+    /// length, so `from_shape_vec([n, 1], ...)` rejects the shape.
+    ///
     pub fn predict(
         &self,
         x: &Array1<f64>,
@@ -207,18 +219,30 @@ where
         let y_vec: Vec<f32> = y.iter().map(|&v| v as f32).collect();
         let t_vec: Vec<f32> = t.iter().map(|&v| v as f32).collect();
 
-        let x_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x_vec, &backend),
+        let x_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n, 1],
+                &x_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let y_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y_vec, &backend),
+        ))?;
+        let y_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n, 1],
+                &y_vec,
+                &backend,
+            ))?,
             false,
-        );
-        let t_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t_vec, &backend),
+        ))?;
+        let t_var = be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![n, 1],
+                &t_vec,
+                &backend,
+            ))?,
             false,
-        );
+        ))?;
 
         let u_var = self.forward(&x_var, &y_var, &t_var)?;
         let u_vec: Vec<f64> = u_var.tensor.as_slice().iter().map(|&v| v as f64).collect();
@@ -242,41 +266,41 @@ where
         let scale_factor = 1e-2_f32;
         let eps = base_eps * scale_factor;
 
-        let x_plus = coeus_autograd::scalar_add(x, eps);
-        let x_minus = coeus_autograd::scalar_add(x, -eps);
-        let y_plus = coeus_autograd::scalar_add(y, eps);
-        let y_minus = coeus_autograd::scalar_add(y, -eps);
-        let t_plus = coeus_autograd::scalar_add(t, eps);
-        let t_minus = coeus_autograd::scalar_add(t, -eps);
+        let x_plus = be(coeus_autograd::scalar_add(x, eps))?;
+        let x_minus = be(coeus_autograd::scalar_add(x, -eps))?;
+        let y_plus = be(coeus_autograd::scalar_add(y, eps))?;
+        let y_minus = be(coeus_autograd::scalar_add(y, -eps))?;
+        let t_plus = be(coeus_autograd::scalar_add(t, eps))?;
+        let t_minus = be(coeus_autograd::scalar_add(t, -eps))?;
 
         let u = self.forward(x, y, t)?;
-        let two_u = coeus_autograd::scalar_mul(&u, 2.0);
+        let two_u = be(coeus_autograd::scalar_mul(&u, 2.0))?;
 
         let u_xx = {
             let u_x_plus = self.forward(&x_plus, y, t)?;
             let u_x_minus = self.forward(&x_minus, y, t)?;
-            let sum = coeus_autograd::add(&u_x_plus, &u_x_minus);
-            let diff = coeus_autograd::sub(&sum, &two_u);
-            coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps))
+            let sum = be(coeus_autograd::add(&u_x_plus, &u_x_minus))?;
+            let diff = be(coeus_autograd::sub(&sum, &two_u))?;
+            be(coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps)))?
         };
 
         let u_yy = {
             let u_y_plus = self.forward(x, &y_plus, t)?;
             let u_y_minus = self.forward(x, &y_minus, t)?;
-            let sum = coeus_autograd::add(&u_y_plus, &u_y_minus);
-            let diff = coeus_autograd::sub(&sum, &two_u);
-            coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps))
+            let sum = be(coeus_autograd::add(&u_y_plus, &u_y_minus))?;
+            let diff = be(coeus_autograd::sub(&sum, &two_u))?;
+            be(coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps)))?
         };
 
         let u_tt = {
             let u_t_plus = self.forward(x, y, &t_plus)?;
             let u_t_minus = self.forward(x, y, &t_minus)?;
-            let sum = coeus_autograd::add(&u_t_plus, &u_t_minus);
-            let diff = coeus_autograd::sub(&sum, &two_u);
-            coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps))
+            let sum = be(coeus_autograd::add(&u_t_plus, &u_t_minus))?;
+            let diff = be(coeus_autograd::sub(&sum, &two_u))?;
+            be(coeus_autograd::scalar_mul(&diff, 1.0 / (eps * eps)))?
         };
 
-        let laplacian = coeus_autograd::add(&u_xx, &u_yy);
+        let laplacian = be(coeus_autograd::add(&u_xx, &u_yy))?;
 
         let x_slice = x.tensor.as_slice();
         let y_slice = y.tensor.as_slice();
@@ -286,20 +310,29 @@ where
             .collect();
 
         let backend = B::default();
-        let c_tensor =
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &c_values, &backend);
-        let c_var = Var::new(c_tensor, false);
-        let c_squared = coeus_autograd::mul(&c_var, &c_var);
+        let c_tensor = be(coeus_tensor::Tensor::from_slice_on(
+            vec![batch_size, 1],
+            &c_values,
+            &backend,
+        ))?;
+        let c_var = be(Var::new(c_tensor, false))?;
+        let c_squared = be(coeus_autograd::mul(&c_var, &c_var))?;
 
-        Ok(coeus_autograd::sub(
+        be(coeus_autograd::sub(
             &u_tt,
-            &coeus_autograd::mul(&laplacian, &c_squared),
+            &be(coeus_autograd::mul(&laplacian, &c_squared))?,
         ))
     }
 
     /// Compute physics-informed loss function.
     // Independent collocation/boundary/initial tensors plus scalar weights with
     // no cohesive sub-grouping; bundling would not clarify the call site.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] from the data/PDE/BC/IC
+    ///   loss evaluations and autograd ops.
+    ///
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::type_complexity)] // (total, data, pde, bc, ic) mirrors the previous training API 1:1
     pub fn compute_physics_loss(
@@ -323,32 +356,52 @@ where
         loss_weights: LossWeights2D,
     ) -> KwaversResult<PhysicsLossComponents<B>> {
         let u_pred_data = self.forward(x_data, y_data, t_data)?;
-        let data_diff = coeus_autograd::sub(&u_pred_data, u_data);
-        let data_loss = coeus_autograd::mean(&coeus_autograd::mul(&data_diff, &data_diff));
+        let data_diff = be(coeus_autograd::sub(&u_pred_data, u_data))?;
+        let data_loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &data_diff, &data_diff,
+        ))?))?;
 
         let residual =
             self.compute_pde_residual(x_collocation, y_collocation, t_collocation, wave_speed)?;
-        let pde_loss_raw = coeus_autograd::mean(&coeus_autograd::mul(&residual, &residual));
-        let pde_loss = coeus_autograd::scalar_mul(&pde_loss_raw, 1e-12);
+        let pde_loss_raw = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &residual, &residual,
+        ))?))?;
+        let pde_loss = be(coeus_autograd::scalar_mul(&pde_loss_raw, 1e-12))?;
 
         let u_pred_boundary = self.forward(x_boundary, y_boundary, t_boundary)?;
-        let bc_diff = coeus_autograd::sub(&u_pred_boundary, u_boundary);
-        let bc_loss = coeus_autograd::mean(&coeus_autograd::mul(&bc_diff, &bc_diff));
+        let bc_diff = be(coeus_autograd::sub(&u_pred_boundary, u_boundary))?;
+        let bc_loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &bc_diff, &bc_diff,
+        ))?))?;
 
         let u_pred_initial = self.forward(x_initial, y_initial, t_initial)?;
-        let ic_diff = coeus_autograd::sub(&u_pred_initial, u_initial);
-        let ic_loss = coeus_autograd::mean(&coeus_autograd::mul(&ic_diff, &ic_diff));
+        let ic_diff = be(coeus_autograd::sub(&u_pred_initial, u_initial))?;
+        let ic_loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+            &ic_diff, &ic_diff,
+        ))?))?;
 
-        let total_loss = coeus_autograd::add(
-            &coeus_autograd::add(
-                &coeus_autograd::scalar_mul(&data_loss, loss_weights.data as f32),
-                &coeus_autograd::scalar_mul(&pde_loss, loss_weights.pde as f32),
-            ),
-            &coeus_autograd::add(
-                &coeus_autograd::scalar_mul(&bc_loss, loss_weights.boundary as f32),
-                &coeus_autograd::scalar_mul(&ic_loss, loss_weights.initial as f32),
-            ),
-        );
+        let total_loss = be(coeus_autograd::add(
+            &be(coeus_autograd::add(
+                &be(coeus_autograd::scalar_mul(
+                    &data_loss,
+                    loss_weights.data as f32,
+                ))?,
+                &be(coeus_autograd::scalar_mul(
+                    &pde_loss,
+                    loss_weights.pde as f32,
+                ))?,
+            ))?,
+            &be(coeus_autograd::add(
+                &be(coeus_autograd::scalar_mul(
+                    &bc_loss,
+                    loss_weights.boundary as f32,
+                ))?,
+                &be(coeus_autograd::scalar_mul(
+                    &ic_loss,
+                    loss_weights.initial as f32,
+                ))?,
+            ))?,
+        ))?;
 
         Ok((total_loss, data_loss, pde_loss, bc_loss, ic_loss))
     }

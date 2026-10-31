@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::f64::consts::TAU;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::validation::validate_positive_finite;
 
 use super::geometry::CurvedArray2d;
 use super::sampling::CurvedArrayShiftScan;
@@ -11,7 +12,11 @@ use super::sampling::CurvedArrayShiftScan;
 pub(super) fn validate_array(array: &CurvedArray2d) -> KwaversResult<()> {
     validate_finite("curved-array center x", array.center_m.x_m)?;
     validate_finite("curved-array center y", array.center_m.y_m)?;
-    validate_positive("curved-array radius", array.radius_m)?;
+    validate_positive_finite(
+        "curved-array radius",
+        array.radius_m,
+        "must be finite and positive",
+    )?;
     validate_finite("curved-array first angle", array.first_angle_rad)?;
     validate_finite("curved-array angular pitch", array.angular_pitch_rad)?;
     if array.element_count < 2 {
@@ -63,16 +68,6 @@ fn validate_finite(name: &str, value: f64) -> KwaversResult<()> {
     } else {
         Err(KwaversError::InvalidInput(format!(
             "{name} must be finite, got {value}"
-        )))
-    }
-}
-
-fn validate_positive(name: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(KwaversError::InvalidInput(format!(
-            "{name} must be finite and positive, got {value}"
         )))
     }
 }

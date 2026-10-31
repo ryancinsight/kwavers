@@ -28,7 +28,9 @@ fn test_annulus_is_subset_of_bowl_same_outer_diameter() {
     let bowl_mask = bowl.get_array_binary_mask(&grid);
 
     let mut annulus = KWaveArray::new();
-    annulus.add_annular_element((cx, cy, cz), radius, inner_d, outer_d);
+    annulus
+        .add_annular_element((cx, cy, cz), radius, inner_d, outer_d)
+        .expect("valid annulus");
     let annulus_mask = annulus.get_array_binary_mask(&grid);
 
     let bowl_count: usize = bowl_mask.iter().filter(|&&b| b).count();
@@ -68,8 +70,10 @@ fn test_build_per_element_source_superposition() {
     let cz = 30.0 * dx;
 
     let mut arr = KWaveArray::new();
-    arr.add_annular_element((cx, cy, cz), 15.0e-3, 0.0, 4.0e-3);
-    arr.add_annular_element((cx, cy, cz), 15.0e-3, 6.0e-3, 10.0e-3);
+    arr.add_annular_element((cx, cy, cz), 15.0e-3, 0.0, 4.0e-3)
+        .expect("valid annulus");
+    arr.add_annular_element((cx, cy, cz), 15.0e-3, 6.0e-3, 10.0e-3)
+        .expect("valid annulus");
     assert_eq!(arr.num_elements(), 2);
 
     let n_times = 4;
@@ -135,7 +139,9 @@ fn test_profiled_disc_enters_per_element_source_weights() {
     let diameter = 6.0e-3;
 
     let mut uniform = KWaveArray::new();
-    uniform.add_disc_element(center, diameter, None);
+    uniform
+        .add_disc_element(center, diameter, None)
+        .expect("valid element");
     let uniform_weights = uniform.get_array_weighted_mask(&grid);
 
     let mut profiled = KWaveArray::new();
@@ -330,14 +336,20 @@ fn planar_rectangle_conserves_area_and_stays_in_its_footprint() {
     let expected_mass = width * height / (dx * dx);
     let (mut samples, mut total) = (0_usize, 0.0);
     let mut inside = true;
-    KWaveArray::rasterize_planar_aperture_points(&grid, geometry, |point, scale| {
-        samples += 1;
-        total += scale;
-        // Width along the first axis (y), height along normal × first (−x).
-        inside &= (point[1] - center[1]).abs() < 0.5 * width
-            && (point[0] - center[0]).abs() < 0.5 * height
-            && point[2] == center[2];
-    });
+    let lattice_center = (center[0], center[1], center[2]);
+    KWaveArray::rasterize_planar_aperture_points(
+        &grid,
+        geometry,
+        lattice_center,
+        |point, scale| {
+            samples += 1;
+            total += scale;
+            // Width along the first axis (y), height along normal × first (−x).
+            inside &= (point[1] - center[1]).abs() < 0.5 * width
+                && (point[0] - center[0]).abs() < 0.5 * height
+                && point[2] == center[2];
+        },
+    );
     assert!(inside, "a sample left the rectangle");
     let rounding_bound = f64::from_count(samples + 6) * 0.5 * f64::EPSILON * expected_mass;
     assert!(
@@ -366,4 +378,54 @@ fn planar_rectangle_conserves_area_and_stays_in_its_footprint() {
         "x extent {x_extent}, y extent {y_extent}"
     );
     assert_eq!(array.compute_total_surface_area(), width * height,);
+}
+
+/// A one-sample disc sits at its centre (ADR 136 disc acceptance): a disc
+/// smaller than one radial step emits exactly the centre sample carrying
+/// the full per-sample scale, so a degenerate disc never drifts off-centre.
+///
+/// # Panics
+/// - Panics if `grid`.
+#[test]
+fn test_single_sample_disc_lattice_sits_at_centre() {
+    use kwavers_grid::Grid;
+
+    let dx = 1.0e-3;
+    let grid = Grid::new(16, 16, 16, dx, dx, dx).expect("grid");
+    let center = (8.0e-3, 8.0e-3, 8.0e-3);
+    let radius = dx / 4.0;
+    let mut points = Vec::new();
+    let mut scales = Vec::new();
+    KWaveArray::rasterize_framed_disc_points(
+        &grid,
+        center,
+        radius,
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        DiscSourceProfile::uniform(),
+        |point, scale| {
+            points.push(point);
+            scales.push(scale);
+        },
+    );
+    assert_eq!(
+        points.len(),
+        1,
+        "a sub-cell disc must emit exactly one sample"
+    );
+    for (axis, (got, want)) in points[0]
+        .iter()
+        .zip([center.0, center.1, center.2].iter())
+        .enumerate()
+    {
+        assert!(
+            (got - want).abs() == 0.0,
+            "single disc sample axis {axis}: {got:.6e} must equal centre {want:.6e} exactly"
+        );
+    }
+    let expected_scale = std::f64::consts::PI * radius * radius / (dx * dx);
+    assert!(
+        (scales[0] - expected_scale).abs() == 0.0,
+        "single disc sample must carry the full per-sample scale"
+    );
 }

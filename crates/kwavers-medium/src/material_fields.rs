@@ -24,11 +24,11 @@ pub struct GenericMaterialFields<T> {
     pub rho0: T,
     /// Ambient sound speed `c₀` \[m·s⁻¹].
     pub c0: T,
-    /// Power-law absorption prefactor `α₀` \[dB/(MHz^y·cm)] — the k-Wave
-    /// convention the medium trait reports. Convert with
-    /// `kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_m`
-    /// (time-domain, Np·m⁻¹ at a frequency) or `…_to_np_omega_m` (spectral).
-    pub alpha0_db: T,
+    /// Power-law absorption prefactor `α₀` in Np·m⁻¹ at the 1 MHz reference —
+    /// the SI quantity the medium trait reports. A solver forms the
+    /// attenuation at its frequency by `α₀·(f/1 MHz)^y`; no dB conversion
+    /// happens downstream.
+    pub alpha0: T,
     /// Power-law absorption exponent `y` (dimensionless).
     pub alpha_power: T,
     /// Nonlinearity parameter `B/A` (dimensionless).
@@ -48,7 +48,7 @@ impl MaterialFields {
         Self {
             rho0: Array3::zeros(shape),
             c0: Array3::zeros(shape),
-            alpha0_db: Array3::zeros(shape),
+            alpha0: Array3::zeros(shape),
             alpha_power: Array3::zeros(shape),
             nonlinearity: Array3::zeros(shape),
         }
@@ -76,7 +76,10 @@ impl MaterialFields {
             return Self {
                 rho0: Array3::from_elem(shape, medium.density(0, 0, 0).into_base()),
                 c0: Array3::from_elem(shape, medium.sound_speed(0, 0, 0).into_base()),
-                alpha0_db: Array3::from_elem(shape, medium.alpha_coefficient(x, y, z, grid)),
+                alpha0: Array3::from_elem(
+                    shape,
+                    medium.alpha_coefficient(x, y, z, grid).into_base(),
+                ),
                 alpha_power: Array3::from_elem(shape, medium.alpha_power(x, y, z, grid)),
                 nonlinearity: Array3::from_elem(shape, medium.nonlinearity(0, 0, 0).into_base()),
             };
@@ -90,7 +93,7 @@ impl MaterialFields {
                     let index = [i, j, k];
                     fields.rho0[index] = medium.density(i, j, k).into_base();
                     fields.c0[index] = medium.sound_speed(i, j, k).into_base();
-                    fields.alpha0_db[index] = medium.alpha_coefficient(x, y, z, grid);
+                    fields.alpha0[index] = medium.alpha_coefficient(x, y, z, grid).into_base();
                     fields.alpha_power[index] = medium.alpha_power(x, y, z, grid);
                     fields.nonlinearity[index] = medium.nonlinearity(i, j, k).into_base();
                 }
@@ -109,7 +112,7 @@ impl MaterialFields {
     /// is lossless and an absorbing solver path would be wasted work.
     #[must_use]
     pub fn is_lossless(&self) -> bool {
-        self.alpha0_db.iter().all(|&a| a == 0.0)
+        self.alpha0.iter().all(|&a| a == 0.0)
     }
 }
 

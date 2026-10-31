@@ -1,20 +1,26 @@
 use super::*;
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::wave_equation_1d::config::PinnConfig;
 use coeus_core::MoiraiBackend;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use kwavers_core::error::KwaversResult;
 
 type TestBackend = MoiraiBackend;
 
-fn var2(vals: &[f32], backend: TestBackend) -> Var<f32, TestBackend> {
+fn var2(vals: &[f32], backend: TestBackend) -> KwaversResult<Var<f32, TestBackend>> {
     let n = vals.len();
-    Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![n, 1], vals, &backend),
+    be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
+            vec![n, 1],
+            vals,
+            &backend,
+        ))?,
         false,
-    )
+    ))
 }
 
 #[test]
-fn test_pde_residual_computation() {
+fn test_pde_residual_computation() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![20, 20],
@@ -22,8 +28,8 @@ fn test_pde_residual_computation() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = var2(&[0.5], backend);
-    let t = var2(&[0.1], backend);
+    let x = var2(&[0.5], backend)?;
+    let t = var2(&[0.1], backend)?;
 
     let residual = pinn
         .compute_pde_residual(&x, &t, 343.0)
@@ -31,10 +37,11 @@ fn test_pde_residual_computation() {
 
     assert_eq!(residual.tensor.shape(), &[1, 1]);
     assert!(residual.tensor.as_slice()[0].is_finite());
+    Ok(())
 }
 
 #[test]
-fn test_pde_residual_batch() {
+fn test_pde_residual_batch() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![15, 15],
@@ -42,8 +49,8 @@ fn test_pde_residual_batch() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = var2(&[0.0, 0.5, 1.0], backend);
-    let t = var2(&[0.0, 0.1, 0.2], backend);
+    let x = var2(&[0.0, 0.5, 1.0], backend)?;
+    let t = var2(&[0.0, 0.1, 0.2], backend)?;
 
     let residual = pinn
         .compute_pde_residual(&x, &t, 343.0)
@@ -53,10 +60,11 @@ fn test_pde_residual_batch() {
     for &val in residual.tensor.as_slice() {
         assert!(val.is_finite());
     }
+    Ok(())
 }
 
 #[test]
-fn test_physics_loss_computation() {
+fn test_physics_loss_computation() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![10, 10],
@@ -64,16 +72,16 @@ fn test_physics_loss_computation() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x_data = var2(&[0.5, 0.6], backend);
-    let t_data = var2(&[0.1, 0.2], backend);
-    let u_data = var2(&[0.3, 0.4], backend);
+    let x_data = var2(&[0.5, 0.6], backend)?;
+    let t_data = var2(&[0.1, 0.2], backend)?;
+    let u_data = var2(&[0.3, 0.4], backend)?;
 
-    let x_colloc = var2(&[0.0, 0.5, 1.0], backend);
-    let t_colloc = var2(&[0.0, 0.1, 0.2], backend);
+    let x_colloc = var2(&[0.0, 0.5, 1.0], backend)?;
+    let t_colloc = var2(&[0.0, 0.1, 0.2], backend)?;
 
-    let x_bc = var2(&[-1.0, 1.0], backend);
-    let t_bc = var2(&[0.0, 0.0], backend);
-    let u_bc = var2(&[0.0, 0.0], backend);
+    let x_bc = var2(&[-1.0, 1.0], backend)?;
+    let t_bc = var2(&[0.0, 0.0], backend)?;
+    let u_bc = var2(&[0.0, 0.0], backend)?;
 
     let (total, data, pde, bc) = pinn
         .compute_physics_loss(
@@ -106,10 +114,11 @@ fn test_physics_loss_computation() {
     assert!(bc_val.is_finite());
 
     assert!(total_val >= 0.0);
+    Ok(())
 }
 
 #[test]
-fn test_physics_loss_weighting() {
+fn test_physics_loss_weighting() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![10, 10],
@@ -117,16 +126,16 @@ fn test_physics_loss_weighting() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x_data = var2(&[0.5], backend);
-    let t_data = var2(&[0.1], backend);
-    let u_data = var2(&[0.3], backend);
+    let x_data = var2(&[0.5], backend)?;
+    let t_data = var2(&[0.1], backend)?;
+    let u_data = var2(&[0.3], backend)?;
 
-    let x_colloc = var2(&[0.5], backend);
-    let t_colloc = var2(&[0.1], backend);
+    let x_colloc = var2(&[0.5], backend)?;
+    let t_colloc = var2(&[0.1], backend)?;
 
-    let x_bc = var2(&[-1.0], backend);
-    let t_bc = var2(&[0.0], backend);
-    let u_bc = var2(&[0.0], backend);
+    let x_bc = var2(&[-1.0], backend)?;
+    let t_bc = var2(&[0.0], backend)?;
+    let u_bc = var2(&[0.0], backend)?;
 
     let weights_balanced = LossWeights {
         data: 1.0,
@@ -174,10 +183,11 @@ fn test_physics_loss_weighting() {
 
     assert!(balanced_val.is_finite());
     assert!(data_heavy_val.is_finite());
+    Ok(())
 }
 
 #[test]
-fn test_pde_residual_different_wave_speeds() {
+fn test_pde_residual_different_wave_speeds() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![10, 10],
@@ -185,8 +195,8 @@ fn test_pde_residual_different_wave_speeds() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = var2(&[0.5], backend);
-    let t = var2(&[0.1], backend);
+    let x = var2(&[0.5], backend)?;
+    let t = var2(&[0.1], backend)?;
 
     let residual_343 = pinn
         .compute_pde_residual(&x, &t, 343.0)
@@ -197,10 +207,11 @@ fn test_pde_residual_different_wave_speeds() {
 
     assert!(residual_343.tensor.as_slice()[0].is_finite());
     assert!(residual_1500.tensor.as_slice()[0].is_finite());
+    Ok(())
 }
 
 #[test]
-fn test_loss_components_non_negative() {
+fn test_loss_components_non_negative() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![10, 10],
@@ -208,16 +219,16 @@ fn test_loss_components_non_negative() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x_data = var2(&[0.5], backend);
-    let t_data = var2(&[0.1], backend);
-    let u_data = var2(&[0.0], backend);
+    let x_data = var2(&[0.5], backend)?;
+    let t_data = var2(&[0.1], backend)?;
+    let u_data = var2(&[0.0], backend)?;
 
-    let x_colloc = var2(&[0.5], backend);
-    let t_colloc = var2(&[0.1], backend);
+    let x_colloc = var2(&[0.5], backend)?;
+    let t_colloc = var2(&[0.1], backend)?;
 
-    let x_bc = var2(&[0.0], backend);
-    let t_bc = var2(&[0.0], backend);
-    let u_bc = var2(&[0.0], backend);
+    let x_bc = var2(&[0.0], backend)?;
+    let t_bc = var2(&[0.0], backend)?;
+    let u_bc = var2(&[0.0], backend)?;
 
     let (total, data, pde, bc) = pinn
         .compute_physics_loss(
@@ -238,10 +249,11 @@ fn test_loss_components_non_negative() {
     assert!(data.tensor.as_slice()[0] >= 0.0);
     assert!(pde.tensor.as_slice()[0] >= 0.0);
     assert!(bc.tensor.as_slice()[0] >= 0.0);
+    Ok(())
 }
 
 #[test]
-fn test_backward_compatibility_with_autodiff() {
+fn test_backward_compatibility_with_autodiff() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![10, 10],
@@ -249,16 +261,16 @@ fn test_backward_compatibility_with_autodiff() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x_data = var2(&[0.5], backend);
-    let t_data = var2(&[0.1], backend);
-    let u_data = var2(&[0.0], backend);
+    let x_data = var2(&[0.5], backend)?;
+    let t_data = var2(&[0.1], backend)?;
+    let u_data = var2(&[0.0], backend)?;
 
-    let x_colloc = var2(&[0.5], backend);
-    let t_colloc = var2(&[0.1], backend);
+    let x_colloc = var2(&[0.5], backend)?;
+    let t_colloc = var2(&[0.1], backend)?;
 
-    let x_bc = var2(&[0.0], backend);
-    let t_bc = var2(&[0.0], backend);
-    let u_bc = var2(&[0.0], backend);
+    let x_bc = var2(&[0.0], backend)?;
+    let t_bc = var2(&[0.0], backend)?;
+    let u_bc = var2(&[0.0], backend)?;
 
     let (total, _, _, _) = pinn
         .compute_physics_loss(
@@ -276,10 +288,11 @@ fn test_backward_compatibility_with_autodiff() {
         .expect("1D physics loss");
 
     total.backward().expect("1D physics loss backward");
+    Ok(())
 }
 
 #[test]
-fn test_large_batch_stability() {
+fn test_large_batch_stability() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![10, 10],
@@ -291,8 +304,8 @@ fn test_large_batch_stability() {
     let x_vals: Vec<f32> = (0..n).map(|i| (i as f32) / (n as f32)).collect();
     let t_vals: Vec<f32> = (0..n).map(|i| (i as f32) / (n as f32) * 0.5).collect();
 
-    let x = var2(&x_vals, backend);
-    let t = var2(&t_vals, backend);
+    let x = var2(&x_vals, backend)?;
+    let t = var2(&t_vals, backend)?;
 
     let residual = pinn
         .compute_pde_residual(&x, &t, 343.0)
@@ -302,10 +315,11 @@ fn test_large_batch_stability() {
     for &val in residual.tensor.as_slice() {
         assert!(val.is_finite());
     }
+    Ok(())
 }
 
 #[test]
-fn test_zero_boundary_conditions() {
+fn test_zero_boundary_conditions() -> KwaversResult<()> {
     let backend = TestBackend::default();
     let config = PinnConfig {
         hidden_layers: vec![10, 10],
@@ -313,15 +327,19 @@ fn test_zero_boundary_conditions() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x_bc = var2(&[-1.0, 1.0], backend);
-    let t_bc = var2(&[0.0, 0.0], backend);
-    let u_bc = var2(&[0.0, 0.0], backend);
+    let x_bc = var2(&[-1.0, 1.0], backend)?;
+    let t_bc = var2(&[0.0, 0.0], backend)?;
+    let u_bc = var2(&[0.0, 0.0], backend)?;
 
     let u_pred = pinn.forward(&x_bc, &t_bc).expect("1D boundary forward");
-    let diff = coeus_autograd::sub(&u_pred, &u_bc);
-    let bc_loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
+    let diff = be(coeus_autograd::sub(&u_pred, &u_bc))?;
+    let bc_loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+        &diff, &diff,
+    ))?))?;
 
     let bc_val = bc_loss.tensor.as_slice()[0];
     assert!(bc_val.is_finite());
     assert!(bc_val >= 0.0);
+
+    Ok(())
 }

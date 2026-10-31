@@ -3,18 +3,19 @@
 use super::HeterogeneousTissueMedium;
 use crate::absorption::TISSUE_PROPERTIES;
 use crate::elastic::{ElasticArrayAccess, ElasticProperties};
+use aequitas::systems::si::quantities::Pressure;
 use kwavers_grid::Grid;
 use leto::Array3;
 
 impl ElasticProperties for HeterogeneousTissueMedium {
-    fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Pressure<f64> {
         let (i, j, k) = crate::continuous_to_discrete(x, y, z, grid);
-        self.get_tissue_properties(i, j, k).lame_lambda
+        Pressure::from_base(self.get_tissue_properties(i, j, k).lame_lambda)
     }
 
-    fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Pressure<f64> {
         let (i, j, k) = crate::continuous_to_discrete(x, y, z, grid);
-        self.get_tissue_properties(i, j, k).lame_mu
+        Pressure::from_base(self.get_tissue_properties(i, j, k).lame_mu)
     }
 }
 

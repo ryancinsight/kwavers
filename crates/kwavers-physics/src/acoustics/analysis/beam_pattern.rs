@@ -5,6 +5,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::validation::validate_positive_finite;
 use kwavers_grid::Grid;
 use leto::{Array2, ArrayView3};
 use std::f64::consts::PI;
@@ -158,9 +159,17 @@ pub fn calculate_directivity(beam_pattern: &Array2<f64>) -> f64 {
 }
 
 fn validate_beam_pattern_config(config: &BeamPatternConfig) -> KwaversResult<()> {
-    validate_positive_finite("frequency", config.frequency)?;
-    validate_positive_finite("sound_speed", config.sound_speed)?;
-    validate_positive_finite("angular_resolution", config.angular_resolution)?;
+    validate_positive_finite("frequency", config.frequency, "must be finite and positive")?;
+    validate_positive_finite(
+        "sound_speed",
+        config.sound_speed,
+        "must be finite and positive",
+    )?;
+    validate_positive_finite(
+        "angular_resolution",
+        config.angular_resolution,
+        "must be finite and positive",
+    )?;
 
     if config.angular_resolution > PI {
         return Err(invalid_parameter(
@@ -171,18 +180,6 @@ fn validate_beam_pattern_config(config: &BeamPatternConfig) -> KwaversResult<()>
     }
 
     Ok(())
-}
-
-fn validate_positive_finite(parameter: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(invalid_parameter(
-            parameter,
-            value,
-            "must be positive and finite",
-        ))
-    }
 }
 
 /// Calculate far-field distance
@@ -322,7 +319,7 @@ mod tests {
 
         assert!(message.contains("frequency"), "unexpected error: {message}");
         assert!(
-            message.contains("positive and finite"),
+            message.contains("finite and positive"),
             "domain reason must be reported: {message}"
         );
     }

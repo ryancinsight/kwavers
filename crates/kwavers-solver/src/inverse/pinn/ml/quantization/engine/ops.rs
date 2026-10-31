@@ -14,7 +14,6 @@ impl MlQuantizer {
     pub(super) fn analyze_model_layers<
         B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     >(
-        &self,
         model: &PinnWave2D<B>,
     ) -> KwaversResult<Vec<LayerInfo>> {
         let mut layers = Vec::new();
@@ -218,7 +217,6 @@ impl MlQuantizer {
     pub(super) fn validate_quantization<
         B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     >(
-        &self,
         model: &PinnWave2D<B>,
         quantized_weights: &[QuantizedTensor],
     ) -> KwaversResult<QuantizationValidationResult>

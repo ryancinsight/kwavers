@@ -4,6 +4,93 @@
 
 ### Changed
 
+- **Breaking:** `AcousticProperties::alpha_coefficient` returns
+  `ReciprocalLength<f64>` (Np/m at the 1 MHz reference) and
+  `MaterialFields::alpha0_db` becomes `alpha0` in the same SI units. The
+  k-Wave dB convention (`dB/(MHz^y·cm)`) now lives only at user-facing
+  boundaries (solver configs, KZK, Python): every implementor converts once
+  at its trait boundary, and FDTD/PSTD/GPU absorbers scale a true
+  attenuation `α(f) = α₀·(f/1 MHz)^y` with no downstream dB conversion.
+- **Breaking:** `DissolutionModel::radius_rate` returns `Velocity<f64>`. The
+  contract already documented `dR/dt` in `m/s`; the sealed trait has two
+  implementors, so the change is contained to the dissolution module and its
+  integrator. `EpsteinPlessetDissolution` and `ShellPermeationDissolution`
+  both construct at their formula boundary, the shelled model reads its core
+  model's rate with `into_base` to apply the permeation resistance, and the
+  RK4 integrator unwraps once where it needs a scalar. `AcousticElasticCoupling`
+  is left untyped on purpose: it has no implementor in the workspace, so
+  changing its signature would be an unvalidated contract change rather than a
+  migration, and its documented units are already correct.
+- **Breaking:** `AcousticProperties::acoustic_diffusivity` is removed. The
+  method claimed `m²/s` and had four implementations returning four different
+  dimensions: `k / (ρ·c_p·c)` is metres, `c² / ρ` is `m⁵/(kg·s²)`, the
+  elastic test medium's `α / c²` is seconds, and the tissue medium returned a
+  placeholder zero. Nothing called it — the workspace compiles unchanged
+  without it — and the power-law diffusivity the solvers use,
+  `compute_diffusivity_from_power_law_absorption` (`2αc³/ω²`, genuinely
+  `m²/s`), is a separate function that was never this method. Typing the
+  trait is what surfaced the disagreement: a quantity return type would have
+  forced one dimension onto four formulas that do not produce it, so the
+  method goes rather than gain a unit it cannot honour. This leaves no
+  untyped getter on the acoustic surface.
+- **[patch] The tensor DG uniform-grid projection builds its basis once and
+  computes each point's weights once.** A uniform grid index lands on element
+  `index / n_nodes` at local position `index % n_nodes`, so the GLL basis
+  depends on the local position alone: every element reuses the same
+  `n_nodes` patterns, and every active axis reuses them too because the
+  quadrature nodes and the local coordinate mapping are the same on all three.
+  The projection previously built one `AxisMap` per grid index per axis, each
+  carrying an owned `Vec<f64>`, which stored `element_counts[axis]` copies of
+  the same patterns -- `4 + nx + ny + nz` allocations per call, holding
+  `(nx + ny + nz) * n_nodes` doubles. It now stores each pattern once in one
+  contiguous buffer and derives the element arithmetically: two allocations per
+  call, at 48^3 that is 2 against 148.
+  The per-node weights depend on the grid point alone, so one computation
+  serves every variable projected there. The four-field entry point no longer
+  repeats the `nodes_per_element` products once per output field. Criterion,
+  `dg_projection`, four fields against the same four outputs produced by four
+  single-field calls: 7.04 against 16.21 ms at 24^3 order 2, 53.91 against
+  119.01 ms at 48^3 order 2, 123.65 against 275.19 ms at 48^3 order 3 -- about
+  2x across the set. The ratio holds at both node counts rather than growing
+  with them, which is what sharing one weight computation across four
+  variables should give: the saving is three of four products, whatever
+  `nodes_per_element` is.
+  Two tests pin the invariants. One checks that the stored basis pattern is
+  identical in every element, which is what makes the stored-once layout
+  correct. The other checks that the four-field projection returns exactly the
+  bit pattern the single-field projection returns for pressure, so sharing the
+  weights changed the cost and not the answer.
+- **Breaking:** `AcousticProperties` returns Aequitas quantities.
+  `absorption_coefficient` and `attenuation` return `ReciprocalLength<f64>`;
+  `nonlinearity_parameter` (B/A) and `nonlinearity_coefficient` (β) return
+  `Dimensionless<f64>`. The four implementors construct at their storage
+  boundary via `from_base`, so the tissue power-law conversion
+  (`alpha_0 · (f/f_ref)^y` from dB/(MHz^y·cm) through `DB_TO_NP · 100`) stays
+  where the units are known, and 30 caller sites across 23 files in seven
+  crates read `into_base` at the numerical boundary.
+  `alpha_coefficient` (dB/(MHz^y·cm), not SI), `alpha_power` (a pure
+  exponent), and `tissue_type` stay raw, as does every array fast path. This
+  completes the trait-typing work `CoreMedium`'s `sound_speed`, `density`,
+  `absorption`, `nonlinearity` and `max_sound_speed` began, and that the
+  thermal and viscous traits preceded.
+- **[patch] The stack's advisory gate clears: the `zip` crate leaves this
+  workspace and the certificate roots move past their advisories.** `zip` 2.4.2
+  reached the lock through `gaia-mesh` 0.5.2 and `zip` 6.0.0 through
+  `consus-npy` 0.2.0; both providers now ship their own containers
+  (`consus-zip` 0.4.0 and Gaia 0.6.10's consus-zip 3MF writer), so advancing
+  Gaia to 0.6.10 and the Consus edges to 0.4.0 takes both out of the lock.
+  The unused `zip = "0.6"` workspace edge is deleted with them. The lock also
+  moves `rustls-webpki` to 0.103.16 and `webpki-root-certs` to 1.0.10, which
+  clears RUSTSEC-2026-0382 and RUSTSEC-2026-0383 alongside the three ZIP
+  advisories.
+- **[patch] The first-party providers move to their current cohort.** Aequitas
+  to 0.3.1, Apollo FFT to 0.29.3, Asclepius to 0.3.0, Athena to 0.3.2,
+  Eunomia to 0.10.0, Gaia to 0.6.10, Hephaestus to 0.27.0, Hermes to 0.9.2,
+  Horae to 0.2.2, Leto to 0.46.4, Mnemosyne to 0.10.1/0.7.1/0.7.0, Moirai to
+  0.10.0, Themis to 0.11.3, and Tyche to 0.4.0; the six RITK pins move to the
+  merged `12cedbff6` (RITK I/O 0.5.0, RITK registration 0.56.0). One git
+  source resolves to one revision, so every edge naming a provider
+  repository has to agree on a version or the resolver refuses the pair.
 - **[patch] The lossless staggered FDTD pressure update is one pass.** On a
   Cartesian grid without a CPML or absorption, the three velocity
   divergences are swept a row at a time into buffers that stay in cache and

@@ -12,9 +12,9 @@ impl EdgeRuntime {
         kernel: &ExecutionKernel,
     ) -> KwaversResult<Vec<f32>> {
         match self.hardware_caps.architecture {
-            Architecture::ARM | Architecture::ARM64 => self.neon_quantize(input, kernel),
-            Architecture::RISCV => self.riscv_quantize(input, kernel),
-            _ => self.software_quantize(input, kernel),
+            Architecture::ARM | Architecture::ARM64 => Self::neon_quantize(input, kernel),
+            Architecture::RISCV => Self::riscv_quantize(input, kernel),
+            _ => Self::software_quantize(input, kernel),
         }
     }
     /// Neon quantize.
@@ -22,7 +22,6 @@ impl EdgeRuntime {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn neon_quantize(
-        &self,
         input: &[f32],
         kernel: &ExecutionKernel,
     ) -> KwaversResult<Vec<f32>> {
@@ -34,7 +33,6 @@ impl EdgeRuntime {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn riscv_quantize(
-        &self,
         input: &[f32],
         kernel: &ExecutionKernel,
     ) -> KwaversResult<Vec<f32>> {
@@ -46,7 +44,6 @@ impl EdgeRuntime {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn software_quantize(
-        &self,
         input: &[f32],
         kernel: &ExecutionKernel,
     ) -> KwaversResult<Vec<f32>> {
@@ -74,7 +71,6 @@ impl EdgeRuntime {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn fixed_point_inference(
-        &self,
         input: &[f32],
         kernel: &ExecutionKernel,
     ) -> KwaversResult<Vec<f32>> {
@@ -176,8 +172,8 @@ impl EdgeRuntime {
     ///
     pub(super) fn dequantize_output(&self, quantized_output: &[f32]) -> KwaversResult<Vec<f32>> {
         match self.hardware_caps.architecture {
-            Architecture::ARM | Architecture::ARM64 => self.neon_dequantize(quantized_output),
-            Architecture::RISCV => self.riscv_dequantize(quantized_output),
+            Architecture::ARM | Architecture::ARM64 => Self::neon_dequantize(quantized_output),
+            Architecture::RISCV => Self::riscv_dequantize(quantized_output),
             _ => Ok(quantized_output.to_vec()),
         }
     }
@@ -185,14 +181,14 @@ impl EdgeRuntime {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn neon_dequantize(&self, input: &[f32]) -> KwaversResult<Vec<f32>> {
+    pub(super) fn neon_dequantize(input: &[f32]) -> KwaversResult<Vec<f32>> {
         Ok(input.to_vec())
     }
     /// Riscv dequantize.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn riscv_dequantize(&self, input: &[f32]) -> KwaversResult<Vec<f32>> {
+    pub(super) fn riscv_dequantize(input: &[f32]) -> KwaversResult<Vec<f32>> {
         Ok(input.to_vec())
     }
 }

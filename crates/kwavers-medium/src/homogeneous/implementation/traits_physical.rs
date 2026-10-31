@@ -1,5 +1,6 @@
 use aequitas::systems::si::quantities::{
-    DynamicViscosity, ReciprocalTemperature, SpecificHeatCapacity, ThermalConductivity,
+    AreaPerTime, Dimensionless, DynamicViscosity, Pressure, ReciprocalLength,
+    ReciprocalTemperature, SpecificHeatCapacity, SurfaceTension, ThermalConductivity,
     ThermalDiffusivity,
 };
 use leto::Array3;
@@ -24,34 +25,47 @@ impl AcousticProperties for HomogeneousMedium {
         _z: f64,
         _grid: &Grid,
         frequency: f64,
-    ) -> f64 {
-        self.absorption_alpha * (frequency / self.reference_frequency).powf(self.absorption_power)
+    ) -> ReciprocalLength<f64> {
+        // Storage is the power-law prefactor α₀ [dB/(cm·MHz^y)] at the 1 MHz
+        // reference; convert dB/cm to Np/m (× 100 [cm/m] × DB_TO_NP [Np/dB]),
+        // matching the tissue implementor (Szabo 1994).
+        ReciprocalLength::from_base(
+            self.absorption_alpha
+                * (frequency / self.reference_frequency).powf(self.absorption_power)
+                * kwavers_core::constants::DB_TO_NP
+                * 100.0,
+        )
     }
 
-    fn alpha_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.absorption_alpha
+    fn alpha_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> ReciprocalLength<f64> {
+        // Stored prefactor is dB/(cm·MHz^y); report Np/m at the boundary.
+        ReciprocalLength::from_base(
+            self.absorption_alpha * kwavers_core::constants::DB_TO_NP * 100.0,
+        )
     }
 
     fn alpha_power(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.absorption_power
     }
 
-    fn nonlinearity_parameter(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.nonlinearity
-    }
-
-    fn acoustic_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.thermal_conductivity / (self.density * self.specific_heat * self.sound_speed)
+    fn nonlinearity_parameter(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> Dimensionless<f64> {
+        Dimensionless::from_base(self.nonlinearity)
     }
 }
 
 impl ElasticProperties for HomogeneousMedium {
-    fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.lame_lambda
+    fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Pressure<f64> {
+        Pressure::from_base(self.lame_lambda)
     }
 
-    fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.lame_mu
+    fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Pressure<f64> {
+        Pressure::from_base(self.lame_mu)
     }
 }
 
@@ -80,6 +94,14 @@ impl ThermalProperties for HomogeneousMedium {
         SpecificHeatCapacity::from_base(self.specific_heat)
     }
 
+    /// The stored specific heat is Cp (it feeds thermal diffusivity
+    /// α = κ/(ρCp)); without this override Cp would fall back to the trait's
+    /// water constant and could violate Cp ≥ Cv (Mayer). Liquids: Cv ≈ Cp,
+    /// so γ = Cp/Cv = 1 by the trait defaults.
+    fn specific_heat_capacity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> SpecificHeatCapacity {
+        self.specific_heat(x, y, z, grid)
+    }
+
     fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> ThermalConductivity {
         ThermalConductivity::from_base(self.thermal_conductivity)
     }
@@ -106,8 +128,14 @@ impl ThermalField for HomogeneousMedium {
 }
 
 impl MediumOpticalProperties for HomogeneousMedium {
-    fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.optical_absorption
+    fn optical_absorption_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> ReciprocalLength<f64> {
+        ReciprocalLength::from_base(self.optical_absorption)
     }
 
     fn optical_reduced_scattering_coefficient(
@@ -142,24 +170,30 @@ impl ViscousProperties for HomogeneousMedium {
 }
 
 impl BubbleProperties for HomogeneousMedium {
-    fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.surface_tension
+    fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> SurfaceTension<f64> {
+        SurfaceTension::from_base(self.surface_tension)
     }
 
-    fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.ambient_pressure
+    fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Pressure<f64> {
+        Pressure::from_base(self.ambient_pressure)
     }
 
-    fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.vapor_pressure
+    fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Pressure<f64> {
+        Pressure::from_base(self.vapor_pressure)
     }
 
-    fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.polytropic_index
+    fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Dimensionless<f64> {
+        Dimensionless::from_base(self.polytropic_index)
     }
 
-    fn gas_diffusion_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.gas_diffusion
+    fn gas_diffusion_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+    ) -> AreaPerTime<f64> {
+        AreaPerTime::from_base(self.gas_diffusion)
     }
 }
 

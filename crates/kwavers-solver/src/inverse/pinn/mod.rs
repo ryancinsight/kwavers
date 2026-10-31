@@ -181,6 +181,25 @@ pub mod elastic_2d;
 pub mod geometry;
 pub mod ml;
 
+/// Convert a compute-backend operation's fallible result into the solver's
+/// error type. The tensor backend's operations are fallible (allocation,
+/// storage and shape ops can refuse); every PINN call site routes through
+/// this one conversion so the backend's error text stays attached.
+///
+/// This is the module's single `B::Error -> KwaversError` seam: the backend
+/// error type is generic, so no `From` impl can cover it once for `?`.
+///
+/// # Errors
+///
+/// Returns `KwaversError::BackendOp` carrying the backend error text
+/// when the input `r` is `Err`.
+#[cfg(feature = "pinn")]
+pub fn be<T, E: core::fmt::Display>(
+    r: Result<T, E>,
+) -> Result<T, kwavers_core::error::KwaversError> {
+    r.map_err(|e| kwavers_core::error::KwaversError::BackendOp(e.to_string()))
+}
+
 #[cfg(feature = "pinn")]
 pub mod beamforming;
 

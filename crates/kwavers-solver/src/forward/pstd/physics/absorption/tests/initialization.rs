@@ -5,12 +5,12 @@ use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::constants::DB_TO_NP;
 use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_grid::Grid;
+use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
 use kwavers_medium::HomogeneousMedium;
-use kwavers_physics::acoustics::mechanics::absorption::{
-    power_law_db_cm_to_np_omega_m, AbsorptionMode,
-};
+use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 
 #[test]
 fn test_power_law_initialization() {
@@ -129,7 +129,7 @@ fn test_nabla_operators_correct_power() {
 ///         = (negative, magnitude ≈ 6.357e-5)
 #[test]
 fn test_absorption_model_physics_validation() {
-    use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
+    use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
     use std::f64::consts::PI;
 
     let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4).unwrap();
@@ -415,7 +415,10 @@ fn near_uniform_medium_exponent_resolves_to_its_midpoint_everywhere() {
     let mut medium = HeterogeneousMedium::from_homogeneous(&background, &grid)
         .expect("valid homogeneous optical properties");
     medium.use_trilinear_interpolation = false;
-    medium.absorption.fill(alpha0);
+    // The `absorption` field stores SI base prefactors (Np/m at the reference
+    // frequency), so 0.7 dB/(MHz^y cm) is filled boundary-converted, as the
+    // medium's own constructors store it.
+    medium.absorption.fill(alpha0 * DB_TO_NP * 100.0);
     medium.alpha0.fill(alpha0);
     for ([i, _, _], y) in medium
         .alpha_power

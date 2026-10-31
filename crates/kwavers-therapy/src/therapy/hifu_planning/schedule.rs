@@ -1,7 +1,8 @@
 use super::types::{AblationTarget, FocalSpot, FocalSpotDoseEstimate};
 use crate::therapy::domain_types::ClinicalTherapyParameters;
 use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
+use kwavers_core::validation::validate_positive_finite;
 
 /// One planned HIFU focal dwell location.
 #[derive(Debug, Clone)]
@@ -48,15 +49,40 @@ impl SonicationSchedule {
         therapy_params: &ClinicalTherapyParameters,
         frequency_hz: f64,
     ) -> KwaversResult<Self> {
-        validate_positive_finite("target.dimensions_mm.0", target.dimensions_mm.0)?;
-        validate_positive_finite("target.dimensions_mm.1", target.dimensions_mm.1)?;
-        validate_positive_finite("target.dimensions_mm.2", target.dimensions_mm.2)?;
-        validate_positive_finite("target.safety_margin_mm", target.safety_margin_mm)?;
-        validate_positive_finite("focal_spot.lateral_width_mm", focal_spot.lateral_width_mm)?;
-        validate_positive_finite("focal_spot.axial_width_mm", focal_spot.axial_width_mm)?;
+        validate_positive_finite(
+            "target.dimensions_mm.0",
+            target.dimensions_mm.0,
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "target.dimensions_mm.1",
+            target.dimensions_mm.1,
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "target.dimensions_mm.2",
+            target.dimensions_mm.2,
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "target.safety_margin_mm",
+            target.safety_margin_mm,
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "focal_spot.lateral_width_mm",
+            focal_spot.lateral_width_mm,
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "focal_spot.axial_width_mm",
+            focal_spot.axial_width_mm,
+            "must be finite and positive",
+        )?;
         validate_positive_finite(
             "therapy_params.treatment_duration",
             therapy_params.treatment_duration,
+            "must be finite and positive",
         )?;
 
         let sqrt3 = 3.0_f64.sqrt();
@@ -121,16 +147,6 @@ impl SonicationSchedule {
     #[must_use]
     pub fn all_subspots_reach_ablation(&self) -> bool {
         self.minimum_subspot_cem43 >= THERMAL_DOSE_THRESHOLD
-    }
-}
-
-fn validate_positive_finite(name: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(KwaversError::InvalidInput(format!(
-            "{name} must be finite and positive, got {value}"
-        )))
     }
 }
 

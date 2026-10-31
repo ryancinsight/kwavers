@@ -56,6 +56,10 @@ pub struct HeterogeneousMedium {
     pub bubble_velocity: Array3<f64>,
 
     // Acoustic parameters
+    //
+    // `absorption` stores Np/m at `reference_frequency` (storage convention in
+    // `crate::core`); every fill converts the dB α₀ prefactor once. `alpha0`
+    // is legacy write-only scratch (nothing reads it); do not add readers.
     pub alpha0: Array3<f64>,
     pub delta: Array3<f64>,
     pub b_a: Array3<f64>,
@@ -192,20 +196,22 @@ impl HeterogeneousMedium {
         let lame_mu_arr = h.lame_mu_array();
 
         // Scalar properties via trait methods
-        let ref_freq = h.reference_frequency();
+        let ref_freq = h.reference_frequency().into_base();
         let vis = h.viscosity(0.0, 0.0, 0.0, grid).into_base();
         let shear_vis = h.shear_viscosity(0.0, 0.0, 0.0, grid).into_base();
         let bulk_vis = h.bulk_viscosity(0.0, 0.0, 0.0, grid).into_base();
-        let surf_tension = h.surface_tension(0.0, 0.0, 0.0, grid);
-        let amb_pressure = h.ambient_pressure(0.0, 0.0, 0.0, grid);
-        let vap_pressure = h.vapor_pressure(0.0, 0.0, 0.0, grid);
-        let polytropic = h.polytropic_index(0.0, 0.0, 0.0, grid);
+        let surf_tension = h.surface_tension(0.0, 0.0, 0.0, grid).into_base();
+        let amb_pressure = h.ambient_pressure(0.0, 0.0, 0.0, grid).into_base();
+        let vap_pressure = h.vapor_pressure(0.0, 0.0, 0.0, grid).into_base();
+        let polytropic = h.polytropic_index(0.0, 0.0, 0.0, grid).into_base();
 
         let c_p = h.specific_heat(0.0, 0.0, 0.0, grid).into_base();
         let k_t = h.thermal_conductivity(0.0, 0.0, 0.0, grid).into_base();
         let alpha_t = h.thermal_expansion(0.0, 0.0, 0.0, grid).into_base();
-        let gas_diff = h.gas_diffusion_coefficient(0.0, 0.0, 0.0, grid);
-        let mu_a = h.optical_absorption_coefficient(0.0, 0.0, 0.0, grid);
+        let gas_diff = h.gas_diffusion_coefficient(0.0, 0.0, 0.0, grid).into_base();
+        let mu_a = h
+            .optical_absorption_coefficient(0.0, 0.0, 0.0, grid)
+            .into_base();
         let mu_sp = h
             .optical_reduced_scattering_coefficient(0.0, 0.0, 0.0, grid)?
             .in_unit::<PerMeter>();

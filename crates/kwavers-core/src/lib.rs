@@ -14,6 +14,7 @@ pub mod time;
 pub mod traversal;
 pub mod units;
 pub mod utils;
+pub mod validation;
 
 /// Base bound for all kwavers component types.
 ///
@@ -22,8 +23,8 @@ pub mod utils;
 /// (with its blanket implementation) is the lowest-level common base for the
 /// domain-specific supertrait families:
 ///
-/// - [`kwavers_physics::acoustics::traits::PhysicsModel`] — physics models
-/// - [`kwavers_signal::SignalPrimitive`] — signal components
+/// - `kwavers_physics::acoustics::traits::PhysicsModel` — physics models
+/// - `kwavers_signal::SignalPrimitive` — signal components
 /// - `kwavers_solver::interface::factory::SolverComponent` — solver infrastructure
 ///
 /// Use the domain-specific supertrait where possible; fall back to

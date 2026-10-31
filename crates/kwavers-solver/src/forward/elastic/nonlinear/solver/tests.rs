@@ -1,6 +1,7 @@
 use super::super::config::NonlinearSWEConfig;
 use super::super::material::HyperelasticModel;
 use super::NonlinearElasticWaveSolver;
+use kwavers_core::constants::acoustic_parameters::{DB_TO_NP, WATER_ABSORPTION_ALPHA_0};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
@@ -52,6 +53,17 @@ fn test_nonlinear_solver_creation() {
     assert!(
         solver.attenuation_np_per_m >= 0.0,
         "attenuation_np_per_m must be >= 0, got {}",
+        solver.attenuation_np_per_m
+    );
+
+    // KW-SWE-OPTICAL-ATTENUATION: the seed is the ACOUSTIC absorption at the
+    // reference frequency, not the optical μa constructor argument (0.5/m).
+    // The medium carries the water power law, so attenuation must be
+    // α(1 MHz) = 0.02533 Np/m (Szabo 1994).
+    let expected = WATER_ABSORPTION_ALPHA_0 * DB_TO_NP * 100.0;
+    assert!(
+        (solver.attenuation_np_per_m - expected).abs() <= 1e-12 * expected,
+        "attenuation must be acoustic α(1 MHz) = {expected} Np/m, got {}",
         solver.attenuation_np_per_m
     );
 

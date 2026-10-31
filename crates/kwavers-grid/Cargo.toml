@@ -21,7 +21,7 @@ log = "0.4"
 
 [dev-dependencies]
 proptest = "1.2"
-kwavers-alloc-probe = { path = "../kwavers-alloc-probe" }
+mnemosyne = { workspace = true }
 
 [lints]
 workspace = true

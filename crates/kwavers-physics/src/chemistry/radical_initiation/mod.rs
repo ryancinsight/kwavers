@@ -40,7 +40,8 @@ impl RadicalInitiation {
                 let (x, y, z) = grid.coords(i, j, k);
                 let alpha = kwavers_medium::AcousticProperties::absorption_coefficient(
                     medium, x, y, z, grid, frequency,
-                );
+                )
+                .into_base();
 
                 // Cavitation-induced radical formation (e.g., water sonolysis)
                 let cav_rate = if p_val < -MPA_TO_PA {

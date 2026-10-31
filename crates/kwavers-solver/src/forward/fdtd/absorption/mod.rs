@@ -49,10 +49,10 @@
 //! - Blanch, J.O., Robertsson, J.O.A. & Symes, W.W. (1995). "Modeling of a
 //!   constant Q." *Geophysics* 60(1), 176–184.
 
+use kwavers_core::constants::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_medium::absorption::{fit_power_law_fields, FitBand, RelaxationTimePlacement};
 use kwavers_medium::material_fields::MaterialFields;
-use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_m;
 use leto::{Array3, ArrayView3};
 
 use super::config::FdtdAbsorption;
@@ -113,9 +113,9 @@ impl RelaxationAbsorption {
     /// Fit a relaxation spectrum to the medium's power law and allocate the
     /// memory fields.
     ///
-    /// `alpha0_db` is the medium's k-Wave prefactor in `dB/(MHz^y·cm)`; it is
-    /// converted to `Np·m⁻¹` at the configured reference frequency, which is
-    /// the form the fit is posed in.
+    /// `alpha0` is the medium's SI prefactor in Np/m at 1 MHz; it is scaled to
+    /// `Np·m⁻¹` at the configured reference frequency, which is the form the
+    /// fit is posed in.
     ///
     /// # Errors
     /// - Non-positive density or sound speed anywhere on the grid.
@@ -140,15 +140,15 @@ impl RelaxationAbsorption {
             ));
         }
 
-        // Convert the medium's prefactor to Np/m at the reference frequency,
-        // per voxel and with that voxel's own exponent.
+        // Scale the medium's SI prefactor (Np/m at 1 MHz) to Np/m at the
+        // reference frequency, per voxel and with that voxel's own exponent.
         let mut alpha_np_m = Array3::<f64>::zeros(shape);
-        for (dst, (&alpha_db, &gamma)) in alpha_np_m
+        let f_ratio = settings.reference_frequency_hz / MHZ_TO_HZ;
+        for (dst, (&alpha_0, &gamma)) in alpha_np_m
             .iter_mut()
-            .zip(materials.alpha0_db.iter().zip(materials.alpha_power.iter()))
+            .zip(materials.alpha0.iter().zip(materials.alpha_power.iter()))
         {
-            *dst =
-                power_law_db_cm_to_np_m(alpha_db, gamma, settings.reference_frequency_hz).max(0.0);
+            *dst = (alpha_0 * f_ratio.powf(gamma)).max(0.0);
         }
 
         let mut band = FitBand::new(

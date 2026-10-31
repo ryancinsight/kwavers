@@ -51,13 +51,13 @@ impl LiverAssessmentWorkflow {
             "\n--- Phase 5: Clinical Decision Support ---"
         );
         let diagnosis =
-            self.generate_clinical_diagnosis(&swe_result, &ceus_result, &uncertainty_result);
+            Self::generate_clinical_diagnosis(&swe_result, &ceus_result, &uncertainty_result);
 
         let _ = writeln!(
             std::io::stdout().lock(),
             "\n--- Phase 6: Treatment Planning ---"
         );
-        let treatment_plan = self.generate_treatment_plan(&diagnosis);
+        let treatment_plan = Self::generate_treatment_plan(&diagnosis);
 
         let _ = writeln!(
             std::io::stdout().lock(),

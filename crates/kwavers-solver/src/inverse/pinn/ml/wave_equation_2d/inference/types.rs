@@ -181,6 +181,7 @@ impl<B: coeus_ops::BackendOps<f32> + Default> std::fmt::Debug for PinnNeuralNetw
         formatter
             .debug_struct("PinnNeuralNetwork")
             .field("layer_count", &self.weights.len())
+            .field("bias_count", &self.biases.len())
             .field("quantized_network", &self.quantized_network)
             .finish()
     }

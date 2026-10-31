@@ -3,6 +3,7 @@
 //! # References
 //! - Raissi et al. (2019): "Physics-informed neural networks". *J. Comput. Phys.*, 378, 686–707.
 
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 
 use super::ForwardOutput;
@@ -38,13 +39,13 @@ where
     O: ForwardOutput<B>,
 {
     let batch = input.shape()[0];
-    let input_grad = Var::new(input.clone(), true);
+    let input_grad = be(Var::new(input.clone(), true))?;
     let output = forward_fn(&input_grad).into_forward_result()?;
-    let component = coeus_autograd::slice(
+    let component = be(coeus_autograd::slice(
         &output,
         &[(0, batch), (output_component, output_component + 1)],
-    );
-    coeus_autograd::sum(&component)
+    ))?;
+    be(coeus_autograd::sum(&component))?
         .backward()
         .map_err(|error| {
             kwavers_core::error::KwaversError::InternalError(format!(
@@ -58,8 +59,8 @@ where
         )
     })?;
 
-    let dx_grad = grad_tensor.slice(&[(0, batch), (1, 2)]).to_contiguous();
-    let dy_grad = grad_tensor.slice(&[(0, batch), (2, 3)]).to_contiguous();
+    let dx_grad = be(grad_tensor.slice(&[(0, batch), (1, 2)]).to_contiguous())?;
+    let dy_grad = be(grad_tensor.slice(&[(0, batch), (2, 3)]).to_contiguous())?;
 
     Ok((dx_grad, dy_grad))
 }
@@ -94,10 +95,10 @@ where
     let batch = input.shape()[0];
 
     // ∂u_x/∂x — backward through u_x component
-    let input_grad = Var::new(input.clone(), true);
+    let input_grad = be(Var::new(input.clone(), true))?;
     let output = forward_fn(&input_grad).into_forward_result()?;
-    let u_x = coeus_autograd::slice(&output, &[(0, batch), (0, 1)]);
-    coeus_autograd::sum(&u_x).backward().map_err(|error| {
+    let u_x = be(coeus_autograd::slice(&output, &[(0, batch), (0, 1)]))?;
+    be(coeus_autograd::sum(&u_x))?.backward().map_err(|error| {
         kwavers_core::error::KwaversError::InternalError(format!("divergence x backward: {error}"))
     })?;
     let du_x_dx = input_grad
@@ -111,10 +112,10 @@ where
         .to_contiguous();
 
     // ∂u_y/∂y — backward through u_y component
-    let input_grad = Var::new(input.clone(), true);
+    let input_grad = be(Var::new(input.clone(), true))?;
     let output = forward_fn(&input_grad).into_forward_result()?;
-    let u_y = coeus_autograd::slice(&output, &[(0, batch), (1, 2)]);
-    coeus_autograd::sum(&u_y).backward().map_err(|error| {
+    let u_y = be(coeus_autograd::slice(&output, &[(0, batch), (1, 2)]))?;
+    be(coeus_autograd::sum(&u_y))?.backward().map_err(|error| {
         kwavers_core::error::KwaversError::InternalError(format!("divergence y backward: {error}"))
     })?;
     let du_y_dy = input_grad
@@ -128,5 +129,5 @@ where
         .to_contiguous();
 
     let backend = B::default();
-    Ok(coeus_ops::add(&du_x_dx, &du_y_dy, &backend))
+    be(coeus_ops::add(&be(du_x_dx)?, &be(du_y_dy)?, &backend))
 }

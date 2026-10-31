@@ -4,6 +4,7 @@
 
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::error::{ConfigError, KwaversResult};
+use kwavers_core::validation::{validate_nonnegative_finite, validate_positive_finite};
 use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 
@@ -180,9 +181,13 @@ impl DomainSourceParameters {
     /// source constructors cannot receive `NaN`/infinite coordinates or an
     /// impossible angular aperture through this public configuration boundary.
     pub fn validate(&self) -> KwaversResult<()> {
-        validate_nonnegative_finite("amplitude", self.amplitude)?;
-        validate_positive_finite("frequency", self.frequency)?;
-        validate_nonnegative_finite("radius", self.radius)?;
+        validate_nonnegative_finite(
+            "amplitude",
+            self.amplitude,
+            "must be finite and nonnegative",
+        )?;
+        validate_positive_finite("frequency", self.frequency, "must be finite and positive")?;
+        validate_nonnegative_finite("radius", self.radius, "must be finite and nonnegative")?;
         validate_finite("phase", self.phase)?;
         validate_finite("delay", self.delay)?;
         validate_finite_vector("position", self.position)?;
@@ -232,7 +237,7 @@ fn validate_focused_source_geometry(source: &DomainSourceParameters) -> KwaversR
         | FocusedBowlAperture::PolarSpan { .. }
         | FocusedBowlAperture::PolarBounds { .. }
         | FocusedBowlAperture::AxisProjectionBounds { .. } => {
-            validate_positive_finite("radius", source.radius)
+            validate_positive_finite("radius", source.radius, "must be finite and positive")
         }
     }
 }
@@ -246,7 +251,7 @@ fn focused_source_focus(source: &DomainSourceParameters) -> [f64; 3] {
 }
 
 fn validate_pulse_parameters(pulse: &PulseParameters) -> KwaversResult<()> {
-    validate_positive_finite("pulse.cycles", pulse.cycles)
+    validate_positive_finite("pulse.cycles", pulse.cycles, "must be finite and positive")
 }
 
 fn validate_focused_bowl_aperture(aperture: FocusedBowlAperture) -> KwaversResult<()> {
@@ -271,6 +276,7 @@ fn validate_focused_bowl_aperture(aperture: FocusedBowlAperture) -> KwaversResul
             validate_positive_finite(
                 "focused_bowl_aperture.radius_of_curvature_m",
                 radius_of_curvature_m,
+                "must be finite and positive",
             )?;
             validate_polar_bounds(theta_min_rad, theta_max_rad)
         }
@@ -279,6 +285,7 @@ fn validate_focused_bowl_aperture(aperture: FocusedBowlAperture) -> KwaversResul
         } => validate_positive_finite(
             "focused_bowl_aperture.radius_of_curvature_m",
             radius_of_curvature_m,
+            "must be finite and positive",
         ),
     }
 }
@@ -331,30 +338,6 @@ fn validate_finite_vector(parameter: &str, value: [f64; 3]) -> KwaversResult<()>
         }
     }
     Ok(())
-}
-
-fn validate_positive_finite(parameter: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(invalid_value(
-            parameter,
-            value,
-            "Must be finite and positive",
-        ))
-    }
-}
-
-fn validate_nonnegative_finite(parameter: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value >= 0.0 {
-        Ok(())
-    } else {
-        Err(invalid_value(
-            parameter,
-            value,
-            "Must be finite and non-negative",
-        ))
-    }
 }
 
 fn validate_finite(parameter: &str, value: f64) -> KwaversResult<()> {

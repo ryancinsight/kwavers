@@ -1,6 +1,7 @@
 use super::{super::ExponentSpectrum::Stratified, uniform_symbols};
 use crate::forward::pstd::config::PSTDConfig;
 use crate::pstd::PSTDSolver;
+use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
@@ -408,7 +409,7 @@ fn multi_relaxation_mode_realizes_spectrum_at_drive_frequency() {
 
     // Realized absorption at ω_ref equals the relaxation spectrum's α(ω_ref).
     let relax = RelaxationAbsorption::new(tau, weights).unwrap();
-    let f_ref = kwavers_medium::CoreMedium::reference_frequency(&medium);
+    let f_ref = kwavers_medium::CoreMedium::reference_frequency(&medium).into_base();
     let omega_ref = TWO_PI * f_ref;
     let y_eff = relax.local_exponent(omega_ref).clamp(0.1, 2.0);
     let expected = relax.attenuation(omega_ref, SOUND_SPEED_WATER_SIM);
@@ -498,8 +499,9 @@ fn stratified_exponent_matches_per_tissue_uniform_operator() {
     let mut het = HeterogeneousMedium::from_homogeneous(&bg, &grid)
         .expect("valid homogeneous optical properties");
     het.use_trilinear_interpolation = false; // piecewise-constant exponent lookup
-    het.absorption.fill(alpha0);
-    het.alpha0.fill(alpha0);
+                                             // Np/m storage (storage convention in `kwavers_medium::core`).
+    het.absorption.fill(alpha0 * DB_TO_NP * 100.0);
+    het.alpha0.fill(alpha0 * DB_TO_NP * 100.0);
     for ([i, _, _], a) in het
         .alpha_power
         .indexed_iter_mut()

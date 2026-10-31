@@ -1,6 +1,7 @@
 //! Acoustic wave physics domain implementation.
 
 use super::types::{AcousticBoundarySpec, AcousticProblemType, PinnAcousticBoundaryType};
+use crate::inverse::pinn::be;
 use crate::inverse::pinn::ml::adapters::source::PinnAcousticSource;
 use crate::inverse::pinn::ml::physics::{
     BoundaryPosition, InitialConditionSpec, PhysicsLossWeights, PhysicsValidationMetric,
@@ -95,49 +96,49 @@ where
         // term), so this is a plain forward pass.
         let p = model.forward(x, y, t)?;
 
-        let x_grad_2 = Var::new(x.tensor.clone(), true);
+        let x_grad_2 = be(Var::new(x.tensor.clone(), true))?;
         let p_x_for_xx = model.forward(&x_grad_2, y, t)?;
         p_x_for_xx.backward().map_err(|error| {
             KwaversError::InternalError(format!("acoustic x derivative: {error}"))
         })?;
-        let p_xx = Var::new(
+        let p_xx = be(Var::new(
             x_grad_2.grad().ok_or_else(|| {
                 KwaversError::InternalError(
                     "acoustic x derivative did not produce a gradient".into(),
                 )
             })?,
             false,
-        );
+        ))?;
 
-        let y_grad_2 = Var::new(y.tensor.clone(), true);
+        let y_grad_2 = be(Var::new(y.tensor.clone(), true))?;
         let p_y_for_yy = model.forward(x, &y_grad_2, t)?;
         p_y_for_yy.backward().map_err(|error| {
             KwaversError::InternalError(format!("acoustic y derivative: {error}"))
         })?;
-        let p_yy = Var::new(
+        let p_yy = be(Var::new(
             y_grad_2.grad().ok_or_else(|| {
                 KwaversError::InternalError(
                     "acoustic y derivative did not produce a gradient".into(),
                 )
             })?,
             false,
-        );
+        ))?;
 
-        let t_grad_2 = Var::new(t.tensor.clone(), true);
+        let t_grad_2 = be(Var::new(t.tensor.clone(), true))?;
         let p_t_for_tt = model.forward(x, y, &t_grad_2)?;
         p_t_for_tt.backward().map_err(|error| {
             KwaversError::InternalError(format!("acoustic t derivative: {error}"))
         })?;
-        let p_tt = Var::new(
+        let p_tt = be(Var::new(
             t_grad_2.grad().ok_or_else(|| {
                 KwaversError::InternalError(
                     "acoustic t derivative did not produce a gradient".into(),
                 )
             })?,
             false,
-        );
+        ))?;
 
-        let laplacian = coeus_autograd::add(&p_xx, &p_yy);
+        let laplacian = be(coeus_autograd::add(&p_xx, &p_yy))?;
 
         let c = physics_params
             .material_properties
@@ -145,8 +146,10 @@ where
             .copied()
             .unwrap_or(self.wave_speed);
         let c_squared = (c * c) as f32;
-        let mut residual =
-            coeus_autograd::sub(&p_tt, &coeus_autograd::scalar_mul(&laplacian, c_squared));
+        let mut residual = be(coeus_autograd::sub(
+            &p_tt,
+            &be(coeus_autograd::scalar_mul(&laplacian, c_squared))?,
+        ))?;
 
         if let AcousticProblemType::Nonlinear = self.problem_type {
             if let Some(beta) = self.nonlinearity_coefficient {
@@ -162,27 +165,32 @@ where
                 // coeff = β/(ρ₀c²), not β/(ρ₀c⁴).
                 let coeff = (beta / (rho_0 * (c * c))) as f32;
 
-                let t_grad_for_pt = Var::new(t.tensor.clone(), true);
+                let t_grad_for_pt = be(Var::new(t.tensor.clone(), true))?;
                 let p_for_pt = model.forward(x, y, &t_grad_for_pt)?;
                 p_for_pt.backward().map_err(|error| {
                     KwaversError::InternalError(format!("acoustic nonlinear t derivative: {error}"))
                 })?;
-                let p_t = Var::new(
+                let p_t = be(Var::new(
                     t_grad_for_pt.grad().ok_or_else(|| {
                         KwaversError::InternalError(
                             "acoustic nonlinear t derivative did not produce a gradient".into(),
                         )
                     })?,
                     false,
-                );
+                ))?;
 
                 // ∂²(p²)/∂t² = 2*(p_t² + p * p_tt)
-                let p_t_sq = coeus_autograd::mul(&p_t, &p_t);
-                let p_p_tt = coeus_autograd::mul(&p, &p_tt);
-                let p2_tt = coeus_autograd::scalar_mul(&coeus_autograd::add(&p_t_sq, &p_p_tt), 2.0);
+                let p_t_sq = be(coeus_autograd::mul(&p_t, &p_t))?;
+                let p_p_tt = be(coeus_autograd::mul(&p, &p_tt))?;
+                let p2_tt = be(coeus_autograd::scalar_mul(
+                    &be(coeus_autograd::add(&p_t_sq, &p_p_tt))?,
+                    2.0,
+                ))?;
 
-                residual =
-                    coeus_autograd::sub(&residual, &coeus_autograd::scalar_mul(&p2_tt, coeff));
+                residual = be(coeus_autograd::sub(
+                    &residual,
+                    &be(coeus_autograd::scalar_mul(&p2_tt, coeff))?,
+                ))?;
             }
         }
 

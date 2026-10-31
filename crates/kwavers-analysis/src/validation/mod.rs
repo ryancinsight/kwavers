@@ -126,12 +126,13 @@ pub fn validate_absorption_model(
 
     let alpha_theory = kwavers_core::constants::acoustic_parameters::WATER_ABSORPTION_ALPHA_0
         * (frequency / kwavers_core::constants::MHZ_TO_HZ).powi(2);
-    let alpha_np_m = alpha_theory * kwavers_core::constants::DB_TO_NP; // Convert dB/cm to Np/cm (DB_TO_NP = ln(10)/20)
+    let alpha_np_m = alpha_theory * kwavers_core::constants::DB_TO_NP * 100.0; // dB/cm -> Np/m: x DB_TO_NP [Np/dB] x 100 [cm/m]
 
     // Get implementation's absorption
     use kwavers_medium::AcousticProperties;
     let alpha_impl =
-        AcousticProperties::absorption_coefficient(medium, 0.0, 0.0, 0.0, grid, frequency);
+        AcousticProperties::absorption_coefficient(medium, 0.0, 0.0, 0.0, grid, frequency)
+            .into_base();
 
     // Compare with measured value if provided
     let measurement_error = if measured_alpha > 0.0 {
@@ -234,5 +235,40 @@ mod tests {
             report.passed,
             "CFL condition should pass for conservative timestep"
         );
+    }
+
+    /// ADR 135: the water absorption boundary is Np/m. Theory leg proves the
+    /// getter matches the Szabo water power law; skew leg proves a dB-valued
+    /// measurement (the historical unconverted magnitude) fails.
+    #[test]
+    fn water_absorption_boundary_is_np_per_m() {
+        use kwavers_core::constants::acoustic_parameters::{DB_TO_NP, WATER_ABSORPTION_ALPHA_0};
+        use kwavers_medium::HomogeneousMedium;
+
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
+        let medium = HomogeneousMedium::water(&grid);
+        let frequency = 1.0e6;
+
+        let report = validate_absorption_model(frequency, 0.0, &medium, &grid);
+        assert!(
+            report.passed,
+            "water getter must match Szabo theory: {report:?}"
+        );
+        assert!(report.error_l2 < 0.05);
+
+        // Independent pin of the boundary value: 0.0022 dB/(cm·MHz²) at
+        // 1 MHz is 0.0253 Np/m.
+        let expected_np_m = WATER_ABSORPTION_ALPHA_0 * DB_TO_NP * 100.0;
+        assert!((expected_np_m - 0.0253).abs() < 1e-3);
+
+        // A measurement carrying the raw dB number must fail by an order of
+        // magnitude, not squeak through the threshold.
+        let db_valued = WATER_ABSORPTION_ALPHA_0 * (frequency / 1.0e6).powi(2);
+        let skewed = validate_absorption_model(frequency, db_valued, &medium, &grid);
+        assert!(
+            !skewed.passed,
+            "dB-valued measurement must fail the Np/m boundary"
+        );
+        assert!(skewed.error_linf > 1.0);
     }
 }

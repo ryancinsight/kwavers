@@ -1,9 +1,10 @@
 //! Validated planar aperture shapes, oriented geometry and surface drive.
 
-use super::input::{invalid, validate_point, validate_positive};
+use super::input::invalid;
 use super::vector::{dot, norm, normalized_normal, plane_basis, scale, subtract};
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::validation::{validate_finite_point, validate_positive_finite};
 use std::f64::consts::TAU;
 
 /// Outline of a planar aperture in its local frame.
@@ -78,6 +79,21 @@ impl PlanarApertureShape {
     }
 }
 
+/// Surface-sampling contract of a planar aperture (ADR 136).
+///
+/// `KWave` reproduces the legacy `ElementShape::Rect` path: the
+/// rect-canonical lattice deposited through the unnormalized k-Wave BLI
+/// stencil, with reference values pinned by the k-Wave mass test.
+/// `AreaConserving` runs the planar midpoint lattice through the
+/// renormalized stencil, so total discrete mass equals `area / dx^2`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SurfaceConvention {
+    /// k-Wave parity: rect-canonical lattice, raw BLI deposition.
+    KWave,
+    /// Planar default: midpoint lattice, renormalized deposition.
+    AreaConserving,
+}
+
 /// Validated position, orientation, and outline of a planar aperture.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlanarApertureGeometry {
@@ -85,6 +101,7 @@ pub struct PlanarApertureGeometry {
     normal: [f64; 3],
     first_axis: [f64; 3],
     shape: PlanarApertureShape,
+    surface: SurfaceConvention,
 }
 
 impl PlanarApertureGeometry {
@@ -102,6 +119,7 @@ impl PlanarApertureGeometry {
             normal,
             first_axis,
             PlanarApertureShape::Disk { radius_m },
+            SurfaceConvention::AreaConserving,
         )
     }
 
@@ -118,12 +136,45 @@ impl PlanarApertureGeometry {
         first_axis: [f64; 3],
         shape: PlanarApertureShape,
     ) -> KwaversResult<Self> {
+        Self::oriented_with_convention(
+            center_m,
+            normal,
+            first_axis,
+            shape,
+            SurfaceConvention::AreaConserving,
+        )
+    }
+
+    /// Construct a planar aperture with an explicit in-plane first axis and
+    /// an explicit surface-sampling contract (ADR 136).
+    ///
+    /// # Errors
+    ///
+    /// Returns `KwaversError::Config` unless the shape bounds are valid and
+    /// the first axis has a nonzero projection into the aperture plane.
+    pub fn oriented_with_convention(
+        center_m: [f64; 3],
+        normal: [f64; 3],
+        first_axis: [f64; 3],
+        shape: PlanarApertureShape,
+        surface: SurfaceConvention,
+    ) -> KwaversResult<Self> {
         let normal = normalized_normal(normal)?;
-        validate_point("first_axis", first_axis)?;
+        validate_finite_point("first_axis", first_axis, "all coordinates finite")?;
         let planar_axis = subtract(first_axis, scale(normal, dot(first_axis, normal)));
         let axis_norm = norm(planar_axis);
-        validate_positive("first_axis_planar_norm", axis_norm)?;
-        Self::from_validated(center_m, normal, scale(planar_axis, 1.0 / axis_norm), shape)
+        validate_positive_finite(
+            "first_axis_planar_norm",
+            axis_norm,
+            "must be finite and positive",
+        )?;
+        Self::from_validated(
+            center_m,
+            normal,
+            scale(planar_axis, 1.0 / axis_norm),
+            shape,
+            surface,
+        )
     }
 
     fn from_validated(
@@ -131,10 +182,13 @@ impl PlanarApertureGeometry {
         normal: [f64; 3],
         first_axis: [f64; 3],
         shape: PlanarApertureShape,
+        surface: SurfaceConvention,
     ) -> KwaversResult<Self> {
-        validate_point("center_m", center_m)?;
+        validate_finite_point("center_m", center_m, "all coordinates finite")?;
         match shape {
-            PlanarApertureShape::Disk { radius_m } => validate_positive("radius_m", radius_m)?,
+            PlanarApertureShape::Disk { radius_m } => {
+                validate_positive_finite("radius_m", radius_m, "must be finite and positive")?
+            }
             PlanarApertureShape::AnnularSector {
                 inner_radius_m,
                 outer_radius_m,
@@ -148,7 +202,11 @@ impl PlanarApertureGeometry {
                         "finite and >= 0",
                     ));
                 }
-                validate_positive("outer_radius_m", outer_radius_m)?;
+                validate_positive_finite(
+                    "outer_radius_m",
+                    outer_radius_m,
+                    "must be finite and positive",
+                )?;
                 if inner_radius_m >= outer_radius_m {
                     return Err(invalid(
                         "annular_radii_m",
@@ -172,8 +230,8 @@ impl PlanarApertureGeometry {
                 }
             }
             PlanarApertureShape::Rectangle { width_m, height_m } => {
-                validate_positive("width_m", width_m)?;
-                validate_positive("height_m", height_m)?;
+                validate_positive_finite("width_m", width_m, "must be finite and positive")?;
+                validate_positive_finite("height_m", height_m, "must be finite and positive")?;
             }
         }
         Ok(Self {
@@ -181,6 +239,7 @@ impl PlanarApertureGeometry {
             normal,
             first_axis,
             shape,
+            surface,
         })
     }
 
@@ -207,6 +266,32 @@ impl PlanarApertureGeometry {
     #[must_use]
     pub const fn shape(&self) -> PlanarApertureShape {
         self.shape
+    }
+
+    /// Re-frame a validated aperture without revalidation (salvaged from the
+    /// superseded one-rectangle-element attempt, PR #967): a rigid motion of
+    /// a validated frame stays valid, so rasterization-time transform
+    /// application needs no fallible path.
+    #[must_use]
+    pub(crate) const fn with_frame(
+        &self,
+        center_m: [f64; 3],
+        normal: [f64; 3],
+        first_axis: [f64; 3],
+    ) -> Self {
+        Self {
+            center_m,
+            normal,
+            first_axis,
+            shape: self.shape,
+            surface: self.surface,
+        }
+    }
+
+    /// Surface-sampling contract (ADR 136).
+    #[must_use]
+    pub const fn surface(&self) -> SurfaceConvention {
+        self.surface
     }
 
     /// Radius of the smallest centred disk that contains the aperture, metres.

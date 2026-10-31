@@ -4,13 +4,13 @@ use pyo3::prelude::*;
 #[pyfunction]
 #[pyo3(signature = (db, y=1.0))]
 fn db2neper(db: f64, y: f64) -> f64 {
-    kwavers_core::units::db_per_mhz_cm_to_neper_per_rad_s_m(db, y)
+    kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m(db, y)
 }
 
 #[pyfunction]
 #[pyo3(signature = (neper, y=1.0))]
 fn neper2db(neper: f64, y: f64) -> f64 {
-    kwavers_core::units::neper_per_rad_s_m_to_db_per_mhz_cm(neper, y)
+    kwavers_medium::absorption::power_law::np_omega_m_to_power_law_db_cm(neper, y)
 }
 
 #[pyfunction]

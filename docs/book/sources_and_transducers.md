@@ -861,13 +861,23 @@ kwavers_transducer                   Transducer geometry → grid rasterization
 produce k-Wave-compatible source masks and signal matrices. The public API exposes:
 
 ```rust,ignore
-// Add a rectangular element (typical for linear arrays); builder-style, returns &mut Self
+// Add a rectangular element (typical for linear arrays); builder-style, returns &mut Self.
+// Builds a PlanarApertureShape::Rectangle under SurfaceConvention::KWave (ADR 136).
 pub fn add_rect_element(
     &mut self,
     position: (f64, f64, f64),
-    u_size: f64,            // element width
-    v_size: f64,            // element height
-    euler_angles: (f64, f64, f64),  // XYZ rotation (alpha, beta, gamma) in radians
+    width: f64,             // element width
+    height: f64,            // element height
+) -> &mut Self
+
+// Add a rotated rectangular element; euler_xyz_deg are intrinsic X-Y-Z Euler
+// angles in degrees about the element center.
+pub fn add_rect_rot_element(
+    &mut self,
+    position: (f64, f64, f64),
+    width: f64,             // element width
+    height: f64,            // element height
+    euler_xyz_deg: (f64, f64, f64),
 ) -> &mut Self
 
 // Add a focused disc element (piston with optional focus)

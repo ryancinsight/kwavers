@@ -29,12 +29,13 @@
 use super::kernel::AbsorptionKernel;
 use super::strata::{resolve_exponent_spectrum, uniform_spectrum};
 use crate::forward::pstd::config::{PSTDConfig, PowerLawDispersion};
+use kwavers_core::constants::acoustic_parameters::REFERENCE_FREQUENCY_HZ;
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
+use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
 use kwavers_medium::Medium;
-use kwavers_physics::acoustics::mechanics::absorption::{
-    np_m_to_power_law_db_cm, power_law_db_cm_to_np_omega_m, AbsorptionMode,
-};
+use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers_physics::acoustics::mechanics::RelaxationAbsorption;
 use leto::Array3;
 
@@ -48,11 +49,12 @@ const DEGENERATE_EXPONENT_TOL: f64 = 1e-12;
 /// spectral nabla operators ∇^(y−2) and ∇^(y−1) on the r2c half spectrum.
 ///
 /// ## Algorithm
-/// For `AbsorptionMode::PowerLaw { alpha_coeff: α_dB, alpha_power: y }`:
+/// For `AbsorptionMode::PowerLaw { alpha_coeff, alpha_power: y }`:
 ///
 /// **Spatial coefficients** (vary per cell for heterogeneous media):
 /// ```text
-///   α_SI(r) = power_law_db_cm_to_np_omega_m(α_dB(r), y(r))
+///   α_SI(r) = power_law_db_cm_to_np_omega_m(α_dB(r), y(r))   (caller dB path)
+///   α_SI(r) = α₀(r) · (1/(2π·1 MHz))^y(r)                     (medium SI path)
 ///   τ(r)    = −2 α_SI(r) · c₀(r)^(y(r)−1)
 ///   η(r)    =  2 α_SI(r) · c₀(r)^y(r) · tan(π y(r) / 2)   (causal dispersion)
 ///   η(r)    =  0                                         (dispersion omitted)
@@ -165,6 +167,7 @@ pub(crate) fn initialize_absorption_operators(
             // fixes the spectrum, whose exponent pass 2 uses for τ and η so the
             // coefficients and the operators share one y per voxel.
             let mut alpha_db_field = Array3::zeros(shape);
+            let mut alpha_np_field = Array3::zeros(shape);
             let mut y_field = Array3::from_elem(shape, y_config);
 
             for k in 0..grid.nz {
@@ -187,8 +190,13 @@ pub(crate) fn initialize_absorption_operators(
                         // (`!= 0.0`, `!= 1.0`), so a homogeneous medium's
                         // defaulted water values silently outranked a caller's
                         // request on both (ADR 120).
-                        let (alpha_db_cm, y) = match alpha_coeff {
-                            Some(requested) => (*requested, y_config),
+                        // The `Some` arm carries the caller's k-Wave dB prefactor;
+                        // the `None` arm carries the medium's SI prefactor in
+                        // Np/m at 1 MHz. Each converts to the spectral Np/ω^y/m
+                        // coefficient on its own path; the two unit domains
+                        // meet only as `alpha_0_si`.
+                        let (alpha_db_cm, alpha_np_m, y) = match alpha_coeff {
+                            Some(requested) => (*requested, 0.0, y_config),
                             None => {
                                 let y_medium = medium.alpha_power(x, y_coord, z, grid);
                                 // y = 1 is degenerate only for the causal form.
@@ -196,10 +204,15 @@ pub(crate) fn initialize_absorption_operators(
                                     || (dispersive
                                         && (y_medium - 1.0).abs() <= DEGENERATE_EXPONENT_TOL);
                                 let y = if !degenerate { y_medium } else { y_config };
-                                (medium.alpha_coefficient(x, y_coord, z, grid), y)
+                                (
+                                    0.0,
+                                    medium.alpha_coefficient(x, y_coord, z, grid).into_base(),
+                                    y,
+                                )
                             }
                         };
                         alpha_db_field[[i, j, k]] = alpha_db_cm;
+                        alpha_np_field[[i, j, k]] = alpha_np_m;
                         y_field[[i, j, k]] = y;
                     }
                 }
@@ -218,8 +231,12 @@ pub(crate) fn initialize_absorption_operators(
                     for i in 0..grid.nx {
                         let y = spectrum.exponent_at([i, j, k]);
                         let c0_val = medium.sound_speed(i, j, k).into_base();
-                        let alpha_0_si =
-                            power_law_db_cm_to_np_omega_m(alpha_db_field[[i, j, k]], y);
+                        let alpha_0_si = if alpha_coeff.is_some() {
+                            power_law_db_cm_to_np_omega_m(alpha_db_field[[i, j, k]], y)
+                        } else {
+                            alpha_np_field[[i, j, k]]
+                                * (1.0 / (TWO_PI * REFERENCE_FREQUENCY_HZ)).powf(y)
+                        };
 
                         // Treeby & Cox (2010) Eqs. 19–20
                         tau[[i, j, k]] = -2.0 * alpha_0_si * c0_val.powf(y - 1.0);
@@ -295,7 +312,7 @@ fn build_relaxation_kernel(
     causal_alpha_0: Option<f64>,
 ) -> KwaversResult<Option<AbsorptionKernel>> {
     let shape = [grid.nx, grid.ny, grid.nz];
-    let f_ref = medium.reference_frequency();
+    let f_ref = medium.reference_frequency().into_base();
     let omega_ref = 2.0 * std::f64::consts::PI * f_ref;
     let y_eff = clamp_fractional_exponent(relaxation.local_exponent(omega_ref));
 
@@ -309,8 +326,9 @@ fn build_relaxation_kernel(
                 let c0_val = medium.sound_speed(i, j, k).into_base();
                 let alpha_np_m =
                     causal_alpha_0.unwrap_or_else(|| relaxation.attenuation(omega_ref, c0_val));
-                let alpha_db_cm = np_m_to_power_law_db_cm(alpha_np_m, f_ref, y_eff);
-                let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, y_eff);
+                // The dB round trip (Np/m → dB/cm → Np/ω^y/m) is exactly
+                // α_np_m / ω_ref^y; write it directly in SI.
+                let alpha_0_si = alpha_np_m / omega_ref.powf(y_eff);
 
                 tau[[i, j, k]] = -2.0 * alpha_0_si * c0_val.powf(y_eff - 1.0);
                 eta[[i, j, k]] = 2.0

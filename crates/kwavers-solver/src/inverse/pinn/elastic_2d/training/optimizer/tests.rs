@@ -2,6 +2,8 @@
 
 use super::pinn_optimizer::PINNOptimizer;
 use super::types::OptimizerAlgorithm;
+use crate::inverse::pinn::be;
+use kwavers_core::error::KwaversResult;
 
 type B = coeus_core::MoiraiBackend;
 
@@ -15,7 +17,7 @@ fn test_optimizer_creation() {
         ..Config::default()
     };
     let model = ElasticPINN2D::<B>::new(&config).unwrap();
-    let sgd_opt = PINNOptimizer::sgd(&model, 0.01, 0.0001);
+    let sgd_opt = PINNOptimizer::sgd(&model, 0.01, 0.0001).expect("invariant: SGD construction");
     assert_eq!(sgd_opt.algorithm, OptimizerAlgorithm::SGD);
     assert_eq!(sgd_opt.learning_rate, 0.01);
     assert_eq!(sgd_opt.weight_decay, 0.0001);
@@ -36,7 +38,7 @@ fn test_optimizer_algorithm_enum() {
 /// value and (b) the model output actually changes (a no-op optimizer
 /// would leave both invariant).
 #[test]
-fn adam_and_adamw_reduce_loss_and_update_parameters() {
+fn adam_and_adamw_reduce_loss_and_update_parameters() -> KwaversResult<()> {
     use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
     use crate::inverse::pinn::elastic_2d::Config;
     use coeus_autograd::Var;
@@ -48,37 +50,47 @@ fn adam_and_adamw_reduce_loss_and_update_parameters() {
         ..Config::default()
     };
 
-    let var_col = |values: &[f32]| {
-        Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![(values.len()), 1], values, &backend),
+    let var_col = |values: &[f32]| -> KwaversResult<Var<f32, B>> {
+        be(Var::new(
+            be(coeus_tensor::Tensor::from_slice_on(
+                vec![values.len(), 1],
+                values,
+                &backend,
+            ))?,
             false,
-        )
+        ))
     };
-    let x = var_col(&[0.1, 0.4, 0.7]);
-    let y = var_col(&[0.2, 0.5, 0.8]);
-    let t = var_col(&[0.0, 0.1, 0.2]);
-    let target = Var::new(
-        coeus_tensor::Tensor::from_slice_on(
+    let x = var_col(&[0.1, 0.4, 0.7])?;
+    let y = var_col(&[0.2, 0.5, 0.8])?;
+    let t = var_col(&[0.0, 0.1, 0.2])?;
+    let target = be(Var::new(
+        be(coeus_tensor::Tensor::from_slice_on(
             vec![3, 2],
             &[1.0_f32, -1.0, 1.0, -1.0, 1.0, -1.0],
             &backend,
-        ),
+        ))?,
         false,
-    );
+    ))?;
 
     let mse = |model: &ElasticPINN2D<B>| -> f32 {
         let pred = model
             .forward(&x, &y, &t)
             .expect("elastic optimizer forward");
-        let diff = coeus_autograd::sub(&pred, &target);
-        coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff))
-            .tensor
-            .as_slice()[0]
+        let diff = be(coeus_autograd::sub(&pred, &target)).expect("invariant: sub");
+        be(coeus_autograd::mean(
+            &be(coeus_autograd::mul(&diff, &diff)).expect("invariant: mul"),
+        ))
+        .expect("invariant: mean")
+        .tensor
+        .as_slice()[0]
     };
     let probe = |model: &ElasticPINN2D<B>| -> f32 {
-        coeus_autograd::sum(&model.forward(&x, &y, &t).expect("elastic probe forward"))
-            .tensor
-            .as_slice()[0]
+        be(coeus_autograd::sum(
+            &model.forward(&x, &y, &t).expect("elastic probe forward"),
+        ))
+        .expect("invariant: sum")
+        .tensor
+        .as_slice()[0]
     };
 
     for algorithm in ["sgd_momentum", "adam", "adamw"] {
@@ -87,7 +99,8 @@ fn adam_and_adamw_reduce_loss_and_update_parameters() {
             "sgd_momentum" => PINNOptimizer::sgd_momentum(&model, 5e-3, 0.0, 0.9),
             "adam" => PINNOptimizer::adam(&model, 1e-2, 0.0, 0.9, 0.999, 1e-8),
             _ => PINNOptimizer::adamw(&model, 1e-2, 1e-4, 0.9, 0.999, 1e-8),
-        };
+        }
+        .expect("invariant: optimizer construction");
 
         let initial_loss = mse(&model);
         let initial_probe = probe(&model);
@@ -98,13 +111,15 @@ fn adam_and_adamw_reduce_loss_and_update_parameters() {
 
         for _ in 0..200 {
             for p in model.parameters() {
-                p.zero_grad();
+                be(p.zero_grad())?;
             }
             let pred = model
                 .forward(&x, &y, &t)
                 .expect("elastic optimizer forward");
-            let diff = coeus_autograd::sub(&pred, &target);
-            let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
+            let diff = be(coeus_autograd::sub(&pred, &target))?;
+            let loss = be(coeus_autograd::mean(&be(coeus_autograd::mul(
+                &diff, &diff,
+            ))?))?;
             loss.backward().expect("elastic optimizer backward");
             optimizer
                 .step(&mut model)
@@ -126,4 +141,6 @@ fn adam_and_adamw_reduce_loss_and_update_parameters() {
              (initial {initial_probe}, final {final_probe})"
         );
     }
+
+    Ok(())
 }

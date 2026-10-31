@@ -62,9 +62,11 @@ fn test_conservation_check_interval() {
 /// energy norm `‖p‖₂ = sqrt(∑p²)` must be strictly smaller after N steps than
 /// before, for any α > 0.
 ///
-/// Verification: α = 5 Np/m, c = 1500 m/s, Δt ≈ 3.85×10⁻⁷ s.
-/// Per-step decay factor ≈ exp(−5·1500·3.85e-7) ≈ 0.9971.
-/// After 30 steps: 0.9971³⁰ ≈ 0.918 → ~8% L2 energy reduction.
+/// Verification: α₀ = 5 dB prefactor surfaces as α = 5·DB_TO_NP·100 ≈ 57.6 Np/m
+/// (storage convention in `kwavers_medium::core`), c = 1500 m/s,
+/// Δt ≈ 3.85×10⁻⁷ s.
+/// Per-step decay factor ≈ exp(−57.6·1500·3.85e-7) ≈ 0.9673.
+/// After 30 steps: 0.9673³⁰ ≈ 0.369 → ~63% peak reduction.
 #[test]
 fn absorption_causes_amplitude_decay_not_growth() {
     let n = 24usize;

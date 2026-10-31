@@ -54,8 +54,6 @@
 
 use super::KZKConfig;
 use apollo::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64 as ApolloComplex64};
-use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
-use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use kwavers_math::fft::Complex64;
 use leto::Array1 as LetoArray1;
 use leto::Array3;
@@ -113,11 +111,13 @@ impl KzkAbsorptionOperator {
     /// ```
     #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
-        // Convert dB/(cm·MHz^y) → Np/(m·Hz^y) using SSOT conversion constants:
-        //   / CM_TO_M     : cm⁻¹ → m⁻¹             (CM_TO_M = 0.01, divide)
-        //   / NP_TO_DB    : dB → Np                (NP_TO_DB = 20/ln10 ≈ 8.686)
-        //   / MHZ_TO_HZ^y : MHz^y → Hz^y           (MHZ_TO_HZ = 1e6)
-        let alpha0_np = config.alpha0 / CM_TO_M / NP_TO_DB / MHZ_TO_HZ.powf(config.alpha_power);
+        // Convert dB/(cm·MHz^y) → Np/(m·Hz^y) through the single owner beside
+        // `PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS), never by
+        // hand-spelled factors.
+        let alpha0_np = kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m_hz(
+            config.alpha0,
+            config.alpha_power,
+        );
 
         // Pre-compute h_mask for both step-size variants used in Strang splitting.
         // Theorem (mask independence): H[k] = exp(-α(f_k) · Δz) depends only on

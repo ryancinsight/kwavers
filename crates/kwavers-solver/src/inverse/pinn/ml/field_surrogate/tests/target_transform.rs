@@ -7,6 +7,7 @@
 //! to within the transform's f32 round-trip tolerance, and that
 //! sub-`p_eps` pressures are compressed instead of vanishing.
 
+use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
 use super::super::config::ParamFieldPINNConfig;
@@ -56,7 +57,7 @@ fn sampler_default_uses_linear_transform() {
 }
 
 #[test]
-fn sampler_with_signed_log1p_emits_targets_in_unit_interval() {
+fn sampler_with_signed_log1p_emits_targets_in_unit_interval() -> KwaversResult<()> {
     let kernels = cube();
     let p_max_pa = 30.0 * MPA_TO_PA as f32;
     let transforms =
@@ -64,7 +65,7 @@ fn sampler_with_signed_log1p_emits_targets_in_unit_interval() {
     let sampler =
         KernelCubeSampler::with_transforms(&kernels, None, transforms).expect("sampler build");
 
-    let batch = sampler.batch::<B>(0, 512);
+    let batch = sampler.batch::<B>(0, 512)?;
     let host: Vec<f32> = batch.targets.tensor.as_slice().to_vec();
 
     // All transformed targets must lie in [-1, 1] (the network's
@@ -81,6 +82,7 @@ fn sampler_with_signed_log1p_emits_targets_in_unit_interval() {
         max_abs > 0.9,
         "signed-log1p sampler did not produce near-peak targets: max_abs={max_abs}"
     );
+    Ok(())
 }
 
 #[test]

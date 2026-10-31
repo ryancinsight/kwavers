@@ -14,6 +14,7 @@
 //! - `rasterizer_curved`: arc, bowl, and annulus element rasterizers.
 //! - `rasterizer_planar`: rect, disc, and per-element rasterizers.
 //! - `accessors`: public query methods (masks, delays, apodization, etc.).
+//! - `validation`: typed `Config` errors for constructor input validation.
 
 mod accessors;
 mod bli_kernel;
@@ -23,6 +24,7 @@ pub(crate) mod math;
 mod rasterizer_curved;
 mod rasterizer_planar;
 mod transform;
+mod validation;
 
 use crate::transducers::physics::PlanarApertureGeometry;
 
@@ -121,23 +123,6 @@ pub enum ElementShape {
         diameter: f64,
         start_angle: f64,
         end_angle: f64,
-    },
-    /// Rectangular element
-    Rect {
-        position: (f64, f64, f64),
-        width: f64,
-        height: f64,
-        /// Retained for API compatibility.
-        length: f64,
-        /// Intrinsic X-Y-Z Euler rotation in degrees applied about the element
-        /// center. `(0.0, 0.0, 0.0)` keeps the rectangle axis-aligned.
-        euler_xyz_deg: (f64, f64, f64),
-    },
-    /// Disc/circular element
-    Disc {
-        position: (f64, f64, f64),
-        diameter: f64,
-        focus_position: Option<(f64, f64, f64)>,
     },
     /// Disc/circular element with finite-source surface profile.
     ProfiledDisc {

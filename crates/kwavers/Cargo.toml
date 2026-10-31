@@ -325,6 +325,10 @@ name = "pstd_long_run"
 harness = false
 
 [[bench]]
+name = "dg_projection"
+harness = false
+
+[[bench]]
 name = "aperture_rf_synthesis"
 harness = false
 
@@ -365,6 +369,10 @@ harness = false
 name = "photoacoustic_pipeline"
 harness = false
 
+[[bench]]
+name = "subspace_eigen"
+harness = false
+
 [[example]]
 name = "skull_ct_phase_correction"
 path = "examples/skull_ct_phase_correction.rs"
@@ -372,6 +380,7 @@ path = "examples/skull_ct_phase_correction.rs"
 [[example]]
 name = "seismic_imaging_demo"
 path = "examples/seismic_imaging_demo.rs"
+required-features = ["pinn"]
 
 [[example]]
 name = "seismic_imaging_3d_demo"
@@ -394,6 +403,7 @@ path = "examples/single_bubble_sonoluminescence.rs"
 [[example]]
 name = "liver_theranostic_reconstruction"
 path = "examples/liver_theranostic_reconstruction.rs"
+required-features = ["pinn"]
 
 [[example]]
 name = "transcranial_ct_mri_reconstruction"

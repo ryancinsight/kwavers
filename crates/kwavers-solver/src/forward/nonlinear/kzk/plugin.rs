@@ -119,9 +119,17 @@ impl KzkPlugin {
     fn build_config(grid: &Grid, medium: &dyn Medium) -> KZKConfig {
         let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid).into_base();
         let rho0 = kwavers_medium::density_at(medium, 0.0, 0.0, 0.0, grid).into_base();
-        let b_over_a = medium.nonlinearity_parameter(0.0, 0.0, 0.0, grid);
-        let alpha0 = medium.alpha_coefficient(0.0, 0.0, 0.0, grid);
+        let b_over_a = medium
+            .nonlinearity_parameter(0.0, 0.0, 0.0, grid)
+            .into_base();
         let alpha_power = medium.alpha_power(0.0, 0.0, 0.0, grid);
+        // KZKConfig carries the k-Wave dB prefactor; convert the SI boundary
+        // value back at f_ref, where the power ratio is exactly 1.
+        let alpha0 = kwavers_medium::absorption::power_law::np_m_to_power_law_db_cm(
+            medium.alpha_coefficient(0.0, 0.0, 0.0, grid).into_base(),
+            kwavers_core::constants::MHZ_TO_HZ,
+            alpha_power,
+        );
 
         // CFL constraint: c0 * dt / dz <= 0.5 for the parabolic approximation.
         let dz = grid.dx; // therapy axial spacing → KZK axial step

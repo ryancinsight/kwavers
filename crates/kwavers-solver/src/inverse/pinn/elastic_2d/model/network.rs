@@ -16,6 +16,7 @@
 //! - Raissi et al. (2019). "Physics-informed neural networks." *J. Comput. Phys.*, 378, 686–707.
 
 use super::super::config::Config;
+use crate::inverse::pinn::be;
 use coeus_autograd::Var;
 use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -100,28 +101,28 @@ where
             .map_err(|error| crate::inverse::pinn::layer_construction_failed("output", error))?;
 
         let backend = B::default();
-        let leaf_scalar = |v: f32| {
-            Var::new(
-                coeus_tensor::Tensor::from_slice_on(vec![1], &[v], &backend),
+        let leaf_scalar = |v: f32| -> KwaversResult<Var<f32, B>> {
+            be(Var::new(
+                be(coeus_tensor::Tensor::from_slice_on(vec![1], &[v], &backend))?,
                 true,
-            )
+            ))
         };
 
         let lambda = if config.optimize_lambda {
             let v = config.lambda_init.expect("lambda_init required");
-            Some(leaf_scalar(v as f32))
+            Some(leaf_scalar(v as f32)?)
         } else {
             None
         };
         let mu = if config.optimize_mu {
             let v = config.mu_init.expect("mu_init required");
-            Some(leaf_scalar(v as f32))
+            Some(leaf_scalar(v as f32)?)
         } else {
             None
         };
         let rho = if config.optimize_rho {
             let v = config.rho_init.expect("rho_init required");
-            Some(leaf_scalar(v as f32))
+            Some(leaf_scalar(v as f32)?)
         } else {
             None
         };
@@ -197,57 +198,90 @@ where
     ///
     /// Concatenates inputs to `[batch, 3]`, applies tanh-activated fully connected layers,
     /// then a linear output projection.
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions,
+    ///   including the input/hidden/output layer forwards.
+    ///
     pub fn forward(
         &self,
         x: &Var<f32, B>,
         y: &Var<f32, B>,
         t: &Var<f32, B>,
     ) -> KwaversResult<Var<f32, B>> {
-        let input = coeus_autograd::cat(&[x, y, t], 1);
-        let mut h = coeus_autograd::tanh(&map_forward(
+        let input = be(coeus_autograd::cat(&[x, y, t], 1))?;
+        let mut h = be(coeus_autograd::tanh(&map_forward(
             self.input_layer.forward(&input),
             "elastic PINN input layer",
-        )?);
+        )?))?;
         for layer in &self.hidden_layers {
-            h = coeus_autograd::tanh(&map_forward(
+            h = be(coeus_autograd::tanh(&map_forward(
                 layer.forward(&h),
                 "elastic PINN hidden layer",
-            )?);
+            )?))?;
         }
         map_forward(self.output_layer.forward(&h), "elastic PINN output layer")
     }
 
     /// Return λ as a scalar tensor; uses `fixed_value` when not optimizing.
-    pub fn get_lambda(&self, fixed_value: f64) -> coeus_tensor::Tensor<f32, B> {
-        match &self.lambda {
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
+    pub fn get_lambda(&self, fixed_value: f64) -> KwaversResult<coeus_tensor::Tensor<f32, B>> {
+        Ok(match &self.lambda {
             Some(p) => p.tensor.clone(),
             None => {
                 let backend = B::default();
-                coeus_tensor::Tensor::from_slice_on(vec![1], &[fixed_value as f32], &backend)
+                be(coeus_tensor::Tensor::from_slice_on(
+                    vec![1],
+                    &[fixed_value as f32],
+                    &backend,
+                ))?
             }
-        }
+        })
     }
 
     /// Return μ as a scalar tensor; uses `fixed_value` when not optimizing.
-    pub fn get_mu(&self, fixed_value: f64) -> coeus_tensor::Tensor<f32, B> {
-        match &self.mu {
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
+    pub fn get_mu(&self, fixed_value: f64) -> KwaversResult<coeus_tensor::Tensor<f32, B>> {
+        Ok(match &self.mu {
             Some(p) => p.tensor.clone(),
             None => {
                 let backend = B::default();
-                coeus_tensor::Tensor::from_slice_on(vec![1], &[fixed_value as f32], &backend)
+                be(coeus_tensor::Tensor::from_slice_on(
+                    vec![1],
+                    &[fixed_value as f32],
+                    &backend,
+                ))?
             }
-        }
+        })
     }
 
     /// Return ρ as a scalar tensor; uses `fixed_value` when not optimizing.
-    pub fn get_rho(&self, fixed_value: f64) -> coeus_tensor::Tensor<f32, B> {
-        match &self.rho {
+    ///
+    /// # Errors
+    ///
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    ///
+    pub fn get_rho(&self, fixed_value: f64) -> KwaversResult<coeus_tensor::Tensor<f32, B>> {
+        Ok(match &self.rho {
             Some(p) => p.tensor.clone(),
             None => {
                 let backend = B::default();
-                coeus_tensor::Tensor::from_slice_on(vec![1], &[fixed_value as f32], &backend)
+                be(coeus_tensor::Tensor::from_slice_on(
+                    vec![1],
+                    &[fixed_value as f32],
+                    &backend,
+                ))?
             }
-        }
+        })
     }
 
     /// Estimated material parameters for inverse problems.

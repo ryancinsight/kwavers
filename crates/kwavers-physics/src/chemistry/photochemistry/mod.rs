@@ -44,7 +44,9 @@ impl PhotochemicalEffects {
                 let (x, y, z) = grid.coords(i, j, k);
 
                 // Photosensitizer-like activation (e.g., ROS production in sonodynamic therapy)
-                let mu_a = medium.optical_absorption_coefficient(x, y, z, grid);
+                let mu_a = medium
+                    .optical_absorption_coefficient(x, y, z, grid)
+                    .into_base();
                 let k_photo = 1e-6 * mu_a * (t / 298.15); // Temperature-dependent rate
                 let light_intensity = light_val.max(0.0);
 

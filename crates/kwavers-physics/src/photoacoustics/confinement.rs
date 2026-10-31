@@ -1,4 +1,5 @@
-use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use kwavers_core::error::KwaversResult;
+use kwavers_core::validation::validate_positive_finite;
 use kwavers_imaging::photoacoustic::ThermoelasticProperties;
 
 #[derive(Debug, Clone, Copy)]
@@ -36,27 +37,48 @@ impl ConfinementAssessment {
     ///   life sciences. Nat Methods. 2016;13:627-638. DOI: 10.1038/nmeth.3925.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if any required physical parameter
-    ///   is nonfinite or nonpositive.
+    /// - Returns a [`kwavers_core::error::ValidationError`] invalid-value
+    ///   error if any required physical parameter is nonfinite or nonpositive.
     pub fn evaluate(
         mu_a_m_inv: f64,
         pulse_duration_s: f64,
         thermoelastic: ThermoelasticProperties,
     ) -> KwaversResult<Self> {
-        validate_positive_finite("mu_a_m_inv", mu_a_m_inv)?;
-        validate_positive_finite("pulse_duration_s", pulse_duration_s)?;
-        validate_positive_finite("density_kg_m3", thermoelastic.density_kg_m3)?;
-        validate_positive_finite("sound_speed_m_s", thermoelastic.sound_speed_m_s)?;
-        validate_positive_finite("specific_heat_j_kgk", thermoelastic.specific_heat_j_kgk)?;
+        validate_positive_finite("mu_a_m_inv", mu_a_m_inv, "must be finite and positive")?;
+        validate_positive_finite(
+            "pulse_duration_s",
+            pulse_duration_s,
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "density_kg_m3",
+            thermoelastic.density_kg_m3,
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "sound_speed_m_s",
+            thermoelastic.sound_speed_m_s,
+            "must be finite and positive",
+        )?;
+        validate_positive_finite(
+            "specific_heat_j_kgk",
+            thermoelastic.specific_heat_j_kgk,
+            "must be finite and positive",
+        )?;
         validate_positive_finite(
             "thermal_conductivity_w_mk",
             thermoelastic.thermal_conductivity_w_mk,
+            "must be finite and positive",
         )?;
 
         let optical_penetration_depth_m = 1.0 / mu_a_m_inv;
         let stress_confinement_time_s = optical_penetration_depth_m / thermoelastic.sound_speed_m_s;
         let thermal_diffusivity = thermoelastic.thermal_diffusivity_m2_s();
-        validate_positive_finite("thermal_diffusivity_m2_s", thermal_diffusivity)?;
+        validate_positive_finite(
+            "thermal_diffusivity_m2_s",
+            thermal_diffusivity,
+            "must be finite and positive",
+        )?;
         let thermal_confinement_time_s =
             optical_penetration_depth_m.powi(2) / (4.0 * thermal_diffusivity);
 
@@ -70,17 +92,6 @@ impl ConfinementAssessment {
     }
 }
 
-fn validate_positive_finite(parameter: &str, value: f64) -> KwaversResult<()> {
-    if value.is_finite() && value > 0.0 {
-        return Ok(());
-    }
-    Err(KwaversError::Validation(ValidationError::InvalidValue {
-        parameter: parameter.to_owned(),
-        value,
-        reason: "must be finite and strictly positive".to_owned(),
-    }))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -88,6 +99,7 @@ mod tests {
     use kwavers_core::constants::thermodynamic::{
         SPECIFIC_HEAT_WATER_37C, THERMAL_CONDUCTIVITY_WATER_37C,
     };
+    use kwavers_core::error::{KwaversError, ValidationError};
 
     fn water() -> ThermoelasticProperties {
         ThermoelasticProperties {

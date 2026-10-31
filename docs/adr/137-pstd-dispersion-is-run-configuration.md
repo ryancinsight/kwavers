@@ -1,4 +1,4 @@
-# ADR 135: Power-law dispersion is part of every PSTD run's configuration
+# ADR 137: Power-law dispersion is part of every PSTD run's configuration
 
 Status: Accepted
 

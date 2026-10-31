@@ -1,6 +1,7 @@
 //! Apodization window tests for [`KWaveArray`].
 
 use super::super::{KWaveArray, KwaveApodizationWindow};
+use eunomia::FloatElement;
 
 /// Rectangular apodization returns all-ones.
 /// # Panics
@@ -10,7 +11,9 @@ use super::super::{KWaveArray, KwaveApodizationWindow};
 fn test_apodization_rectangular_all_ones() {
     let mut array = KWaveArray::new();
     for i in 0..8 {
-        array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None);
+        array
+            .add_disc_element((f64::from_count(i) * 0.001, 0.0, 0.0), 0.001, None)
+            .expect("valid element");
     }
     let weights = array.get_apodization(KwaveApodizationWindow::Rectangular);
     assert_eq!(weights.len(), 8);
@@ -27,7 +30,9 @@ fn test_apodization_rectangular_all_ones() {
 fn test_apodization_hann_endpoints_near_zero() {
     let mut array = KWaveArray::new();
     for i in 0..9 {
-        array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None);
+        array
+            .add_disc_element((f64::from_count(i) * 0.001, 0.0, 0.0), 0.001, None)
+            .expect("valid element");
     }
     let weights = array.get_apodization(KwaveApodizationWindow::Hann);
     assert_eq!(weights.len(), 9);
@@ -56,7 +61,9 @@ fn test_apodization_hann_endpoints_near_zero() {
 fn test_apodization_hamming_range_and_symmetry() {
     let mut array = KWaveArray::new();
     for i in 0..7 {
-        array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None);
+        array
+            .add_disc_element((f64::from_count(i) * 0.001, 0.0, 0.0), 0.001, None)
+            .expect("valid element");
     }
     let weights = array.get_apodization(KwaveApodizationWindow::Hamming);
     assert_eq!(weights.len(), 7);
@@ -85,7 +92,9 @@ fn test_apodization_hamming_range_and_symmetry() {
 fn test_apodization_blackman_endpoints_and_symmetry() {
     let mut array = KWaveArray::new();
     for i in 0..9 {
-        array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None);
+        array
+            .add_disc_element((f64::from_count(i) * 0.001, 0.0, 0.0), 0.001, None)
+            .expect("valid element");
     }
     let weights = array.get_apodization(KwaveApodizationWindow::Blackman);
     assert_eq!(weights.len(), 9);
@@ -117,7 +126,9 @@ fn test_apodization_blackman_endpoints_and_symmetry() {
 fn test_apodization_tukey_limits_and_flat_top() {
     let mut array = KWaveArray::new();
     for i in 0..9 {
-        array.add_disc_element((i as f64 * 0.001, 0.0, 0.0), 0.001, None);
+        array
+            .add_disc_element((f64::from_count(i) * 0.001, 0.0, 0.0), 0.001, None)
+            .expect("valid element");
     }
     // r = 0 ≡ rectangular.
     let rect = array.get_apodization(KwaveApodizationWindow::Rectangular);
@@ -151,7 +162,9 @@ fn test_apodization_tukey_limits_and_flat_top() {
 #[test]
 fn test_apodization_single_element() {
     let mut array = KWaveArray::new();
-    array.add_disc_element((0.0, 0.0, 0.0), 0.005, None);
+    array
+        .add_disc_element((0.0, 0.0, 0.0), 0.005, None)
+        .expect("valid element");
     for window in [
         KwaveApodizationWindow::Rectangular,
         KwaveApodizationWindow::Hann,
@@ -176,7 +189,8 @@ fn test_apodization_single_element() {
 fn test_default_sound_speed_is_ssot_constant() {
     use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
     let mut arr = KWaveArray::new();
-    arr.add_disc_element((0.0, 0.0, 0.0), 0.001, None);
+    arr.add_disc_element((0.0, 0.0, 0.0), 0.001, None)
+        .expect("valid element");
     let delays = arr.get_focus_delays((0.0, 0.0, 1.0));
     assert!(
         (delays[0] - 1.0 / SOUND_SPEED_TISSUE).abs() < 1e-10,

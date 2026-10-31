@@ -167,14 +167,22 @@ impl KWaveArray {
     }
 
     /// Total sample count for a disc rasterized with `num_radial` rings
-    /// (including the center point and all azimuthal samples).
+    /// (including the center point and all azimuthal samples). Counts
+    /// convert through the conversion module, never bare `as`.
     pub(super) fn disc_sample_count(num_radial: usize) -> usize {
+        use eunomia::convert::IntegerTarget;
+        use eunomia::FloatElement;
+
         if num_radial == 1 {
             return 1;
         }
         let mut num_points = 1usize;
         for ring_idx in 1..num_radial {
-            let num_theta = ((ring_idx as f64) * DISC_PACKING_NUMBER).round().max(1.0) as usize;
+            let num_theta = usize::from_truncated(
+                (f64::from_count(ring_idx) * DISC_PACKING_NUMBER)
+                    .round()
+                    .max(1.0),
+            );
             num_points += num_theta;
         }
         num_points

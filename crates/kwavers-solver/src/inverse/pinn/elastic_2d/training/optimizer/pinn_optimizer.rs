@@ -8,6 +8,7 @@
 //! have no built-in weight-decay parameter (unlike `AdamW`, which is
 //! decoupled and passes `weight_decay` natively to `AdamW::new`).
 
+use crate::inverse::pinn::be;
 use coeus_autograd::{Parameter, Var};
 use coeus_optim::{Adam, AdamW, Optimizer as CoeusOptimizer, SGD};
 
@@ -59,20 +60,24 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 fn apply_coupled_weight_decay<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     params: &[Parameter<f32, B>],
     weight_decay: f64,
-) {
+) -> KwaversResult<()> {
     if weight_decay <= 0.0 {
-        return;
+        return Ok(());
     }
     let wd = weight_decay as f32;
     for p in params {
         if let Some(grad) = p.var.grad() {
-            let decayed = coeus_autograd::add(
-                &Var::new(grad, false),
-                &coeus_autograd::scalar_mul(&Var::new(p.var.tensor.clone(), false), wd),
-            );
+            let decayed = be(coeus_autograd::add(
+                &be(Var::new(grad, false))?,
+                &be(coeus_autograd::scalar_mul(
+                    &be(Var::new(p.var.tensor.clone(), false))?,
+                    wd,
+                ))?,
+            ))?;
             p.var.set_grad(decayed.tensor);
         }
     }
+    Ok(())
 }
 
 fn to_named_parameters<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
@@ -100,42 +105,64 @@ where
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
 {
     /// Create a plain SGD optimizer.
-    pub fn sgd(model: &ElasticPINN2D<B>, learning_rate: f64, weight_decay: f64) -> Self {
-        Self {
+    ///
+    /// # Errors
+    ///
+    /// Returns the optimizer-backend error when `SGD::new` rejects the
+    /// model parameters (e.g. empty parameter set).
+    ///
+    pub fn sgd(
+        model: &ElasticPINN2D<B>,
+        learning_rate: f64,
+        weight_decay: f64,
+    ) -> KwaversResult<Self> {
+        Ok(Self {
             algorithm: OptimizerAlgorithm::SGD,
             learning_rate,
             weight_decay,
-            backend: Backend::Sgd(SGD::new(
+            backend: Backend::Sgd(be(SGD::new(
                 to_named_parameters(model.parameters()),
                 learning_rate as f32,
                 0.0,
-            )),
-        }
+            ))?),
+        })
     }
 
     /// Create an SGD-with-momentum optimizer (`coeus_optim::SGD`, velocity-accumulating).
+    ///
+    /// # Errors
+    ///
+    /// Returns the optimizer-backend error when `SGD::new` rejects the
+    /// model parameters (e.g. empty parameter set).
+    ///
     pub fn sgd_momentum(
         model: &ElasticPINN2D<B>,
         learning_rate: f64,
         weight_decay: f64,
         momentum: f64,
-    ) -> Self {
-        Self {
+    ) -> KwaversResult<Self> {
+        Ok(Self {
             algorithm: OptimizerAlgorithm::SGDMomentum,
             learning_rate,
             weight_decay,
-            backend: Backend::Sgd(SGD::new(
+            backend: Backend::Sgd(be(SGD::new(
                 to_named_parameters(model.parameters()),
                 learning_rate as f32,
                 momentum as f32,
-            )),
-        }
+            ))?),
+        })
     }
 
     /// Create an Adam optimizer (`coeus_optim::Adam`, full moment update).
     ///
     /// `weight_decay > 0` adds coupled L2 regularization; use [`Self::adamw`] for
     /// decoupled weight decay.
+    ///
+    /// # Errors
+    ///
+    /// Returns the optimizer-backend error when `Adam::new` rejects the
+    /// model parameters (e.g. empty parameter set).
+    ///
     pub fn adam(
         model: &ElasticPINN2D<B>,
         learning_rate: f64,
@@ -143,22 +170,28 @@ where
         beta1: f64,
         beta2: f64,
         epsilon: f64,
-    ) -> Self {
-        Self {
+    ) -> KwaversResult<Self> {
+        Ok(Self {
             algorithm: OptimizerAlgorithm::Adam,
             learning_rate,
             weight_decay,
-            backend: Backend::Adam(Adam::new(
+            backend: Backend::Adam(be(Adam::new(
                 to_named_parameters(model.parameters()),
                 learning_rate as f32,
                 beta1 as f32,
                 beta2 as f32,
                 epsilon as f32,
-            )),
-        }
+            ))?),
+        })
     }
 
     /// Create an AdamW optimizer (`coeus_optim::AdamW`, decoupled weight decay).
+    ///
+    /// # Errors
+    ///
+    /// Returns the optimizer-backend error when `AdamW::new` rejects the
+    /// model parameters (e.g. empty parameter set).
+    ///
     pub fn adamw(
         model: &ElasticPINN2D<B>,
         learning_rate: f64,
@@ -166,20 +199,20 @@ where
         beta1: f64,
         beta2: f64,
         epsilon: f64,
-    ) -> Self {
-        Self {
+    ) -> KwaversResult<Self> {
+        Ok(Self {
             algorithm: OptimizerAlgorithm::AdamW,
             learning_rate,
             weight_decay,
-            backend: Backend::AdamW(AdamW::new(
+            backend: Backend::AdamW(be(AdamW::new(
                 to_named_parameters(model.parameters()),
                 learning_rate as f32,
                 beta1 as f32,
                 beta2 as f32,
                 epsilon as f32,
                 weight_decay as f32,
-            )),
-        }
+            ))?),
+        })
     }
 
     /// Perform one optimization step, writing the updated parameters back
@@ -193,13 +226,13 @@ where
     pub fn step(&mut self, model: &mut ElasticPINN2D<B>) -> KwaversResult<()> {
         match &mut self.backend {
             Backend::Sgd(opt) => {
-                apply_coupled_weight_decay(&opt.params, self.weight_decay);
+                apply_coupled_weight_decay(&opt.params, self.weight_decay)?;
                 map_backend(opt.step(), "elastic PINN SGD step")?;
                 let updated = vars_from_parameters(&opt.params);
                 model.load_parameters(&updated);
             }
             Backend::Adam(opt) => {
-                apply_coupled_weight_decay(&opt.params, self.weight_decay);
+                apply_coupled_weight_decay(&opt.params, self.weight_decay)?;
                 map_backend(opt.step(), "elastic PINN Adam step")?;
                 let updated = vars_from_parameters(&opt.params);
                 model.load_parameters(&updated);
