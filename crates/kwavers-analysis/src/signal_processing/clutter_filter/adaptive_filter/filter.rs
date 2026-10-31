@@ -1,4 +1,5 @@
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
+use eunomia::FloatElement;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array2};
 use leto_ops::SymmetricEigenWorkspace;
@@ -233,10 +234,26 @@ impl AdaptiveFilter {
                 Ok((n_eigenvalues / 2).max(1))
             }
             SubspaceSeparationMethod::CbrBased { target_cbr_db } => {
+                // Threshold crossing from below: `CBR(rank)` is the clutter
+                // power in the first `rank` modes over the residual power, so
+                // the caller asks for the smallest clutter subspace whose
+                // residual-clutter fraction `1/CBR(rank)` already falls below
+                // `1/target` — i.e. the smallest `rank` with
+                // `CBR(rank) >= target`. For the eigenvalue-sum estimator this
+                // crossing is unique: with descending eigenvalues
+                // `CBR(r+1) - CBR(r)` has the sign of
+                // `lambda_{r+1} * total_power > 0`, so `CBR` is strictly
+                // increasing while residual power remains. (The mean/geometric
+                // estimators need not be monotone; there the first crossing
+                // still selects the smallest qualifying rank.) The old
+                // `<=` comparison returned rank 1 whenever `CBR(1)` already
+                // sat below the target and the `n/2` fallback otherwise, so
+                // the rank never tracked the target. When no rank reaches the
+                // target the fallback keeps the previous arbitrary choice.
                 let target_cbr_linear = 10.0_f64.powf(target_cbr_db / 10.0);
                 for rank in 1..n_eigenvalues {
                     let cbr = self.estimate_cbr(eigenvalues, rank);
-                    if cbr <= target_cbr_linear {
+                    if cbr >= target_cbr_linear {
                         return Ok(rank);
                     }
                 }
@@ -251,10 +268,25 @@ impl AdaptiveFilter {
             return f64::INFINITY;
         }
 
+        // Negative eigenvalue estimates carry no power: the lag-window
+        // Toeplitz covariance estimate is indefinite (rectangular-window
+        // leakage) even though the true covariance is positive
+        // semi-definite, so CBR estimation floors them at zero — the exact
+        // bound power satisfies, mirroring the `MaximumLikelihood` arm's
+        // `1e-12` floor below. Without this the residual sum can vanish or
+        // go negative and the ratio is meaningless.
         match self.config.cbr_estimation {
             CbrEstimationMethod::EigenvalueSum => {
-                let clutter_power: f64 = eigenvalues.iter().take(clutter_rank).sum();
-                let blood_power: f64 = eigenvalues.iter().skip(clutter_rank).sum();
+                let clutter_power: f64 = eigenvalues
+                    .iter()
+                    .take(clutter_rank)
+                    .map(|&x| x.max(0.0))
+                    .sum();
+                let blood_power: f64 = eigenvalues
+                    .iter()
+                    .skip(clutter_rank)
+                    .map(|&x| x.max(0.0))
+                    .sum();
                 if blood_power > 0.0 {
                     clutter_power / blood_power
                 } else {
@@ -262,11 +294,19 @@ impl AdaptiveFilter {
                 }
             }
             CbrEstimationMethod::PowerRatio => {
-                let clutter_mean: f64 =
-                    eigenvalues.iter().take(clutter_rank).sum::<f64>() / clutter_rank.max(1) as f64;
+                let clutter_mean: f64 = eigenvalues
+                    .iter()
+                    .take(clutter_rank)
+                    .map(|&x| x.max(0.0))
+                    .sum::<f64>()
+                    / f64::from_count(clutter_rank.max(1));
                 let blood_count = n_eigenvalues - clutter_rank;
-                let blood_mean: f64 =
-                    eigenvalues.iter().skip(clutter_rank).sum::<f64>() / blood_count.max(1) as f64;
+                let blood_mean: f64 = eigenvalues
+                    .iter()
+                    .skip(clutter_rank)
+                    .map(|&x| x.max(0.0))
+                    .sum::<f64>()
+                    / f64::from_count(blood_count.max(1));
                 if blood_mean > 0.0 {
                     clutter_mean / blood_mean
                 } else {
@@ -311,5 +351,13 @@ impl AdaptiveFilter {
     /// Clear CBR history.
     pub fn clear_history(&mut self) {
         self.cbr_history.clear();
+    }
+
+    /// Rank selection on caller-supplied descending eigenvalues, for tests.
+    /// Compiled out of non-test builds; the production path always derives
+    /// eigenvalues from the signal covariance in [`AdaptiveFilter::filter`].
+    #[cfg(test)]
+    pub(crate) fn rank_for_eigenvalues(&self, eigenvalues: &Array1<f64>) -> KwaversResult<usize> {
+        self.determine_clutter_rank(eigenvalues)
     }
 }

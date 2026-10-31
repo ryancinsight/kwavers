@@ -7,7 +7,13 @@ pub enum SubspaceSeparationMethod {
     FixedRank { clutter_rank: usize },
     /// Adaptive threshold based on eigenvalue decay
     AdaptiveThreshold { decay_factor: f64 },
-    /// CBR-based automatic selection
+    /// CBR-based automatic selection: the smallest rank whose estimated
+    /// clutter-to-residual power ratio reaches `target_cbr_db`.
+    ///
+    /// `target_cbr_db` is a power ratio in dB (`10 * log10`), converted with
+    /// `/ 10`, matching `AdaptiveFilter::current_cbr_db`.
+    /// A larger target removes more modes; a target above the maximum
+    /// achievable ratio falls back to `n/2`, as before.
     CbrBased { target_cbr_db: f64 },
 }
 

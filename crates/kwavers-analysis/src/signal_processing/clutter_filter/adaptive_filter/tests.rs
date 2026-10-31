@@ -1,5 +1,6 @@
 use super::filter::AdaptiveFilter;
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
+use eunomia::FloatElement;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array2;
 
@@ -102,13 +103,53 @@ fn test_cbr_based_separation() {
     for t in 0..n_frames {
         let clutter = 10.0 * (TWO_PI * t as f64 / 32.0).sin();
         let blood = 0.5 * (TWO_PI * t as f64 / 4.0).sin();
-        data[[0, t]] = clutter + blood;
+        // Deterministic non-integer interferer: spreads a small floor of
+        // energy over every eigenmode so the residual mean stays positive and
+        // every CBR estimate is finite, as on measured data.
+        let floor = 0.05 * (TWO_PI * 0.37 * f64::from_count(t)).sin();
+        data[[0, t]] = clutter + blood + floor;
     }
 
     let _filtered = filter.filter(&data).unwrap();
     let cbr_db = filter.current_cbr_db().unwrap();
     assert!(cbr_db.is_finite());
-    assert!(cbr_db > 0.0);
+    // The clutter tone dominates the leading mode, so the fixed rule selects
+    // rank 1 with a ratio near the tone-power ratio: at or above the 20 dB
+    // target, and far below what a deeper rank over the weak tail would
+    // report. The old `<=` rule fell through to the rank-16 fallback.
+    assert!(cbr_db >= 20.0, "selected rank must reach the target");
+    assert!(cbr_db < 60.0, "rank 1 ratio, not a tail ratio");
+}
+
+/// The CBR rank tracks the target along a known curve.
+///
+/// Eigenvalues `[12, 4, 2, 1]` under `EigenvalueSum` give
+/// `CBR = [12/7, 16/3, 18/1] ≈ [1.71, 5.33, 18]` (≈ 2.3, 7.3, 12.6 dB), so
+/// the smallest qualifying rank for targets `[1, 5, 10]` dB is `[1, 2, 3]`;
+/// a 20 dB target is unreachable and takes the `n/2 = 2` fallback. The 10
+/// and 20 dB targets also pin the power convention: read as amplitude ratios
+/// (`/ 20`, thresholds ≈ 3.16 and 10) they would select ranks 2 and 3
+/// instead of 3 and the fallback, and the old `<=` comparison would return
+/// 2, 1, 1, 1.
+#[test]
+fn test_cbr_rank_tracks_target_on_known_curve() {
+    use leto::Array1;
+    let eigenvalues = Array1::from_vec(4, vec![12.0, 4.0, 2.0, 1.0]).unwrap();
+    let rank_of = |target_cbr_db: f64| {
+        let filter = AdaptiveFilter::new(AdaptiveFilterConfig {
+            separation_method: SubspaceSeparationMethod::CbrBased { target_cbr_db },
+            cbr_estimation: CbrEstimationMethod::EigenvalueSum,
+            noise_floor_threshold: 1e-6,
+            temporal_smoothing: false,
+            smoothing_window: 1,
+        })
+        .unwrap();
+        filter.rank_for_eigenvalues(&eigenvalues).unwrap()
+    };
+    assert_eq!(rank_of(1.0), 1);
+    assert_eq!(rank_of(5.0), 2);
+    assert_eq!(rank_of(10.0), 3);
+    assert_eq!(rank_of(20.0), 2);
 }
 
 #[test]
