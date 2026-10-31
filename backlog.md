@@ -56,4 +56,3 @@
 <a id="kw-gpu-velocity-source-scale"></a>- [KW-GPU-VELOCITY-SOURCE-SCALE](backlog/kw-gpu-velocity-source-scale.md) — GPU PSTD adds velocity sources without the 2c₀Δt/Δx scale [patch] — todo
 <a id="kw-origin-sampled-medium"></a>- [KW-ORIGIN-SAMPLED-MEDIUM](backlog/kw-origin-sampled-medium.md) — Non-PSTD paths read a heterogeneous medium at the origin [patch] — todo
 <a id="kw-pstd-unit-exponent-backends"></a>- [KW-PSTD-UNIT-EXPONENT-BACKENDS](backlog/kw-pstd-unit-exponent-backends.md) — CPU and GPU PSTD disagree on a configured y = 1 under causal dispersion [patch] — todo
-<a id="kw-wallclock-test-assertions"></a>- [KW-WALLCLOCK-TEST-ASSERTIONS](backlog/kw-wallclock-test-assertions.md) — Three test files still assert on elapsed time and sleep to synchronize [patch] — todo
