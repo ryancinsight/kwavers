@@ -1,3 +1,4 @@
+use super::{super::ExponentSpectrum::Stratified, uniform_symbols};
 use crate::forward::pstd::config::PSTDConfig;
 use crate::pstd::PSTDSolver;
 use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
@@ -170,9 +171,8 @@ fn test_pressure_correction_dispersion_term_matches_analytical() {
 
     // Read the kernel's stored η and |k|^(y−1) directly so the test pins the
     // formula without duplicating the grid's wavenumber convention.
-    let n2_kernel = solver.absorption.as_ref().unwrap().nabla2[[kx_idx, 0, 0]];
+    let n2_kernel = uniform_symbols(solver.absorption.as_ref().unwrap()).1[[kx_idx, 0, 0]];
     let eta = solver.absorption.as_ref().unwrap().eta[[0, 0, 0]];
-    let _ = RHO0; // unused with L1=0; kept for symmetry of physical constants
 
     solver.apply_absorption_to_pressure().unwrap();
 
@@ -263,8 +263,8 @@ fn test_fft_absorption_energy_dissipation() {
     let abs = solver.absorption.as_ref().unwrap();
     let tau = abs.tau[[0, 0, 0]];
     let eta = abs.eta[[0, 0, 0]];
-    let n1 = abs.nabla1[[kx_idx, 0, 0]];
-    let n2 = abs.nabla2[[kx_idx, 0, 0]];
+    let n1 = uniform_symbols(abs).0[[kx_idx, 0, 0]];
+    let n2 = uniform_symbols(abs).1[[kx_idx, 0, 0]];
     let rho0 = solver.materials.rho0[[0, 0, 0]];
     let c0 = solver.materials.c0[[0, 0, 0]];
     let expected_amp = c0 * c0 * (tau * 3.0 * rho0).mul_add(n1, -(eta * n2));
@@ -519,7 +519,7 @@ fn stratified_exponent_matches_per_tissue_uniform_operator() {
     };
     let strat = PSTDSolver::new(cfg, grid.clone(), &het, GridSource::default()).unwrap();
     assert!(
-        strat.absorption.as_ref().unwrap().strata.is_some(),
+        matches!(strat.absorption.as_ref().unwrap().spectrum, Stratified(_)),
         "heterogeneous exponent must engage the stratified operator"
     );
     let p_s = run(strat);

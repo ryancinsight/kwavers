@@ -208,6 +208,7 @@ from ._pykwavers import (
     Simulation,
     SimulationResult,
     SolverType,
+    PowerLawDispersion,
     Source,
     PmlConfig,
     HelmholtzConfig,
@@ -669,6 +670,7 @@ __all__ = [
     "Simulation",
     "SimulationResult",
     "SolverType",
+    "PowerLawDispersion",
     "ResidualGasField",
     # Thermal diffusion / Pennes bioheat
     "ThermalSimulation",

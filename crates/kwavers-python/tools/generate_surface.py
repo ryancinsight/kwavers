@@ -517,6 +517,13 @@ def format_arg(name: str, ty: str, default: str | None, mapper: TypeMapper) -> s
         return "self"
     py_ty = mapper.map(ty)
     if default is not None:
+        default = default.strip()
+        if "::" in default:
+            # Enum-variant default (`PyPowerLawDispersion::Causal`): qualify
+            # with the mapped class name, since a bare variant ident is not
+            # defined in stub scope (mypy --strict name-defined).
+            head, _, variant = default.rpartition("::")
+            default = f"{mapper.map(head.strip())}.{variant.strip()}"
         return f"{name}: {py_ty} = {python_literal(default)}"
     return f"{name}: {py_ty}"
 
@@ -623,6 +630,9 @@ def parse_enum_variants(text: str) -> list[str]:
     for raw in split_top(body):
         if not raw:
             continue
+        # Strip variant attributes (`#[default]`, ...) so an attributed
+        # variant is not silently dropped from the stub.
+        raw = re.sub(r"^(?:\s*#[^\n]*\n)+", "", raw).strip()
         vm = re.match(r"([A-Za-z_]\w*)\s*(?:\(|,|$)", raw)
         if vm:
             variants.append(vm.group(1))
@@ -926,6 +936,19 @@ def build_signatures(model: dict) -> dict:
                             return None
                         if default is not None:
                             try:
+                                default = default.strip()
+                                if "::" in default:
+                                    # Enum-variant default
+                                    # (`PyPowerLawDispersion::Causal`):
+                                    # qualify with the mapped class name,
+                                    # since a bare variant ident is not
+                                    # defined in stub scope (mypy --strict
+                                    # name-defined).
+                                    head, _, variant = default.rpartition("::")
+                                    default = (
+                                        f"{mapper.map(head.strip())}"
+                                        f".{variant.strip()}"
+                                    )
                                 lit = python_literal(default, const_values)
                             except UnsupportedType as e:
                                 failures.append({"symbol": sym.name, "reason": str(e)})

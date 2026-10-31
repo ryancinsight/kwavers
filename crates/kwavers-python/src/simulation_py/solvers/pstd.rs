@@ -1,9 +1,11 @@
 use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid as KwaversGrid;
-use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers_receiver::recorder::simple::SensorRecorder;
-use kwavers_solver::forward::pstd::config::{BoundaryConfig, CompatibilityMode, PSTDConfig};
+use kwavers_simulation::dispatch::pstd::power_law_absorption_mode;
+use kwavers_solver::forward::pstd::config::{
+    BoundaryConfig, CompatibilityMode, PSTDConfig, PowerLawDispersion,
+};
 use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_solver::geometry::SolverGeometry;
 use kwavers_solver::interface::solver::Solver as SolverTrait;
@@ -28,6 +30,7 @@ impl Simulation {
         enable_nonlinear: bool,
         alpha_coeff_db: f64,
         alpha_power: f64,
+        power_law_dispersion: PowerLawDispersion,
         grid_source: GridSource,
         sources: Vec<Box<dyn KwaversSource>>,
         sensor: Option<&Sensor>,
@@ -141,39 +144,8 @@ impl Simulation {
             BoundaryConfig::None
         };
 
-        // Absorption is active when the caller supplies a dB prefactor or the
-        // medium reports a positive SI prefactor at the 1 MHz reference. The
-        // two unit domains never mix: the caller's dB value stays in the
-        // config, the medium's Np/m value is read per voxel by the solver
-        // (ADR 120).
-        let absorption_active = alpha_coeff_db > 0.0
-            || medium
-                .as_medium()
-                .alpha_coefficient(0.0, 0.0, 0.0, grid)
-                .into_base()
-                > 0.0;
-
-        let effective_alpha_power = {
-            let y_medium = medium.as_medium().alpha_power(0.0, 0.0, 0.0, grid);
-            if alpha_coeff_db <= 0.0 && y_medium > 0.0 && (y_medium - 1.0).abs() > 1e-12 {
-                y_medium
-            } else {
-                alpha_power
-            }
-        };
-
-        let absorption_mode = if absorption_active {
-            AbsorptionMode::PowerLaw {
-                // Only a coefficient the caller actually supplied is passed on. The
-                // medium's own value is left to the solver, which reads it per
-                // voxel; forwarding a single origin sample here would flatten a
-                // heterogeneous medium to one number (ADR 120).
-                alpha_coeff: (alpha_coeff_db > 0.0).then_some(alpha_coeff_db),
-                alpha_power: effective_alpha_power,
-            }
-        } else {
-            AbsorptionMode::Lossless
-        };
+        let absorption_mode =
+            power_law_absorption_mode(medium.as_medium(), grid, alpha_coeff_db, alpha_power);
 
         let geometry = if axisymmetric {
             SolverGeometry::CylindricalAS
@@ -189,6 +161,7 @@ impl Simulation {
             boundary,
             pml_inside: effective_pml_inside,
             absorption_mode,
+            power_law_dispersion,
             nonlinearity: enable_nonlinear,
             geometry,
             ..Default::default()
@@ -225,6 +198,7 @@ impl Simulation {
         enable_nonlinear: bool,
         alpha_coeff_db: f64,
         alpha_power: f64,
+        power_law_dispersion: PowerLawDispersion,
         grid_source: GridSource,
         sources: Vec<Box<dyn KwaversSource>>,
         sensor: Option<&Sensor>,
@@ -244,6 +218,7 @@ impl Simulation {
             enable_nonlinear,
             alpha_coeff_db,
             alpha_power,
+            power_law_dispersion,
             grid_source,
             sources,
             sensor,
@@ -269,6 +244,7 @@ impl Simulation {
         enable_nonlinear: bool,
         alpha_coeff_db: f64,
         alpha_power: f64,
+        power_law_dispersion: PowerLawDispersion,
         grid_source: GridSource,
         sources: Vec<Box<dyn KwaversSource>>,
         sensor: Option<&Sensor>,
@@ -291,6 +267,7 @@ impl Simulation {
             enable_nonlinear,
             alpha_coeff_db,
             alpha_power,
+            power_law_dispersion,
             grid_source,
             sources,
             sensor,

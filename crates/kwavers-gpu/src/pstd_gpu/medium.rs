@@ -3,7 +3,11 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::{core::MIN_PHYSICAL_SOUND_SPEED, Medium};
+use kwavers_solver::forward::pstd::config::PowerLawDispersion;
 
+/// Distance from a degenerate exponent (`y = 0`, or `y = 1` for the causal
+/// form) below which an exponent counts as that value: far above the rounding
+/// of a value near 1 and far below any physically distinct tissue exponent.
 const POWER_LAW_SENTINEL_TOLERANCE: f64 = 1e-12;
 
 /// Prepared power-law prefactors in SI Np/m at the 1 MHz reference, either
@@ -36,10 +40,12 @@ impl PreparedAbsorptionCoefficients {
 #[derive(Clone, Debug)]
 pub(super) struct PreparedAbsorption {
     pub(super) exponent: f64,
+    pub(super) dispersion: PowerLawDispersion,
     pub(super) coefficients: PreparedAbsorptionCoefficients,
 }
 
 struct PowerLawResolver {
+    dispersion: PowerLawDispersion,
     fallback_exponent: f64,
     exponent: Option<f64>,
     coefficients: Option<Vec<f64>>,
@@ -47,18 +53,20 @@ struct PowerLawResolver {
 }
 
 impl PowerLawResolver {
-    fn new(alpha_coeff_db: f64, alpha_power: f64, total: usize) -> KwaversResult<Self> {
-        if !alpha_coeff_db.is_finite() || alpha_coeff_db < 0.0 {
-            return Err(KwaversError::InvalidInput(format!(
-                "GPU PSTD alpha_coeff_db must be finite and non-negative; got {alpha_coeff_db}"
-            )));
-        }
+    fn new(
+        alpha_coeff_db: f64,
+        alpha_power: f64,
+        dispersion: PowerLawDispersion,
+        total: usize,
+    ) -> KwaversResult<Self> {
+        validate_absorption_coefficient(alpha_coeff_db, "alpha_coeff_db")?;
         if alpha_coeff_db > 0.0 {
-            validate_active_power_law_exponent(alpha_power)?;
+            validate_active_power_law_exponent(alpha_power, dispersion)?;
             // User boundary is k-Wave dB; the prepared coefficients are SI
             // Np/m at 1 MHz, matching what the medium path pushes.
             use kwavers_core::constants::DB_TO_NP;
             return Ok(Self {
+                dispersion,
                 fallback_exponent: alpha_power,
                 exponent: Some(alpha_power),
                 coefficients: None,
@@ -66,6 +74,7 @@ impl PowerLawResolver {
             });
         }
         Ok(Self {
+            dispersion,
             fallback_exponent: alpha_power,
             exponent: None,
             coefficients: Some(Vec::with_capacity(total)),
@@ -87,23 +96,24 @@ impl PowerLawResolver {
             .coefficients
             .as_mut()
             .expect("invariant: medium pairs are pushed only for delegated absorption");
-        if !coefficient.is_finite() || coefficient < 0.0 {
-            return Err(KwaversError::InvalidInput(format!(
-                "GPU PSTD medium alpha coefficient must be finite and non-negative at flat index {index}; got {coefficient}"
-            )));
-        }
+        validate_absorption_coefficient(
+            coefficient,
+            format_args!("medium alpha coefficient at flat index {index}"),
+        )?;
         coefficients.push(coefficient);
         if coefficient == 0.0 {
             return Ok(());
         }
-        let effective_power = if medium_power.abs() > POWER_LAW_SENTINEL_TOLERANCE
-            && (medium_power - 1.0).abs() > POWER_LAW_SENTINEL_TOLERANCE
-        {
-            medium_power
-        } else {
+        // y = 1 is degenerate only for the causal form.
+        let degenerate = medium_power.abs() <= POWER_LAW_SENTINEL_TOLERANCE
+            || (self.dispersion == PowerLawDispersion::Causal
+                && (medium_power - 1.0).abs() <= POWER_LAW_SENTINEL_TOLERANCE);
+        let effective_power = if degenerate {
             self.fallback_exponent
+        } else {
+            medium_power
         };
-        validate_active_power_law_exponent(effective_power)?;
+        validate_active_power_law_exponent(effective_power, self.dispersion)?;
         if self
             .exponent
             .is_some_and(|resolved| resolved != effective_power)
@@ -119,6 +129,7 @@ impl PowerLawResolver {
     fn finish(self) -> Option<PreparedAbsorption> {
         self.exponent.map(|exponent| PreparedAbsorption {
             exponent,
+            dispersion: self.dispersion,
             coefficients: self.uniform_coefficient.map_or_else(
                 || {
                     PreparedAbsorptionCoefficients::Spatial(
@@ -148,6 +159,7 @@ pub struct PstdMediumSnapshot {
     pub(super) absorption: Option<PreparedAbsorption>,
     alpha_coeff_db: f64,
     alpha_power: f64,
+    power_law_dispersion: PowerLawDispersion,
 }
 
 impl PstdMediumSnapshot {
@@ -157,6 +169,8 @@ impl PstdMediumSnapshot {
     /// absorption pair that overrides the medium. Zero coefficient delegates
     /// both values to the medium; all active voxels must then resolve to one
     /// exponent because the GPU solver owns one fractional-Laplacian symbol.
+    /// `power_law_dispersion` selects the causal form, which excludes `y = 1`,
+    /// or absorption without dispersion, which admits it.
     ///
     /// # Errors
     ///
@@ -168,12 +182,14 @@ impl PstdMediumSnapshot {
         medium: &M,
         alpha_coeff_db: f64,
         alpha_power: f64,
+        power_law_dispersion: PowerLawDispersion,
     ) -> KwaversResult<Self> {
         let total = super::validate_pstd_grid_shape(grid).map_err(KwaversError::InvalidInput)?;
         let mut c0_flat = Vec::with_capacity(total);
         let mut rho0_flat = Vec::with_capacity(total);
         let mut bon_a_flat = Vec::with_capacity(total);
-        let mut absorption = PowerLawResolver::new(alpha_coeff_db, alpha_power, total)?;
+        let mut absorption =
+            PowerLawResolver::new(alpha_coeff_db, alpha_power, power_law_dispersion, total)?;
         let mut c_ref = MIN_PHYSICAL_SOUND_SPEED;
 
         for ix in 0..grid.nx {
@@ -205,6 +221,7 @@ impl PstdMediumSnapshot {
             absorption: absorption.finish(),
             alpha_coeff_db,
             alpha_power,
+            power_law_dispersion,
         })
     }
 
@@ -227,21 +244,49 @@ impl PstdMediumSnapshot {
         &self,
         alpha_coeff_db: f64,
         alpha_power: f64,
+        power_law_dispersion: PowerLawDispersion,
     ) -> KwaversResult<()> {
-        if self.alpha_coeff_db != alpha_coeff_db || self.alpha_power != alpha_power {
+        if self.alpha_coeff_db != alpha_coeff_db
+            || self.alpha_power != alpha_power
+            || self.power_law_dispersion != power_law_dispersion
+        {
             return Err(KwaversError::InvalidInput(format!(
-                "GPU PSTD medium snapshot was prepared for absorption pair ({}, {}) but the run requested ({alpha_coeff_db}, {alpha_power})",
-                self.alpha_coeff_db, self.alpha_power
+                "GPU PSTD medium snapshot was prepared for absorption ({}, {}, {:?}) but the run requested ({alpha_coeff_db}, {alpha_power}, {power_law_dispersion:?})",
+                self.alpha_coeff_db, self.alpha_power, self.power_law_dispersion
             )));
         }
         Ok(())
     }
 }
 
-fn validate_active_power_law_exponent(alpha_power: f64) -> KwaversResult<()> {
-    if !alpha_power.is_finite() || (alpha_power - 1.0).abs() < POWER_LAW_SENTINEL_TOLERANCE {
+/// Rejects a power-law coefficient that is not a finite, non-negative
+/// dB/(MHz^y cm) value; `what` names it in the error.
+pub(super) fn validate_absorption_coefficient(
+    coefficient: f64,
+    what: impl std::fmt::Display,
+) -> KwaversResult<()> {
+    if !coefficient.is_finite() || coefficient < 0.0 {
         return Err(KwaversError::InvalidInput(format!(
-            "GPU PSTD alpha_power must be finite and must not equal 1.0 for enabled fractional absorption; got {alpha_power}"
+            "GPU PSTD {what} must be finite and non-negative; got {coefficient}"
+        )));
+    }
+    Ok(())
+}
+
+pub(super) fn validate_active_power_law_exponent(
+    alpha_power: f64,
+    dispersion: PowerLawDispersion,
+) -> KwaversResult<()> {
+    if !alpha_power.is_finite() {
+        return Err(KwaversError::InvalidInput(format!(
+            "GPU PSTD alpha_power must be finite for enabled absorption; got {alpha_power}"
+        )));
+    }
+    if dispersion == PowerLawDispersion::Causal
+        && (alpha_power - 1.0).abs() < POWER_LAW_SENTINEL_TOLERANCE
+    {
+        return Err(KwaversError::InvalidInput(format!(
+            "GPU PSTD alpha_power must not equal 1.0 with causal dispersion, where tan(pi*y/2) is singular; set PowerLawDispersion::Omitted to absorb without dispersion; got {alpha_power}"
         )));
     }
     Ok(())
@@ -258,10 +303,12 @@ struct PowerLawAbsorption {
 fn resolve_power_law_absorption(
     alpha_coeff_db: f64,
     alpha_power: f64,
+    dispersion: PowerLawDispersion,
     medium_pairs: impl IntoIterator<Item = (f64, f64)>,
 ) -> KwaversResult<Option<PowerLawAbsorption>> {
     let pairs = medium_pairs.into_iter();
-    let mut resolver = PowerLawResolver::new(alpha_coeff_db, alpha_power, pairs.size_hint().0)?;
+    let mut resolver =
+        PowerLawResolver::new(alpha_coeff_db, alpha_power, dispersion, pairs.size_hint().0)?;
     if resolver.uses_medium() {
         for (index, (coefficient, medium_power)) in pairs.enumerate() {
             resolver.push_medium_pair(index, coefficient, medium_power)?;
@@ -279,11 +326,15 @@ fn resolve_power_law_absorption(
 #[cfg(test)]
 mod tests {
     use super::{resolve_power_law_absorption, PowerLawAbsorption};
+    // The caller's k-Wave dB prefactor is converted once to the SI base
+    // prefactor at the resolver boundary.
+    use kwavers_core::constants::DB_TO_NP;
+    use kwavers_solver::forward::pstd::config::PowerLawDispersion::{Causal, Omitted};
 
     #[test]
     fn zero_explicit_and_medium_absorption_is_lossless() {
         assert_eq!(
-            resolve_power_law_absorption(0.0, 1.0, [(0.0, 1.0)])
+            resolve_power_law_absorption(0.0, 1.0, Causal, [(0.0, 1.0)])
                 .expect("inactive medium coefficients do not enable absorption"),
             None
         );
@@ -291,11 +342,8 @@ mod tests {
 
     #[test]
     fn explicit_absorption_pair_overrides_medium_pair() {
-        // The caller's k-Wave dB prefactor is converted once to SI Np/m at
-        // the resolver boundary.
-        use kwavers_core::constants::DB_TO_NP;
         assert_eq!(
-            resolve_power_law_absorption(0.75, 1.5, [(0.4, 1.2)])
+            resolve_power_law_absorption(0.75, 1.5, Causal, [(0.4, 1.2)])
                 .expect("valid explicit absorption pair"),
             Some(PowerLawAbsorption {
                 exponent: 1.5,
@@ -307,7 +355,7 @@ mod tests {
     #[test]
     fn medium_absorption_resolves_one_uniform_active_exponent() {
         assert_eq!(
-            resolve_power_law_absorption(0.0, 1.5, [(0.2, 1.3), (0.0, 1.7), (0.4, 1.3)])
+            resolve_power_law_absorption(0.0, 1.5, Causal, [(0.2, 1.3), (0.0, 1.7), (0.4, 1.3)])
                 .expect("uniform active medium exponent"),
             Some(PowerLawAbsorption {
                 exponent: 1.3,
@@ -319,7 +367,7 @@ mod tests {
     #[test]
     fn medium_absorption_sentinel_uses_configuration_fallback() {
         assert_eq!(
-            resolve_power_law_absorption(0.0, 1.5, [(0.2, 1.0)])
+            resolve_power_law_absorption(0.0, 1.5, Causal, [(0.2, 1.0)])
                 .expect("sentinel exponent delegates to configuration"),
             Some(PowerLawAbsorption {
                 exponent: 1.5,
@@ -330,7 +378,7 @@ mod tests {
 
     #[test]
     fn heterogeneous_medium_absorption_exponents_are_rejected() {
-        let error = resolve_power_law_absorption(0.0, 1.5, [(0.2, 1.3), (0.4, 1.7)])
+        let error = resolve_power_law_absorption(0.0, 1.5, Causal, [(0.2, 1.3), (0.4, 1.7)])
             .expect_err("one GPU spectral symbol cannot represent multiple exponents");
         assert_eq!(
             error.to_string(),
@@ -340,11 +388,43 @@ mod tests {
 
     #[test]
     fn enabled_absorption_rejects_singular_power_law_exponent() {
-        let error = resolve_power_law_absorption(0.0022, 1.0, [])
-            .expect_err("enabled fractional absorption cannot use y=1");
+        let error = resolve_power_law_absorption(0.0022, 1.0, Causal, [])
+            .expect_err("enabled causal absorption cannot use y=1");
         assert_eq!(
             error.to_string(),
-            "Invalid input: GPU PSTD alpha_power must be finite and must not equal 1.0 for enabled fractional absorption; got 1"
+            "Invalid input: GPU PSTD alpha_power must not equal 1.0 with causal dispersion, where tan(pi*y/2) is singular; set PowerLawDispersion::Omitted to absorb without dispersion; got 1"
+        );
+    }
+
+    /// Without dispersion `y = 1` is an ordinary exponent: an explicit pair
+    /// keeps it, and a medium-supplied `y = 1` is the medium's exponent rather
+    /// than a sentinel for the configured fallback.
+    #[test]
+    fn omitted_dispersion_admits_a_unit_exponent() {
+        assert_eq!(
+            resolve_power_law_absorption(0.0022, 1.0, Omitted, [])
+                .expect("y = 1 without dispersion"),
+            Some(PowerLawAbsorption {
+                exponent: 1.0,
+                explicit_coefficient: Some(0.0022 * DB_TO_NP * 100.0),
+            })
+        );
+        assert_eq!(
+            resolve_power_law_absorption(0.0, 1.5, Omitted, [(0.2, 1.0), (0.4, 1.0)])
+                .expect("medium y = 1 without dispersion"),
+            Some(PowerLawAbsorption {
+                exponent: 1.0,
+                explicit_coefficient: None,
+            })
+        );
+        // y = 0 stays the medium's "unset" sentinel either way.
+        assert_eq!(
+            resolve_power_law_absorption(0.0, 1.5, Omitted, [(0.2, 0.0)])
+                .expect("sentinel exponent delegates to configuration"),
+            Some(PowerLawAbsorption {
+                exponent: 1.5,
+                explicit_coefficient: None,
+            })
         );
     }
 }

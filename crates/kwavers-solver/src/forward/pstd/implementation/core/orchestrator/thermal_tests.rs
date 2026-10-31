@@ -73,7 +73,10 @@ fn absorption_at_frequency_scales_each_voxel_by_its_exponent() {
         ..PSTDConfig::default()
     };
     let mut solver = PSTDSolver::new(config, grid, &medium, GridSource::new_empty()).unwrap();
-    assert!(solver.absorption.as_ref().unwrap().strata.is_some());
+    assert!(matches!(
+        solver.absorption.as_ref().unwrap().spectrum,
+        crate::forward::pstd::physics::absorption::ExponentSpectrum::Stratified(_)
+    ));
     let omega = TAU * 2.0e6;
     solver.populate_alpha_np_m_at_frequency(omega);
     // α_SI and ω^y are formed by the same operations as in the solver, so each

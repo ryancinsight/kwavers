@@ -11,32 +11,40 @@ pub(crate) struct AbsorptionKernel {
     /// Dispersion coefficient field η = 2 α₀ c₀^y tan(πy/2) [Eq. 20]; zero
     /// when the power law omits dispersion.
     pub eta: Array3<f64>,
-    /// Spectral nabla1 operator |k|^(y−2) in FFT wavenumber order [Eq. 10]
-    pub nabla1: Array3<f64>,
-    /// Spectral nabla2 operator |k|^(y−1) in FFT wavenumber order [Eq. 10]
-    pub nabla2: Array3<f64>,
     /// Per-cell α_SI coefficient [Np/((rad/s)^y·m)].
     ///
     /// Converts to physical absorption at center angular frequency ω_c via
-    /// `α(ω_c) [Np/m] = alpha_si · ω_c^y` with `y` from [`Self::exponent`].
+    /// `α(ω_c) [Np/m] = alpha_si · ω_c^y` with `y` from [`Self::spectrum`].
     /// Used by `PSTDSolver::compute_acoustic_heat_source()` for thermal coupling.
     pub alpha_si: Array3<f64>,
-    /// Stratified spectral operators for a **spatially-varying** exponent y(x).
-    ///
-    /// `None` when y is uniform (the `nabla1`/`nabla2` single-symbol path is used,
-    /// matching k-Wave); `Some` when the medium carries per-voxel exponents (e.g.
-    /// a CT-derived tissue medium), in which case the apply path blends per-voxel
-    /// across exponent strata — beyond k-Wave's single global exponent.
-    pub strata: Option<ExponentStrata>,
-    /// Power-law exponent the coefficients were built for, per voxel.
-    pub exponent: AbsorptionExponent,
+    /// Exponent `y` that `tau`, `eta` and `alpha_si` share, with the spectral
+    /// operators built for it.
+    pub spectrum: ExponentSpectrum,
 }
 
-/// Exponent `y` of `α(ω) = α_SI ω^y` that `tau`, `eta` and `alpha_si` share.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) enum AbsorptionExponent {
-    /// One exponent for every voxel.
-    Uniform(f64),
-    /// A per-voxel exponent; present only when it varies across the grid.
-    Field(Array3<f64>),
+/// Power-law exponent `y` of `α(ω) = α_SI ω^y` and the fractional-Laplacian
+/// symbols `|k|^(y−2)`, `|k|^(y−1)` built for it, stored on the r2c half
+/// spectrum (`z ∈ [0, nz/2]`) with the DC bin set to zero.
+pub(crate) enum ExponentSpectrum {
+    /// One exponent for every voxel and one symbol pair (k-Wave's model).
+    Uniform {
+        /// The exponent.
+        exponent: f64,
+        /// `|k|^(y−2)` [Treeby & Cox 2010 Eq. 10].
+        nabla1: Array3<f64>,
+        /// `|k|^(y−1)` [Treeby & Cox 2010 Eq. 10].
+        nabla2: Array3<f64>,
+    },
+    /// A per-voxel exponent, blended between exponent strata.
+    Stratified(ExponentStrata),
+}
+
+impl ExponentSpectrum {
+    /// Exponent of voxel `[i, j, k]`.
+    pub(crate) fn exponent_at(&self, index: [usize; 3]) -> f64 {
+        match self {
+            Self::Uniform { exponent, .. } => *exponent,
+            Self::Stratified(strata) => strata.exponent_at(index),
+        }
+    }
 }

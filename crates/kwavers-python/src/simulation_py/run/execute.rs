@@ -116,10 +116,10 @@ impl Simulation {
                 .helmholtz_config
                 .as_ref()
                 .filter(|cfg| cfg.frequency.is_some()),
-            nonlinear: self
-                .nonlinear_config
-                .as_ref()
-                .filter(|cfg| cfg.enabled || cfg.alpha_coeff > 0.0),
+            // Always forwarded: the dispatch reads the exponent and the
+            // dispersion mode from it even when the medium supplies the
+            // coefficient, and `enabled` alone gates nonlinearity.
+            nonlinear: self.nonlinear_config.as_ref(),
             thermal: self.thermal.as_ref(),
             poroelastic: self.poroelastic.as_ref(),
             compatibility_mode: self.compatibility_mode,

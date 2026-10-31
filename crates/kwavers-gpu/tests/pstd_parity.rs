@@ -11,7 +11,10 @@ use kwavers_gpu::pstd_gpu::{
 };
 use kwavers_grid::Grid;
 use kwavers_medium::{heterogeneous::HeterogeneousMedium, HomogeneousMedium, Medium};
-use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDConfig};
+use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
+use kwavers_solver::forward::pstd::config::{
+    BoundaryConfig, KSpaceMethod, PSTDConfig, PowerLawDispersion,
+};
 use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2, Array3};
@@ -69,6 +72,7 @@ fn pstd_cpu_gpu_parity_bluestein_shape() {
             nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.0,
+            power_law_dispersion: PowerLawDispersion::Causal,
             cpml: None,
             pml_inside: false,
         },
@@ -78,7 +82,7 @@ fn pstd_cpu_gpu_parity_bluestein_shape() {
     let gpu_fields = gpu
         .final_fields
         .expect("field comparison requests final GPU state");
-    let cpu = run_cpu_pstd(&grid, &medium, &grid_source, source, nt, dt);
+    let cpu = run_cpu_pstd(&grid, &medium, &grid_source, source, nt, dt, LOSSLESS);
 
     let pressure_error = max_field_rel_err(&cpu.pressure, &gpu_fields.pressure);
     let trace_error = max_rel_err(
@@ -94,6 +98,21 @@ fn pstd_cpu_gpu_parity_bluestein_shape() {
         "Bluestein-shape GPU/CPU mismatch: field={pressure_error:.2e}, trace={trace_error:.2e}"
     );
 }
+
+/// Power-law absorption applied identically by both providers; a zero
+/// coefficient [dB/(MHz^y·cm)] is lossless.
+#[derive(Clone, Copy)]
+struct PowerLaw {
+    coefficient: f64,
+    exponent: f64,
+    dispersion: PowerLawDispersion,
+}
+
+const LOSSLESS: PowerLaw = PowerLaw {
+    coefficient: 0.0,
+    exponent: 1.0,
+    dispersion: PowerLawDispersion::Causal,
+};
 
 /// CPU-side outputs used as the independent double-precision reference.
 struct CpuPstdOutput {
@@ -112,10 +131,20 @@ fn run_cpu_pstd<M: Medium>(
     sensor: [usize; 3],
     nt: usize,
     dt: f64,
+    absorption: PowerLaw,
 ) -> CpuPstdOutput {
     let config = PSTDConfig {
         dt,
         nt,
+        absorption_mode: if absorption.coefficient > 0.0 {
+            AbsorptionMode::PowerLaw {
+                alpha_coeff: Some(absorption.coefficient),
+                alpha_power: absorption.exponent,
+            }
+        } else {
+            AbsorptionMode::Lossless
+        },
+        power_law_dispersion: absorption.dispersion,
         kspace_method: KSpaceMethod::StandardPSTD,
         boundary: BoundaryConfig::None,
         nonlinearity: medium
@@ -155,10 +184,12 @@ fn run_cpu_gpu_traces<M: Medium + Sync>(
     sensor: [usize; 3],
     nt: usize,
     dt: f64,
+    absorption: PowerLaw,
 ) -> (Vec<f64>, Vec<f64>) {
     std::thread::scope(|scope| {
-        let gpu = scope.spawn(|| run_gpu_pstd_trace(grid, medium, source, sensor, nt, dt));
-        let cpu = run_cpu_pstd(grid, medium, source, sensor, nt, dt).trace;
+        let gpu =
+            scope.spawn(|| run_gpu_pstd_trace(grid, medium, source, sensor, nt, dt, absorption));
+        let cpu = run_cpu_pstd(grid, medium, source, sensor, nt, dt, absorption).trace;
         let gpu = gpu.join().expect("GPU PSTD parity worker completes");
         (cpu, gpu)
     })
@@ -172,6 +203,7 @@ fn run_gpu_pstd_trace<M: Medium>(
     sensor: [usize; 3],
     nt: usize,
     dt: f64,
+    absorption: PowerLaw,
 ) -> Vec<f64> {
     let mut sensor_mask = Array3::from_elem((grid.nx, grid.ny, grid.nz), false);
     sensor_mask[[sensor[0], sensor[1], sensor[2]]] = true;
@@ -184,8 +216,9 @@ fn run_gpu_pstd_trace<M: Medium>(
             time_steps: nt,
             dt,
             nonlinear: false,
-            alpha_coeff_db: 0.0,
-            alpha_power: 1.0,
+            alpha_coeff_db: absorption.coefficient,
+            alpha_power: absorption.exponent,
+            power_law_dispersion: absorption.dispersion,
             cpml: None,
             pml_inside: false,
         },
@@ -254,6 +287,7 @@ fn pstd_cpu_gpu_additive_source_filter_contract() {
             nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.0,
+            power_law_dispersion: PowerLawDispersion::Causal,
             cpml: None,
             pml_inside: false,
         },
@@ -264,7 +298,7 @@ fn pstd_cpu_gpu_additive_source_filter_contract() {
         .final_fields
         .expect("source-filter contract requires final fields")
         .pressure;
-    let cpu_output = run_cpu_pstd(&grid, &medium, &grid_source, source, nt, dt);
+    let cpu_output = run_cpu_pstd(&grid, &medium, &grid_source, source, nt, dt, LOSSLESS);
 
     assert_eq!(cpu_output.pressure.len(), gpu_pressure.len());
     let rel_err = max_field_rel_err(&cpu_output.pressure, gpu_pressure);
@@ -309,6 +343,7 @@ fn pstd_cpu_gpu_source_and_early_leapfrog_contract() {
             nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.0,
+            power_law_dispersion: PowerLawDispersion::Causal,
             cpml: None,
             pml_inside: false,
         },
@@ -324,7 +359,7 @@ fn pstd_cpu_gpu_source_and_early_leapfrog_contract() {
     let gpu_fields = gpu_output
         .final_fields
         .expect("early-leapfrog contract requires final fields");
-    let cpu_output = run_cpu_pstd(&grid, &medium, &grid_source, source, nt, dt);
+    let cpu_output = run_cpu_pstd(&grid, &medium, &grid_source, source, nt, dt, LOSSLESS);
     let velocity_x_err = max_field_rel_err(&cpu_output.velocity_x, &gpu_fields.velocity_x);
     let velocity_y_err = max_field_rel_err(&cpu_output.velocity_y, &gpu_fields.velocity_y);
     let velocity_z_err = max_field_rel_err(&cpu_output.velocity_z, &gpu_fields.velocity_z);
@@ -369,7 +404,8 @@ fn pstd_cpu_gpu_parity_homogeneous() {
     let source = [n / 2 - 4, n / 2, n / 2];
     let sensor = [n / 2 + 4, n / 2, n / 2];
     let grid_source = point_pressure_burst(n, nt, source);
-    let (cpu_trace, gpu_trace) = run_cpu_gpu_traces(&grid, &medium, &grid_source, sensor, nt, dt);
+    let (cpu_trace, gpu_trace) =
+        run_cpu_gpu_traces(&grid, &medium, &grid_source, sensor, nt, dt, LOSSLESS);
 
     assert_eq!(cpu_trace.len(), nt);
     assert_eq!(gpu_trace.len(), nt);
@@ -410,7 +446,8 @@ fn pstd_cpu_gpu_parity_heterogeneous() {
     let source = [n / 2 - 8, n / 2, n / 2];
     let sensor = [n / 2 + 8, n / 2, n / 2];
     let grid_source = point_pressure_burst(n, nt, source);
-    let (cpu_trace, gpu_trace) = run_cpu_gpu_traces(&grid, &medium, &grid_source, sensor, nt, dt);
+    let (cpu_trace, gpu_trace) =
+        run_cpu_gpu_traces(&grid, &medium, &grid_source, sensor, nt, dt, LOSSLESS);
 
     assert_eq!(cpu_trace.len(), nt);
     assert_eq!(gpu_trace.len(), nt);
@@ -420,5 +457,42 @@ fn pstd_cpu_gpu_parity_heterogeneous() {
     assert!(
         rel_err < 2e-3,
         "128³ heterogeneous GPU/CPU PSTD trace parity failed: max_rel_err = {rel_err:.2e}, CPU peak = {cpu_peak:.2e}, GPU peak = {gpu_peak:.2e} (threshold 2e-3)"
+    );
+}
+
+/// `y = 1` without dispersion (`τ = −2 α₀`, `η = 0`), which the causal form
+/// rejects. Absorption doubles the per-step spectral work, so half the
+/// homogeneous case's steps keep its `γ_(100×216) < 1.3e-3` bound and `2e-3`
+/// threshold. 5 dB/(MHz·cm) costs the 0.75 MHz Nyquist content about 3 dB
+/// over the 8-cell path, far beyond that threshold.
+#[test]
+#[ignore = "requires a GPU device; kept out of headless CI and run on the scheduled self-hosted CUDA job (gpu-parity.yml) via `--run-ignored ignored-only`. Re-enable trigger: a GPU runner is wired into CI"]
+fn pstd_cpu_gpu_parity_unit_exponent_without_dispersion() {
+    let n = 64usize;
+    let dx = 1e-3_f64;
+    let nt = 50usize;
+    let dt = 0.3 * dx / 1500.0;
+    let grid = Grid::new(n, n, n, dx, dx, dx).expect("valid grid");
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let source = [n / 2 - 4, n / 2, n / 2];
+    let sensor = [n / 2 + 4, n / 2, n / 2];
+    let grid_source = point_pressure_burst(n, nt, source);
+    let absorbing = PowerLaw {
+        coefficient: 5.0,
+        exponent: 1.0,
+        dispersion: PowerLawDispersion::Omitted,
+    };
+    let (cpu_trace, gpu_trace) =
+        run_cpu_gpu_traces(&grid, &medium, &grid_source, sensor, nt, dt, absorbing);
+    let lossless = run_cpu_pstd(&grid, &medium, &grid_source, sensor, nt, dt, LOSSLESS).trace;
+
+    assert!(
+        max_rel_err(&lossless, &cpu_trace) > 2e-2,
+        "the absorbing trace must differ from the lossless one"
+    );
+    let rel_err = max_rel_err(&cpu_trace, &gpu_trace);
+    assert!(
+        rel_err < 2e-3,
+        "y = 1 no-dispersion GPU/CPU PSTD trace parity failed: max_rel_err = {rel_err:.2e} (threshold 2e-3)"
     );
 }

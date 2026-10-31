@@ -31,6 +31,52 @@ fn embed_leto3(
     out
 }
 
+/// The PSTD absorption model for a caller's coefficient and a medium.
+///
+/// A medium absorbs when any voxel carries a positive coefficient, so a
+/// heterogeneous medium that is zero at the origin is not read as lossless.
+/// Only a coefficient the caller supplied (`alpha_coeff_db > 0`) is passed
+/// on; otherwise the solver reads the medium's coefficient and exponent per
+/// voxel (ADR 120), and `alpha_power` serves only an explicit coefficient or
+/// a voxel whose medium exponent is degenerate. The solver owns the `y = 1`
+/// rule, which depends on the dispersion mode.
+#[must_use]
+pub fn power_law_absorption_mode(
+    medium: &dyn kwavers_medium::Medium,
+    grid: &Grid,
+    alpha_coeff_db: f64,
+    alpha_power: f64,
+) -> AbsorptionMode {
+    let absorbs = alpha_coeff_db > 0.0
+        || (0..grid.nx).any(|i| {
+            (0..grid.ny).any(|j| {
+                (0..grid.nz).any(|k| {
+                    let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+                    medium.alpha_coefficient(x, y, z, grid).into_base() > 0.0
+                })
+            })
+        });
+    // Without an explicit coefficient the mode carries the medium's origin
+    // exponent when it is non-degenerate; the solver still reads both fields
+    // per voxel, so this only seeds heterogeneous media (ADR 120).
+    let effective_alpha_power = {
+        let y_medium = medium.alpha_power(0.0, 0.0, 0.0, grid);
+        if alpha_coeff_db <= 0.0 && y_medium > 0.0 && (y_medium - 1.0).abs() > 1e-12 {
+            y_medium
+        } else {
+            alpha_power
+        }
+    };
+    if absorbs {
+        AbsorptionMode::PowerLaw {
+            alpha_coeff: (alpha_coeff_db > 0.0).then_some(alpha_coeff_db),
+            alpha_power: effective_alpha_power,
+        }
+    } else {
+        AbsorptionMode::Lossless
+    }
+}
+
 // ── PSTD (acoustic-only) ──────────────────────────────────────────────────────
 
 /// Run a PSTD (acoustic-only) simulation.
@@ -129,6 +175,8 @@ pub fn run_with_thermal(
 mod gpu;
 #[cfg(feature = "gpu")]
 pub use gpu::run_gpu;
+#[cfg(test)]
+mod tests;
 
 // ── Solver preparation ────────────────────────────────────────────────────────
 
@@ -255,38 +303,8 @@ pub(crate) fn prepare_solver(
     };
 
     let nl = req.nonlinear.cloned().unwrap_or_default();
-    // Absorption is active when the caller supplies a dB prefactor or the
-    // medium reports a positive SI prefactor at the 1 MHz reference. The two
-    // unit domains never mix: the caller's dB value stays in the config, the
-    // medium's Np/m value is read per voxel by the solver (ADR 120).
-    let absorption_active = nl.alpha_coeff > 0.0
-        || req
-            .medium
-            .alpha_coefficient(0.0, 0.0, 0.0, req.grid)
-            .into_base()
-            > 0.0;
-
-    let effective_alpha_power = {
-        let y_medium = req.medium.alpha_power(0.0, 0.0, 0.0, req.grid);
-        if nl.alpha_coeff <= 0.0 && y_medium > 0.0 && (y_medium - 1.0).abs() > 1e-12 {
-            y_medium
-        } else {
-            nl.alpha_power
-        }
-    };
-
-    let absorption_mode = if absorption_active {
-        AbsorptionMode::PowerLaw {
-            // Only a coefficient the caller actually supplied is passed on. The
-            // medium's own value is left to the solver, which reads it per
-            // voxel; forwarding a single origin sample here would flatten a
-            // heterogeneous medium to one number (ADR 120).
-            alpha_coeff: (nl.alpha_coeff > 0.0).then_some(nl.alpha_coeff),
-            alpha_power: effective_alpha_power,
-        }
-    } else {
-        AbsorptionMode::Lossless
-    };
+    let absorption_mode =
+        power_law_absorption_mode(req.medium, req.grid, nl.alpha_coeff, nl.alpha_power);
 
     let geometry = if req.axisymmetric {
         SolverGeometry::CylindricalAS
@@ -302,6 +320,7 @@ pub(crate) fn prepare_solver(
         boundary,
         pml_inside: effective_pml_inside,
         absorption_mode,
+        power_law_dispersion: nl.power_law_dispersion,
         nonlinearity: nl.enabled,
         geometry,
         ..Default::default()

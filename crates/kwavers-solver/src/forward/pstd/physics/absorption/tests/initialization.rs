@@ -1,10 +1,12 @@
-use super::{test_k_mag, zeros_k_mag};
+use super::{test_k_mag, uniform_symbols, zeros_k_mag};
 use crate::forward::pstd::config::{PSTDConfig, PowerLawDispersion};
 use crate::forward::pstd::physics::absorption::init::initialize_absorption_operators;
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_core::constants::DB_TO_NP;
+use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
 use kwavers_medium::HomogeneousMedium;
@@ -56,8 +58,8 @@ fn test_power_law_initialization() {
         kernel.eta[[0, 0, 0]],
         expected_eta
     );
-    assert_eq!(kernel.nabla1[[0, 0, 0]], 0.0);
-    assert_eq!(kernel.nabla2[[0, 0, 0]], 0.0);
+    assert_eq!(uniform_symbols(&kernel).0[[0, 0, 0]], 0.0);
+    assert_eq!(uniform_symbols(&kernel).1[[0, 0, 0]], 0.0);
 }
 
 #[test]
@@ -97,15 +99,15 @@ fn test_nabla_operators_correct_power() {
     let expected_n1 = k_at_1.powf(y - 2.0);
     let expected_n2 = k_at_1.powf(y - 1.0);
     assert!(
-        (kernel.nabla1[[1, 0, 0]] - expected_n1).abs() < 1e-10 * expected_n1,
+        (uniform_symbols(&kernel).0[[1, 0, 0]] - expected_n1).abs() < 1e-10 * expected_n1,
         "nabla1 mismatch: got {}, expected {}",
-        kernel.nabla1[[1, 0, 0]],
+        uniform_symbols(&kernel).0[[1, 0, 0]],
         expected_n1
     );
     assert!(
-        (kernel.nabla2[[1, 0, 0]] - expected_n2).abs() < 1e-10 * expected_n2,
+        (uniform_symbols(&kernel).1[[1, 0, 0]] - expected_n2).abs() < 1e-10 * expected_n2,
         "nabla2 mismatch: got {}, expected {}",
-        kernel.nabla2[[1, 0, 0]],
+        uniform_symbols(&kernel).1[[1, 0, 0]],
         expected_n2
     );
 }
@@ -249,18 +251,22 @@ fn test_stokes_absorption_tau_matches_classical_formula() {
         assert_eq!(*val, 0.0, "eta must be zero for Stokes (y=2) absorption");
     }
 
-    assert_eq!(kernel.nabla1[[0, 0, 0]], 0.0, "DC nabla1 must be 0");
     assert_eq!(
-        kernel.nabla1[[1, 0, 0]],
+        uniform_symbols(&kernel).0[[0, 0, 0]],
+        0.0,
+        "DC nabla1 must be 0"
+    );
+    assert_eq!(
+        uniform_symbols(&kernel).0[[1, 0, 0]],
         1.0,
         "nabla1 must be 1 at non-DC modes (|k|^0 = 1)"
     );
 
     let expected_n2 = k_mag[[1, 0, 0]];
     assert!(
-        (kernel.nabla2[[1, 0, 0]] - expected_n2).abs() < 1e-12 * expected_n2,
+        (uniform_symbols(&kernel).1[[1, 0, 0]] - expected_n2).abs() < 1e-12 * expected_n2,
         "nabla2 mismatch: got {}, expected {}",
-        kernel.nabla2[[1, 0, 0]],
+        uniform_symbols(&kernel).1[[1, 0, 0]],
         expected_n2
     );
 }
@@ -308,8 +314,17 @@ fn omitted_dispersion_keeps_tau_and_zeroes_eta() {
     assert_ne!(causal.eta[[3, 4, 5]], 0.0);
     assert!(omitted.eta.iter().all(|&value| value == 0.0));
 
-    assert!(kernel_for(1.0, PowerLawDispersion::Causal)
-        .is_err_and(|error| matches!(error, kwavers_core::error::KwaversError::Validation(_))));
+    let rejection = kernel_for(1.0, PowerLawDispersion::Causal)
+        .err()
+        .expect("the causal form rejects y = 1");
+    let KwaversError::Validation(ValidationError::ConstraintViolation { message }) = rejection
+    else {
+        panic!("expected a constraint violation, got {rejection:?}");
+    };
+    assert_eq!(
+        message,
+        "alpha_power must not be 1.0 with causal dispersion, where tan(pi*y/2) is singular; set PowerLawDispersion::Omitted to absorb without dispersion"
+    );
     let unit = kernel_for(1.0, PowerLawDispersion::Omitted)
         .unwrap()
         .unwrap();
@@ -354,9 +369,11 @@ fn omitted_dispersion_takes_unit_exponent_from_the_medium() {
     .unwrap();
     // The operators carry the same y = 1: ∇₂ = |k|⁰ = 1 and ∇₁ = |k|⁻¹ off the
     // DC bin, where the configured y = 1.5 would give |k|^0.5 and |k|^-0.5.
-    assert!(kernel.strata.is_none());
-    assert_eq!(kernel.nabla2[[1, 0, 0]], 1.0);
-    assert_eq!(kernel.nabla1[[1, 0, 0]], k_mag[[1, 0, 0]].powf(-1.0));
+    assert_eq!(uniform_symbols(&kernel).1[[1, 0, 0]], 1.0);
+    assert_eq!(
+        uniform_symbols(&kernel).0[[1, 0, 0]],
+        k_mag[[1, 0, 0]].powf(-1.0)
+    );
     // y = 1 from the medium: τ = −2 α₀ c₀⁰ = −2 α₀ exactly. The configured
     // y = 1.5 would instead give −2 α₀(1.5) c₀^0.5.
     let alpha_0_si = power_law_db_cm_to_np_omega_m(0.7, 1.0);
@@ -376,4 +393,78 @@ fn config_without_dispersion_field_deserializes_as_causal() {
         .unwrap();
     let config: PSTDConfig = serde_json::from_value(value).unwrap();
     assert_eq!(config.power_law_dispersion, PowerLawDispersion::Causal);
+}
+
+/// A medium whose exponent range is within the strata tolerance takes the
+/// midpoint of that range in every voxel, for τ, η, the operators and the
+/// thermal exponent alike, rather than the exponent of one sample voxel.
+#[test]
+fn near_uniform_medium_exponent_resolves_to_its_midpoint_everywhere() {
+    use super::super::ExponentSpectrum;
+    use kwavers_medium::heterogeneous::HeterogeneousMedium;
+
+    let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+    let (alpha0, low, high) = (0.7, 1.5_f64, 1.5 + 5e-7);
+    let background = HomogeneousMedium::new(
+        DENSITY_WATER_NOMINAL,
+        SOUND_SPEED_WATER_SIM,
+        0.0,
+        0.0,
+        &grid,
+    );
+    let mut medium = HeterogeneousMedium::from_homogeneous(&background, &grid)
+        .expect("valid homogeneous optical properties");
+    medium.use_trilinear_interpolation = false;
+    // The `absorption` field stores SI base prefactors (Np/m at the reference
+    // frequency), so 0.7 dB/(MHz^y cm) is filled boundary-converted, as the
+    // medium's own constructors store it.
+    medium.absorption.fill(alpha0 * DB_TO_NP * 100.0);
+    medium.alpha0.fill(alpha0);
+    for ([i, _, _], y) in medium
+        .alpha_power
+        .indexed_iter_mut()
+        .expect("invariant: alpha_power field is materialized")
+    {
+        // Voxel [0, 0, 0] carries the low end, so a sample-voxel rule would
+        // resolve to `low`, not the midpoint.
+        *y = if i == 0 { low } else { high };
+    }
+    let config = PSTDConfig {
+        absorption_mode: AbsorptionMode::PowerLaw {
+            alpha_coeff: None,
+            alpha_power: 1.2,
+        },
+        ..PSTDConfig::default()
+    };
+    let k_mag = test_k_mag(8, 8, 8, 1e-3);
+    let kernel = initialize_absorption_operators(
+        &config,
+        &grid,
+        &medium,
+        &k_mag,
+        MHZ_TO_HZ,
+        SOUND_SPEED_WATER_SIM,
+    )
+    .unwrap()
+    .unwrap();
+
+    let midpoint = 0.5 * (low + high);
+    let ExponentSpectrum::Uniform { exponent, .. } = &kernel.spectrum else {
+        panic!("a range within the strata tolerance takes the uniform path");
+    };
+    assert_eq!(*exponent, midpoint);
+    let (nabla1, nabla2) = uniform_symbols(&kernel);
+    assert_eq!(nabla1[[1, 0, 0]], k_mag[[1, 0, 0]].powf(midpoint - 2.0));
+    assert_eq!(nabla2[[1, 0, 0]], k_mag[[1, 0, 0]].powf(midpoint - 1.0));
+    // Every voxel's coefficients use the same expression at the midpoint, so
+    // they match bit for bit. A voxel's own exponent would scale τ's c₀^(y−1)
+    // by c₀^(±Δy/2) ≈ 1 ± 2.5e-7 · ln c₀ ≈ 1 ± 1.8e-6, far above one rounding.
+    let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha0, midpoint);
+    let tau = -2.0 * alpha_0_si * SOUND_SPEED_WATER_SIM.powf(midpoint - 1.0);
+    let eta = 2.0
+        * alpha_0_si
+        * SOUND_SPEED_WATER_SIM.powf(midpoint)
+        * (std::f64::consts::PI * midpoint / 2.0).tan();
+    assert!(kernel.tau.iter().all(|&value| value == tau));
+    assert!(kernel.eta.iter().all(|&value| value == eta));
 }

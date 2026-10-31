@@ -20,14 +20,13 @@ use crate::pstd_gpu::{
     SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
-use kwavers_core::constants::{acoustic_parameters::REFERENCE_FREQUENCY_HZ, numerical::TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use kwavers_solver::forward::pstd::config::PowerLawDispersion;
 use kwavers_source::GridSource;
 use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
 use std::borrow::Cow;
-use std::f64::consts::PI;
 
 /// GPU PSTD acquisition settings.
 #[derive(Clone, Debug)]
@@ -43,10 +42,14 @@ pub struct GpuPstdRunConfig {
     /// [`Self::alpha_power`] form one uniform pair that overrides the medium.
     /// Zero delegates both parameters to the medium at each voxel.
     pub alpha_coeff_db: f64,
-    /// Power-law absorption exponent `y`; an enabled fractional model cannot
-    /// use the singular value `1.0`. When coefficient ownership is delegated,
-    /// this value is the fallback for medium exponent sentinels `0.0` and `1.0`.
+    /// Power-law absorption exponent `y`; the causal form cannot use the
+    /// singular value `1.0`. When coefficient ownership is delegated, this
+    /// value is the fallback for the medium exponent sentinel `0.0`, and for
+    /// `1.0` under the causal form.
     pub alpha_power: f64,
+    /// Whether the power law carries its Kramers–Kronig dispersion (k-Wave's
+    /// default) or absorbs without it (k-Wave `alpha_mode = 'no_dispersion'`).
+    pub power_law_dispersion: PowerLawDispersion,
     /// Exact CPML profile configuration. `None` selects an automatically
     /// grid-limited default configuration.
     pub cpml: Option<CPMLConfig>,
@@ -63,6 +66,7 @@ impl Default for GpuPstdRunConfig {
             nonlinear: false,
             alpha_coeff_db: 0.0,
             alpha_power: 1.5,
+            power_law_dispersion: PowerLawDispersion::Causal,
             cpml: None,
             pml_inside: true,
         }
@@ -210,8 +214,13 @@ where
     P: PstdAutoDeviceProvider,
     P::State: PstdRunState,
 {
-    let medium =
-        PstdMediumSnapshot::from_medium(grid, medium, config.alpha_coeff_db, config.alpha_power)?;
+    let medium = PstdMediumSnapshot::from_medium(
+        grid,
+        medium,
+        config.alpha_coeff_db,
+        config.alpha_power,
+        config.power_law_dispersion,
+    )?;
     run_gpu_pstd_with_snapshot_provider_outputs::<P>(
         grid,
         &medium,
@@ -243,6 +252,7 @@ where
         nonlinear,
         alpha_coeff_db,
         alpha_power,
+        power_law_dispersion,
         cpml,
         pml_inside,
     } = config;
@@ -255,7 +265,7 @@ where
     }
     validate_sensor_mask_shape(grid, sensor_mask)?;
     let sensor_indices = collect_sensor_indices(sensor_mask)?;
-    medium.validate_absorption_config(alpha_coeff_db, alpha_power)?;
+    medium.validate_absorption_config(alpha_coeff_db, alpha_power, power_law_dispersion)?;
     let cpml_config = cpml.unwrap_or_else(|| {
         let (default_thickness, _) = cpml_thickness_limits(nx, ny, nz);
         CPMLConfig::with_thickness(default_thickness)
@@ -345,62 +355,7 @@ where
     let has_absorption = medium.absorption.is_some();
     let has_nonlinear = nonlinear && has_nonlinear_coefficient(&medium.bon_a_flat);
 
-    let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
-        if let Some(absorption) = &medium.absorption {
-            let (lx, ly, lz) = grid.physical_size();
-            let (dk_x, dk_y, dk_z) = (TWO_PI / lx, TWO_PI / ly, TWO_PI / lz);
-            let singularity_thresh: f64 = 1e-8;
-            let y = absorption.exponent;
-            // Spectral normalizer for the SI prefactor (Np/m at 1 MHz).
-            let inv_omega_ref = 1.0 / (TWO_PI * REFERENCE_FREQUENCY_HZ);
-
-            let mut n1 = vec![0.0f32; total];
-            let mut n2 = vec![0.0f32; total];
-            let mut tau_v = vec![0.0f32; total];
-            let mut eta_v = vec![0.0f32; total];
-
-            for flat in 0..total {
-                let ix = flat / (ny * nz);
-                let iy = (flat % (ny * nz)) / nz;
-                let iz = flat % nz;
-
-                let kix = if ix <= nx / 2 {
-                    ix as f64
-                } else {
-                    (nx - ix) as f64
-                } * dk_x;
-                let kiy = if iy <= ny / 2 {
-                    iy as f64
-                } else {
-                    (ny - iy) as f64
-                } * dk_y;
-                let kiz = if iz <= nz / 2 {
-                    iz as f64
-                } else {
-                    (nz - iz) as f64
-                } * dk_z;
-                let k_mag = (kix * kix + kiy * kiy + kiz * kiz).sqrt();
-
-                if k_mag > singularity_thresh {
-                    n1[flat] = k_mag.powf(y - 2.0) as f32;
-                    n2[flat] = k_mag.powf(y - 1.0) as f32;
-                }
-
-                let alpha_np_m = absorption.coefficients.at(flat);
-                let alpha_0_si = alpha_np_m * inv_omega_ref.powf(y);
-                let c0_local = f64::from(medium.c0_flat[flat]);
-                tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
-                eta_v[flat] = (2.0 * alpha_0_si * c0_local.powf(y) * (PI * y / 2.0).tan()) as f32;
-            }
-            (n1, n2, tau_v, eta_v)
-        } else {
-            (
-                vec![0.0f32; total],
-                vec![0.0f32; total],
-                vec![0.0f32; total],
-                vec![0.0f32; total],
-            )
-        };
+    let absorption = absorption::absorption_operators(grid, medium)?;
 
     let mut solver = GpuPstdSolver::<P>::with_auto_device(
         grid,
@@ -425,10 +380,10 @@ where
         },
         AbsorptionArrays {
             bon_a_flat: &medium.bon_a_flat,
-            nabla1: &absorb_nabla1_flat,
-            nabla2: &absorb_nabla2_flat,
-            tau: &absorb_tau_flat,
-            eta: &absorb_eta_flat,
+            nabla1: &absorption.nabla1,
+            nabla2: &absorption.nabla2,
+            tau: &absorption.tau,
+            eta: &absorption.eta,
         },
     )?;
 
@@ -495,5 +450,8 @@ pub fn cpml_thickness_limits(nx: usize, ny: usize, nz: usize) -> (usize, usize) 
     (default_thickness, max_allowed)
 }
 
+mod absorption;
+
+pub use absorption::{power_law_operators, PowerLawOperators};
 #[cfg(test)]
 mod tests;
