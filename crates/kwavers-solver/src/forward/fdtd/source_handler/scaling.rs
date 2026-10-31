@@ -1,6 +1,6 @@
 use super::SourceHandler;
 use kwavers_grid::Grid;
-use kwavers_source::SourceMode;
+use kwavers_source::{velocity_source_scale, SourceMode};
 
 pub(crate) trait Array3ValueAccess {
     fn at(&self, i: usize, j: usize, k: usize) -> f64;
@@ -92,14 +92,12 @@ impl SourceHandler {
 
         for &(i, j, k, _weight) in &self.u_indices {
             let c0_val = c0.at(i, j, k);
-            let (sx, sy, sz) = match self.source.u_mode {
-                SourceMode::Dirichlet => (1.0_f64, 1.0_f64, 1.0_f64),
-                SourceMode::Additive | SourceMode::AdditiveNoCorrection => (
-                    2.0 * c0_val * dt / dx,
-                    2.0 * c0_val * dt / dy,
-                    2.0 * c0_val * dt / dz,
-                ),
-            };
+            let mode = self.source.u_mode;
+            let (sx, sy, sz) = (
+                velocity_source_scale(c0_val, dt, dx, mode),
+                velocity_source_scale(c0_val, dt, dy, mode),
+                velocity_source_scale(c0_val, dt, dz, mode),
+            );
             self.u_scale_x.push(sx);
             self.u_scale_y.push(sy);
             self.u_scale_z.push(sz);

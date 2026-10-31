@@ -311,46 +311,14 @@ where
     let pressure_source =
         super::prepare_pstd_pressure_source(grid, source, &medium.c0_flat, dt, time_steps)?;
 
-    let mut vel_x_indices: Vec<u32> = Vec::new();
-    let mut vel_x_signals: Vec<f32> = Vec::new();
-    let mut velocity_source_correction = false;
-
-    if let (Some(u_mask), Some(u_signal)) = (&source.u_mask, &source.u_signal) {
-        // Row-major order: borrowed when `u_mask` is C-dense, otherwise
-        // collected from its logical iterator.
-        let mask_flat: Cow<'_, [_]> = u_mask.as_slice().map_or_else(
-            || Cow::Owned(u_mask.iter().copied().collect()),
-            Cow::Borrowed,
-        );
-        if mask_flat.len() != total {
-            return Err(KwaversError::InvalidInput(format!(
-                "u_mask has {} cells but grid has {total}",
-                mask_flat.len()
-            )));
-        }
-        for (i, &v) in mask_flat.iter().enumerate() {
-            if v != 0.0 {
-                vel_x_indices.push(i as u32);
-            }
-        }
-        let n_vel = vel_x_indices.len();
-        let n_sig_srcs = u_signal.shape()[1];
-        if n_vel > 0 && n_sig_srcs != 1 && n_sig_srcs != n_vel {
-            return Err(KwaversError::InvalidInput(format!(
-                "u_signal has {n_sig_srcs} source rows for {n_vel} velocity-source cells; expected 1 or {n_vel}"
-            )));
-        }
-        velocity_source_correction =
-            super::source::source_mode_uses_kspace_correction(source.u_mode, "velocity")?;
-        let n_sig_cols = u_signal.shape()[2].min(time_steps);
-        vel_x_signals = vec![0.0f32; n_vel * time_steps];
-        for src_idx in 0..n_vel {
-            let sig_row = if n_sig_srcs == 1 { 0 } else { src_idx };
-            for step in 0..n_sig_cols {
-                vel_x_signals[src_idx * time_steps + step] = u_signal[[0, sig_row, step]] as f32;
-            }
-        }
-    }
+    // The one velocity schedule both GPU entry points share: source cells are
+    // scaled once by the shared 2·c₀·Δt/Δx helper, the same quotient the CPU
+    // solver applies, so the providers agree without normalisation.
+    let velocity_schedule =
+        super::prepare_pstd_velocity_source(grid, source, &medium.c0_flat, dt, time_steps)?;
+    let vel_x_indices = velocity_schedule.indices;
+    let vel_x_signals = velocity_schedule.signals;
+    let velocity_source_correction = velocity_schedule.uses_kspace_correction;
 
     let has_absorption = medium.absorption.is_some();
     let has_nonlinear = nonlinear && has_nonlinear_coefficient(&medium.bon_a_flat);

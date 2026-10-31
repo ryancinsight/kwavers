@@ -17,7 +17,7 @@ pub use config::{
     DomainSourceParameters, EnvelopeType, FocusedBowlAperture, PulseParameters, PulseType,
     SourceModel,
 };
-pub use grid_source::{GridSource, SourceMode};
+pub use grid_source::{velocity_source_scale, GridSource, SourceMode};
 pub use injection::SourceInjectionMode;
 pub use structs::{CompositeSource, NullSource, PointSource, TimeVaryingSource};
 pub use types::{Source, SourceEMWaveType, SourceField, SourcePolarization, SourceType};
