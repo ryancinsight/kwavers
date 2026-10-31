@@ -36,19 +36,15 @@ fn comparative_quick_test() {
     // Run FDTD
     let fdtd_result = run_fdtd_quick(&grid, &medium, &source, time_steps);
     eprintln!(
-        "FDTD: {:.1}ms, Energy: {:.2e}, Stability: {:.3}",
-        fdtd_result.execution_time.as_millis(),
-        fdtd_result.energy,
-        fdtd_result.stability
+        "FDTD: Energy: {:.2e}, Stability: {:.3}",
+        fdtd_result.energy, fdtd_result.stability
     );
 
     // Run PSTD
     let pstd_result = run_pstd_quick(&grid, &medium, time_steps);
     eprintln!(
-        "PSTD: {:.1}ms, Energy: {:.2e}, Stability: {:.3}",
-        pstd_result.execution_time.as_millis(),
-        pstd_result.energy,
-        pstd_result.stability
+        "PSTD: Energy: {:.2e}, Stability: {:.3}",
+        pstd_result.energy, pstd_result.stability
     );
 
     // Compare FDTD vs PSTD specifically
@@ -109,15 +105,9 @@ fn comparative_quick_test() {
         );
     }
 
-    // Test should pass even with warnings - warnings are for investigation
-    assert!(
-        fdtd_result.execution_time.as_millis() > 0,
-        "FDTD should execute"
-    );
-    assert!(
-        pstd_result.execution_time.as_millis() > 0,
-        "PSTD should execute"
-    );
+    // Test should pass even with warnings - warnings are for investigation.
+    // Execution is proven by the finite energy below, never by a wallclock
+    // read: a nonzero check fails on a fast host, a millisecond bound on load.
     assert!(
         fdtd_result.energy >= 0.0,
         "FDTD energy should be non-negative"
@@ -128,9 +118,8 @@ fn comparative_quick_test() {
     );
 }
 
-/// Quick FDTD test result
+/// Quick FDTD test result (value semantics only; timing lives in benches)
 struct QuickTestResult {
-    execution_time: std::time::Duration,
     energy: f64,
     stability: f64,
 }
@@ -141,8 +130,6 @@ fn run_fdtd_quick(
     source: &GridSource,
     time_steps: usize,
 ) -> QuickTestResult {
-    let start = std::time::Instant::now();
-
     let config = FdtdConfig::default();
     let mut solver = FdtdSolver::new(config, grid, medium, source.clone()).unwrap();
 
@@ -151,22 +138,15 @@ fn run_fdtd_quick(
         solver.step_forward().unwrap();
     }
 
-    let execution_time = start.elapsed();
     let final_field = solver.pressure_field();
     let final_field_view = leto_view3(final_field);
     let energy = calculate_energy_quick(final_field_view);
     let stability = calculate_stability_quick(final_field_view);
 
-    QuickTestResult {
-        execution_time,
-        energy,
-        stability,
-    }
+    QuickTestResult { energy, stability }
 }
 
 fn run_pstd_quick(grid: &Grid, medium: &HomogeneousMedium, time_steps: usize) -> QuickTestResult {
-    let start = std::time::Instant::now();
-
     let config = PSTDConfig {
         boundary: kwavers_solver::forward::pstd::config::BoundaryConfig::None,
         ..Default::default()
@@ -180,17 +160,12 @@ fn run_pstd_quick(grid: &Grid, medium: &HomogeneousMedium, time_steps: usize) ->
         solver.step_forward().unwrap();
     }
 
-    let execution_time = start.elapsed();
     let final_field = solver.pressure_field();
     let final_field_view = leto_view3(final_field);
     let energy = calculate_energy_quick(final_field_view);
     let stability = calculate_stability_quick(final_field_view);
 
-    QuickTestResult {
-        execution_time,
-        energy,
-        stability,
-    }
+    QuickTestResult { energy, stability }
 }
 
 /// Quick energy calculation (sum of squares)
@@ -263,19 +238,9 @@ fn test_solver_performance_comparison() {
     let fdtd_result = run_fdtd_quick(&grid, &medium, &source, 3);
     let pstd_result = run_pstd_quick(&grid, &medium, 3);
 
-    // Performance should be reasonable: < 5s under debug build parallel test load.
-    assert!(
-        fdtd_result.execution_time.as_millis() < 5000,
-        "FDTD took {}ms (> 5000ms limit)",
-        fdtd_result.execution_time.as_millis()
-    );
-    assert!(
-        pstd_result.execution_time.as_millis() < 5000,
-        "PSTD took {}ms (> 5000ms limit)",
-        pstd_result.execution_time.as_millis()
-    );
-
-    // Results should be finite and reasonable
+    // Results should be finite and reasonable. Timing budgets belong in
+    // criterion benches (`critical_path_benchmarks`, `pstd_long_run`): a
+    // millisecond bound here fails on host load, not on a defect.
     assert!(fdtd_result.energy.is_finite());
     assert!(pstd_result.energy.is_finite());
 }

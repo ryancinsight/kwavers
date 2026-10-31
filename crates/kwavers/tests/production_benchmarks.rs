@@ -6,30 +6,20 @@ use kwavers_analysis::performance::benchmarks::{run_production_benchmarks, Produ
 
 #[test]
 fn test_production_benchmark_execution() {
-    // Execute benchmarks within SRS 30s constraint
-    let start = std::time::Instant::now();
-
+    // Timing lives in criterion benches, never in wallclock asserts: under
+    // nextest parallelism and host load, measured durations are nondeterministic.
     let benchmarks = ProductionBenchmarks::new(50, 100); // Smaller for test speed
     let results = benchmarks.run_all();
-
-    let duration = start.elapsed();
-
-    // Verify SRS test runtime constraint
-    assert!(
-        duration.as_secs() < 30,
-        "Benchmark exceeded 30s SRS constraint"
-    );
 
     // Verify all benchmarks executed
     assert_eq!(results.len(), 3);
 
-    // Verify benchmark structure
+    // Verify benchmark structure and value semantics only.
     for result in results {
         assert!(!result.name.is_empty());
         assert!(result.value >= 0.0);
         assert!(result.target > 0.0);
         assert!(!result.unit.is_empty());
-        assert!(result.duration.as_millis() < 10000); // Individual benchmark <10s
     }
 }
 

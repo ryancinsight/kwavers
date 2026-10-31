@@ -12,8 +12,7 @@
 #![cfg(all(feature = "async-runtime", feature = "gpu-visualization"))]
 
 use std::sync::atomic::AtomicU64;
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use kwavers_analysis::visualization::stream::pipeline::PipelineConfig;
 use kwavers_analysis::visualization::stream::sync::{report_sync_metrics, QualityLevel};
@@ -86,11 +85,12 @@ fn test_stream_producer_consumer() {
     let stream = VizStream::new(BufferPolicy::Block).unwrap();
 
     let tx = stream.sender();
-    let producer = thread::spawn(move || {
+    // No pacing sleep: the blocking channel is the synchronization. The
+    // producer floods all 10 frames; the consumer drains them below.
+    let producer = std::thread::spawn(move || {
         for i in 0..10 {
             let frame = create_test_frame(i, 16);
             tx.send_blocking(frame).unwrap();
-            thread::sleep(Duration::from_millis(10));
         }
     });
 
@@ -155,10 +155,8 @@ fn test_drop_latest_backpressure() {
         let _ = stream.send_frame_blocking(frame);
     }
 
-    // Give time for any pending operations
-    thread::sleep(Duration::from_millis(50));
-
-    // Consume all available frames
+    // `send_frame_blocking` applies the drop policy synchronously before it
+    // returns, so there are no pending operations to wait for: drain now.
     let mut received_count = 0;
     while let Ok(Some(_)) = stream.try_recv_frame() {
         received_count += 1;
@@ -464,18 +462,12 @@ fn test_acceptance_frame_drop_rate() {
     let target_fps = 30.0;
     let coordinator = SyncCoordinator::new(target_fps);
 
-    // Simulate 100 frames at slightly slower than target rate
-    // (Should not trigger significant drops under normal conditions)
-    let frame_time_ms = 32.0; // Slightly under 33.33ms
-
+    // Simulate 100 frames at slightly faster than the 33.33ms target rate.
+    // Deterministic injected frame cost, not a wallclock sleep: the drop-rate
+    // assert below then tests coordinator accounting, not host scheduling.
+    let frame_cost = Duration::from_millis(32);
     for i in 0..100 {
-        let start = Instant::now();
-
-        // Simulate frame work
-        thread::sleep(Duration::from_millis(frame_time_ms as u64));
-
-        let elapsed = start.elapsed();
-        coordinator.complete_frame(elapsed, i as f64 * 0.033);
+        coordinator.complete_frame(frame_cost, f64::from(i) * 0.033);
     }
 
     let stats = coordinator.statistics();
@@ -507,16 +499,15 @@ fn test_latency_reporting_integration() {
     let stream = VizStream::new(BufferPolicy::Block).unwrap();
     let coordinator = SyncCoordinator::new(60.0);
 
-    // Send frames through stream while coordinator tracks
+    // Send frames through stream while coordinator tracks. The latency comes
+    // from the frame's own production clock (`age`), never from a test-side
+    // stopwatch, so no wallclock read appears here.
     for i in 0..10 {
         let frame = create_test_frame(i, 16);
-        let send_time = Instant::now();
-
         stream.send_frame_blocking(frame).unwrap();
 
         if let Ok(received) = stream.recv_frame_blocking() {
-            let latency = send_time.elapsed();
-            coordinator.complete_frame(latency, received.metadata.simulation_time);
+            coordinator.complete_frame(received.age(), received.metadata.simulation_time);
         }
     }
 
@@ -571,11 +562,21 @@ fn test_pipeline_metrics_collection() {
             eprintln!("Send error: {:?}", e);
             break;
         }
-        thread::sleep(Duration::from_millis(10));
     }
 
-    // Give pipeline time to process
-    thread::sleep(Duration::from_millis(100));
+    // Synchronize on the pipeline's own processed counter instead of
+    // sleeping: the bound is iterations, never wallclock.
+    for _ in 0..1_000_000 {
+        let processed: u64 = pipeline
+            .metrics()
+            .stages
+            .iter()
+            .map(|stage| stage.frames_processed)
+            .sum();
+        if processed >= 5 {
+            break;
+        }
+    }
 
     // Get metrics
     let metrics = pipeline.metrics();
@@ -605,9 +606,6 @@ fn test_adaptive_buffer_policy() {
     let mut sent = 0;
     for i in 0..20 {
         let frame = create_test_frame(i, 8);
-
-        // Simulate processing delay
-        thread::sleep(Duration::from_millis(5));
 
         match stream.send_frame_blocking(frame) {
             Ok(()) => sent += 1,
@@ -639,16 +637,16 @@ fn test_full_stream_sync_integration() {
     // Create sync coordinator targeting 30 FPS
     let coordinator = SyncCoordinator::new(30.0);
 
+    // Unpaced: with 20 frames against capacity 32 nothing drops, so the
+    // integration below is deterministic on every host.
     for i in 0..20 {
         let frame = create_test_frame(i, grid_size);
         if stream.send_frame_blocking(frame).is_err() {
             break;
         }
-        thread::sleep(Duration::from_millis(33));
     }
 
     while let Ok(Some(frame)) = stream.try_recv_frame() {
-        thread::sleep(Duration::from_millis(15));
         let latency = frame.age();
         coordinator.complete_frame(latency, frame.metadata.simulation_time);
     }
