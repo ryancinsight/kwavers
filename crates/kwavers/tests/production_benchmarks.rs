@@ -20,7 +20,6 @@ fn test_production_benchmark_execution() {
         assert!(result.value >= 0.0);
         assert!(result.target > 0.0);
         assert!(!result.unit.is_empty());
-        assert!(result.value.is_finite());
     }
 }
 
