@@ -239,7 +239,7 @@ fn test_solver_performance_comparison() {
     let pstd_result = run_pstd_quick(&grid, &medium, 3);
 
     // Results should be finite and reasonable. Timing budgets belong in
-    // criterion benches (`fdtd_propagation_benchmark`, `pstd_long_run`): a
+    // criterion benches (`critical_path_benchmarks`, `pstd_long_run`): a
     // millisecond bound here fails on host load, not on a defect.
     assert!(fdtd_result.energy.is_finite());
     assert!(pstd_result.energy.is_finite());
