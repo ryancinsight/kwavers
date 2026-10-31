@@ -66,7 +66,10 @@ pub use runner::{
     run_gpu_pstd_with_provider, run_gpu_pstd_with_provider_outputs,
     run_gpu_pstd_with_snapshot_outputs, GpuPstdRunConfig, PowerLawOperators,
 };
-pub use source::{prepare_pstd_pressure_source, PstdPressureSourceSchedule};
+pub use source::{
+    prepare_pstd_pressure_source, prepare_pstd_velocity_source, PstdPressureSourceSchedule,
+    PstdVelocitySourceSchedule,
+};
 pub use state::{
     PstdAutoDeviceProvider, PstdFinalFields, PstdMediumUpdateState, PstdOutputRequest,
     PstdRunInputs, PstdRunResult, PstdRunScalars, PstdRunState, PstdStateBuilder,

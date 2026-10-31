@@ -4,9 +4,10 @@
 //! schedule. Keeping the conversion here prevents their finite-aperture mask,
 //! local-medium, and source-mode contracts from drifting.
 
+use super::source_mode_uses_kspace_correction;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_source::{GridSource, SourceMode};
+use kwavers_source::GridSource;
 use std::borrow::Cow;
 
 /// Pressure-source payload ready for one GPU PSTD batch.
@@ -185,22 +186,9 @@ pub fn prepare_pstd_pressure_source(
     })
 }
 
-pub(super) fn source_mode_uses_kspace_correction(
-    mode: SourceMode,
-    source_kind: &str,
-) -> KwaversResult<bool> {
-    match mode {
-        SourceMode::Additive => Ok(true),
-        SourceMode::AdditiveNoCorrection => Ok(false),
-        SourceMode::Dirichlet => Err(KwaversError::InvalidInput(format!(
-            "GPU PSTD does not support Dirichlet {source_kind} sources"
-        ))),
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{prepare_pstd_pressure_source, source_mode_uses_kspace_correction};
+    use super::prepare_pstd_pressure_source;
     use kwavers_grid::Grid;
     use kwavers_source::{GridSource, SourceMode};
     use leto::{Array2, Array3};
@@ -320,25 +308,5 @@ mod tests {
                 )
             );
         }
-    }
-
-    #[test]
-    fn source_mode_selects_the_physical_correction_and_rejects_dirichlet() {
-        assert!(
-            source_mode_uses_kspace_correction(SourceMode::Additive, "pressure")
-                .expect("additive pressure source is supported")
-        );
-        assert!(
-            !source_mode_uses_kspace_correction(SourceMode::AdditiveNoCorrection, "velocity")
-                .expect("uncorrected velocity source is supported")
-        );
-
-        let error = source_mode_uses_kspace_correction(SourceMode::Dirichlet, "pressure")
-            .expect_err("Dirichlet pressure source must be rejected");
-
-        assert_eq!(
-            error.to_string(),
-            "Invalid input: GPU PSTD does not support Dirichlet pressure sources"
-        );
     }
 }

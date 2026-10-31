@@ -2,6 +2,8 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::GpuPstdSession;
+use eunomia::FloatElement;
+use kwavers_source::{velocity_source_scale, SourceMode};
 
 impl GpuPstdSession {
     pub(crate) fn rebuild_source_sensor_indices(
@@ -68,12 +70,48 @@ impl GpuPstdSession {
             ));
         }
 
+        // Scaled once here with the shared 2·c₀·Δt/Δx helper — the same
+        // quotient the CPU solver and the Rust runner apply, so the session
+        // agrees with both without normalisation. The session carries no
+        // source mode; it upholds no-correction semantics (the run passes
+        // `velocity_source_correction: false`), matching AdditiveNoCorrection.
+        if !(self.dt.is_finite() && self.dt > 0.0) {
+            return Err(PyValueError::new_err(format!(
+                "GPU session velocity upload requires finite positive dt; got {}",
+                self.dt
+            )));
+        }
         self.vel_x_signals.clear();
         self.vel_x_signals.resize(n_vel * time_steps, 0.0f32);
         for src_idx in 0..n_vel {
+            let flat = usize::try_from(self.vel_x_indices[src_idx]).map_err(|_| {
+                PyValueError::new_err("GPU session source index cannot address host memory")
+            })?;
+            let local_sound_speed = *self.c0_flat.get(flat).ok_or_else(|| {
+                PyValueError::new_err(format!(
+                    "GPU session source index {flat} exceeds the sound-speed field"
+                ))
+            })?;
+            if !(local_sound_speed.is_finite() && local_sound_speed > 0.0) {
+                return Err(PyValueError::new_err(format!(
+                    "GPU session sound speed must be finite and positive at flat index {flat}; got {local_sound_speed}"
+                )));
+            }
+            let source_scale = velocity_source_scale(
+                f64::from(local_sound_speed),
+                self.dt,
+                self.dx,
+                SourceMode::AdditiveNoCorrection,
+            );
             let sig_row = src_idx.min(n_sig_srcs.saturating_sub(1));
             for step in 0..n_sig_cols {
-                self.vel_x_signals[src_idx * time_steps + step] = sig_arr[[sig_row, step]] as f32;
+                let scaled = sig_arr[[sig_row, step]] * source_scale;
+                if !(scaled.is_finite() && scaled.abs() <= f64::from(f32::MAX)) {
+                    return Err(PyValueError::new_err(format!(
+                        "GPU session velocity source {src_idx} step {step} is not representable as finite f32"
+                    )));
+                }
+                self.vel_x_signals[src_idx * time_steps + step] = f32::from_f64(scaled);
             }
         }
 

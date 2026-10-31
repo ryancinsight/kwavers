@@ -27,6 +27,15 @@ pub struct GpuPstdSession {
 
     pub(crate) time_steps: usize,
 
+    /// Sound-speed field retained to scale velocity sources once at upload
+    /// with the shared `2·c₀·Δt/Δx` helper (same single-precision values the
+    /// solver was initialised with).
+    pub(crate) c0_flat: Vec<f32>,
+    /// Time step retained for the velocity-source scale.
+    pub(crate) dt: f64,
+    /// x spacing retained for the velocity-source scale (ux only).
+    pub(crate) dx: f64,
+
     pub(crate) sensor_indices: Vec<u32>,
     pub(crate) vel_x_indices: Vec<u32>,
     pub(crate) vel_x_signals: Vec<f32>,

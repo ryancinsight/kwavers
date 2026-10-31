@@ -26,10 +26,12 @@ NT = 64
 SENSOR_OFFSET = 8
 PML = 4
 ALPHA_COEFF_DB = 5.0
-# max |cpu - gpu| over traces normalised to a unit lossless peak. The Rust
-# parity test bounds f32 PSTD against the f64 CPU path at gamma_(100 x 216) <
-# 1.3e-3 for 100 steps of a 64^3 grid and asserts 2e-3; this 32^3 grid runs
-# shorter transforms for fewer steps, so the same assertion bound applies.
+# max |cpu - gpu| over the direct sensor traces: both providers scale an
+# additive velocity source through the one shared 2 c0 dt / dx quotient, so
+# no normalisation may hide a missing scale. The Rust parity test bounds f32
+# PSTD against the f64 CPU path at gamma_(100 x 216) < 1.3e-3 for 100 steps
+# of a 64^3 grid and asserts 2e-3; this 32^3 grid runs shorter transforms
+# for fewer steps, so the same assertion bound applies.
 PARITY_BOUND = 2.0e-3
 # The absorbing and lossless traces must differ by far more than the bound, or
 # the comparison would not see the absorption operators (measured 0.12).
@@ -61,7 +63,7 @@ SOURCE_IX = N // 2 - SENSOR_OFFSET // 2
 SENSOR_IX = SOURCE_IX + SENSOR_OFFSET
 
 
-def _cpu_trace(pkw, *, absorbing: bool) -> np.ndarray:
+def _cpu_trace(pkw, *, absorbing: bool, dt: float = DT) -> np.ndarray:
     """Pressure at the sensor voxel from the CPU PSTD solver, `NT` samples."""
     grid = pkw.Grid(N, N, N, DX, DX, DX)
     medium = pkw.Medium.homogeneous(sound_speed=C0, density=RHO0)
@@ -74,10 +76,10 @@ def _cpu_trace(pkw, *, absorbing: bool) -> np.ndarray:
         sim.set_alpha_coeff(ALPHA_COEFF_DB)
         sim.set_alpha_power(1.0)
         sim.set_power_law_dispersion(pkw.PowerLawDispersion.Omitted)
-    return np.asarray(sim.run(time_steps=NT, dt=DT).sensor_data, dtype=np.float64).ravel()
+    return np.asarray(sim.run(time_steps=NT, dt=dt).sensor_data, dtype=np.float64).ravel()
 
 
-def _session_trace(pkw, *, dispersion, absorbing: bool = True) -> np.ndarray:
+def _session_trace(pkw, *, dispersion, absorbing: bool = True, dt: float = DT) -> np.ndarray:
     grid = pkw.Grid(N, N, N, DX, DX, DX)
     kwargs = {} if dispersion is None else {"power_law_dispersion": dispersion}
     try:
@@ -85,7 +87,7 @@ def _session_trace(pkw, *, dispersion, absorbing: bool = True) -> np.ndarray:
             grid,
             np.full((N, N, N), C0),
             np.full((N, N, N), RHO0),
-            dt=DT,
+            dt=dt,
             time_steps=NT,
             absorption=np.full((N, N, N), ALPHA_COEFF_DB) if absorbing else None,
             pml_size_xyz=(PML, PML, PML),
@@ -104,27 +106,6 @@ def _session_trace(pkw, *, dispersion, absorbing: bool = True) -> np.ndarray:
     traces = np.asarray(session.run_scan_line_cached(), dtype=np.float64)
     assert traces.shape == (2, NT)
     return traces[1]
-
-
-def _normalised_by_lossless_peak(trace: np.ndarray, lossless: np.ndarray) -> np.ndarray:
-    """Divide a trace by the peak of its own provider's lossless trace.
-
-    The CPU solver scales an additive velocity source by 2 c0 dt / dx
-    (`kwavers-solver/src/forward/fdtd/source_handler/scaling.rs`); the GPU
-    session, runner and shader add it unscaled. At `DT = 0.3 DX / C0` the
-    lossless traces therefore differ by 1 / (2 c0 dt / dx) = 1 / 0.6 = 1.667,
-    the ratio measured here. Board item KW-GPU-VELOCITY-SOURCE-SCALE tracks
-    the GPU scaling. The solve is linear in the source amplitude, so
-    normalising each provider by its own lossless peak removes that
-    convention and leaves the absorption.
-
-    The Rust parity test normalises by the peak of the absorbing CPU trace;
-    the lossless peak is 1.114 times larger here (measured), so this metric
-    is about 1.1 times looser. The 2e-3 bound derived there (see
-    `PARITY_BOUND`) still holds with that margin, and the measured error
-    (1.6e-5) is two orders below it.
-    """
-    return trace / np.max(np.abs(lossless))
 
 
 @pytest.mark.timeout(120)
@@ -147,22 +128,31 @@ def test_session_rejects_a_causal_unit_exponent_with_value_error():
         pytest.skip(f"GPU PSTD unavailable: {exc}")
 
 
-@pytest.mark.timeout(120)
-def test_unit_exponent_without_dispersion_matches_the_cpu_solver():
+@pytest.mark.timeout(300)
+@pytest.mark.parametrize("cfl", [0.2, 0.3])
+def test_unit_exponent_without_dispersion_matches_the_cpu_solver(cfl):
+    """The GPU session and the CPU solver agree on one sensor trace, directly.
+
+    Both providers route an additive velocity source through the one shared
+    `2 c0 dt / dx` quotient (`velocity_source_scale` in
+    `crates/kwavers-source/src/grid_source.rs`), so the traces agree with no
+    normalisation. A per-provider normalisation would hide a missing scale on
+    either side; the direct comparison is the velocity-scale proof. The run
+    is repeated at CFL 0.2 and 0.3 so the quotient is exercised away from a
+    single timestep.
+    """
     pkw = _pykwavers()
+    dt = cfl * DX / C0
     omitted = pkw.PowerLawDispersion.Omitted
-    gpu = _session_trace(pkw, dispersion=omitted)
-    gpu_lossless = _session_trace(pkw, dispersion=omitted, absorbing=False)
-    cpu = _cpu_trace(pkw, absorbing=True)
-    cpu_lossless = _cpu_trace(pkw, absorbing=False)
+    gpu = _session_trace(pkw, dispersion=omitted, dt=dt)
+    cpu = _cpu_trace(pkw, absorbing=True, dt=dt)
+    cpu_lossless = _cpu_trace(pkw, absorbing=False, dt=dt)
 
     assert gpu.shape == cpu.shape == (NT,)
-    gpu = _normalised_by_lossless_peak(gpu, gpu_lossless)
-    cpu = _normalised_by_lossless_peak(cpu, cpu_lossless)
-    cpu_unabsorbed = _normalised_by_lossless_peak(cpu_lossless, cpu_lossless)
-
-    # The comparison sees the absorption operators ...
-    assert np.max(np.abs(cpu_unabsorbed - cpu)) > ABSORPTION_VISIBILITY
+    # The comparison sees the absorption operators: same-provider relative
+    # difference, so it cannot hide a cross-provider scale mismatch ...
+    visibility = np.max(np.abs(cpu_lossless - cpu)) / np.max(np.abs(cpu_lossless))
+    assert visibility > ABSORPTION_VISIBILITY
     # ... and the session's operators produce the CPU solver's absorption.
     assert np.max(np.abs(cpu - gpu)) < PARITY_BOUND
 
