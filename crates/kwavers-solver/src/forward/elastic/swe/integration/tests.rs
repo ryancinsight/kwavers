@@ -218,14 +218,13 @@ fn fused_pml_damping_matches_separable_oracle_across_chunk_tail() {
     }
 }
 
-/// Reproduction probe for KW-SWE-EDGE-GROWTH-2026-09-17: a whole-grid
-/// sinusoidal initial displacement grows without bound at the walls, while a
-/// centred pulse decays into the PML. Ignored until the cause (boundary
-/// closure vs PML-on-displacement vs inadmissible initial data) is isolated;
-/// it becomes the regression test once the growth is bounded or such data is
-/// type-rejected.
+/// Regression test for KW-SWE-EDGE-GROWTH-2026-09-17: a whole-grid
+/// sinusoidal initial displacement stays bounded. The one-sided wall
+/// closures of the central stencils break the discrete skew-symmetry the
+/// leapfrog needs, so wall degrees of freedom with nonzero strain injected
+/// energy without bound; the integrator clamps the outer walls, and a fixed
+/// boundary does no work. A centred pulse decays into the PML as before.
 #[test]
-#[ignore = "reproduction probe for KW-SWE-EDGE-GROWTH-2026-09-17: run explicitly to observe the unbounded growth"]
 fn whole_grid_initial_displacement_stays_bounded() {
     use eunomia::FloatElement;
 

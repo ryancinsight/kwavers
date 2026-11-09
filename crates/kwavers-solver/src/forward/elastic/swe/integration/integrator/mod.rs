@@ -2,6 +2,7 @@
 
 mod acceleration;
 mod body_force;
+mod clamp;
 mod damping;
 mod step;
 
