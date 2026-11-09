@@ -376,6 +376,34 @@ mod tests {
         );
     }
 
+    /// The configured exponent is validated only where a voxel falls back to
+    /// it: an unused configured `y = 1` is accepted when every absorbing
+    /// voxel uses the medium's exponent (KW-PSTD-UNIT-EXPONENT-BACKENDS).
+    #[test]
+    fn unused_configured_unit_exponent_is_accepted() {
+        assert_eq!(
+            resolve_power_law_absorption(0.0, 1.0, Causal, [(0.2, 1.5), (0.4, 1.5)])
+                .expect("unused configured y = 1 is accepted"),
+            Some(PowerLawAbsorption {
+                exponent: 1.5,
+                explicit_coefficient: None,
+            })
+        );
+    }
+
+    /// ...while a voxel that falls back to the configured exponent validates
+    /// it: an absorbing sentinel voxel with a configured `y = 1` rejects
+    /// under causal dispersion.
+    #[test]
+    fn fallback_to_a_configured_unit_exponent_rejects() {
+        let error = resolve_power_law_absorption(0.0, 1.0, Causal, [(0.2, 0.0), (0.4, 1.5)])
+            .expect_err("fallback y = 1 rejects under causal dispersion");
+        assert_eq!(
+            error.to_string(),
+            "Invalid input: GPU PSTD alpha_power must not equal 1.0 with causal dispersion, where tan(pi*y/2) is singular; set PowerLawDispersion::Omitted to absorb without dispersion; got 1"
+        );
+    }
+
     #[test]
     fn heterogeneous_medium_absorption_exponents_are_rejected() {
         let error = resolve_power_law_absorption(0.0, 1.5, Causal, [(0.2, 1.3), (0.4, 1.7)])

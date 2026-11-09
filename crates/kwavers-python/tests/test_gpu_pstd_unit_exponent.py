@@ -226,19 +226,21 @@ def test_run_keeps_the_dispersion_when_the_medium_supplies_the_absorption():
     omitted, causal = pkw.PowerLawDispersion.Omitted, pkw.PowerLawDispersion.Causal
 
     # A medium with y = 1 and Omitted runs as y = 1: the explicit-coefficient
-    # path is the same solve with the coefficient given by the caller.
+    # path is the same solve with the coefficient given by the caller. Both
+    # paths build bit-identical operator fields (measured max |diff| 0.0 at
+    # peak ~20), so the traces compare exactly with no tolerance.
     from_medium = _run_with_medium_exponent(pkw, omitted)
     explicit_unit = _run_with_explicit_coefficient(pkw, omitted, 1.0)
-    np.testing.assert_allclose(from_medium, explicit_unit, rtol=0.0, atol=1e-12 * np.max(np.abs(explicit_unit)))
+    np.testing.assert_array_equal(from_medium, explicit_unit)
 
     # Under Causal the medium's degenerate y = 1 is replaced by the configured
     # alpha_power (1.5), so the result is the y = 1.5 solve, not the y = 1 one.
     from_medium_causal = _run_with_medium_exponent(pkw, causal)
     explicit_replaced = _run_with_explicit_coefficient(pkw, causal, 1.5)
-    np.testing.assert_allclose(
-        from_medium_causal, explicit_replaced, rtol=0.0, atol=1e-12 * np.max(np.abs(explicit_replaced))
-    )
-    assert np.max(np.abs(from_medium_causal - from_medium)) > ABSORPTION_VISIBILITY * np.max(np.abs(from_medium))
+    np.testing.assert_array_equal(from_medium_causal, explicit_replaced)
+    # The two pinned solves differ, so a zero separation would prove the
+    # fallback silently stopped taking effect.
+    assert np.max(np.abs(from_medium_causal - from_medium)) > 0.0
 
 
 if __name__ == "__main__":

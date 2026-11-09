@@ -79,7 +79,9 @@ const DEGENERATE_EXPONENT_TOL: f64 = 1e-12;
 /// ## References
 /// Treeby & Cox (2010) Eqs. 19–21 for τ and η; Eq. 10 for nabla operators.
 /// # Errors
-/// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Returns [`crate::KwaversError::Validation`] for an exponent actually used
+///   by an absorbing voxel that is non-finite, or `y = 1` under causal
+///   dispersion. Exponents no absorbing voxel uses are never validated.
 ///
 pub(crate) fn initialize_absorption_operators(
     config: &PSTDConfig,
@@ -152,15 +154,16 @@ pub(crate) fn initialize_absorption_operators(
         } => {
             let y_config = *alpha_power;
             let dispersive = config.power_law_dispersion == PowerLawDispersion::Causal;
-            if dispersive && (y_config - 1.0).abs() < DEGENERATE_EXPONENT_TOL {
-                return Err(KwaversError::Validation(
-                    ValidationError::ConstraintViolation {
-                        message: "alpha_power must not be 1.0 with causal dispersion, where \
-                                  tan(pi*y/2) is singular; set PowerLawDispersion::Omitted \
-                                  to absorb without dispersion"
-                            .to_owned(),
-                    },
-                ));
+            // The configured exponent is validated only where it is used. The
+            // explicit-coefficient path applies it in every voxel, so a
+            // non-zero request validates up front; a zero request absorbs
+            // nothing and leaves it alone. The medium path validates the
+            // effective exponent per absorbing voxel below, where a voxel
+            // either uses the medium's exponent or falls back to this one.
+            if let Some(requested) = alpha_coeff {
+                if *requested != 0.0 {
+                    validate_active_power_law_exponent(y_config, dispersive)?;
+                }
             }
 
             // Pass 1 resolves each voxel's power law; the exponent field then
@@ -204,11 +207,16 @@ pub(crate) fn initialize_absorption_operators(
                                     || (dispersive
                                         && (y_medium - 1.0).abs() <= DEGENERATE_EXPONENT_TOL);
                                 let y = if !degenerate { y_medium } else { y_config };
-                                (
-                                    0.0,
-                                    medium.alpha_coefficient(x, y_coord, z, grid).into_base(),
-                                    y,
-                                )
+                                let alpha_np_m =
+                                    medium.alpha_coefficient(x, y_coord, z, grid).into_base();
+                                // The effective exponent is validated where it
+                                // is used: voxels that absorb nothing take no
+                                // exponent, mirroring the GPU resolver, which
+                                // skips zero-coefficient voxels the same way.
+                                if alpha_np_m != 0.0 {
+                                    validate_active_power_law_exponent(y, dispersive)?;
+                                }
+                                (0.0, alpha_np_m, y)
                             }
                         };
                         alpha_db_field[[i, j, k]] = alpha_db_cm;
@@ -272,6 +280,32 @@ pub(crate) fn initialize_absorption_operators(
             build_relaxation_kernel(grid, medium, k_mag, &relaxation, Some(*alpha_0))
         }
     }
+}
+
+/// Reject an exponent actually used by an absorbing voxel: it must be finite,
+/// and must stay away from the `y = 1` singularity of the causal dispersion
+/// term `tan(πy/2)`. The configured exponent is checked only on paths that
+/// apply it, and a medium-supplied exponent only at voxels that absorb with
+/// it, so the CPU and GPU backends accept or reject the same configurations.
+fn validate_active_power_law_exponent(y: f64, dispersive: bool) -> KwaversResult<()> {
+    if !y.is_finite() {
+        return Err(KwaversError::Validation(
+            ValidationError::ConstraintViolation {
+                message: format!("alpha_power must be finite for enabled absorption; got {y}"),
+            },
+        ));
+    }
+    if dispersive && (y - 1.0).abs() < DEGENERATE_EXPONENT_TOL {
+        return Err(KwaversError::Validation(
+            ValidationError::ConstraintViolation {
+                message: "alpha_power must not be 1.0 with causal dispersion, where \
+                          tan(pi*y/2) is singular; set PowerLawDispersion::Omitted \
+                          to absorb without dispersion"
+                    .to_owned(),
+            },
+        ));
+    }
+    Ok(())
 }
 
 /// Error for an ill-formed relaxation spectrum.
