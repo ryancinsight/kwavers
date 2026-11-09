@@ -1,7 +1,5 @@
 # Backlog / Strategy
 
-<a id="kwavers-medium-quantity-typing"></a>- [KW-MEDIUM-QUANTITY-TYPING](backlog/kwavers-medium-quantity-typing.md) — Type the medium physics traits with aequitas quantities [tightening][minor] — todo
-
 <a id="atlas-kwavers-hephaestus-vis-104"></a>- [ATLAS-KWAVERS-HEPHAESTUS-VIS-104](backlog/atlas-kwavers-hephaestus-vis-104.md) — Reject uninitialized GPU visualization [patch] — review
 <a id="kw-aperture-001"></a>- [KW-APERTURE-001](backlog/kw-aperture-001.md) — Own finite circular-piston propagation [minor] — review
 <a id="kw-aperture-002"></a>- [KW-APERTURE-002](backlog/kw-aperture-002.md) — General planar aperture propagation [major] — review
@@ -52,6 +50,4 @@
 <a id="kw-dep-zip-advisory"></a>- [KW-DEP-ZIP-ADVISORY](backlog/kw-dep-zip-advisory.md) — The Security Audit fails on zip < 9 through gaia-mesh and consus-npy [patch] — todo
 <a id="kw-examples-oversized-923"></a>- [KW-EXAMPLES-OVERSIZED-923](backlog/kw-examples-oversized-923.md) — Examples and tests grown or touched by #923 stay over the 500-line target [patch] — todo
 <a id="kw-gpu-host-tests-unrun"></a>- [KW-GPU-HOST-TESTS-UNRUN](backlog/kw-gpu-host-tests-unrun.md) — CI runs no kwavers-gpu test, including the host-only ones [patch] — todo
-<a id="kw-gpu-velocity-source-scale"></a>- [KW-GPU-VELOCITY-SOURCE-SCALE](backlog/kw-gpu-velocity-source-scale.md) — GPU PSTD adds velocity sources without the 2c₀Δt/Δx scale [patch] — todo
-<a id="kw-origin-sampled-medium"></a>- [KW-ORIGIN-SAMPLED-MEDIUM](backlog/kw-origin-sampled-medium.md) — Non-PSTD paths read a heterogeneous medium at the origin [patch] — todo
 <a id="kw-pstd-unit-exponent-backends"></a>- [KW-PSTD-UNIT-EXPONENT-BACKENDS](backlog/kw-pstd-unit-exponent-backends.md) — CPU and GPU PSTD disagree on a configured y = 1 under causal dispersion [patch] — todo
