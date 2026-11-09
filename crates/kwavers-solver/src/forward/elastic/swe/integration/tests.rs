@@ -217,3 +217,46 @@ fn fused_pml_damping_matches_separable_oracle_across_chunk_tail() {
         }
     }
 }
+
+/// Regression test for KW-SWE-EDGE-GROWTH-2026-09-17: a whole-grid
+/// sinusoidal initial displacement stays bounded. The one-sided wall
+/// closures of the central stencils break the discrete skew-symmetry the
+/// leapfrog needs, so wall degrees of freedom with nonzero strain injected
+/// energy without bound; the integrator clamps the outer walls, and a fixed
+/// boundary does no work. A centred pulse decays into the PML as before.
+#[test]
+fn whole_grid_initial_displacement_stays_bounded() {
+    use eunomia::FloatElement;
+
+    let n = 64;
+    let grid = Grid::new(n, n, n, 1e-3, 1e-3, 1e-3).unwrap();
+    let (lambda, mu, density, pml) = make_integrator(&grid, 1e9, 1e9);
+    let integrator = TimeIntegrator::new(&grid, &lambda, &mu, &density, &pml);
+    let dt = integrator.calculate_stable_timestep(0.5);
+    let mut field = ElasticWaveField::new(n, n, n);
+    for i in 0..n {
+        for j in 0..n {
+            for k in 0..n {
+                let phase = 0.37 * f64::from_count(i)
+                    + 0.53 * f64::from_count(j)
+                    + 0.71 * f64::from_count(k);
+                field.ux[[i, j, k]] = phase.sin();
+                field.uy[[i, j, k]] = phase.cos();
+            }
+        }
+    }
+    let mut scratch = ElasticStepScratch::new(n, n, n);
+    for _ in 0..400 {
+        integrator
+            .step(&mut field, dt, None, &mut scratch)
+            .expect("probe step");
+    }
+    let peak = field
+        .displacement_magnitude()
+        .iter()
+        .fold(0.0_f64, |peak, &value| peak.max(value.abs()));
+    assert!(
+        peak < 10.0,
+        "whole-grid initial displacement grew without bound: peak {peak}"
+    );
+}

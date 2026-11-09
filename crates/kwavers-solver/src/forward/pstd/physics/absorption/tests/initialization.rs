@@ -6,7 +6,6 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::DB_TO_NP;
-use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
 use kwavers_medium::HomogeneousMedium;

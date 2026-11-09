@@ -69,9 +69,9 @@ fn swe_step_phase_split() {
         field: ElasticWaveField::new(N, N, N),
         scratch: ElasticStepScratch::new(N, N, N),
     };
-    // A centred Gaussian pulse: the integrator assumes displacement that
-    // vanishes towards the absorbing layer, and a field reaching the edges
-    // grows secularly (`kw-swe-edge-growth`), which would time a different run.
+    // A centred Gaussian pulse: the integrator clamps the outer walls, so a
+    // field reaching the edges stays bounded, but the pulse keeps the timed
+    // run representative of absorbing-layer production use.
     let centre = (N / 2) as f64;
     for i in 0..N {
         for j in 0..N {

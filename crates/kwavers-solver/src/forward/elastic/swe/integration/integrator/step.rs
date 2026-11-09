@@ -3,6 +3,7 @@
 use super::super::super::scratch::ElasticStepScratch;
 use super::super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use super::acceleration::{Evaluated, PlaneStrainStress, SpatialStress, StressOperator};
+use super::clamp::clamp_walls;
 use super::{body_force, PreparedBodyForces, TimeIntegrator};
 use kwavers_core::arena::last_level_cache_bytes;
 use kwavers_core::error::KwaversResult;
@@ -15,6 +16,11 @@ impl TimeIntegrator<'_> {
     /// a full displacement update. Reusing `scratch` makes the update
     /// allocation-free. Velocity-Verlet is second-order and symplectic; the
     /// separable PML then damps both displacement and velocity components.
+    ///
+    /// The outer wall planes are clamped after each acceleration evaluation
+    /// (see `super::clamp`): wall velocity is held at zero, so wall strain
+    /// cannot inject energy through the one-sided wall closures
+    /// (`KW-SWE-EDGE-GROWTH-2026-09-17`).
     ///
     /// # Errors
     ///
@@ -123,8 +129,12 @@ impl TimeIntegrator<'_> {
         let half_dt = 0.5 * dt;
         let time = field.time;
         match acceleration(field, scratch, time, half_dt)? {
-            Evaluated::Kicked => drift::<S>(field, dt),
+            Evaluated::Kicked => {
+                clamp_walls(field, scratch);
+                drift::<S>(field, dt)
+            }
             Evaluated::Stored => {
+                clamp_walls(field, scratch);
                 let live = if S::IS_PLANE_STRAIN { 4 } else { 6 };
                 kick_then_drift::<S>(
                     field,
@@ -136,7 +146,9 @@ impl TimeIntegrator<'_> {
             }
         }
 
-        if let Evaluated::Stored = acceleration(field, scratch, time + dt, half_dt)? {
+        let second = acceleration(field, scratch, time + dt, half_dt)?;
+        clamp_walls(field, scratch);
+        if let Evaluated::Stored = second {
             update_components::<S>(
                 &mut field.vx,
                 &mut field.vy,
