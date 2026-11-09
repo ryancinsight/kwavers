@@ -15,7 +15,9 @@ use harness::{
     max_abs, max_abs_field, max_field_rel_err, max_rel_err, run_cpu_gpu_traces, run_cpu_pstd,
     PowerLaw, LOSSLESS,
 };
-use kwavers_gpu::pstd_gpu::{run_gpu_pstd_with_outputs, GpuPstdRunConfig, PstdOutputRequest};
+use kwavers_gpu::pstd_gpu::{
+    run_gpu_pstd, run_gpu_pstd_with_outputs, GpuPstdRunConfig, PstdOutputRequest,
+};
 use kwavers_grid::Grid;
 use kwavers_medium::{heterogeneous::HeterogeneousMedium, HomogeneousMedium};
 use kwavers_solver::forward::pstd::config::PowerLawDispersion;
@@ -99,6 +101,96 @@ fn pstd_cpu_gpu_parity_bluestein_shape() {
     assert!(
         pressure_error < 1e-3 && trace_error < 1e-3,
         "Bluestein-shape GPU/CPU mismatch: field={pressure_error:.2e}, trace={trace_error:.2e}"
+    );
+}
+
+/// Delegated (medium-supplied) absorption validates the configured exponent
+/// only where a voxel falls back to it: a medium whose absorbing voxels all
+/// use their own exponent leaves an unused configured `y = 1` alone, so GPU
+/// dispatch accepts it and the solve runs (KW-PSTD-UNIT-EXPONENT-BACKENDS).
+#[test]
+#[ignore = "requires a GPU device; run on the scheduled self-hosted GPU parity job"]
+fn delegated_absorption_accepts_an_unused_configured_unit_exponent() {
+    let shape = [8, 8, 8];
+    let nt = 4;
+    let dx = 1.0e-3;
+    let c0 = 1_500.0;
+    let rho0 = 1_000.0;
+    let dt = 0.3 * dx / c0;
+    let grid = Grid::new(shape[0], shape[1], shape[2], dx, dx, dx).expect("valid grid");
+    let mut medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+    medium
+        .set_acoustic_properties(0.5, 1.5, 0.0)
+        .expect("absorbing medium");
+    let source = [4, 4, 4];
+    let grid_source = point_pressure_burst_shape(shape, nt, source);
+    let mut sensor_mask = Array3::from_elem(shape, false);
+    sensor_mask[[source[0], source[1], source[2]]] = true;
+
+    let trace = run_gpu_pstd(
+        &grid,
+        &medium,
+        &grid_source,
+        &sensor_mask,
+        GpuPstdRunConfig {
+            time_steps: nt,
+            dt,
+            nonlinear: false,
+            alpha_coeff_db: 0.0,
+            alpha_power: 1.0,
+            power_law_dispersion: PowerLawDispersion::Causal,
+            cpml: None,
+            pml_inside: false,
+        },
+    )
+    .expect("dispatch accepts an unused configured y = 1");
+    let trace: Vec<f64> = trace.iter().copied().collect();
+    assert_eq!(trace.len(), nt);
+    assert!(trace.iter().all(|value| value.is_finite()));
+}
+
+/// ...while a voxel that falls back to the configured exponent validates it:
+/// an absorbing medium whose exponents are all unset delegates every voxel to
+/// the configured `y = 1`, so dispatch rejects it before device acquisition
+/// and the case runs without a device.
+#[test]
+fn delegated_absorption_rejects_a_fallback_unit_exponent() {
+    let shape = [8, 8, 8];
+    let nt = 4;
+    let dx = 1.0e-3;
+    let c0 = 1_500.0;
+    let rho0 = 1_000.0;
+    let dt = 0.3 * dx / c0;
+    let grid = Grid::new(shape[0], shape[1], shape[2], dx, dx, dx).expect("valid grid");
+    let mut medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
+    medium
+        .set_acoustic_properties(0.5, 0.0, 0.0)
+        .expect("absorbing medium with an unset exponent");
+    let source = [4, 4, 4];
+    let grid_source = point_pressure_burst_shape(shape, nt, source);
+    let mut sensor_mask = Array3::from_elem(shape, false);
+    sensor_mask[[source[0], source[1], source[2]]] = true;
+
+    let error = run_gpu_pstd(
+        &grid,
+        &medium,
+        &grid_source,
+        &sensor_mask,
+        GpuPstdRunConfig {
+            time_steps: nt,
+            dt,
+            nonlinear: false,
+            alpha_coeff_db: 0.0,
+            alpha_power: 1.0,
+            power_law_dispersion: PowerLawDispersion::Causal,
+            cpml: None,
+            pml_inside: false,
+        },
+    )
+    .expect_err("dispatch rejects the fallback y = 1");
+    assert!(
+        error.to_string().contains("must not equal 1.0"),
+        "unexpected dispatch error: {error}"
     );
 }
 
