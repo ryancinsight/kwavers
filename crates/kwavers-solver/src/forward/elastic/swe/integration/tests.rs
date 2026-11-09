@@ -260,3 +260,63 @@ fn whole_grid_initial_displacement_stays_bounded() {
         "whole-grid initial displacement grew without bound: peak {peak}"
     );
 }
+
+/// A thin slab (`nz = 1`) keeps evolving under the wall clamp: an axis
+/// pair is clamped only with interior cells, so the collapse axis stays
+/// free for the solver's plane-strain and 2D modes while the clamped x/y
+/// walls still hold the bound. An unconditional six-plane clamp freezes the
+/// whole slab at its initial field instead (the elastic-FWI inverse suite
+/// caught this as zero kernels and zero misfits).
+#[test]
+fn thin_slab_stays_live_and_bounded() {
+    use eunomia::FloatElement;
+
+    let (nx, ny, nz) = (16, 16, 1);
+    let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3).unwrap();
+    // No PML: its displacement damping would move a frozen field on its own
+    // and mask the clamp under test. The FWI suites that caught this run
+    // PML-free for the same reason.
+    let (lambda, mu, density, _) = make_integrator(&grid, 1e9, 1e9);
+    let pml = ElasticSwePMLBoundary::new(
+        &grid,
+        SwePmlConfig {
+            thickness: 0,
+            ..SwePmlConfig::default()
+        },
+    );
+    let integrator = TimeIntegrator::new(&grid, &lambda, &mu, &density, &pml);
+    let dt = integrator.calculate_stable_timestep(0.5);
+    let mut field = ElasticWaveField::new(nx, ny, nz);
+    for i in 0..nx {
+        for j in 0..ny {
+            let phase = 0.37 * f64::from_count(i) + 0.53 * f64::from_count(j);
+            field.ux[[i, j, 0]] = phase.sin();
+            field.uy[[i, j, 0]] = phase.cos();
+        }
+    }
+    let initial: Vec<f64> = field.ux.iter().copied().collect();
+    let mut scratch = ElasticStepScratch::new(nx, ny, nz);
+    for _ in 0..400 {
+        integrator
+            .step(&mut field, dt, None, &mut scratch)
+            .expect("probe step");
+    }
+    let peak = field
+        .displacement_magnitude()
+        .iter()
+        .fold(0.0_f64, |peak, &value| peak.max(value.abs()));
+    assert!(
+        peak < 10.0,
+        "thin-slab displacement grew without bound: peak {peak}"
+    );
+    let drift = field
+        .ux
+        .iter()
+        .zip(initial.iter())
+        .map(|(current, first)| (current - first).abs())
+        .fold(0.0_f64, f64::max);
+    assert!(
+        drift > 1.0e-6,
+        "thin-slab field froze at its initial value: the clamp annihilated the collapse axis"
+    );
+}
