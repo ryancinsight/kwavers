@@ -193,9 +193,11 @@ fn test_cbr_history() {
 
     filter.filter(&data).unwrap();
     assert_eq!(filter.cbr_history().len(), 3);
+    assert_eq!(filter.rank_history().len(), 3);
 
     filter.clear_history();
     assert_eq!(filter.cbr_history().len(), 0);
+    assert_eq!(filter.rank_history().len(), 0);
 }
 
 /// Per-pixel result of the classical-Jacobi filter, the eigensolver the

@@ -36,6 +36,7 @@ use leto_ops::SymmetricEigenWorkspace;
 pub struct AdaptiveFilter {
     pub(super) config: AdaptiveFilterConfig,
     pub(super) cbr_history: Vec<f64>,
+    pub(super) rank_history: Vec<usize>,
 }
 
 /// Per-call scratch buffers reused across pixels.
@@ -100,6 +101,7 @@ impl AdaptiveFilter {
         Ok(Self {
             config,
             cbr_history: Vec::new(),
+            rank_history: Vec::new(),
         })
     }
 
@@ -190,6 +192,7 @@ impl AdaptiveFilter {
         let clutter_rank = self.determine_clutter_rank(&scratch.sorted_eigenvalues)?;
         let cbr = self.estimate_cbr(&scratch.sorted_eigenvalues, clutter_rank);
         self.cbr_history.push(cbr);
+        self.rank_history.push(clutter_rank);
 
         // Project onto blood subspace: filtered = x − Σᵢ <x,eᵢ> eᵢ over the
         // `clutter_rank` leading eigenvectors, the last rows of the ascending
@@ -342,15 +345,25 @@ impl AdaptiveFilter {
         &self.cbr_history
     }
 
+    /// Get the selected clutter rank per pixel, in filter-call order.
+    /// Recorded alongside [`Self::cbr_history`]: entry `i` is the rank whose
+    /// projection produced the `i`-th filtered pixel and whose CBR estimate
+    /// is `cbr_history()[i]`.
+    #[must_use]
+    pub fn rank_history(&self) -> &[usize] {
+        &self.rank_history
+    }
+
     /// Get the current estimated CBR in dB.
     #[must_use]
     pub fn current_cbr_db(&self) -> Option<f64> {
         self.cbr_history.last().map(|&cbr| 10.0 * cbr.log10())
     }
 
-    /// Clear CBR history.
+    /// Clear CBR and rank history.
     pub fn clear_history(&mut self) {
         self.cbr_history.clear();
+        self.rank_history.clear();
     }
 
     /// Rank selection on caller-supplied descending eigenvalues, for tests.
