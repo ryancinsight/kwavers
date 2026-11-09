@@ -1,0 +1,10 @@
+<a id="kw-provider-convergence"></a>
+
+## KW-PROVIDER-CONVERGENCE — Converge kwavers onto the fleet provider lines (eunomia 0.12, hermes 0.10, leto 0.48) [patch] — todo
+
+priority: correctness; needs: sibling eunomia-<0.13.0 releases (aequitas, apollo, gaia, leto, ritk, coeus, hermes, hyperion, tyche, athena, asclepius, proteus, mnemosyne, hephaestus), aequitas-python pyo3-0.30, leto-0.48/hermes-0.10 tags (leto line: peer lane `leto048-kwavers`); scope: `Cargo.toml`, `Cargo.lock`
+
+- **Finding.** kwavers pins eunomia 0.11.0, hermes-simd 0.9.2, leto/leto-ops 0.46.5 while sibling mains carry eunomia 0.12.0 (tagged `crate-eunomia-v0.12.0`), hermes 0.10.x and leto 0.48.x (both untagged). The Atlas overlay therefore rewrites these three sources locally and `cargo` cannot resolve under it.
+- **Rehearsal (2026-11-09, outside-atlas probe).** Enumerated blockers by forcing `eunomia = "0.12"`: 15 release units cap eunomia below 0.12 (kwavers, aequitas, apollo, gaia, leto, ritk, coeus, hermes, hyperion, tyche, athena, asclepius, proteus, mnemosyne, hephaestus). With all bounds widened to `<0.13.0`, resolution selects eunomia 0.12.0, which needs pyo3 0.30 / numpy 0.30 (its `numpy` feature); kwavers-python + aequitas-python move pyo3 0.29 to 0.30. Full-workspace `cargo check` is green with manifest-only changes; leto/hermes stay at 0.46.5/0.9.2 (no releasable 0.48/0.10 content upstream).
+- **Acceptance:** `cargo metadata --locked` resolves the committed lock on a clean checkout with the overlay check clean; full-workspace check green; one lock identity for all three providers.
+- **Next step:** land the kwavers-side range widening (this change, lock-invariant today); follow the sibling releases; then the pyo3-0.30 migration and the 0.12/0.10/0.48 roll-forward.
