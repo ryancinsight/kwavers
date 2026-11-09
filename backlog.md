@@ -45,6 +45,7 @@
 <a id="kwavers-aeq-met-69"></a>- [KWAVERS-AEQ-MET-69](backlog/kwavers-aeq-met-69.md) — Type B-mode scan-conversion geometry [major] [arch] — done
 <a id="kwavers-aeq-met-flex"></a>- [KWAVERS-AEQ-MET-FLEX](backlog/kwavers-aeq-met-flex.md) — Type the flexible-array dynamic metrics [arch] [major] — done
 <a id="kwavers-coupling-contract-001"></a>- [KWAVERS-COUPLING-CONTRACT-001](backlog/kwavers-coupling-contract-001.md) — Medium-aware field-coupling inputs [minor] — todo
+<a id="kw-cbr-facade-consistency"></a>- [KW-CBR-FACADE-CONSISTENCY](backlog/kw-cbr-facade-consistency.md) — Facade CBR integration test contradicts the corrected rank-selection contract [patch] [fix] — todo
 <a id="kw-cbr-selection-direction"></a>- [KW-CBR-SELECTION-DIRECTION](backlog/kw-cbr-selection-direction.md) — CBR-based clutter rank selection compares in a direction its estimate cannot satisfy [patch] [fix] — todo
 <a id="kw-clippy-pinn-gpu"></a>- [KW-CLIPPY-PINN-GPU](backlog/kw-clippy-pinn-gpu.md) — `cargo clippy --features pinn,gpu` is not warning-clean outside the solver [patch] — todo
 <a id="kw-dep-zip-advisory"></a>- [KW-DEP-ZIP-ADVISORY](backlog/kw-dep-zip-advisory.md) — The Security Audit fails on zip < 9 through gaia-mesh and consus-npy [patch] — todo
