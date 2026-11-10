@@ -200,6 +200,21 @@ fn test_cbr_history() {
     assert_eq!(filter.rank_history().len(), 0);
 }
 
+#[test]
+fn test_rank_history_records_applied_rank() {
+    let config = AdaptiveFilterConfig {
+        separation_method: SubspaceSeparationMethod::FixedRank { clutter_rank: 3 },
+        ..Default::default()
+    };
+    let mut filter = AdaptiveFilter::new(config).unwrap();
+    let data =
+        Array2::<f64>::from_shape_fn((4, 16), |[_, t]| (TWO_PI * f64::from_count(t) / 8.0).sin());
+
+    filter.filter(&data).unwrap();
+
+    assert_eq!(filter.rank_history(), &[3, 3, 3, 3]);
+}
+
 /// Per-pixel result of the classical-Jacobi filter, the eigensolver the
 /// adaptive filter used before it moved to tridiagonal QL.
 struct JacobiReference {

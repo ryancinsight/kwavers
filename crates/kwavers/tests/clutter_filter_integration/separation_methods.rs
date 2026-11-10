@@ -52,6 +52,13 @@ fn output_gap(a: &AdaptiveRun, b: &AdaptiveRun, pixel: usize) -> f64 {
     )
 }
 
+fn row_bits(run: &AdaptiveRun, pixel: usize) -> Vec<u64> {
+    pixel_row(&run.filtered, pixel)
+        .iter()
+        .map(|v| v.to_bits())
+        .collect()
+}
+
 fn max_abs_diff(a: &[f64], b: &[f64]) -> f64 {
     a.iter()
         .zip(b)
@@ -117,19 +124,53 @@ fn max_abs_diff(a: &[f64], b: &[f64]) -> f64 {
 ///
 /// ## CbrBased { 25 dB }
 ///
-/// The rank is the smallest `r` with `CBR(r) = sum_(i<r) lambda_i /
-/// sum_(i>=r) lambda_i >= 10^2.5 = 316`: the smallest clutter subspace
-/// whose residual-clutter fraction `1/CBR(r)` already falls below
-/// `1/target`. `CBR` is strictly increasing in `r` while residual power
-/// remains, so the crossing is unique. By fact 1, `CBR(1) = lambda_1 /
-/// (|x|^2 - lambda_1)` with `lambda_1` in `[0.85, 1.15] lambda_T`, which is
-/// between 0.56 and 1.24 for every pixel, far below 316: rank 1 never
-/// satisfies the target, so the selected rank is at least 2 everywhere
-/// and the recorded CBR is the estimate at the applied rank, at or above
-/// the target. The filtered output must equal the `FixedRank` output at
-/// that same rank within the eigensolver envelope: one deterministic pixel
-/// loop, one scratch, one projection path, so equal ranks project
-/// bit-identically.
+/// `determine_clutter_rank` (filter.rs:259) returns the smallest `r` with
+/// `CBR(r) >= 10^2.5 = 316.23`, where `estimate_cbr` (`EigenvalueSum`)
+/// floors every eigenvalue at zero (`max(lambda_i, 0)`, filter.rs:286 and
+/// :291): `CBR(r) = sum_(i<r) max(lambda_i, 0) / sum_(i>=r) max(lambda_i, 0)`.
+/// The floor matters here. The lag-mean covariance is indefinite (the window
+/// term of the derivation above), so its eigenvalues carry a negative mass
+/// `N-` and, by fact 1, the floored residual is `|x|^2 - sum_(i<r) lambda_i
+/// + |N-|`, not `|x|^2 - sum_(i<r) lambda_i`.
+///
+/// Eigenvalues of the pixel's lag-product matrix, computed in f64 with
+/// `numpy.linalg.eigvalsh` (an eigensolver independent of the filter's),
+/// over the 30 pixels:
+///
+/// | quantity | range over pixels |
+/// |---|---|
+/// | `lambda_1`, `lambda_2` | 838.15..841.79, 743.40..747.20 |
+/// | `N-` | -109.66..-105.23 |
+/// | `CBR(1)`, floored | 0.813 (pixel 29)..1.029 (pixel 0) |
+/// | `CBR(1)`, unfloored `lambda_1 / (|x|^2 - lambda_1)` | 0.910..1.181 |
+///
+/// `CBR(1)` is far below 316.23, so rank 1 is never selected. With
+/// descending eigenvalues `CBR` never decreases in `r`: raising `r` moves
+/// `max(lambda_r, 0)` from the residual to the clutter sum, so `CBR` is
+/// strictly increasing while positive eigenvalues remain and constant over
+/// the negative tail. The selected rank is therefore the unique `r` with
+/// `CBR(r-1) < target <= CBR(r)`:
+///
+/// | pixels | rank | `CBR(r-1)` | `CBR(r)` |
+/// |---|---|---|---|
+/// | 0..=12 | 7 | at most 210.04 (pixel 0) | at least 323.00 (pixel 12) |
+/// | 13..=29 | 8 | at most 306.54 (pixel 13) | at least 337.27 (pixel 29) |
+///
+/// The tightest margins are 2.1% (pixel 12, `CBR(7) = 323.00`) and 3.1%
+/// (pixel 13, `CBR(7) = 306.54`). The eigensolver's backward error moves
+/// each eigenvalue by at most `n^2 eps lambda_max = 2.7e-9`, and the
+/// residual sum at the crossing is at least 1.90 over at most 113 terms, so
+/// `CBR` carries a relative error below 2e-7, five orders under the
+/// margins: the ranks are exact. The numpy values are the prediction; the
+/// assertions below run the filter.
+///
+/// The `FixedRank { r }` run records `estimate_cbr(., r)` in its CBR history
+/// and projects through the same pixel loop, scratch and eigensolver as the
+/// `CbrBased` run, with identical inputs in identical order. So when
+/// `CbrBased` selects `r`, its recorded CBR and filtered output equal the
+/// `FixedRank { r }` run's bit for bit, and the `FixedRank { r - 1 }`
+/// run's recorded CBR is `CBR(r-1)`, which minimality requires to sit below
+/// the target.
 pub(super) fn check_all_methods() -> KwaversResult<()> {
     const N_PIXELS: usize = 30;
     const N_FRAMES: usize = 120;
@@ -141,6 +182,11 @@ pub(super) fn check_all_methods() -> KwaversResult<()> {
     const N: f64 = 120.0;
     const ENVELOPE: f64 = N * N * f64::EPSILON;
     const TARGET_CBR_DB: f64 = 25.0;
+    // Selected CbrBased ranks and the first pixel at the higher one
+    // (derivation above).
+    const CBR_RANK_LOW: usize = 7;
+    const CBR_RANK_HIGH: usize = 8;
+    const FIRST_HIGH_RANK_PIXEL: usize = 13;
 
     let (data, tissue, blood) = generate_fus_data(
         N_PIXELS,
@@ -167,6 +213,24 @@ pub(super) fn check_all_methods() -> KwaversResult<()> {
     let threshold = run_adaptive(
         &data,
         SubspaceSeparationMethod::AdaptiveThreshold { decay_factor: 0.1 },
+    )?;
+    let fixed_below_low = run_adaptive(
+        &data,
+        SubspaceSeparationMethod::FixedRank {
+            clutter_rank: CBR_RANK_LOW - 1,
+        },
+    )?;
+    let fixed_low = run_adaptive(
+        &data,
+        SubspaceSeparationMethod::FixedRank {
+            clutter_rank: CBR_RANK_LOW,
+        },
+    )?;
+    let fixed_high = run_adaptive(
+        &data,
+        SubspaceSeparationMethod::FixedRank {
+            clutter_rank: CBR_RANK_HIGH,
+        },
     )?;
     let cbr_based = run_adaptive(
         &data,
@@ -250,44 +314,47 @@ pub(super) fn check_all_methods() -> KwaversResult<()> {
         }
     }
 
-    // CbrBased { 25 dB }: smallest rank with CBR at or above the target
-    // (derivation above). CBR(1) stays far below it, so rank 1 is never
-    // selected; the recorded estimate belongs to the applied rank, and the
-    // output equals the FixedRank output at that rank.
+    // CbrBased { 25 dB }: the smallest rank with CBR at or above the target
+    // (derivation above). Pixels 0..=12 select rank 7, pixels 13..=29 rank 8.
+    // Minimality: the FixedRank run one rank lower records CBR(r - 1), below
+    // the target. Crossing: the run at r records CBR(r), at or above it. The
+    // CbrBased run reproduces the FixedRank run at r bit for bit.
     let target_cbr = 10.0_f64.powf(TARGET_CBR_DB / 10.0);
     assert_eq!(
         cbr_based.rank_history.len(),
         N_PIXELS,
         "one selected rank per pixel"
     );
-    let mut fixed_by_rank: Vec<(usize, AdaptiveRun)> = Vec::new();
     for pixel in 0..N_PIXELS {
-        let x_energy = row_energy(&data, pixel);
-        let rank = cbr_based.rank_history[pixel];
-        assert!(
-            rank >= 2,
-            "pixel {pixel}: CBR(1) sits far below the target, so rank 1 is never selected"
+        let (rank, below, at) = if pixel < FIRST_HIGH_RANK_PIXEL {
+            (CBR_RANK_LOW, &fixed_below_low, &fixed_low)
+        } else {
+            (CBR_RANK_HIGH, &fixed_low, &fixed_high)
+        };
+        assert_eq!(
+            cbr_based.rank_history[pixel], rank,
+            "pixel {pixel}: CBR selection must pick the crossing rank"
         );
-        let cbr = cbr_based.cbr_history[pixel];
         assert!(
-            cbr.is_finite() && cbr >= target_cbr,
-            "pixel {pixel}: recorded CBR {cbr} must estimate the applied rank at or above the target {target_cbr}"
+            below.cbr_history[pixel] < target_cbr,
+            "pixel {pixel}: CBR({}) = {} must sit below the target {target_cbr}",
+            rank - 1,
+            below.cbr_history[pixel]
         );
-        if fixed_by_rank.iter().all(|(r, _)| *r != rank) {
-            let run = run_adaptive(
-                &data,
-                SubspaceSeparationMethod::FixedRank { clutter_rank: rank },
-            )?;
-            fixed_by_rank.push((rank, run));
-        }
-        let reference = &fixed_by_rank
-            .iter()
-            .find(|(r, _)| *r == rank)
-            .expect("rank was cached above")
-            .1;
         assert!(
-            output_gap(&cbr_based, reference, pixel) <= ENVELOPE * x_energy.sqrt(),
-            "pixel {pixel}: CBR output must equal the FixedRank output at the recorded rank {rank}"
+            at.cbr_history[pixel] >= target_cbr,
+            "pixel {pixel}: CBR({rank}) = {} must reach the target {target_cbr}",
+            at.cbr_history[pixel]
+        );
+        assert_eq!(
+            cbr_based.cbr_history[pixel].to_bits(),
+            at.cbr_history[pixel].to_bits(),
+            "pixel {pixel}: recorded CBR must be the estimate at the applied rank {rank}"
+        );
+        assert_eq!(
+            row_bits(&cbr_based, pixel),
+            row_bits(at, pixel),
+            "pixel {pixel}: CBR output must equal the FixedRank output at rank {rank}"
         );
     }
 
