@@ -17,6 +17,8 @@ mod integral;
 mod path;
 mod quadrature;
 #[cfg(test)]
+mod rectangle_tests;
+#[cfg(test)]
 mod tests;
 mod vector;
 
