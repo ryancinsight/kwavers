@@ -63,6 +63,24 @@ pub(super) fn legendre_pair(order: usize, x: f64) -> (f64, f64) {
     (current, previous)
 }
 
+/// Reject a secondary order that cannot resolve `shape`.
+///
+/// Fewer than three midpoint nodes cannot resolve the first angular harmonic
+/// of a ring's phase; a rectangle has no angular rule, so any order is valid.
+pub(super) fn validate_secondary_order(
+    shape: PlanarApertureShape,
+    secondary_order: usize,
+) -> KwaversResult<()> {
+    if shape.polar_bounds().is_some() && secondary_order < 3 {
+        return Err(invalid(
+            "secondary_order",
+            secondary_order.to_string(),
+            ">= 3 for a polar aperture",
+        ));
+    }
+    Ok(())
+}
+
 /// Local surface nodes `([u, v], weight)` of a planar shape.
 ///
 /// `u` runs along the first axis and `v` along `normal × first_axis`; the
@@ -95,15 +113,7 @@ pub(super) fn surface_rule(
         }
         return Ok(nodes);
     }
-    // Fewer than three midpoint nodes cannot resolve the first angular
-    // harmonic of a ring's phase; a rectangle has no angular rule.
-    if secondary_order < 3 {
-        return Err(invalid(
-            "secondary_order",
-            secondary_order.to_string(),
-            ">= 3 for a polar aperture",
-        ));
-    }
+    validate_secondary_order(shape, secondary_order)?;
     let (inner, outer, start, span) = shape
         .polar_bounds()
         .expect("invariant: every non-rectangular shape is polar");
