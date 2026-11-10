@@ -1460,7 +1460,8 @@ while IFS= read -r changed_path; do
     esac
     continue
   fi
-  if [ -z "$package_dir" ] && [ "$changed_path" = "Cargo.toml" ] \
+  if [ -z "$package_dir" ] \
+    && { [ "$changed_path" = "Cargo.toml" ] || [ "$changed_path" = "Cargo.lock" ]; } \
     && [ -f "$gate_manifest_path" ] \
     && grep -qE '^\[workspace\]' "$gate_manifest_path" 2>/dev/null; then
     while IFS=$'\t' read -r _workspace_manifest workspace_package; do
