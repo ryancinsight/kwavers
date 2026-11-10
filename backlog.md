@@ -34,21 +34,17 @@
 <a id="kw-manifest-implementation-2026-09-09"></a>- [KW-MANIFEST-IMPLEMENTATION-2026-09-09](backlog/kw-manifest-implementation-2026-09-09.md) — Reduce the implementation-bearing manifests [patch] [arch] — in-progress
 <a id="kw-mat-043"></a>- [KW-MAT-043](backlog/kw-mat-043.md) — Direct FWI L-BFGS provider ownership [patch] [arch] — in-progress
 <a id="kw-medium-ct-001"></a>- [KW-MEDIUM-CT-001](backlog/kw-medium-ct-001.md) — Own complete CT medium assembly [arch] — review
-<a id="kw-prose-pr-unmergeable-2026-09-16"></a>- [KW-PROSE-PR-UNMERGEABLE-2026-09-16](backlog/kw-prose-pr-unmergeable-2026-09-16.md) — A prose-only pull request can never satisfy the required checks [patch] [ci] — blocked
 <a id="kw-py-uvlock-stale-2026-09-21"></a>- [KW-PY-UVLOCK-STALE-2026-09-21](backlog/kw-py-uvlock-stale-2026-09-21.md) — The Python dev lockfile is stale against its own pyproject [patch] — todo
 <a id="kw-ray-040"></a>- [KW-RAY-040](backlog/kw-ray-040.md) — Layered focus-path contract [minor] — in-progress
 <a id="kw-release-crates-01"></a>- [KW-RELEASE-CRATES-01](backlog/kw-release-crates-01.md) — Publish the Rust package closure [patch] — blocked
 <a id="kw-sim-test-compile-graph"></a>- [KW-SIM-TEST-COMPILE-GRAPH](backlog/kw-sim-test-compile-graph.md) — Reduce simulation test build latency [patch] [perf] — in-progress
 <a id="kw-sol-054"></a>- [KW-SOL-054](backlog/kw-sol-054.md) — Repair AVX-512 FDTD layout contract [patch] — todo
 <a id="kw-swe-degenerate-axis"></a>- [KW-SWE-DEGENERATE-AXIS](backlog/kw-swe-degenerate-axis.md) — Wall clamp annihilates thin-slab and plane-strain domains [patch] [fix] — todo
-<a id="kw-swe-edge-growth-2026-09-17"></a>- [KW-SWE-EDGE-GROWTH-2026-09-17](backlog/kw-swe-edge-growth-2026-09-17.md) — Elastic displacement grows without bound when the initial field reaches the edges [patch] [fix] — todo
 <a id="kwavers-aeq-met-66"></a>- [KWAVERS-AEQ-MET-66](backlog/kwavers-aeq-met-66.md) — Type thermal-diffusion quantities [major] [arch] — blocked
 <a id="kwavers-aeq-met-69"></a>- [KWAVERS-AEQ-MET-69](backlog/kwavers-aeq-met-69.md) — Type B-mode scan-conversion geometry [major] [arch] — done
 <a id="kwavers-aeq-met-flex"></a>- [KWAVERS-AEQ-MET-FLEX](backlog/kwavers-aeq-met-flex.md) — Type the flexible-array dynamic metrics [arch] [major] — done
 <a id="kwavers-coupling-contract-001"></a>- [KWAVERS-COUPLING-CONTRACT-001](backlog/kwavers-coupling-contract-001.md) — Medium-aware field-coupling inputs [minor] — todo
 <a id="kw-cbr-selection-direction"></a>- [KW-CBR-SELECTION-DIRECTION](backlog/kw-cbr-selection-direction.md) — CBR-based clutter rank selection compares in a direction its estimate cannot satisfy [patch] [fix] — todo
-<a id="kw-clippy-pinn-gpu"></a>- [KW-CLIPPY-PINN-GPU](backlog/kw-clippy-pinn-gpu.md) — `cargo clippy --features pinn,gpu` is not warning-clean outside the solver [patch] — todo
 <a id="kw-dep-zip-advisory"></a>- [KW-DEP-ZIP-ADVISORY](backlog/kw-dep-zip-advisory.md) — The Security Audit fails on zip < 9 through gaia-mesh and consus-npy [patch] — todo
 <a id="kw-examples-oversized-923"></a>- [KW-EXAMPLES-OVERSIZED-923](backlog/kw-examples-oversized-923.md) — Examples and tests grown or touched by #923 stay over the 500-line target [patch] — todo
 <a id="kw-gpu-host-tests-unrun"></a>- [KW-GPU-HOST-TESTS-UNRUN](backlog/kw-gpu-host-tests-unrun.md) — CI runs no kwavers-gpu test, including the host-only ones [patch] — todo
-<a id="kw-pstd-unit-exponent-backends"></a>- [KW-PSTD-UNIT-EXPONENT-BACKENDS](backlog/kw-pstd-unit-exponent-backends.md) — CPU and GPU PSTD disagree on a configured y = 1 under causal dispersion [patch] — todo
