@@ -282,14 +282,18 @@ fi
 
 checker_dir="$(mktemp -d "${TMPDIR:-/tmp}/pre-commit-lock.XXXXXX")"
 trap 'rm -rf "$checker_dir"' EXIT
-if ! outside_checkout git -C "$stack_root" cat-file -e "$stack_baseline:scripts/lockfile.py" 2>/dev/null \
-  || ! outside_checkout git -C "$stack_root" archive "$stack_baseline" scripts/lockfile.py | tar -x -C "$checker_dir"; then
-  # The stack is reachable here, so its default is what lacks the checker;
-  # refuse, with no deliberate way through (see SKIP_LOCKFILE_CHECK above).
-  echo "pre-commit: the stack's scripts at ${stack_baseline:0:12} carry no lockfile.py; lockfile not verified" >&2
+if ! checker_ref="$(outside_checkout git --no-replace-objects -C "$stack_root" rev-parse --verify "$stack_baseline^{commit}")"; then
+  echo "pre-commit: the stack lockfile source is unavailable; lockfile not verified" >&2
   exit 1
 fi
+mkdir -p "$checker_dir/scripts"
+for tool in lockfile.py process_tree.py windows_process.py darwin_process.py; do
+  if ! outside_checkout git --no-replace-objects -C "$stack_root" cat-file blob "$checker_ref:scripts/$tool" > "$checker_dir/scripts/$tool"; then
+    echo "pre-commit: the stack's scripts at ${stack_baseline:0:12} carry no $tool; lockfile not verified" >&2
+    exit 1
+  fi
+done
 checker="$(cd "$checker_dir" && { pwd -W 2>/dev/null || pwd; })/scripts/lockfile.py"
 
 # --check-staged is index-only and runs no cargo.
-"$python_bin" "$checker" --check-staged
+"$python_bin" -I "$checker" --check-staged
