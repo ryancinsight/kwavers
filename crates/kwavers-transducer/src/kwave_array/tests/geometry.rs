@@ -343,7 +343,9 @@ fn per_element_source_paths_honour_the_array_transform() {
         let mut array = KWaveArray::new();
         match convention {
             SurfaceConvention::KWave => {
-                array.add_rect_rot_element(local_centre, 1.2e-3, 4.0e-4, (0.0, 5.0, 40.0));
+                array
+                    .add_rect_rot_element(local_centre, 1.2e-3, 4.0e-4, (0.0, 5.0, 40.0))
+                    .expect("invariant: finite positive rectangle dimensions");
             }
             SurfaceConvention::AreaConserving => {
                 array.add_planar_aperture_element(geometry);
