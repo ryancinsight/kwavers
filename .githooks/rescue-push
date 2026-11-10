@@ -37,6 +37,7 @@ run_secret_scan() {
     sources=(
         scripts/atlas-secret-scan.py
         scripts/process_tree.py
+        scripts/darwin_process.py
         scripts/windows_process.py
     )
     for source in "${sources[@]}"; do
@@ -81,8 +82,12 @@ run_secret_scan() {
             return 2
         }
     fi
+    # Finish the producer before extraction: BSD tar may stop reading valid
+    # trailing padding before a pipe producer finishes writing it. Both stages
+    # must succeed before any trusted scanner code runs.
     if ! git -C "$stack_root" archive "$scanner_ref" -- "${sources[@]}" \
-        | tar -x -C "$scanner_temp"; then
+        > "$scanner_temp/source.tar" \
+        || ! tar -xf "$scanner_temp/source.tar" -C "$scanner_temp"; then
         echo "pre-push: BLOCKED -- could not extract the trusted credential scanner." >&2
         return 2
     fi
@@ -126,7 +131,7 @@ if [ "$scan_only" -eq 1 ]; then
     exit $?
 fi
 
-# Any update, deletion, or multi-ref push belongs to the normal hook gate.
+# Any deletion or multi-ref push belongs to the normal hook gate.
 [ "$#" -eq 1 ] || exit 3
 read -r local_ref local_sha remote_ref remote_sha extra <<<"$1"
 [ -z "${extra:-}" ] || {
@@ -138,7 +143,6 @@ case "$remote_ref" in
     refs/heads/rescue/*) ;;
     *) exit 3 ;;
 esac
-[ "$remote_sha" = "$zero" ] || exit 3
 [ "$local_sha" != "$zero" ] || exit 3
 
 # The destination names the durable rescue branch. Git may name its source as
@@ -152,11 +156,26 @@ git -C "$repo_root" cat-file -e "$local_sha^{commit}" 2>/dev/null || {
     echo "pre-push: BLOCKED -- rescue tip is unavailable" >&2
     exit 1
 }
+# A new rescue introduces everything after its trusted-default merge base. An
+# existing rescue stays on this path only when the remote tip is available and
+# an ancestor of the local tip; then it introduces exactly remote..local.
+if [ "$remote_sha" = "$zero" ]; then
+    base="$(git -C "$repo_root" merge-base "$allowlist_ref" "$local_sha" 2>/dev/null || true)"
+else
+    [[ "$remote_sha" =~ ^[0-9a-fA-F]{40}$ ]] || {
+        echo "pre-push: BLOCKED -- malformed rescue remote tip" >&2
+        exit 1
+    }
+    git -C "$repo_root" cat-file -e "$remote_sha^{commit}" 2>/dev/null || {
+        echo "pre-push: BLOCKED -- rescue remote tip is unavailable" >&2
+        exit 1
+    }
+    git -C "$repo_root" merge-base --is-ancestor "$remote_sha" "$local_sha" \
+        2>/dev/null || exit 3
+    base="$remote_sha"
+fi
 # One scanner process judges every commit the rescue introduces, each against
-# its first parent: a credential added and then removed is still published. The
-# base is the merge-base with the trusted default; none means an unrelated
-# history, scanned whole.
-base="$(git -C "$repo_root" merge-base "$allowlist_ref" "$local_sha" 2>/dev/null || true)"
+# its first parent: a credential added and then removed is still published.
 scan_status=0
 run_secret_scan "$repo_root" "$stack_root" "$scanner_ref" "$allowlist_ref" \
     "$local_sha" "$base" || scan_status=$?
