@@ -65,12 +65,23 @@ set -euo pipefail
 # warning-denied public documentation command on the same prepared export.
 # `--bounded-phase` is the runner-owned re-entry and still runs every guard.
 gate_phase="push"
-gate_bounded=0
+gate_bounded="${ATLAS_GATE_BOUNDED:-0}"
+unset ATLAS_GATE_BOUNDED
+case "$gate_bounded" in
+  0 | 1) ;;
+  *) echo "pre-push: BLOCKED -- invalid process-tree ownership marker" >&2; exit 2 ;;
+esac
 gate_needs_deadline=0
 documentation_tip=""
 documentation_base=""
 bounded_prepared_selected=0
 bounded_prepared_tools=""
+original_arguments=("$@")
+if [ "${1:-}" = "--bounded-entry" ]; then
+  gate_bounded=1
+  shift
+  original_arguments=("$@")
+fi
 case "${1:-}" in
   documentation)
     gate_phase="documentation"
@@ -79,6 +90,10 @@ case "${1:-}" in
     documentation_tip="${1:-}"
     documentation_base="${2:-}"
     [ "$#" -le 2 ] || {
+      echo "pre-push: usage: pre-push documentation <candidate> [<base>]" >&2
+      exit 2
+    }
+    [ -n "$documentation_tip" ] || {
       echo "pre-push: usage: pre-push documentation <candidate> [<base>]" >&2
       exit 2
     }
@@ -100,6 +115,28 @@ case "${1:-}" in
     [ "$#" -eq 0 ] || gate_needs_deadline=1
     ;;
 esac
+
+# The total wall owner enters before any Git call, fetched helper, ref guard,
+# interpreter probe, cache cleanup, or archive. Setup installs this trusted
+# local bootstrap beside the hook shims, which enter it before loading this
+# source. Direct source invocations, including tests, name a trusted runtime
+# explicitly. A missing bootstrap refuses rather than performing unbounded
+# setup during the push.
+if [ "$gate_needs_deadline" -eq 1 ] && [ "$gate_bounded" -eq 0 ]; then
+  pre_push_runtime="${ATLAS_PRE_PUSH_RUNTIME:-}"
+  pre_push_python="${ATLAS_PRE_PUSH_PYTHON:-}"
+  if [ -z "$pre_push_python" ] && [ -f "$pre_push_runtime/python" ]; then
+    IFS= read -r pre_push_python < "$pre_push_runtime/python" || true
+  fi
+  pre_push_supervisor="$pre_push_runtime/pre_push_gate.py"
+  if [ -z "$pre_push_python" ] || [ ! -f "$pre_push_supervisor" ]; then
+    echo "pre-push: BLOCKED -- the installed process-tree bootstrap is unavailable; run scripts/atlas-lock-form.py install-hooks from the fetched Atlas default" >&2
+    exit 1
+  fi
+  unset MSYS_NO_PATHCONV
+  exec "$pre_push_python" -I "$pre_push_supervisor" \
+    direct "$gate_phase" "${BASH_SOURCE[0]}" "${original_arguments[@]}"
+fi
 
 # The lockfile section below still runs unconditionally; only the
 # no-manifest-in-range skip further down (evidence, not a bypass) can
@@ -162,6 +199,7 @@ repo_store="$(git rev-parse --path-format=absolute --git-common-dir)"
 # been refused, and such a PATH need not carry `env`.
 outside_checkout() {
   (
+    export GIT_NO_REPLACE_OBJECTS=1
     unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR
     "$@"
   )
@@ -371,7 +409,7 @@ default_branch_base() {
 # leading to it. Judging the first ref alone let a later ref carry anything.
 zero="$(printf '0%.0s' $(seq 40))"
 push_lines=()
-if [ "$gate_phase" = "documentation" ] && [ "$gate_bounded" -eq 0 ]; then
+if [ "$gate_phase" = "documentation" ] && [ -n "$documentation_tip" ]; then
   if [ -z "$documentation_tip" ] \
     || ! documentation_tip="$(git rev-parse --verify --quiet "$documentation_tip^{commit}")"; then
     echo "pre-push: BLOCKED -- documentation candidate does not resolve to a commit" >&2
@@ -441,17 +479,34 @@ case "$located" in
   *) exit 1 ;;
 esac
 
+# A staged hook pins the stack source it was validated against. Freeze that
+# identity before any rescue or checker lookup so a fetched-default movement
+# cannot change the source during this invocation (or its bounded re-entry).
+hook_source_commit="${ATLAS_HOOK_SOURCE_COMMIT:-}"
+unset ATLAS_HOOK_SOURCE_COMMIT
+if [ -z "$hook_source_commit" ] && [ -n "$stack_root" ]; then
+  for source_ref in origin/HEAD origin/main; do
+    hook_source_commit="$(outside_checkout git -C "$stack_root" rev-parse --verify --quiet "$source_ref^{commit}" 2>/dev/null || true)"
+    [ -n "$hook_source_commit" ] && break
+  done
+fi
+if [ -n "$hook_source_commit" ]; then
+  if [[ ! "$hook_source_commit" =~ ^[0-9a-f]{40}$ ]] \
+    || [ -z "$stack_root" ] \
+    || ! outside_checkout git -C "$stack_root" cat-file -e \
+      "$hook_source_commit^{commit}" 2>/dev/null; then
+    echo "pre-push: BLOCKED -- ATLAS_HOOK_SOURCE_COMMIT is not an available full Atlas commit." >&2
+    exit 1
+  fi
+fi
+
 # Both Atlas and member hooks dispatch to the classifier committed at the
 # fetched stack default. The member revision cannot broaden its own exception.
 if [ "${ATLAS_RESCUE_MIXED:-0}" != 1 ] && [ "${#push_lines[@]}" -gt 0 ]; then
   rescue_stack_root="$stack_root"
   rescue_stack_ref=""
   rescue_allowlist_ref=""
-  for rescue_ref in origin/HEAD origin/main; do
-    [ -n "$rescue_stack_root" ] || break
-    rescue_stack_ref="$(outside_checkout git -C "$rescue_stack_root" rev-parse --verify --quiet "$rescue_ref^{commit}" 2>/dev/null || true)"
-    [ -n "$rescue_stack_ref" ] && break
-  done
+  rescue_stack_ref="$hook_source_commit"
   for rescue_ref in origin/HEAD origin/main; do
     rescue_allowlist_ref="$(outside_checkout git -C "$repo_root" rev-parse --verify --quiet "$rescue_ref^{commit}" 2>/dev/null || true)"
     [ -n "$rescue_allowlist_ref" ] && break
@@ -479,7 +534,13 @@ gate_range_base=""
 if [ "${#content_lines[@]}" -eq 1 ]; then
   touches_dependency_state=no
   while read -r _local_ref local_sha _remote_ref remote_sha; do
-    if [ "$remote_sha" = "$zero" ]; then
+    if [ "$gate_phase" = "documentation" ] \
+      && [ "$local_sha" = "$documentation_tip" ]; then
+      # An explicit documentation invocation supplies the comparison base.
+      # Preserve that exact revision even when it is not an ancestor of the
+      # candidate; ordinary push ancestry recovery would silently replace it.
+      base="$remote_sha"
+    elif [ "$remote_sha" = "$zero" ]; then
       # New branch: compare against the merge-base with the default branch,
       # so a long series is not read as touching everything. Comparing
       # against HEAD instead is vacuous exactly when it matters: pushing
@@ -515,11 +576,15 @@ if [ "${#content_lines[@]}" -eq 1 ]; then
       gate_tip="$local_sha"
       gate_range_base="$base"
     fi
-    if ! changed="$(git diff --name-only "$base" "$local_sha" 2>/dev/null)"; then
-      touches_dependency_state=unknown
-      break
-    fi
-    if printf '%s\n' "$changed" | grep -qE '(^|/)Cargo\.(lock|toml)$'; then
+    if git --no-replace-objects diff --quiet --no-ext-diff --no-textconv "$base" "$local_sha" -- \
+      ':(glob)**/Cargo.toml' ':(glob)**/Cargo.lock'; then
+      continue
+    else
+      dependency_diff_status=$?
+      if [ "$dependency_diff_status" -ne 1 ]; then
+        touches_dependency_state=unknown
+        break
+      fi
       touches_dependency_state=yes
       pushed_tip="$local_sha"
       break
@@ -595,7 +660,7 @@ export_revision() (
     && git -C "$directory" config core.longpaths true \
     && git -C "$directory" config gc.auto 0 \
     && git -C "$directory" config maintenance.auto false \
-    && GIT_DIR="$repo_git_dir" GIT_WORK_TREE="$directory" GIT_INDEX_FILE="$directory/.git/index" \
+    && GIT_DIR="$repo_git_dir" GIT_WORK_TREE="$directory" GIT_INDEX_FILE="$directory/.git/index" GIT_NO_REPLACE_OBJECTS=1 \
       git -c core.longpaths=true -c core.sparseCheckout=false -c gc.auto=0 -c maintenance.auto=false \
         read-tree -u --reset "$sha" \
     && git -C "$directory" update-ref HEAD "$sha" \
@@ -660,10 +725,7 @@ done
 # Every such process runs through `outside_checkout` (defined at the top).
 stack_baseline=""
 if [ -n "$stack_root" ]; then
-  for ref in origin/HEAD origin/main; do
-    stack_baseline="$(outside_checkout git -C "$stack_root" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
-    [ -n "$stack_baseline" ] && break
-  done
+  stack_baseline="$hook_source_commit"
 fi
 member_baseline=""
 for ref in origin/HEAD origin/main; do
@@ -735,75 +797,6 @@ if [ -n "$stack_baseline" ]; then
   stack_scripts="$extracted_stack_scripts"
 fi
 
-# The actual production push and documentation phases own a committed
-# ten-minute wall bound. The stack's process-tree runner gives every descendant
-# one Windows Job Object or POSIX process group, so timeout and interruption
-# retire Cargo, rustc, rustdoc, and Git children together. The bounded child
-# receives the exact ref protocol already validated above and repeats every
-# source, dependency, export, selection, and identity guard.
-if [ "$gate_needs_deadline" -eq 1 ] && [ "$gate_bounded" -eq 0 ]; then
-  process_tree_module="${stack_scripts:+$stack_scripts/process_tree.py}"
-  if [ -z "$python_bin" ] || [ ! -f "$process_tree_module" ]; then
-    echo "pre-push: BLOCKED -- the stack process-tree runner is unavailable; $gate_phase was not run" >&2
-    exit 1
-  fi
-  new_run_temp phase_progress pg-progress
-  phase_input="$(printf '%s\n' "${content_lines[@]}")"
-  set +e
-  "$python_bin" -I -c '
-import os
-import pathlib
-import sys
-
-sys.path.insert(0, sys.argv[1])
-import process_tree
-
-phase, hook, progress, prepared_selected, prepared_tools = sys.argv[2:7]
-payload = sys.argv[7].encode("utf-8") + b"\n"
-environment = os.environ.copy()
-environment["ATLAS_GATE_PROGRESS_DIR"] = progress
-command = [
-    "bash", hook, "--bounded-phase", phase, prepared_selected, prepared_tools,
-]
-
-def emit(value, stream):
-    if value:
-        stream.buffer.write(value)
-        stream.flush()
-
-def progress_report():
-    marker = pathlib.Path(progress, "stages.log")
-    if marker.is_file():
-        print("pre-push: bounded stage timings:", file=sys.stderr)
-        print(marker.read_text(encoding="utf-8", errors="replace"), end="", file=sys.stderr)
-
-try:
-    result = process_tree.run(command, input=payload, timeout=600, env=environment)
-except process_tree.ProcessTreeTimeout as error:
-    emit(error.output, sys.stdout)
-    emit(error.stderr, sys.stderr)
-    progress_report()
-    log = pathlib.Path(progress, "gate.log")
-    if log.is_file():
-        tail = log.read_bytes()[-32768:]
-        print("pre-push: final bounded gate log bytes:", file=sys.stderr)
-        emit(tail, sys.stderr)
-    print(f"pre-push: BLOCKED -- {phase} phase exceeded 600 seconds; its process tree was retired", file=sys.stderr)
-    raise SystemExit(124)
-except process_tree.ProcessTreeCleanupError as error:
-    print(f"pre-push: BLOCKED -- {phase} phase cleanup failed: {error}", file=sys.stderr)
-    raise SystemExit(1)
-emit(result.stdout, sys.stdout)
-emit(result.stderr, sys.stderr)
-progress_report()
-raise SystemExit(result.returncode)
-' "$stack_scripts" "$gate_phase" "${BASH_SOURCE[0]}" "$phase_progress" \
-    "$prepared_tools_selected" "$prepared_tools" "$phase_input"
-  bounded_status=$?
-  set -e
-  exit "$bounded_status"
-fi
-
 # A production multi-ref push enters the process-tree supervisor once with
 # every ref still present. The bounded re-entry then judges each ref
 # independently inside that one aggregate ten-minute lifetime. Supervising
@@ -816,11 +809,11 @@ if [ "${#push_lines[@]}" -gt 1 ]; then
   for push_line in "${content_lines[@]}"; do
     echo "pre-push: judging ${push_line%% *}" >&2
     if [ "$gate_bounded" -eq 1 ]; then
-      printf '%s\n' "$push_line" | bash "${BASH_SOURCE[0]}" \
+      printf '%s\n' "$push_line" | ATLAS_HOOK_SOURCE_COMMIT="$hook_source_commit" bash "${BASH_SOURCE[0]}" \
         --bounded-phase "$gate_phase" "$prepared_tools_selected" "$prepared_tools" \
         || refs_status=1
     else
-      printf '%s\n' "$push_line" | bash "${BASH_SOURCE[0]}" "$@" || refs_status=1
+      printf '%s\n' "$push_line" | ATLAS_HOOK_SOURCE_COMMIT="$hook_source_commit" bash "${BASH_SOURCE[0]}" "$@" || refs_status=1
     fi
   done
   exit "$refs_status"
@@ -869,7 +862,8 @@ if [ "$skip_lockfile" = "0" ]; then
 lock_rev="${pushed_tip:-${gate_tip:-HEAD}}"
 new_run_temp lock_root pl
 lock_export="$lock_root/tree"
-if ! export_revision "$(git rev-parse --verify "$lock_rev^{commit}")" "$lock_export"; then
+if ! lock_commit="$(git --no-replace-objects rev-parse --verify "$lock_rev^{commit}")" \
+  || ! export_revision "$lock_commit" "$lock_export"; then
   echo "pre-push: could not export $lock_rev for the lockfile check" >&2
   exit 1
 fi
@@ -896,9 +890,7 @@ elif [ ! -f "$checker" ]; then
 elif [ -z "$python_bin" ]; then
   echo "pre-push: no python interpreter found; lockfile not verified" >&2
   exit 1
-elif [ "$stack_member" = "<meta>" ]; then
-  echo "pre-push: nested Cargo lock checks follow Atlas meta-root owner selection" >&2
-elif ! (cd "$lock_export" && "$python_bin" "$checker" --check --manifest-path "$lock_export/Cargo.toml"); then
+elif ! (cd "$lock_export" && "$python_bin" -I "$checker" --check --check-tree "$lock_export" --tree-source "$repo_root" "$lock_commit"); then
   cat >&2 <<MESSAGE
 
 pre-push: the Cargo.lock in $lock_rev does not resolve under --locked, so
@@ -1371,18 +1363,6 @@ PY
   # Leading space: the steps render as `cargo doc --no-deps$gate_specs`, and
   # without it the flag joins the subcommand ("--no-deps--manifest-path").
   gate_manifest=" --manifest-path $gate_manifest_path"
-
-  if [ "$stack_member" = "<meta>" ] \
-    && printf '%s\n' "$gate_changed" | grep -qE '(^|/)Cargo\.(lock|toml)$'; then
-    if [ ! -f "$checker" ]; then
-      echo "pre-push: BLOCKED -- the stack lockfile checker is missing for $workspace_manifest" >&2
-      exit 1
-    elif ! (cd "$gate_command_cwd" \
-      && "$python_bin" "$checker" --check --manifest-path "$gate_manifest_path"); then
-      echo "pre-push: the lock for $workspace_manifest does not resolve under --locked on $gate_sha" >&2
-      exit 1
-    fi
-  fi
 
 # Package selection, testability, and documentation ownership all read the
 # same exported workspace graph. Cargo metadata is an input discovery step,
