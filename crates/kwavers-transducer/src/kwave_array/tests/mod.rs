@@ -3,4 +3,5 @@ mod delays;
 mod elements;
 mod geometry;
 mod mask;
+mod planar;
 mod rejections;
