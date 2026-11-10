@@ -45,7 +45,7 @@ eunomia = { workspace = true, features = ["numpy"] }
 leto-ops = { workspace = true }
 
 # PyO3 for Python bindings
-pyo3 = { version = "0.29", features = ["abi3-py310", "multiple-pymethods"] }
+pyo3 = { version = "0.30", features = ["abi3-py310", "multiple-pymethods"] }
 numpy = { workspace = true }  # PyO3 ↔ NumPy bridge (pyo3-numpy)
 
 # Error handling
@@ -59,7 +59,7 @@ serde_json = "1.0"
 [dev-dependencies]
 # Embedded unit tests exercise NumPy conversion helpers through a real Python
 # interpreter. Maturin configures extension-module linking for wheel builds.
-pyo3 = { version = "0.29", features = ["auto-initialize"] }
+pyo3 = { version = "0.30", features = ["auto-initialize"] }
 
 [features]
 default = ["minimal"]
