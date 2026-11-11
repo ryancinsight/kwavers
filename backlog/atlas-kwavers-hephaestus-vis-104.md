@@ -1,0 +1,12 @@
+<a id="atlas-kwavers-hephaestus-vis-104"></a>
+
+## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — Visualization fallback has no caller and no value test [patch] — todo
+
+priority: verification; needs: none; basis: 2d854db07215ea794ed107d5aed760f4a72c5ade; scope: `crates/kwavers-analysis/src/visualization/fallback/mod.rs`, `crates/kwavers-analysis/src/visualization/mod.rs`, `crates/kwavers-analysis/src/visualization/engine/`
+
+- **Delivered.** #1051 tested three of this item's four acceptance clauses in the `gpu-visualization` build, the only build that compiles the module (`crates/kwavers-analysis/src/lib.rs` lines 10-11): the typed error without GPU resources, before initialization and after `cleanup`; every field of an initialized multi-field render reaching the transfer provider in order; the zero-field and mismatch rejections. It removed the CPU arms of the engine, which no build compiled, and added the workflow step that runs the module's tests.
+- **Open clause:** "the non-GPU fallback stays value-semantic". What is left under that name is `visualization::fallback`. Its `render_field` function (`fallback/mod.rs` line 141) and method (line 28) return `()` after logging statistics and printing an ASCII slice; in this workspace only `test_fallback_renderer` (`visualization/mod.rs`) calls them, and it only unwraps. Both are public items of a published crate.
+- **Found beside it.** The engine's `render_field` and `render_multi_field` drop the frame the renderer returns, so no engine test observes the composited image; the renderer's own test of compositing asserts only that a two-field image differs from the first field's. The module defines three recording test providers (`visualization/mod.rs`, `engine/tests.rs`, `data_pipeline/transfer.rs`).
+- **Acceptance:** the two fallback render entries either return what they compute and have a test asserting those values and a caller a build compiles, or are removed with their test in a change classed as breaking; a test asserts pixel values of a multi-field frame, through the engine if it returns the frame and otherwise at the renderer, with the reason the engine drops it recorded; the module has one recording test provider.
+- **Non-goals:** no CPU path inside the engine, no change to the transfer contract or to provider crates.
+- **Next step:** list the consumers of `kwavers_analysis::visualization::fallback` across the stack members; with none, draft the removal and its migration note.

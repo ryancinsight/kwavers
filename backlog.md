@@ -1,5 +1,6 @@
 # Backlog / Strategy
 
+<a id="atlas-kwavers-hephaestus-vis-104"></a>- [ATLAS-KWAVERS-HEPHAESTUS-VIS-104](backlog/atlas-kwavers-hephaestus-vis-104.md) — Visualization fallback has no caller and no value test [patch] — todo
 <a id="kw-arch-036"></a>- [KW-ARCH-036](backlog/kw-arch-036.md) — Clinical-imaging dependency boundary [major] — todo
 <a id="kw-arch-065"></a>- [KW-ARCH-065](backlog/kw-arch-065.md) — Consolidate optical transport in Hyperion [major] [arch] — todo
 <a id="kw-bio-043"></a>- [KW-BIO-043](backlog/kw-bio-043.md) — Asclepius response ownership [arch] [major] — todo
