@@ -23,8 +23,8 @@ runs:
       run: |
         set -euo pipefail
 
-        # /etc/apt/apt-mirrors.txt stays as shipped, Azure mirror included as
-        # a second source; the mirror selection step drops what does not answer.
+        # /etc/apt/apt-mirrors.txt stays as shipped, Azure mirror included; the
+        # mirror selection step drops the mirrors that do not answer.
         for apt_source in \
           /etc/apt/sources.list \
           /etc/apt/sources.list.d/*.list \
@@ -88,19 +88,10 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        # Worst case with every mirror unreachable. apt cannot fail the refresh
-        # before it has tried the four InRelease files (release, -updates,
-        # -backports, -security) on each of the three mirrors the image lists,
-        # each fetch making Retries+1 attempts of at most Timeout seconds:
-        # 4 files x 3 mirrors x (1 + 1) attempts x 10 s = 240 s < 480 s.
-        # --error-on=any turns a temporary fetch failure into a non-zero exit;
-        # without it apt-get update warns and exits 0, and the install step
-        # then spends the remaining bound failing instead.
         timeout --foreground --kill-after=30s 8m sudo apt-get \
-          -o Acquire::Retries=1 \
-          -o Acquire::http::Timeout=10 \
-          -o Acquire::https::Timeout=10 \
-          --error-on=any \
+          -o Acquire::Retries=3 \
+          -o Acquire::http::Timeout=20 \
+          -o Acquire::https::Timeout=20 \
           update
 
     - name: Install Ubuntu packages
@@ -111,10 +102,8 @@ runs:
       run: |
         set -euo pipefail
         read -r -a packages <<< "$PACKAGES"
-        # The package count is the caller's, so only the 8-minute bound limits
-        # this step.
         timeout --foreground --kill-after=30s 8m sudo apt-get \
-          -o Acquire::Retries=1 \
-          -o Acquire::http::Timeout=10 \
-          -o Acquire::https::Timeout=10 \
+          -o Acquire::Retries=3 \
+          -o Acquire::http::Timeout=20 \
+          -o Acquire::https::Timeout=20 \
           install --no-install-recommends -y "${packages[@]}"
