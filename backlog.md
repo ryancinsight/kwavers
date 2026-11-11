@@ -47,6 +47,7 @@
 <a id="kwavers-aeq-met-69"></a>- [KWAVERS-AEQ-MET-69](backlog/kwavers-aeq-met-69.md) — Type B-mode scan-conversion geometry [major] [arch] — done
 <a id="kwavers-aeq-met-flex"></a>- [KWAVERS-AEQ-MET-FLEX](backlog/kwavers-aeq-met-flex.md) — Type the flexible-array dynamic metrics [arch] [major] — done
 <a id="kwavers-coupling-contract-001"></a>- [KWAVERS-COUPLING-CONTRACT-001](backlog/kwavers-coupling-contract-001.md) — Medium-aware field-coupling inputs [minor] — todo
-<a id="kw-dep-zip-advisory"></a>- [KW-DEP-ZIP-ADVISORY](backlog/kw-dep-zip-advisory.md) — The Security Audit fails on zip < 9 through gaia-mesh and consus-npy [patch] — todo
 <a id="kw-examples-oversized-923"></a>- [KW-EXAMPLES-OVERSIZED-923](backlog/kw-examples-oversized-923.md) — Examples and tests grown or touched by #923 stay over the 500-line target [patch] — todo
 <a id="kw-gpu-host-tests-unrun"></a>- [KW-GPU-HOST-TESTS-UNRUN](backlog/kw-gpu-host-tests-unrun.md) — kwavers-gpu device tests pass silently on an adapter-less runner [patch] — todo
+<a id="kw-swe-clamp-test-residuals"></a>- [KW-SWE-CLAMP-TEST-RESIDUALS](backlog/kw-swe-clamp-test-residuals.md) — No workflow test command here selects the SWE integration test, and two clamp-test thresholds are underived [patch] — todo
+<a id="kw-board-offset-statuses"></a>- [KW-BOARD-OFFSET-STATUSES](backlog/kw-board-offset-statuses.md) — 28 board entries carry a status the board does not hold [patch] — todo
