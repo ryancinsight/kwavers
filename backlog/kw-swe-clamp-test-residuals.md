@@ -1,0 +1,13 @@
+<a id="kw-swe-clamp-test-residuals"></a>
+
+## KW-SWE-CLAMP-TEST-RESIDUALS — No workflow test command here selects the SWE integration test, and two clamp-test thresholds are underived [patch] — todo
+
+priority: verification; needs: none; basis: db4c667d9d3bcc1d7502b3799b55c52eb3256d29; scope: `crates/kwavers-solver/src/forward/elastic/swe/integration/tests.rs`, `crates/kwavers-solver/tests/allocation_contracts.rs`, `.github/workflows/ci.yml`
+
+- **Source.** Findings F1 and F3 filed by the judge of #1039 when `KW-SWE-DEGENERATE-AXIS` (delivered by #1025) left the board. Paths below without a crate prefix are under `crates/kwavers-solver/src/forward/elastic/swe/`.
+- **Integration test not selected.** `crates/kwavers-solver/tests/allocation_contracts.rs` is the only file under `crates/kwavers-solver/tests/`; its `swe_solver` builds a 2x2x2 grid, where the `n >= 3` guard in `integration/integrator/clamp.rs` clamps no axis. No `nextest` or `cargo test` command in `.github/workflows/*.yml` selects it: the commands naming `kwavers-solver` are four `--lib` runs (`ci.yml:1088-1097`) and one `--run-ignored ignored-only` run filtered to tests named `kuznetsov` (`ci.yml:1231`), and the file holds no ignored test; the workspace shards are `--lib` (`ci.yml:555`); every other command names `kwavers`, `kwavers-gpu`, `kwavers-therapy`, `kwavers-simulation` or `kwavers-python`. The workflows this repository calls from Atlas were not read.
+- **Underived thresholds.** `integration/tests.rs` asserts `peak < 10.0` (lines 259 and 309) and `drift > 1.0e-6` (line 319, in `thin_slab_stays_live_and_bounded`) as bare literals.
+- **Reported, not checked.** The judge also reported that no test the pipeline runs exercises the `n = 2` edge of the guard. Library tests do build grids with an extent of 2 (`core/solver/propagation/tests.rs:12`, `integration/integrator/body_force.rs:297`); whether any asserts the field on that axis after a step was not checked.
+- **Outcome:** the clamp guard is tested at its edge by value, and every test that drives the SWE solver runs in the pipeline.
+- **Acceptance:** the thresholds are named constants whose docs derive them (the bound from the initial amplitude, the floor from one step of the scheme); a test steps the integrator on a grid with one axis of extent 2 and one of extent 3 and asserts by value that the first is not clamped and the second is; a pipeline job runs `allocation_contracts`, shown by its test names with `PASS` in a job log.
+- **Next step:** settle the reported gap by reading the two library tests named above; then add the edge test and the pipeline step.
