@@ -9,7 +9,7 @@
 <a id="kw-bio-043"></a>- [KW-BIO-043](backlog/kw-bio-043.md) — Asclepius response ownership [arch] [major] — review
 <a id="kw-book-116"></a>- [KW-BOOK-116](backlog/kw-book-116.md) — Make the book gate execute a Rust oracle [patch] — review
 <a id="kw-book-ch29-residuals"></a>- [KW-BOOK-CH29-RESIDUALS](backlog/kw-book-ch29-residuals.md) — Chapter 29 figures 5 and 6 cannot be regenerated [patch] — todo
-<a id="kw-cbr-facade-test-residuals"></a>- [KW-CBR-FACADE-TEST-RESIDUALS](backlog/kw-cbr-facade-test-residuals.md) — CBR facade test doc and rank-history test residuals from #1024 [patch] — todo
+<a id="kw-cbr-facade-test-residuals"></a>- [KW-CBR-FACADE-TEST-RESIDUALS](backlog/kw-cbr-facade-test-residuals.md) — CBR selection doc and test residuals from #1020 and #1024 [patch] — todo
 <a id="kw-ci-049"></a>- [KW-CI-049](backlog/kw-ci-049.md) — Align Apollo provider lock [patch] — review
 <a id="kw-ci-050"></a>- [KW-CI-050](backlog/kw-ci-050.md) — Restore hosted format and CUDA prerequisites [patch] — review
 <a id="kw-ci-051"></a>- [KW-CI-051](backlog/kw-ci-051.md) — Remove obsolete deployment workflow [patch] — review
@@ -31,7 +31,7 @@
 <a id="kw-gpu-062"></a>- [KW-GPU-062](backlog/kw-gpu-062.md) — GPU PSTD peak-pressure output [major] — review
 <a id="kw-gpu-teardown"></a>- [KW-GPU-TEARDOWN](backlog/kw-gpu-teardown.md) — Dissolve the remaining internal `kwavers/src` into the layered crates [arch] — todo
 <a id="kw-img-045"></a>- [KW-IMG-045](backlog/kw-img-045.md) — Frame-resolved physical I/Q ensemble [minor] — todo
-<a id="kw-integration-test-binaries"></a>- [KW-INTEGRATION-TEST-BINARIES](backlog/kw-integration-test-binaries.md) — 89 integration-test binaries make a cold push gate expire [patch] [perf] — todo
+<a id="kw-integration-test-binaries"></a>- [KW-INTEGRATION-TEST-BINARIES](backlog/kw-integration-test-binaries.md) — kwavers integration tests link one binary per file: 89 targets, 81 on the push gate [patch] [perf] — todo
 <a id="kw-lint-1"></a>- [KW-LINT-1](backlog/kw-lint-1.md) — Burn down the clippy debt baseline [patch] — todo
 <a id="kw-manifest-implementation-2026-09-09"></a>- [KW-MANIFEST-IMPLEMENTATION-2026-09-09](backlog/kw-manifest-implementation-2026-09-09.md) — Reduce the implementation-bearing manifests [patch] [arch] — in-progress
 <a id="kw-mat-043"></a>- [KW-MAT-043](backlog/kw-mat-043.md) — Direct FWI L-BFGS provider ownership [patch] [arch] — in-progress
