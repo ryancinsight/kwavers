@@ -1,14 +1,10 @@
 use super::{adjusted_quality, RenderQuality};
 
-#[cfg(feature = "gpu-visualization")]
 use crate::visualization::{
     TransferMode, VisualizationConfig, VisualizationEngine, VisualizationTransferProvider,
 };
-#[cfg(feature = "gpu-visualization")]
 use kwavers_field::UnifiedFieldType;
-#[cfg(feature = "gpu-visualization")]
 use kwavers_grid::Grid;
-#[cfg(feature = "gpu-visualization")]
 use leto::Array3;
 
 const TARGET_FPS: f64 = 60.0;
@@ -47,13 +43,11 @@ fn quality_is_stable_inside_the_hysteresis_band() {
     }
 }
 
-#[cfg(feature = "gpu-visualization")]
 #[derive(Debug, Default)]
 struct RetainingProvider {
     transfer: Option<(UnifiedFieldType, Vec<f32>, TransferMode)>,
 }
 
-#[cfg(feature = "gpu-visualization")]
 impl VisualizationTransferProvider for RetainingProvider {
     fn device_name(&self) -> &'static str {
         "retaining-provider"
@@ -80,7 +74,6 @@ impl VisualizationTransferProvider for RetainingProvider {
     }
 }
 
-#[cfg(feature = "gpu-visualization")]
 #[test]
 fn adaptive_quality_reconfigures_the_initialized_renderer() {
     let mut config = VisualizationConfig::quality();
