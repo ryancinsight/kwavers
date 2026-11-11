@@ -1,6 +1,6 @@
 <a id="kw-ci-apt-single-mirror"></a>
 
-## KW-CI-APT-SINGLE-MIRROR — One unreachable Ubuntu mirror fails every job that installs packages [patch] [ci] — todo
+## KW-CI-APT-SINGLE-MIRROR — An unreachable apt source ends in a timeout, not an apt error [patch] [ci] — todo
 
 priority: verification; needs: none; basis: 2891e767b23fbd89270bdbac8ee48402a8e39780; scope: `.github/actions/install-system-dependencies/action.yml` (steps `Refresh Ubuntu package index`, `Install Ubuntu packages`); `.github/workflows/ci.yml` (`cuda-runtime-build`, step `Install container prerequisites`)
 
