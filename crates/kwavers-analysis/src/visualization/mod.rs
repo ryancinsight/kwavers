@@ -59,12 +59,25 @@ pub use stream::{FrameMetadata, VizFrame, VizStream};
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kwavers_core::error::{KwaversError, SystemError};
     use kwavers_grid::Grid;
     use leto::{Array3, Array4};
+    use std::sync::{Arc, Mutex};
 
+    type Transfer = (UnifiedFieldType, Vec<f32>, TransferMode);
+    type TransferLog = Arc<Mutex<Vec<Transfer>>>;
+
+    /// Transfer provider whose log outlives the engine that consumes it.
     #[derive(Debug, Default)]
     struct RecordingProvider {
-        last_transfer: Option<(UnifiedFieldType, Vec<f32>, TransferMode)>,
+        transfers: TransferLog,
+    }
+
+    fn recorded(transfers: &Mutex<Vec<Transfer>>) -> Vec<Transfer> {
+        transfers
+            .lock()
+            .expect("invariant: no test panics while holding the transfer log")
+            .clone()
     }
 
     impl VisualizationTransferProvider for RecordingProvider {
@@ -82,14 +95,18 @@ mod tests {
             samples: &[f32],
             mode: TransferMode,
         ) -> kwavers_core::error::KwaversResult<()> {
-            self.last_transfer = Some((field_type, samples.to_vec(), mode));
+            self.transfers
+                .lock()
+                .expect("invariant: no test panics while holding the transfer log")
+                .push((field_type, samples.to_vec(), mode));
             Ok(())
         }
 
         fn memory_usage(&self) -> usize {
-            self.last_transfer.as_ref().map_or(0, |(_, samples, _)| {
-                samples.len() * std::mem::size_of::<f32>()
-            })
+            recorded(&self.transfers)
+                .iter()
+                .map(|(_, samples, _)| std::mem::size_of_val(samples.as_slice()))
+                .sum()
         }
     }
 
@@ -107,6 +124,46 @@ mod tests {
 
     fn create_test_field() -> Array3<f64> {
         Array3::zeros((32, 32, 32))
+    }
+
+    const FIELD_SHAPE: (usize, usize, usize) = (2, 3, 4);
+    const FIELD_TYPES: [UnifiedFieldType; 3] = [
+        UnifiedFieldType::Pressure,
+        UnifiedFieldType::Temperature,
+        UnifiedFieldType::LightFluence,
+    ];
+
+    /// The row-major position of a sample in a `FIELD_SHAPE` volume, offset by
+    /// 24 per field, so that every sample of the three fields is distinct.
+    fn sample_code(field: usize, i: usize, j: usize, k: usize) -> u8 {
+        u8::try_from(24 * field + 12 * i + 4 * j + k)
+            .expect("invariant: three 2x3x4 fields hold 72 samples")
+    }
+
+    fn coded_fields() -> Array4<f64> {
+        let (nx, ny, nz) = FIELD_SHAPE;
+        Array4::from_shape_fn((nx, ny, nz, FIELD_TYPES.len()), |[i, j, k, field]| {
+            f64::from(sample_code(field, i, j, k))
+        })
+    }
+
+    fn coded_grid() -> Grid {
+        let (nx, ny, nz) = FIELD_SHAPE;
+        Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3).expect("test grid is valid")
+    }
+
+    fn initialized_test_engine(
+        config: VisualizationConfig,
+    ) -> (VisualizationEngine<RecordingProvider>, TransferLog) {
+        let provider = RecordingProvider::default();
+        let transfers = Arc::clone(&provider.transfers);
+        let mut engine = VisualizationEngine::create(config)
+            .expect("valid visualization configuration")
+            .set_transfer_provider(provider);
+        engine
+            .initialize_gpu()
+            .expect("recording provider initializes the pipeline");
+        (engine, transfers)
     }
 
     #[test]
@@ -238,6 +295,86 @@ mod tests {
             Err(kwavers_core::error::KwaversError::InvalidInput(message))
                 if message.contains("received 2 fields but 1 field types")
         ));
+    }
+
+    #[test]
+    fn test_render_multi_field_rejects_zero_fields() {
+        let (mut engine, transfers) = initialized_test_engine(VisualizationConfig::default());
+        let fields = Array4::zeros((2, 3, 4, 0));
+
+        let result = engine.render_multi_field(&fields, &[], &coded_grid());
+
+        assert!(matches!(
+            result,
+            Err(KwaversError::InvalidInput(message))
+                if message == "multi-field rendering requires at least one field"
+        ));
+        assert_eq!(recorded(&transfers), Vec::new());
+    }
+
+    #[test]
+    fn test_initialized_render_multi_field_transfers_every_field() {
+        let (mut engine, transfers) = initialized_test_engine(VisualizationConfig::default());
+
+        engine
+            .render_multi_field(&coded_fields(), &FIELD_TYPES, &coded_grid())
+            .expect("an initialized engine renders three fields");
+
+        let (nx, ny, nz) = FIELD_SHAPE;
+        let expected: Vec<Transfer> = FIELD_TYPES
+            .iter()
+            .enumerate()
+            .map(|(field, &field_type)| {
+                let mut samples = Vec::with_capacity(nx * ny * nz);
+                for i in 0..nx {
+                    for j in 0..ny {
+                        for k in 0..nz {
+                            samples.push(f32::from(sample_code(field, i, j, k)));
+                        }
+                    }
+                }
+                (field_type, samples, TransferMode::Async)
+            })
+            .collect();
+        assert_eq!(recorded(&transfers), expected);
+    }
+
+    #[test]
+    fn test_render_multi_field_hands_later_fields_to_the_renderer() {
+        // The renderer composites only with transparency, so its rejection
+        // shows that it was handed more than the first field.
+        let config = VisualizationConfig {
+            enable_transparency: false,
+            ..VisualizationConfig::default()
+        };
+        let (mut engine, _transfers) = initialized_test_engine(config);
+
+        let result = engine.render_multi_field(&coded_fields(), &FIELD_TYPES, &coded_grid());
+
+        assert!(matches!(
+            result,
+            Err(KwaversError::InvalidInput(message))
+                if message == "multi-field rendering requires transparency for compositing"
+        ));
+    }
+
+    #[test]
+    fn test_render_multi_field_after_cleanup_requires_initialization() {
+        let (mut engine, transfers) = initialized_test_engine(VisualizationConfig::default());
+        assert_eq!(Arc::strong_count(&transfers), 2);
+        engine.cleanup();
+        // The pipeline owned the provider, and the provider the other handle
+        // on the log.
+        assert_eq!(Arc::strong_count(&transfers), 1);
+
+        let result = engine.render_multi_field(&coded_fields(), &FIELD_TYPES, &coded_grid());
+
+        assert!(matches!(
+            result,
+            Err(KwaversError::System(SystemError::FeatureNotAvailable { feature, .. }))
+                if feature == "gpu-visualization"
+        ));
+        assert_eq!(recorded(&transfers), Vec::new());
     }
 
     #[test]

@@ -1189,6 +1189,14 @@ jobs:
       - name: GPU crate library and integration tests (host-only on hosted runners)
         run: cargo nextest run --locked -p kwavers-gpu --features gpu --lib --tests
 
+      # kwavers-analysis compiles its `visualization` module only with
+      # `gpu-visualization`, and the workspace library shards build the
+      # crate without features, so this is the one step that runs that
+      # module's tests. They need no adapter: the engine tests inject a
+      # transfer provider that records what it is handed.
+      - name: Visualization module tests (gpu-visualization build)
+        run: cargo nextest run --locked -p kwavers-analysis --features gpu-visualization --lib -E 'test(/^visualization::/)'
+
       - name: sccache stats
         if: always()
         run: sccache --show-stats
