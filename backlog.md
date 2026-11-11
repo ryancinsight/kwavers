@@ -43,7 +43,6 @@
 <a id="kw-release-crates-01"></a>- [KW-RELEASE-CRATES-01](backlog/kw-release-crates-01.md) — Publish the Rust package closure [patch] — blocked
 <a id="kw-sim-test-compile-graph"></a>- [KW-SIM-TEST-COMPILE-GRAPH](backlog/kw-sim-test-compile-graph.md) — Reduce simulation test build latency [patch] [perf] — in-progress
 <a id="kw-sol-054"></a>- [KW-SOL-054](backlog/kw-sol-054.md) — Repair AVX-512 FDTD layout contract [patch] — todo
-<a id="kw-swe-degenerate-axis"></a>- [KW-SWE-DEGENERATE-AXIS](backlog/kw-swe-degenerate-axis.md) — Wall clamp annihilates thin-slab and plane-strain domains [patch] [fix] — todo
 <a id="kwavers-aeq-met-66"></a>- [KWAVERS-AEQ-MET-66](backlog/kwavers-aeq-met-66.md) — Type thermal-diffusion quantities [major] [arch] — blocked
 <a id="kwavers-aeq-met-69"></a>- [KWAVERS-AEQ-MET-69](backlog/kwavers-aeq-met-69.md) — Type B-mode scan-conversion geometry [major] [arch] — done
 <a id="kwavers-aeq-met-flex"></a>- [KWAVERS-AEQ-MET-FLEX](backlog/kwavers-aeq-met-flex.md) — Type the flexible-array dynamic metrics [arch] [major] — done
