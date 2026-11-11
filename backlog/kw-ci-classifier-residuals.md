@@ -1,0 +1,14 @@
+<a id="kw-ci-classifier-residuals"></a>
+
+## KW-CI-CLASSIFIER-RESIDUALS — The changed-path classifier trusts a file list it does not check [patch] [ci] — todo
+
+priority: verification; needs: none; basis: 95a79d4b2cf05ca2d388c5f1c9f28e7889f75d2a; scope: `.github/workflows/ci.yml` (the `changes` job, step `Classify the changed paths`, and `on.push.paths-ignore`)
+
+- **Source.** Findings the judges of #1030 and #1034 filed; neither pull request changed them.
+- **Unchecked list length.** The step classifies the entries of `pulls/<n>/files`. GitHub documents that endpoint as returning at most 3000 files (REST reference, "List pull requests files"), and the step does not compare the entry count with the pull request's `changed_files` field. Past the cap it sees only the first 3000 entries and can report `code=false` for a pull request that changes code. An empty list also reports `code=false`, because `code` starts `false` and only a listed path sets it.
+- **Prose directories match every file type.** `backlog/*`, `docs/*` and `.githooks/*` match any file below them, and `on.push.paths-ignore` lists the same directories. `xtask/src/migration_audit.rs` reads every `.rs` file and `Cargo.toml` below the repository root outside `.git`, `target` and `xtask`; its two jobs run on pushes, the schedule and manual dispatch, not on pull requests. A `.rs` file or manifest added under one of those directories therefore reaches the two audits at the next scheduled run or unfiltered push, not on the pull request or push that adds it. At the basis no such file exists.
+- **Hypothesis, not tested.** The push trigger's `paths-ignore` may evaluate only the new path of a rename. If it does, a push to `main` that renames a source file into an ignored directory starts no pipeline run. #1034 closed the same hole for pull requests only.
+- **Cosmetic.** The step summary prints a rename's old and new paths as two unlabeled lines.
+- **Outcome:** the classifier runs the gate whenever its file list is incomplete, and a `.rs` file or manifest counts as code wherever it sits.
+- **Acceptance:** the step's script, extracted from the workflow and run under `bash --noprofile --norc -eo pipefail` with a stub `gh` (the method of the #1034 judge), reports `code=true` when the entry count differs from `changed_files` and when a `.rs` file or `Cargo.toml` sits under `backlog/`, `docs/` or `.githooks/`, and still reports `code=false` for a pull request changing only `backlog.md` and `.md` files under `backlog/`; the rename hypothesis is settled by one observed push or by a cited GitHub document, and `paths-ignore` changes only if it holds.
+- **Next step:** add the count comparison (one more `gh api` call for `changed_files`), then make `.rs` and `Cargo.toml` paths count as code ahead of the prose patterns in the `case`.
