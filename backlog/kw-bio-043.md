@@ -2,10 +2,11 @@
 
 ## KW-BIO-043 — Asclepius response ownership [arch] [major] — todo
 
-priority: architecture; needs: none; scope: CEM43, Arrhenius damage and independent-insult composition in `kwavers-physics`, `kwavers-therapy`, `kwavers-python`; provider manifests
+priority: architecture; needs: none; basis: acef6520f6e5c590ff73e1f39ee3e66361df7dcc; scope: CEM43, Arrhenius damage and independent-insult composition in `kwavers-physics`, `kwavers-therapy`, `kwavers-python`; provider manifests
 
 - **Outcome:** production CEM43 and Arrhenius formulas exist only in Asclepius; every in-scope consumer delegates through Aequitas quantities; invalid observations return errors without partially updating persistent state; Python stays a conversion-only PyO3 boundary. Grids, treatment policy, tissue parameter catalogs and the independent bioheat validation oracle stay Kwavers-owned.
 - **Decision:** [ADR 044](docs/adr/044-asclepius-response-ownership.md); the change is breaking (public duplicate response functions removed).
 - **Acceptance:** the independent solver oracle still matches published 42/43/44 degree Celsius cases; one public Asclepius source is in the dependency graph; production residue scans retain only the independent oracle and test equations.
-- **Evidence:** warning-denied all-feature Clippy, 2,070 native tests, 10 Python tests, 29 doctests, Rustdoc, and the major SemVer gate pass (a minor-class check reports seven major-breaking categories).
-- **Next step:** re-validate at the default branch (`thermal/response/cem43.rs`); close if the residue scan holds.
+- **Open clause.** "the independent solver oracle still matches published 42/43/44 degree Celsius cases": the independent oracle, `crates/kwavers-solver/src/validation/bioheat/cem43_reference.rs`, holds literature cases at 43, 44, 45, 46 and 50 degrees (lines 140 to 161) and none at 42. The 42/43/44 triple is asserted by tests of production paths, not by the oracle: `cem43_reference_temperatures_match_sapareto_dewey` (`crates/kwavers-physics/src/acoustics/imaging/modalities/ultrasound/hifu/tests.rs:91`, through `HifuThermalDose`) and `cem43_adapters_match_canonical_reference_cases` (`crates/kwavers-python/src/response/thermal.rs:204`); other such tests were not searched for. Both pass in pipeline run 42970466152 (job 130357540935 log line 2606 for `test_all_literature_cases`; job 130357540799 log line 1801 for the HIFU test).
+- **Witnessed.** `Cargo.lock` holds one `asclepius` package (lines 255 to 257). Reported by the agent that ran the gates at the basis and not re-read: the residue scans found CEM43 and Arrhenius formulas only in the oracle and in test modules. Not run: the 10 Python tests and the SemVer gate the former evidence line named.
+- **Next step:** add a 42 degree case to `literature_cases` and its test, or reword the clause to name the tests that hold the triple; re-run the residue scan and the Python tests; then close.
