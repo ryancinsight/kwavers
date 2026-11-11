@@ -263,10 +263,10 @@ pub fn time_step_s(dx: f64) -> f64 {
 /// Power-law absorption coefficient in Np/m at the drive frequency.
 #[must_use]
 pub fn attenuation_np_m() -> f64 {
-    kwavers_core::units::alpha_db_per_mhz_cm_to_np_per_m(
+    kwavers_medium::absorption::power_law::power_law_db_cm_to_np_m(
         ALPHA_DB_CM_MHZ,
-        FREQUENCY_HZ / kwavers_core::constants::numerical::MHZ_TO_HZ,
         ALPHA_POWER,
+        FREQUENCY_HZ,
     )
 }
 
