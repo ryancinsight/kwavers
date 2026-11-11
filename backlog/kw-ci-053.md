@@ -2,8 +2,10 @@
 
 ## KW-CI-053 — Update GPU PSTD parity contract [patch] — todo
 
-priority: verification; needs: none; scope: `crates/kwavers/tests/gpu_pstd_parity.rs` (removed), `.github/workflows/gpu-parity.yml`
+priority: verification; needs: none; basis: 2891e767b23fbd89270bdbac8ee48402a8e39780; scope: `crates/kwavers/tests/gpu_pstd_parity.rs` (removed), `crates/kwavers-gpu/tests/pstd_parity.rs`, `.github/workflows/gpu-parity.yml`
 
 - **Acceptance:** the ignored GPU parity tests call the provider-owned six-argument `GpuPstdSolver::run` API with `PstdOutputRequest::sensor_traces()` and consume `sensor_data`, with no compatibility wrapper or test simplification.
-- **Re-validation finding (2026-10-03):** `gpu_pstd_parity.rs` no longer exists at origin/main (removed by 42be027a7d9); `gpu-parity.yml` remains.
-- **Next step:** confirm the GPU parity coverage `gpu-parity.yml` runs calls the current `run` signature, then close.
+- **Witnessed, read at the basis:** the tests are in `crates/kwavers-gpu/tests/pstd_parity.rs` and consume `sensor_data` (lines 95 and 290). They name neither `GpuPstdSolver` nor `sensor_traces()`: they call the public functions `run_gpu_pstd` (lines 130 and 174) and `run_gpu_pstd_with_outputs` (lines 69, 215 and 271, each with `PstdOutputRequest::with_final_fields()`). `run_gpu_pstd` passes `PstdOutputRequest::sensor_traces()` itself (`crates/kwavers-gpu/src/pstd_gpu/runner.rs`, line 185), and `GpuPstdSolver::run` takes one `PstdRunInputs` value, not six arguments (`crates/kwavers-gpu/src/pstd_gpu/time_loop/run.rs`, line 402).
+- **Witnessed, runs relayed from the description of #1048 (an export of the basis on a host with a GPU adapter; not re-run by the integrator):** the nightly step at `gpu-parity.yml` line 58 selected no test and exited 4 ("no tests to run"); with `--features gpu` it selects 8 tests, and the 8 passed in one run. #1048 adds the feature to that step.
+- **Open clause:** "call the provider-owned six-argument `GpuPstdSolver::run` API with `PstdOutputRequest::sensor_traces()`" is not met as written: no test calls `run` directly, and its signature is no longer the one the clause names. No run of `gpu-parity.yml` has completed on its runner: the last five are queued or cancelled (42945421700, 42742319191, 42550673307, 42438311764, 42328821618).
+- **Next step:** read the history of `runner.rs` and of the change that removed `gpu_pstd_parity.rs` to establish which call the clause named when it was written and whether the two public functions are a wrapper in its sense; then move a test to that call, or bring a recorded decision that restates the clause. A completed run of the corrected step is needed either way.
