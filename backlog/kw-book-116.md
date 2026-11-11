@@ -1,6 +1,6 @@
 <a id="kw-book-116"></a>
 
-## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — review
+## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — todo
 
 priority: verification; needs: none; scope: `.github/workflows/book-pages.yml`, `docs/book/examples/basic_simulation.md`
 

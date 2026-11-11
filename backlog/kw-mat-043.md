@@ -1,6 +1,6 @@
 <a id="kw-mat-043"></a>
 
-## KW-MAT-043 — Direct FWI L-BFGS provider ownership [patch] [arch] — in-progress 2026-08-11
+## KW-MAT-043 — Direct FWI L-BFGS provider ownership [patch] [arch] — todo
 
 priority: architecture; needs: none; scope: the two FWI production callers, the focused FWI L-BFGS tests, `crates/kwavers-math/src/optimization/`
 

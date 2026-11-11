@@ -1,6 +1,6 @@
 <a id="kw-gpu-062"></a>
 
-## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
+## KW-GPU-062 — GPU PSTD peak-pressure output [major] — todo
 
 priority: feature; needs: none; scope: `crates/kwavers-gpu/src/pstd_gpu/` and its WGSL shader ABI, `crates/kwavers-simulation/src/solver_adapters/gpu_pstd.rs`, `crates/kwavers-math/src/fft/mod.rs`
 

@@ -1,6 +1,6 @@
 <a id="kw-gpu-061"></a>
 
-## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress
+## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — todo
 
 priority: feature; needs: none; scope: `crates/kwavers-gpu/src/pstd_gpu/`, GPU PSTD consumer validation in `kwavers-simulation`
 

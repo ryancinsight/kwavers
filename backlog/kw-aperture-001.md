@@ -1,6 +1,6 @@
 <a id="kw-aperture-001"></a>
 
-## KW-APERTURE-001 — Own finite circular-piston propagation [minor] — review
+## KW-APERTURE-001 — Own finite circular-piston propagation [minor] — todo
 
 priority: feature; needs: none; scope: `kwavers-transducer::transducers::physics`, its public exports and analytical/differential tests
 

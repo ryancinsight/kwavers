@@ -1,6 +1,6 @@
 <a id="kw-aperture-002"></a>
 
-## KW-APERTURE-002 — General planar aperture propagation [major] — review
+## KW-APERTURE-002 — General planar aperture propagation [major] — todo
 
 priority: feature; needs: none; scope: `kwavers-transducer` Rayleigh aperture types and kernel, ADR-035
 

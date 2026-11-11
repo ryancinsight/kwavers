@@ -1,6 +1,6 @@
 <a id="kw-ci-053"></a>
 
-## KW-CI-053 — Update GPU PSTD parity contract [patch] — review
+## KW-CI-053 — Update GPU PSTD parity contract [patch] — todo
 
 priority: verification; needs: none; scope: `crates/kwavers/tests/gpu_pstd_parity.rs` (removed), `.github/workflows/gpu-parity.yml`
 

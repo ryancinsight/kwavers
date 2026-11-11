@@ -1,6 +1,6 @@
 <a id="kw-arch-065"></a>
 
-## KW-ARCH-065 — Consolidate optical transport in Hyperion [major] [arch] — in-progress
+## KW-ARCH-065 — Consolidate optical transport in Hyperion [major] [arch] — todo
 
 priority: architecture; needs: none; scope: Hyperion integration in `kwavers-medium`, `kwavers-physics`, `kwavers-solver`; provider-graph pins; ADR 046
 

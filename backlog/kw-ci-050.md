@@ -1,6 +1,6 @@
 <a id="kw-ci-050"></a>
 
-## KW-CI-050 — Restore hosted format and CUDA prerequisites [patch] — review
+## KW-CI-050 — Restore hosted format and CUDA prerequisites [patch] — todo
 
 priority: verification; needs: none; scope: the finite-window PSTD test formatting; CUDA container prerequisites in the CI workflow
 

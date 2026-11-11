@@ -1,6 +1,6 @@
 <a id="kw-aperture-003"></a>
 
-## KW-APERTURE-003 — Planar sector BLI rasterization [minor] — review
+## KW-APERTURE-003 — Planar sector BLI rasterization [minor] — todo
 
 priority: feature; needs: none; scope: `kwavers-transducer::kwave_array`, canonical planar aperture geometry
 

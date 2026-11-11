@@ -1,6 +1,6 @@
 <a id="kw-ci-049"></a>
 
-## KW-CI-049 — Align Apollo provider lock [patch] — review
+## KW-CI-049 — Align Apollo provider lock [patch] — todo
 
 priority: verification; needs: none; scope: `Cargo.lock`, provider-graph synchronization
 

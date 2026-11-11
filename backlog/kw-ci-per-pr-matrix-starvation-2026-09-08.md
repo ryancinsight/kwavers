@@ -1,6 +1,6 @@
 <a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>
 
-## KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08 — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — in-progress
+## KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08 — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — todo
 
 priority: tightening; needs: none; scope: `.github/workflows/ci.yml`, `main` required checks
 

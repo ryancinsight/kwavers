@@ -1,6 +1,6 @@
 <a id="kwavers-aeq-met-flex"></a>
 
-## KWAVERS-AEQ-MET-FLEX — Type the flexible-array dynamic metrics [arch] [major] — blocked
+## KWAVERS-AEQ-MET-FLEX — Type the flexible-array dynamic metrics [arch] [major] — todo
 
 priority: architecture; needs: none; scope: `crates/kwavers-transducer/src/flexible/{array,beamforming,geometry,config}.rs`, direct callers and tests, ADR 070
 
