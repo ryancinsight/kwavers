@@ -66,7 +66,7 @@ if [[ ${#mirrors[@]} -eq 0 ]]; then
 fi
 
 echo "mirror list as found ($list):"
-cat "$list"
+printf '%s\n' "${lines[@]}"
 
 declare -A answered=()
 failed=()

@@ -116,18 +116,21 @@ class MirrorSelectionTests(unittest.TestCase):
         self.select(text, probes=[A], unreachable="dead.test")
 
     def test_a_dead_mirror_on_a_last_line_without_a_newline_is_dropped(self) -> None:
-        self.select(f"{A}\tpriority:1\n{DEAD}\tpriority:2", f"{A}\tpriority:1\n",
-                    probes=[A, DEAD], unreachable="dead.test")
+        result = self.select(f"{A}\tpriority:1\n{DEAD}\tpriority:2", f"{A}\tpriority:1\n",
+                             probes=[A, DEAD], unreachable="dead.test")
+        self.assertIn(f"\nreachable {A} ", result.stdout)
 
     def test_a_live_mirror_on_a_last_line_without_a_newline_is_probed_and_kept(self) -> None:
-        self.select(f"{DEAD}\tpriority:1\n{B}\tpriority:2", f"{B}\tpriority:2\n",
-                    probes=[DEAD, B], unreachable="dead.test")
+        result = self.select(f"{DEAD}\tpriority:1\n{B}\tpriority:2", f"{B}\tpriority:2\n",
+                             probes=[DEAD, B], unreachable="dead.test")
+        self.assertIn(f"\nunreachable {DEAD} ", result.stdout)
 
     def test_two_live_mirrors_without_a_final_newline_are_both_probed_and_unchanged(self) -> None:
-        self.select(f"{A}\tpriority:1\n{B}\tpriority:2", probes=[A, B])
+        result = self.select(f"{A}\tpriority:1\n{B}\tpriority:2", probes=[A, B])
+        self.assertIn(f"\nreachable {A} ", result.stdout)
 
     def test_a_single_line_without_a_newline_names_a_mirror(self) -> None:
-        self.select(A, probes=[A])
+        self.assertIn(f"\nreachable {A} ", self.select(A, probes=[A]).stdout)
 
     def test_a_uri_only_line_ending_in_crlf_is_probed_without_the_carriage_return(self) -> None:
         self.select(f"{A}\r\n{DEAD}\r\n", f"{A}\r\n", probes=[A, DEAD], unreachable="dead.test")
