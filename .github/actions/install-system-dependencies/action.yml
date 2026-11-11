@@ -23,8 +23,9 @@ runs:
       run: |
         set -euo pipefail
 
+        # /etc/apt/apt-mirrors.txt stays as shipped, Azure mirror included as
+        # a second source; the mirror selection step drops what does not answer.
         for apt_source in \
-          /etc/apt/apt-mirrors.txt \
           /etc/apt/sources.list \
           /etc/apt/sources.list.d/*.list \
           /etc/apt/sources.list.d/*.sources; do
@@ -38,6 +39,21 @@ runs:
             fi
           fi
         done
+
+    - name: Select reachable Ubuntu mirrors
+      if: ${{ inputs.refresh == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ ! -f /etc/apt/apt-mirrors.txt ]]; then
+          echo "no /etc/apt/apt-mirrors.txt on this image; the sources name their hosts directly"
+          exit 0
+        fi
+        # The log file lets a later step of the job read what the probe measured.
+        # Both streams go through the one pipe so that the lines keep their order.
+        sudo bash "$GITHUB_ACTION_PATH/select-mirrors.sh" \
+          /etc/apt/apt-mirrors.txt "$(. /etc/os-release && echo "$VERSION_CODENAME")" \
+          2>&1 | tee "$RUNNER_TEMP/mirror-selection.log"
 
     - name: Disable third-party package sources
       if: ${{ inputs.refresh == 'true' }}

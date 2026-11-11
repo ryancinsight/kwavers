@@ -66,6 +66,7 @@ jobs:
       pull-requests: read
     outputs:
       code: ${{ steps.classify.outputs.code }}
+      apt: ${{ steps.classify.outputs.apt }}
     steps:
       # The pull request's own file list, not a diff: a checkout here is
       # shallow, so the two endpoints of the range are not in it, and asking
@@ -83,6 +84,7 @@ jobs:
           set -uo pipefail
           if [ "$EVENT_NAME" != "pull_request" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "apt=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           # A rename is one entry whose `filename` is the new path, so the old
@@ -91,14 +93,19 @@ jobs:
           if ! changed=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)'); then
             echo "the file list is unreadable; running the gate" >&2
             echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "apt=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           # Prose and the git hooks change no build or test outcome: the hooks
           # run on a developer's machine, and no job here executes them.
+          # `apt` selects the mirror-selection job, which also runs on a draft
+          # pull request that changes the install action, its test, or this file.
           code=false
+          apt=false
           while IFS= read -r path; do
             [ -n "$path" ] || continue
             case "$path" in
+              .github/actions/install-system-dependencies/*|scripts/tests/test_ubuntu_mirror_selection.py|.github/workflows/ci.yml) apt=true ;;&
               backlog.md|backlog/*|CHANGELOG.md|README.md|gap_audit.md|docs/*|.githooks/*) ;;
               *) code=true ;;
             esac
@@ -111,8 +118,10 @@ jobs:
             echo '```'
             echo
             echo "gate runs: $code"
+            echo "mirror selection runs: $apt"
           } >> "$GITHUB_STEP_SUMMARY"
           echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "apt=$apt" >> "$GITHUB_OUTPUT"
 
   # Public-surface compatibility. The blocking comparison runs on release and
   # on pushes to main; it no longer runs on pull requests: a semver run builds
@@ -610,6 +619,76 @@ jobs:
 
     - name: Compile CUDA runtime provider
       run: cargo build --locked -p kwavers --no-default-features --features cuda-runtime
+
+  # The install action drops the Ubuntu mirrors that do not answer. Proven
+  # here against an unroutable address (TEST-NET-1, RFC 5737) rather than a
+  # real outage; runs on drafts too, because a change to the action is
+  # otherwise untested until it lands.
+  apt-mirror-selection:
+    needs: changes
+    if: ${{ needs.changes.outputs.apt == 'true' }}
+    name: Ubuntu mirror selection
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Run the selection unit tests
+        run: python3 -m unittest discover -s scripts/tests -p test_ubuntu_mirror_selection.py -v
+
+      - name: Put an unroutable mirror first in the runner's list
+        run: |
+          set -euo pipefail
+          { printf 'http://192.0.2.1/ubuntu/\tpriority:1\n'; cat /etc/apt/apt-mirrors.txt; } > "$RUNNER_TEMP/mirrors.new"
+          sudo cp "$RUNNER_TEMP/mirrors.new" /etc/apt/apt-mirrors.txt
+
+      - name: Install a package through the action
+        uses: ./.github/actions/install-system-dependencies
+        with:
+          packages: figlet
+
+      - name: Check the written list and the time spent on the dead mirror
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/mirror-selection.log"
+          echo "list after the action:"
+          cat /etc/apt/apt-mirrors.txt
+          # The written list is the list before the action minus the lines whose
+          # first field is a mirror the selection log reports as unreachable. It
+          # does not depend on which of the real mirrors are up.
+          awk '$1 == "unreachable" { print $2 }' "$log" | sort -u > "$RUNNER_TEMP/unreachable.txt"
+          echo "unreachable mirrors:"
+          cat "$RUNNER_TEMP/unreachable.txt"
+          grep -qx 'http://192.0.2.1/ubuntu/' "$RUNNER_TEMP/unreachable.txt"
+          awk 'NR == FNR { sub(/\/$/, "", $1); dead[$1] = 1; next }
+               { key = $1; sub(/\/$/, "", key); if (!(key in dead)) print }' \
+            "$RUNNER_TEMP/unreachable.txt" "$RUNNER_TEMP/mirrors.new" > "$RUNNER_TEMP/mirrors.expected"
+          cmp /etc/apt/apt-mirrors.txt "$RUNNER_TEMP/mirrors.expected"
+          hosts=$(cut -f1 /etc/apt/apt-mirrors.txt | sed -e 's|^[a-z]*://||' -e 's|/.*||' | sort -u)
+          # One live mirror is enough to install from, so the count is reported, not required.
+          echo "distinct hosts ($(echo "$hosts" | wc -l)): $(echo $hosts)"
+          dead_line=$(grep -E '^unreachable http://192\.0\.2\.1/ubuntu/ ' "$log")
+          echo "$dead_line"
+          pattern='^unreachable [^ ]+ ([0-9]+)\.[0-9]{3}s: '
+          [[ $dead_line =~ $pattern ]]
+          # curl --max-time 10 caps the probe at 10 s, and the span the script
+          # measures adds only the start and exit of the curl process, so the
+          # whole seconds of a probe do not exceed 10.
+          if (( 10#${BASH_REMATCH[1]} > 10 )); then
+            echo "the dead mirror took ${BASH_REMATCH[1]} whole seconds, more than the 10 s probe limit" >&2
+            exit 1
+          fi
+          command -v figlet
+
+      - name: Exit 1 and leave the list unchanged when no mirror answers
+        run: |
+          set -euo pipefail
+          printf 'http://192.0.2.1/ubuntu/\n' > "$RUNNER_TEMP/only-dead.txt"
+          cp "$RUNNER_TEMP/only-dead.txt" "$RUNNER_TEMP/only-dead.orig"
+          rc=0
+          bash .github/actions/install-system-dependencies/select-mirrors.sh "$RUNNER_TEMP/only-dead.txt" noble || rc=$?
+          [[ $rc -eq 1 ]]
+          cmp "$RUNNER_TEMP/only-dead.txt" "$RUNNER_TEMP/only-dead.orig"
 
   pinn-validation:
     name: PINN Feature Validation
@@ -1286,6 +1365,7 @@ jobs:
     needs:
       - changes
       - lockfile
+      - apt-mirror-selection
       - pinn-validation
       - quality
       - python-surface
