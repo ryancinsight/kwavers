@@ -1,0 +1,12 @@
+<a id="kw-vis-105"></a>
+
+## KW-VIS-105 — Visualization renderer ignores the field type, and engine tests leave four behaviours unpinned [patch] — todo
+
+priority: verification; needs: none; basis: ea5f0a4d666663ae74d189e1718cfc5836e6e2cb; scope: `crates/kwavers-analysis/src/visualization/renderer/`, `crates/kwavers-analysis/src/visualization/engine/`, `crates/kwavers-analysis/src/visualization/mod.rs`, `.github/workflows/ci.yml`
+
+- **Finding, renderer.** `render_internal` (`renderer/volume.rs` line 74) takes the field type as `_field_type` and does not read it; the other functions of `renderer/mod.rs` and `renderer/volume.rs` only pass the type on. A frame therefore does not depend on the type of the field it shows, and reversing the types handed to `render_multi_volume` changes no frame (derived from reading; no run).
+- **Finding, tests.** From the first verdict on #1051 (comment 6807230157, findings F5 and F6; the mutants were run by that judge in the `gpu-visualization` build, not by the integrator), each with all 35 module tests passing: `cleanup` keeps the renderer; the zero-field check moved after the field-count mismatch check; the metrics update after a multi-field render removed; the field types handed to the renderer in reverse. The empty-log assertion of `test_render_multi_field_rejects_zero_fields` cannot fail for a zero-field input.
+- **Finding, lint.** No workflow step lints the test target of `kwavers-analysis` in the `gpu-visualization` build: the strict clippy commands with `--features full` pass `--no-deps` on `kwavers`, and the ratchet command builds member crates as libraries (derived from the commands in `ci.yml`, not from a run).
+- **Acceptance:** the renderer either uses the field type in the frame, with a test that fails when two types are swapped, or no longer takes it; a test fails under each of the first three mutants, or a recorded reason says why the behaviour is not a contract; the zero-field test has no assertion that cannot fail; a workflow step lints `kwavers-analysis` with `--features gpu-visualization --all-targets`.
+- **Non-goals:** the hand-off from engine to renderer and the fallback render entries, which `ATLAS-KWAVERS-HEPHAESTUS-VIS-104` holds.
+- **Next step:** read what the callers of `Renderer3D::render_field` expect the field type to select (colour map, scale), then decide between using it and removing it.

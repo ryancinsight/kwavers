@@ -9,12 +9,13 @@
 <a id="kw-cbr-facade-test-residuals"></a>- [KW-CBR-FACADE-TEST-RESIDUALS](backlog/kw-cbr-facade-test-residuals.md) — CBR selection doc and test residuals from #1020 and #1024 [patch] — todo
 <a id="kw-ci-049"></a>- [KW-CI-049](backlog/kw-ci-049.md) — Align Apollo provider lock [patch] — todo
 <a id="kw-ci-051"></a>- [KW-CI-051](backlog/kw-ci-051.md) — Remove obsolete deployment workflow [patch] — todo
-<a id="kw-ci-052"></a>- [KW-CI-052](backlog/kw-ci-052.md) — Lock and parse supported Cargo workflows [patch] — blocked
+<a id="kw-ci-052"></a>- [KW-CI-052](backlog/kw-ci-052.md) — Lock and parse supported Cargo workflows [patch] — todo
 <a id="kw-ci-053"></a>- [KW-CI-053](backlog/kw-ci-053.md) — Update GPU PSTD parity contract [patch] — todo
 <a id="kw-ci-094"></a>- [KW-CI-094](backlog/kw-ci-094.md) — The recurseml check errors on itself and is permanently red [patch] — todo
 <a id="kw-ci-apt-single-mirror"></a>- [KW-CI-APT-SINGLE-MIRROR](backlog/kw-ci-apt-single-mirror.md) — An unreachable apt source ends in a timeout, not an apt error [patch] [ci] — todo
 <a id="kw-ci-classifier-residuals"></a>- [KW-CI-CLASSIFIER-RESIDUALS](backlog/kw-ci-classifier-residuals.md) — The changed-path classifier trusts a file list it does not check [patch] [ci] — todo
 <a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>- [KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08](backlog/kw-ci-per-pr-matrix-starvation-2026-09-08.md) — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — todo
+<a id="kw-ci-sccache-startup"></a>- [KW-CI-SCCACHE-STARTUP](backlog/kw-ci-sccache-startup.md) — A hosted job fails before compiling when the sccache server does not start [patch] — todo
 <a id="kw-dep-039"></a>- [KW-DEP-039](backlog/kw-dep-039.md) — Make Gaia an Atlas-local dependency [patch] — todo
 <a id="kw-dep-040"></a>- [KW-DEP-040](backlog/kw-dep-040.md) — Migrate first-party floors past Apollo 0.28 / Consus 0.2 [minor] — todo
 <a id="kw-diag-037"></a>- [KW-DIAG-037](backlog/kw-diag-037.md) — Promote multimodal fusion to Diagnostics [major] — todo
@@ -37,6 +38,7 @@
 <a id="kw-release-crates-01"></a>- [KW-RELEASE-CRATES-01](backlog/kw-release-crates-01.md) — Publish the Rust package closure [patch] — blocked
 <a id="kw-sim-test-compile-graph"></a>- [KW-SIM-TEST-COMPILE-GRAPH](backlog/kw-sim-test-compile-graph.md) — Reduce simulation test build latency [patch] [perf] — todo
 <a id="kw-sol-054"></a>- [KW-SOL-054](backlog/kw-sol-054.md) — Repair AVX-512 FDTD layout contract [patch] — todo
+<a id="kw-vis-105"></a>- [KW-VIS-105](backlog/kw-vis-105.md) — Visualization renderer ignores the field type, and engine tests leave four behaviours unpinned [patch] — todo
 <a id="kwavers-aeq-met-66"></a>- [KWAVERS-AEQ-MET-66](backlog/kwavers-aeq-met-66.md) — Type thermal-diffusion quantities [major] [arch] — blocked
 <a id="kwavers-aeq-met-69"></a>- [KWAVERS-AEQ-MET-69](backlog/kwavers-aeq-met-69.md) — Type B-mode scan-conversion geometry [major] [arch] — todo
 <a id="kwavers-aeq-met-flex"></a>- [KWAVERS-AEQ-MET-FLEX](backlog/kwavers-aeq-met-flex.md) — Type the flexible-array dynamic metrics [arch] [major] — todo
