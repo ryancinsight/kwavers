@@ -5,6 +5,7 @@ on:
     branches: [main, develop]
     paths-ignore:
       - 'backlog.md'
+      - 'backlog/**'
       - 'CHANGELOG.md'
       - 'README.md'
       - 'gap_audit.md'
@@ -95,7 +96,7 @@ jobs:
           while IFS= read -r path; do
             [ -n "$path" ] || continue
             case "$path" in
-              backlog.md|CHANGELOG.md|README.md|gap_audit.md|docs/*|.githooks/*) ;;
+              backlog.md|backlog/*|CHANGELOG.md|README.md|gap_audit.md|docs/*|.githooks/*) ;;
               *) code=true ;;
             esac
           done <<< "$changed"
