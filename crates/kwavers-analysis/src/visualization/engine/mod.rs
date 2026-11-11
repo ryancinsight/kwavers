@@ -7,8 +7,6 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
 use leto::{Array3, Array4};
-#[cfg(not(feature = "gpu-visualization"))]
-use log::warn;
 use log::{debug, info};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -22,10 +20,8 @@ use super::{
 #[cfg(test)]
 mod tests;
 
-#[cfg(feature = "gpu-visualization")]
 use super::config::MILLISECONDS_PER_SECOND;
 
-#[cfg(feature = "gpu-visualization")]
 use super::{controls, data_pipeline, renderer};
 
 /// Typestate for an engine that has no visualization transfer provider.
@@ -46,19 +42,14 @@ pub struct VisualizationEngine<P = UnconfiguredVisualizationProvider> {
     /// Render parameters (for dynamic adjustment)
     parameters: Arc<Mutex<HashMap<String, f64>>>,
     /// GPU renderer (if available)
-    #[cfg(feature = "gpu-visualization")]
     renderer: Option<renderer::Renderer3D>,
     /// Data pipeline for GPU transfers
-    #[cfg(feature = "gpu-visualization")]
     data_pipeline: Option<data_pipeline::DataPipeline<P>>,
     /// Provider-neutral transfer provider awaiting pipeline construction
-    #[cfg(feature = "gpu-visualization")]
     transfer_provider: Option<P>,
     /// Transfer submission and synchronization mode for the provider pipeline
-    #[cfg(feature = "gpu-visualization")]
     transfer_mode: data_pipeline::TransferMode,
     /// Interactive controls
-    #[cfg(feature = "gpu-visualization")]
     controls: Option<controls::InteractiveControls>,
 }
 
@@ -84,15 +75,10 @@ impl VisualizationEngine<UnconfiguredVisualizationProvider> {
             config,
             metrics: MetricsTracker::new(),
             parameters: Arc::new(Mutex::new(parameters)),
-            #[cfg(feature = "gpu-visualization")]
             renderer: None,
-            #[cfg(feature = "gpu-visualization")]
             data_pipeline: None,
-            #[cfg(feature = "gpu-visualization")]
             transfer_provider: None,
-            #[cfg(feature = "gpu-visualization")]
             transfer_mode: data_pipeline::TransferMode::Async,
-            #[cfg(feature = "gpu-visualization")]
             controls: None,
         })
     }
@@ -105,7 +91,6 @@ impl VisualizationEngine<UnconfiguredVisualizationProvider> {
     /// dependency direction acyclic. Callers able to construct a provider must
     /// inject it before initialization. Consuming `self` changes the engine's
     /// typestate, so an unconfigured engine cannot call GPU methods.
-    #[cfg(feature = "gpu-visualization")]
     #[must_use]
     pub fn set_transfer_provider<P>(self, provider: P) -> VisualizationEngine<P>
     where
@@ -140,7 +125,6 @@ impl<P> VisualizationEngine<P> {
     /// The default is [`data_pipeline::TransferMode::Async`]. The selection is
     /// retained when made before initialization and applied immediately when a
     /// data pipeline already exists.
-    #[cfg(feature = "gpu-visualization")]
     pub fn set_transfer_mode(&mut self, mode: data_pipeline::TransferMode)
     where
         P: super::transfer_contract::VisualizationTransferProvider,
@@ -157,7 +141,6 @@ impl<P> VisualizationEngine<P> {
     ///
     /// Propagates any [`KwaversError`] returned by renderer, controls, or
     /// provider initialization.
-    #[cfg(feature = "gpu-visualization")]
     pub fn initialize_gpu(&mut self) -> KwaversResult<()>
     where
         P: super::transfer_contract::VisualizationTransferProvider,
@@ -189,19 +172,7 @@ impl<P> VisualizationEngine<P> {
         Ok(())
     }
 
-    /// Initialize the CPU visualization path when GPU visualization is disabled.
-    ///
-    /// # Errors
-    ///
-    /// This operation currently has no fallible CPU initialization step.
-    #[cfg(not(feature = "gpu-visualization"))]
-    pub fn initialize_gpu(&mut self) -> KwaversResult<()> {
-        info!("GPU visualization disabled; CPU visualization is ready");
-        Ok(())
-    }
-
     /// Return whether every GPU visualization component is initialized.
-    #[cfg(feature = "gpu-visualization")]
     #[must_use]
     pub fn is_gpu_initialized(&self) -> bool {
         self.renderer.is_some() && self.data_pipeline.is_some() && self.controls.is_some()
@@ -211,7 +182,6 @@ impl<P> VisualizationEngine<P> {
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
     ///
-    #[cfg(feature = "gpu-visualization")]
     pub fn render_field(
         &mut self,
         field: &Array3<f64>,
@@ -254,37 +224,19 @@ impl<P> VisualizationEngine<P> {
         Ok(())
     }
 
-    /// Render a single field with the CPU fallback.
-    ///
-    /// # Errors
-    ///
-    /// Propagates fallback-renderer errors.
-    #[cfg(not(feature = "gpu-visualization"))]
-    pub async fn render_field(
-        &mut self,
-        field: &Array3<f64>,
-        field_type: UnifiedFieldType,
-        grid: &Grid,
-    ) -> KwaversResult<()> {
-        warn!("GPU visualization not enabled. Using fallback renderer.");
-        super::fallback::render_field(field, field_type, grid)
-    }
-
     /// Render multiple fields simultaneously.
     ///
     /// The fourth axis of `fields` supplies the field count and `field_types`
-    /// supplies its matching semantic type for each slice. GPU rendering
-    /// composites every slice; the CPU path sends every slice through the
-    /// fallback renderer.
+    /// supplies the matching semantic type of each slice. Every slice is
+    /// uploaded through the transfer provider, then the renderer composites
+    /// the slices in order.
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] when no fields are supplied or
     ///   when the field-type count does not match the fourth-axis length.
-    /// - Returns [`KwaversError::System`] when GPU visualization is enabled but
-    ///   [`Self::initialize_gpu`] has not initialized its renderer and data
-    ///   pipeline.
+    /// - Returns [`KwaversError::System`] when [`Self::initialize_gpu`] has not
+    ///   initialized the renderer and data pipeline.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    #[cfg(feature = "gpu-visualization")]
     pub fn render_multi_field(
         &mut self,
         fields: &Array4<f64>,
@@ -350,40 +302,6 @@ impl<P> VisualizationEngine<P> {
         Ok(())
     }
 
-    /// Render multiple fields with the CPU fallback.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`KwaversError::InvalidInput`] for an empty field set or a
-    /// mismatched field-type count and propagates fallback-renderer errors.
-    #[cfg(not(feature = "gpu-visualization"))]
-    pub async fn render_multi_field(
-        &mut self,
-        fields: &Array4<f64>,
-        field_types: &[UnifiedFieldType],
-        grid: &Grid,
-    ) -> KwaversResult<()> {
-        let field_count = fields.shape()[3];
-        if field_count == 0 {
-            return Err(KwaversError::InvalidInput(
-                "multi-field rendering requires at least one field".to_string(),
-            ));
-        }
-        if field_types.len() != field_count {
-            return Err(KwaversError::InvalidInput(format!(
-                "multi-field rendering received {field_count} fields but {} field types",
-                field_types.len()
-            )));
-        }
-
-        warn!("GPU visualization not enabled. Using fallback renderer for all fields.");
-        for (i, &field_type) in field_types.iter().enumerate() {
-            let field = fields.index_axis::<3>(3, i)?.to_contiguous();
-            super::fallback::render_field(&field, field_type, grid)?;
-        }
-        Ok(())
-    }
-
     /// Update a visualization parameter
     /// # Errors
     /// - Propagates any `KwaversError` returned by called functions.
@@ -423,7 +341,6 @@ impl<P> VisualizationEngine<P> {
         let adjusted_quality = adjusted_quality(current_quality, current_fps, target_fps);
         if adjusted_quality != current_quality {
             self.config.quality = adjusted_quality;
-            #[cfg(feature = "gpu-visualization")]
             if let Some(renderer) = &mut self.renderer {
                 renderer.set_quality(adjusted_quality);
             }
@@ -445,28 +362,14 @@ impl<P> VisualizationEngine<P> {
         filename: &str,
     ) -> KwaversResult<()> {
         info!("Exporting visualization to {}", filename);
-
-        #[cfg(feature = "gpu-visualization")]
-        {
-            super::fallback::export_field(field, field_type, filename)?;
-        }
-
-        #[cfg(not(feature = "gpu-visualization"))]
-        {
-            super::fallback::export_field(field, field_type, filename)?;
-        }
-
-        Ok(())
+        super::fallback::export_field(field, field_type, filename)
     }
 
     /// Clean up GPU resources
     pub fn cleanup(&mut self) {
-        #[cfg(feature = "gpu-visualization")]
-        {
-            self.renderer = None;
-            self.data_pipeline = None;
-            self.controls = None;
-        }
+        self.renderer = None;
+        self.data_pipeline = None;
+        self.controls = None;
         info!("Cleaned up visualization resources");
     }
 }
