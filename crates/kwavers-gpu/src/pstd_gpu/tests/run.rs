@@ -383,3 +383,50 @@ fn bench_gpu_pstd_bmode_grid() {
     );
     assert!(!data.is_empty());
 }
+
+/// One solver serves four requests in an order that leaves the full-field
+/// staging buffer and the peak envelope of an earlier run allocated: each
+/// result holds exactly the outputs its own request names.
+#[test]
+#[ignore = "requires a GPU device; run on the scheduled self-hosted GPU job"]
+fn gpu_pstd_returns_only_the_outputs_each_request_names() {
+    let n = 32usize;
+    let points = n * n * n;
+    let mut solver =
+        make_solver_32(4).expect("an ignored device test runs where an adapter exists");
+    let source = [u32::try_from(16 * n * n + 16 * n + 16).unwrap()];
+    let sensor = [u32::try_from(20 * n * n + 16 * n + 16).unwrap()];
+    let signal = [0.0f32, 1.0, 0.5, 0.0];
+    let mut returned = |output_request| {
+        let result = solver
+            .run(PstdRunInputs {
+                sensor_indices: &sensor,
+                source_indices: &source,
+                source_signals: &signal,
+                pressure_source_correction: true,
+                vel_x_indices: &[],
+                vel_x_signals: &[],
+                velocity_source_correction: false,
+                output_request,
+            })
+            .expect("GPU PSTD run");
+        (
+            result.final_fields.map(|fields| fields.pressure.len()),
+            result.peak_pressure.map(|peak| peak.len()),
+        )
+    };
+
+    assert_eq!(
+        returned(PstdOutputRequest::with_final_fields_and_peak_pressure()),
+        (Some(points), Some(points))
+    );
+    assert_eq!(
+        returned(PstdOutputRequest::with_peak_pressure()),
+        (None, Some(points))
+    );
+    assert_eq!(
+        returned(PstdOutputRequest::with_final_fields()),
+        (Some(points), None)
+    );
+    assert_eq!(returned(PstdOutputRequest::sensor_traces()), (None, None));
+}

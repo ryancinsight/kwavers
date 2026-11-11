@@ -324,6 +324,50 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "gpu")]
+    #[test]
+    fn assembles_the_gpu_adapter_for_hephaestus_pstd() {
+        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+        let config = SolverConfiguration {
+            solver_type: SolverType::PSTD,
+            fft_backend: FftBackend::Hephaestus,
+            dt: 1.0e-7,
+            ..SolverConfiguration::default()
+        };
+
+        let solver =
+            SimulationSolverFactory::create_solver(SolverType::PSTD, config, &grid, &medium)
+                .unwrap();
+
+        // The Leto solver built for `FftBackend::Leto` reports "PSTD".
+        assert_eq!(solver.name(), "GpuPstd");
+    }
+
+    #[cfg(not(feature = "gpu"))]
+    #[test]
+    fn rejects_hephaestus_pstd_without_the_gpu_feature() {
+        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let medium =
+            HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+        let config = SolverConfiguration {
+            solver_type: SolverType::PSTD,
+            fft_backend: FftBackend::Hephaestus,
+            dt: 1.0e-7,
+            ..SolverConfiguration::default()
+        };
+
+        let error =
+            SimulationSolverFactory::create_solver(SolverType::PSTD, config, &grid, &medium)
+                .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Feature not available: FftBackend::Hephaestus requires the `gpu` Cargo feature"
+        );
+    }
+
     #[test]
     fn assembles_discontinuous_galerkin_solver_for_valid_layout() {
         let grid = Grid::new(3, 3, 1, 1.0e-3, 1.0, 1.0).unwrap();

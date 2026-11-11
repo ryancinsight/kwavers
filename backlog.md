@@ -23,7 +23,7 @@
 <a id="kw-edition-2021-behind-current-2026-09-09"></a>- [KW-EDITION-2021-BEHIND-CURRENT-2026-09-09](backlog/kw-edition-2021-behind-current-2026-09-09.md) — 25 crates on edition 2021, resolver 2 [patch] — todo
 <a id="kw-errors-docs-are-template-output-2026-09-09"></a>- [KW-ERRORS-DOCS-ARE-TEMPLATE-OUTPUT-2026-09-09](backlog/kw-errors-docs-are-template-output-2026-09-09.md) — 300 functions document an error they cannot return [patch] — todo
 <a id="kw-fwi-pstd-adjoint-reciprocity"></a>- [KW-FWI-PSTD-ADJOINT-RECIPROCITY](backlog/kw-fwi-pstd-adjoint-reciprocity.md) — The PSTD adjoint-reciprocity check never ran [patch] — todo
-<a id="kw-gpu-048"></a>- [KW-GPU-048](backlog/kw-gpu-048.md) — GPU PSTD output and dispatch honesty [major] — todo
+<a id="kw-gpu-plan-capacity"></a>- [KW-GPU-PLAN-CAPACITY](backlog/kw-gpu-plan-capacity.md) — A GPU PSTD request beyond device capacity has no tested outcome [patch] — todo
 <a id="kw-gpu-060"></a>- [KW-GPU-060](backlog/kw-gpu-060.md) — Hephaestus backend-kernel ownership [major] — todo
 <a id="kw-gpu-061"></a>- [KW-GPU-061](backlog/kw-gpu-061.md) — Extend GPU PSTD FFT lattice [minor] — todo
 <a id="kw-gpu-062"></a>- [KW-GPU-062](backlog/kw-gpu-062.md) — GPU PSTD peak-pressure output [major] — todo

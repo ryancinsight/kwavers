@@ -221,7 +221,7 @@ mod tests {
     #[cfg(feature = "gpu")]
     #[test]
     #[ignore = "requires a GPU device; run on the scheduled self-hosted GPU job"]
-    fn gpu_selection_executes_hephaestus_without_cpu_fallback() {
+    fn gpu_selection_executes_a_hephaestus_request_on_a_device() {
         use leto::{Array2, Array3};
 
         let grid = Grid::new(7, 4, 3, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
