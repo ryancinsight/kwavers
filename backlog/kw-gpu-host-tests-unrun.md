@@ -1,9 +1,10 @@
 <a id="kw-gpu-host-tests-unrun"></a>
 
-## KW-GPU-HOST-TESTS-UNRUN — CI runs no kwavers-gpu test, including the host-only ones [patch] — todo
+## KW-GPU-HOST-TESTS-UNRUN — kwavers-gpu device tests pass silently on an adapter-less runner [patch] — todo
 
-priority: verification; needs: none; scope: .github/workflows/ci.yml, crates/kwavers-gpu
+priority: verification; needs: none; basis: 2824e0ecf45fd62c381bf935fd032326171b1fdd; scope: .github/workflows/ci.yml, crates/kwavers-gpu
 
-- **Finding.** The library-test shards run `cargo nextest run --workspace --exclude kwavers-python --exclude kwavers-gpu --lib`, and the only other kwavers-gpu job is `cargo check -p kwavers-gpu --features gpu --lib`. Tests that need no device never run in CI. Examples: the medium snapshot resolver tests, and `runner/absorption.rs`'s check that `PowerLawDispersion::Omitted` zeroes η. Only the local pre-push gate runs them.
-- **Next step.** Add a job, or extend a shard, running `cargo nextest run -p kwavers-gpu --features gpu --lib` with a filterset that excludes device-acquiring tests. Those tests need a named test group or an `#[ignore]` with a reason. Budget the job's warm time against the five-minute target.
-- **Acceptance.** A deliberately broken host-only kwavers-gpu assertion fails the CI gate on a pull request.
+- **Delivered.** [#965](https://github.com/ryancinsight/kwavers/pull/965) runs `cargo nextest run --locked -p kwavers-gpu --features gpu --lib` in the `validation` job: 175 tests, and a failure reaches the required `CI gate`.
+- **Finding.** About 40 device tests report PASS in 6-15 ms without running: `backend/tests.rs:214`, `:243`, `:260`, `:280` return with no message when no adapter exists. `neural_network/tests.rs:53-59` asserts the host-side `validate_activation_type` behind that early return, so a break there is uncaught in CI.
+- **Next step.** Split host-side assertions out of device tests; mark device-acquiring tests with a named test group or `#[ignore]` with a reason and exclude them by filterset; correct the stale timing comment on the `validation` job; measure the step's warm time against the five-minute target (3m43s cold).
+- **Acceptance.** A deliberately broken `validate_activation_type` fails the CI gate on a pull request, and no test reports PASS without executing an assertion.
