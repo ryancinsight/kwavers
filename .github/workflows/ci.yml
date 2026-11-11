@@ -85,7 +85,10 @@ jobs:
             echo "code=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if ! changed=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename'); then
+          # A rename is one entry whose `filename` is the new path, so the old
+          # path is listed too: a source file moved into a prose directory
+          # still counts as a code change.
+          if ! changed=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)'); then
             echo "the file list is unreadable; running the gate" >&2
             echo "code=true" >> "$GITHUB_OUTPUT"
             exit 0
