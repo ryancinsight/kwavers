@@ -9,7 +9,7 @@
 <a id="kw-cbr-facade-test-residuals"></a>- [KW-CBR-FACADE-TEST-RESIDUALS](backlog/kw-cbr-facade-test-residuals.md) — CBR selection doc and test residuals from #1020 and #1024 [patch] — todo
 <a id="kw-ci-049"></a>- [KW-CI-049](backlog/kw-ci-049.md) — Align Apollo provider lock [patch] — todo
 <a id="kw-ci-051"></a>- [KW-CI-051](backlog/kw-ci-051.md) — Remove obsolete deployment workflow [patch] — todo
-<a id="kw-ci-052"></a>- [KW-CI-052](backlog/kw-ci-052.md) — Lock and parse supported Cargo workflows [patch] — todo
+<a id="kw-ci-052"></a>- [KW-CI-052](backlog/kw-ci-052.md) — Lock and parse supported Cargo workflows [patch] — blocked
 <a id="kw-ci-053"></a>- [KW-CI-053](backlog/kw-ci-053.md) — Update GPU PSTD parity contract [patch] — todo
 <a id="kw-ci-094"></a>- [KW-CI-094](backlog/kw-ci-094.md) — The recurseml check errors on itself and is permanently red [patch] — todo
 <a id="kw-ci-apt-single-mirror"></a>- [KW-CI-APT-SINGLE-MIRROR](backlog/kw-ci-apt-single-mirror.md) — One unreachable Ubuntu mirror fails every job that installs packages [patch] [ci] — todo
@@ -44,4 +44,4 @@
 <a id="kw-examples-oversized-923"></a>- [KW-EXAMPLES-OVERSIZED-923](backlog/kw-examples-oversized-923.md) — Examples and tests grown or touched by #923 stay over the 500-line target [patch] — todo
 <a id="kw-gpu-host-tests-unrun"></a>- [KW-GPU-HOST-TESTS-UNRUN](backlog/kw-gpu-host-tests-unrun.md) — kwavers-gpu device tests pass silently on an adapter-less runner [patch] — todo
 <a id="kw-swe-clamp-test-residuals"></a>- [KW-SWE-CLAMP-TEST-RESIDUALS](backlog/kw-swe-clamp-test-residuals.md) — No workflow test command here selects the SWE integration test, and two clamp-test thresholds are underived [patch] — todo
-<a id="kw-board-offset-statuses"></a>- [KW-BOARD-OFFSET-STATUSES](backlog/kw-board-offset-statuses.md) — 18 entries moved to `todo` from off-set statuses must name their open acceptance clause with a witness, or be closed [patch] — todo
+<a id="kw-board-offset-statuses"></a>- [KW-BOARD-OFFSET-STATUSES](backlog/kw-board-offset-statuses.md) — 16 entries moved to `todo` from off-set statuses must name their open acceptance clause with a witness, or be closed [patch] — todo

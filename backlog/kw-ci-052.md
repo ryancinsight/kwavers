@@ -1,10 +1,12 @@
 <a id="kw-ci-052"></a>
 
-## KW-CI-052 — Lock and parse supported Cargo workflows [patch] — todo
+## KW-CI-052 — Lock and parse supported Cargo workflows [patch] — blocked
 
-priority: verification; needs: none; scope: `.github/workflows/ci.yml` and the other workflows that run cargo
+priority: verification; needs: none; basis: 4d6724c0ebd02de4d22abee6cdd6d41dae236354; scope: `.github/workflows/ci.yml` and the other workflows that run cargo
 
 - **Outcome:** every Cargo graph-consuming command in the workflows uses `--locked`, the workflow YAML parses, and no command hides behind malformed step indentation.
-- **Finding at origin/main:** `architecture-validation.yml` no longer exists, but `ci.yml` still runs `cargo run -p xtask -- legacy-migration-audit` and `cargo run -p xtask -- burn-migration-audit` without `--locked`, and `benchmark-regression.yml` runs `cargo metadata` without it.
 - **Acceptance:** `grep` of the workflows finds no graph-consuming `cargo` invocation lacking `--locked`, and `actionlint` parses every workflow.
-- **Next step:** add `--locked` to the unlocked invocations and run `actionlint`.
+- **Witnessed.** #1045 added `--locked` to the two `cargo run -p xtask` audit steps and to `cargo deny` (`ci.yml` lines 1144, 1179 and 919). At the basis the `cargo` commands in the nine workflow files that carry no `--locked` are `cargo fmt -- --check` (`ci.yml` lines 298 and 749), `cargo audit` (327) and `cargo +nightly miri setup` (935); #1045 held, from recall and not from a lookup, that none of the three needs the flag, and its judge agreed on the same basis (comment 6794943701: "my agreement is also from recall, not a lookup"). Run 43014706076 on `main` at the basis ran both audit jobs (130503569822, 130503569960) and `Security Audit` (130503569739) with the flag, each with conclusion success.
+- **Open clause.** "`actionlint` parses every workflow". No job in the nine workflow files of this repository runs it; the Atlas reusable workflows they call were not read. #1045 first called the shared Atlas guard, which failed before `actionlint` started (run 43010771547, job 130489568492): it rejects the local action that `benchmark-regression.yml` (lines 89 and 262) and `python-wheel-smoke.yml` (lines 133 and 159) reach through a checkout `path:`. Whether `actionlint` passes on the nine files is not known.
+- **Blocker:** the Atlas guard cannot analyse those two files; ryancinsight/atlas#674 (open, not merged) changes it to resolve such references. **Re-open trigger:** that pull request merges.
+- **Next step:** add a `workflow-lint` job that calls the guard at the commit carrying the fix and make `CI gate` need it; read what `actionlint` reports on the nine files and fix those findings. The block is on the job that lands: the report alone could be read earlier by calling the guard at the head of that pull request (not tried), at the cost of one more pipeline run.
