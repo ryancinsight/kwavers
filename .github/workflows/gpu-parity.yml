@@ -55,7 +55,7 @@ jobs:
         run: cargo nextest run --locked -p kwavers --features gpu --profile heavy --run-ignored ignored-only -E 'binary(gpu_cpu_fft_parity) | binary(gpu_fft_arbitrary_size)'
 
       - name: PSTD CPU/GPU source and leapfrog contracts
-        run: cargo nextest run --locked -p kwavers-gpu --profile heavy --run-ignored ignored-only -E 'binary(pstd_parity) | test(matrix_256_absorbing_custom_source)'
+        run: cargo nextest run --locked -p kwavers-gpu --features gpu --profile heavy --run-ignored ignored-only -E 'binary(pstd_parity) | test(matrix_256_absorbing_custom_source)'
 
       - name: Kwavers Hephaestus visualization transfer
         run: cargo nextest run --locked -p kwavers --features gpu-visualization --lib --profile heavy --run-ignored ignored-only -E 'test(hephaestus_selection_requires_real_pipeline_transfer)'

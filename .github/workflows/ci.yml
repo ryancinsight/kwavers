@@ -1097,12 +1097,16 @@ jobs:
         run: cargo nextest run --locked -p kwavers-solver --lib validation::physics_benchmarks
 
       # The workspace library shards exclude kwavers-gpu, whose modules all
-      # sit behind the `gpu` feature. This runs its library tests with the
+      # sit behind the `gpu` feature. This runs its library tests and its
+      # integration test targets (pstd_parity, pstd_velocity_parity) with the
       # feature: host-only tests (medium snapshot, absorption operators,
-      # shader text, buffer layout) execute, and device tests return early
-      # on the adapter-less runner, so this also proves the GPU build.
-      - name: GPU crate library tests (host-only on hosted runners)
-        run: cargo nextest run --locked -p kwavers-gpu --features gpu --lib
+      # shader text, buffer layout, the pstd_parity dispatch rejection)
+      # execute, library device tests return early on the adapter-less
+      # runner, and the integration device tests are ignored here and run
+      # by gpu-parity.yml. This also proves the GPU build, including that
+      # both integration targets compile.
+      - name: GPU crate library and integration tests (host-only on hosted runners)
+        run: cargo nextest run --locked -p kwavers-gpu --features gpu --lib --tests
 
       - name: sccache stats
         if: always()
