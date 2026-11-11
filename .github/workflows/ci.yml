@@ -916,7 +916,7 @@ jobs:
           tool: cargo-deny
 
       - name: Run security audit
-        run: cargo deny --config deny.toml --manifest-path crates/kwavers/Cargo.toml check
+        run: cargo deny --locked --config deny.toml --manifest-path crates/kwavers/Cargo.toml check
 
   memory-safety:
     name: Memory Safety (Miri)
@@ -1141,7 +1141,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cargo run -p xtask -- legacy-migration-audit 2>&1 | tee audit_log.txt
+          cargo run --locked -p xtask -- legacy-migration-audit 2>&1 | tee audit_log.txt
 
       - name: Upload audit log on failure
         if: failure()
@@ -1176,7 +1176,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cargo run -p xtask -- burn-migration-audit 2>&1 | tee audit_log.txt
+          cargo run --locked -p xtask -- burn-migration-audit 2>&1 | tee audit_log.txt
 
       - name: Upload audit log on failure
         if: failure()
