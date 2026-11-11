@@ -23,8 +23,8 @@ runs:
       run: |
         set -euo pipefail
 
-        # /etc/apt/apt-mirrors.txt stays as shipped, Azure mirror included; the
-        # mirror selection step drops the mirrors that do not answer.
+        # /etc/apt/apt-mirrors.txt stays as shipped, Azure mirror included as
+        # a second source; the mirror selection step drops what does not answer.
         for apt_source in \
           /etc/apt/sources.list \
           /etc/apt/sources.list.d/*.list \
