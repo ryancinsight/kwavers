@@ -1,0 +1,11 @@
+<a id="kw-ci-apt-single-mirror"></a>
+
+## KW-CI-APT-SINGLE-MIRROR — One unreachable Ubuntu mirror fails every job that installs packages [patch] [ci] — todo
+
+priority: verification; needs: none; basis: 2891e767b23fbd89270bdbac8ee48402a8e39780; scope: `.github/actions/install-system-dependencies/action.yml` (steps `Refresh Ubuntu package index`, `Install Ubuntu packages`); `.github/workflows/ci.yml` (`cuda-runtime-build`, step `Install container prerequisites`)
+
+- **Outcome:** an unreachable source ends in an apt error inside the step bound. The second-source half (an unreachable mirror is dropped from the mirror list before the refresh) is delivered by ryancinsight/kwavers#1049.
+- **Finding.** Both refreshes run `Acquire::Retries=3` with 20 s timeouts under an 8-minute `timeout`. Run 42967312932 had ten jobs end on exit 124 from that `timeout` with no apt error. Since apt 2.1.x a temporary fetch failure may exit 0 unless `--error-on=any` or `APT::Update::Error-Mode` is set (recalled, not read).
+- **Acceptance (findings 1, 4 and 5 of comment 6803435747 on #1049).** The tested step runs the production refresh command rather than searching text for its options. It requires apt's own failure status, not any status except 0, 124 and 137, and a fetch-failure line in apt's output. The bound for the CUDA container counts its three hosts and five InRelease files (run 43014706076, job 130502787583). No bound is claimed that apt's documentation does not give: it bounds only the connection and the data timeout, and run 42967312932 job 130347454860 showed about 2.1 times the timeout per attempt.
+- **Earlier attempt.** Its commits are at `refs/pull/1049/head`; the verdict is comment 6803435747. The attempt changed the options to `Acquire::Retries=1`, 10 s timeouts and `--error-on=any`; its tests did not meet the clauses above.
+- **Next step:** write the refresh test against the production command, then set the options from the measured time per attempt.
