@@ -1,6 +1,6 @@
 <a id="kw-sim-test-compile-graph"></a>
 
-## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — in-progress
+## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — todo
 
 priority: tightening; needs: none; scope: `kwavers-simulation` and `kwavers-python` dependency/feature graphs, `.cargo/config.toml` alias `test-gpu-consumers`, `.github/workflows/compile-timing.yml`
 

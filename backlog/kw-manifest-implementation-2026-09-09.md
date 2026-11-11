@@ -1,6 +1,6 @@
 <a id="kw-manifest-implementation-2026-09-09"></a>
 
-## KW-MANIFEST-IMPLEMENTATION-2026-09-09 — Reduce the implementation-bearing manifests [patch] [arch] — in-progress
+## KW-MANIFEST-IMPLEMENTATION-2026-09-09 — Reduce the implementation-bearing manifests [patch] [arch] — todo
 
 priority: tightening; needs: none; scope: every `lib.rs`/`mod.rs` carrying more than twenty body lines under `crates/`
 

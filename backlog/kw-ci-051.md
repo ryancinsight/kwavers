@@ -1,6 +1,6 @@
 <a id="kw-ci-051"></a>
 
-## KW-CI-051 — Remove obsolete deployment workflow [patch] — review
+## KW-CI-051 — Remove obsolete deployment workflow [patch] — todo
 
 priority: verification; needs: none; scope: `.github/workflows/deploy.yml` (deleted)
 

@@ -1,6 +1,6 @@
 <a id="kw-ci-052"></a>
 
-## KW-CI-052 — Lock and parse supported Cargo workflows [patch] — review
+## KW-CI-052 — Lock and parse supported Cargo workflows [patch] — todo
 
 priority: verification; needs: none; scope: `.github/workflows/ci.yml` and the other workflows that run cargo
 

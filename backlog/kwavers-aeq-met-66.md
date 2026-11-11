@@ -1,6 +1,6 @@
 <a id="kwavers-aeq-met-66"></a>
 
-## KWAVERS-AEQ-MET-66 — Type thermal-diffusion quantities [major] [arch] — blocked 2026-08-05
+## KWAVERS-AEQ-MET-66 — Type thermal-diffusion quantities [major] [arch] — blocked
 
 priority: architecture; needs: none; scope: public thermal-diffusion parameters and integration-time contracts, their solver/orchestrator callers, Python and simulation serialization boundaries, ADR 103
 

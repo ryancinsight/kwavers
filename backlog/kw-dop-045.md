@@ -1,6 +1,6 @@
 <a id="kw-dop-045"></a>
 
-## KW-DOP-045 — Signed pulsed-wave spectral Doppler [minor] — review
+## KW-DOP-045 — Signed pulsed-wave spectral Doppler [minor] — todo
 
 priority: feature; needs: none; scope: `crates/kwavers-analysis/src/signal_processing/doppler/`
 

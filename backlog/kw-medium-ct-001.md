@@ -1,6 +1,6 @@
 <a id="kw-medium-ct-001"></a>
 
-## KW-MEDIUM-CT-001 — Own complete CT medium assembly [arch] — review
+## KW-MEDIUM-CT-001 — Own complete CT medium assembly [arch] — todo
 
 priority: architecture; needs: none; scope: `kwavers-medium::heterogeneous` CT builder; the former `kwavers-physics` skull-owned builder
 

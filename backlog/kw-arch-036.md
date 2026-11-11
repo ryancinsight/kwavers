@@ -1,6 +1,6 @@
 <a id="kw-arch-036"></a>
 
-## KW-ARCH-036 — Clinical-imaging dependency boundary [major] — review
+## KW-ARCH-036 — Clinical-imaging dependency boundary [major] — todo
 
 priority: architecture; needs: none; scope: `kwavers-physics`, `kwavers-solver`, direct clinical consumers
 

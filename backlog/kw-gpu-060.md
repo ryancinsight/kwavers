@@ -1,6 +1,6 @@
 <a id="kw-gpu-060"></a>
 
-## KW-GPU-060 — Hephaestus backend-kernel ownership [major] — review
+## KW-GPU-060 — Hephaestus backend-kernel ownership [major] — todo
 
 priority: architecture; needs: none; scope: `crates/kwavers-gpu/src/backend/`, `crates/kwavers-gpu/src/pstd_gpu/`, ADR 039
 

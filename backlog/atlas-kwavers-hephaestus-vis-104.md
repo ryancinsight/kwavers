@@ -1,6 +1,6 @@
 <a id="atlas-kwavers-hephaestus-vis-104"></a>
 
-## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — Reject uninitialized GPU visualization [patch] — review 2026-08-17
+## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — Reject uninitialized GPU visualization [patch] — todo
 
 priority: correctness; needs: none; scope: `crates/kwavers-analysis/src/visualization/engine/mod.rs`, `crates/kwavers-analysis/src/visualization/mod.rs`
 

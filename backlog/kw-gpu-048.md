@@ -1,6 +1,6 @@
 <a id="kw-gpu-048"></a>
 
-## KW-GPU-048 — GPU PSTD output and dispatch honesty [major] — review
+## KW-GPU-048 — GPU PSTD output and dispatch honesty [major] — todo
 
 priority: correctness; needs: none; scope: `kwavers-gpu` PSTD output contract, `kwavers-simulation` GPU adapter and runner dispatch, `kwavers-solver` selection docs, ADR-037
 

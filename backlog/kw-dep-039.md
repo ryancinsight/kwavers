@@ -1,6 +1,6 @@
 <a id="kw-dep-039"></a>
 
-## KW-DEP-039 — Make Gaia an Atlas-local dependency [patch] — review
+## KW-DEP-039 — Make Gaia an Atlas-local dependency [patch] — todo
 
 priority: architecture; needs: none; scope: root `Cargo.toml` Gaia dependency; a downstream consumer's SemVer integration
 

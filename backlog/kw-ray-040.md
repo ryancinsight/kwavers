@@ -1,6 +1,6 @@
 <a id="kw-ray-040"></a>
 
-## KW-RAY-040 — Layered focus-path contract [minor] — in-progress
+## KW-RAY-040 — Layered focus-path contract [minor] — todo
 
 priority: feature; needs: none; scope: `kwavers-transducer` layered Rayleigh propagation API, a downstream consumer's focus integration, reference-Python parity
 

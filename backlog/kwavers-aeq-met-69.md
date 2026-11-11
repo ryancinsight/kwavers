@@ -1,6 +1,6 @@
 <a id="kwavers-aeq-met-69"></a>
 
-## KWAVERS-AEQ-MET-69 — Type B-mode scan-conversion geometry [major] [arch] — done 2026-10-28
+## KWAVERS-AEQ-MET-69 — Type B-mode scan-conversion geometry [major] [arch] — todo
 
 priority: architecture; needs: none; scope: `crates/kwavers-analysis/src/signal_processing/b_mode/`, direct tests, ADR 105
 
