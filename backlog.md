@@ -12,7 +12,6 @@
 <a id="kw-ci-052"></a>- [KW-CI-052](backlog/kw-ci-052.md) — Lock and parse supported Cargo workflows [patch] — blocked
 <a id="kw-ci-053"></a>- [KW-CI-053](backlog/kw-ci-053.md) — Update GPU PSTD parity contract [patch] — todo
 <a id="kw-ci-094"></a>- [KW-CI-094](backlog/kw-ci-094.md) — The recurseml check errors on itself and is permanently red [patch] — todo
-<a id="kw-ci-apt-single-mirror"></a>- [KW-CI-APT-SINGLE-MIRROR](backlog/kw-ci-apt-single-mirror.md) — One unreachable Ubuntu mirror fails every job that installs packages [patch] [ci] — todo
 <a id="kw-ci-classifier-residuals"></a>- [KW-CI-CLASSIFIER-RESIDUALS](backlog/kw-ci-classifier-residuals.md) — The changed-path classifier trusts a file list it does not check [patch] [ci] — todo
 <a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>- [KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08](backlog/kw-ci-per-pr-matrix-starvation-2026-09-08.md) — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — todo
 <a id="kw-dep-039"></a>- [KW-DEP-039](backlog/kw-dep-039.md) — Make Gaia an Atlas-local dependency [patch] — todo
