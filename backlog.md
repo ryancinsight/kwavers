@@ -53,6 +53,6 @@
 <a id="kw-sim-hybrid-runner-dispatch"></a>- [KW-SIM-HYBRID-RUNNER-DISPATCH](backlog/kw-sim-hybrid-runner-dispatch.md) — The runner sends a Hybrid request to the PSTD dispatch [patch] — todo
 <a id="kw-sim-pstd-no-sensor-contract"></a>- [KW-SIM-PSTD-NO-SENSOR-CONTRACT](backlog/kw-sim-pstd-no-sensor-contract.md) — The two PSTD dispatches differ on a request without sensors [patch] — todo
 <a id="kw-gpu-unpinned-refusal-fallback"></a>- [KW-GPU-UNPINNED-REFUSAL-FALLBACK](backlog/kw-gpu-unpinned-refusal-fallback.md) — A Leto fall-back on GPU PSTD provider errors other than the two pinned refusals fails no test [patch] — todo
-<a id="kw-ci-semver-not-run"></a>- [KW-CI-SEMVER-NOT-RUN](backlog/kw-ci-semver-not-run.md) — No hosted run compares a public surface before a release [patch] — todo
+<a id="kw-ci-semver-not-run"></a>- [KW-CI-SEMVER-NOT-RUN](backlog/kw-ci-semver-not-run.md) — No hosted run compares a public surface when a change lands [patch] — todo
 <a id="kw-dep-eunomia-requirement-lag"></a>- [KW-DEP-EUNOMIA-REQUIREMENT-LAG](backlog/kw-dep-eunomia-requirement-lag.md) — The Eunomia requirement admits no version its repository now holds [patch] — todo
 <a id="kw-gpu-fft-plan-capacity"></a>- [KW-GPU-FFT-PLAN-CAPACITY](backlog/kw-gpu-fft-plan-capacity.md) — A GPU PSTD plan whose FFT workspace or dispatch exceeds a device limit is refused as `InvalidInput`, after field buffers exist [patch] — blocked
