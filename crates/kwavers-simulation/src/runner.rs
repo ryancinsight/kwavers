@@ -218,6 +218,58 @@ mod tests {
         );
     }
 
+    /// The provider refuses zero steps before it acquires a device. A
+    /// dispatch that ran Leto when the provider fails would return that
+    /// path's result or error in place of this message.
+    #[cfg(feature = "gpu")]
+    #[test]
+    fn gpu_selection_reports_the_provider_rejection() {
+        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let mut request = gpu_request(&grid, &medium);
+        request.time_steps = 0;
+
+        let error = SimulationRunner::run(&request, Vec::new())
+            .expect_err("zero time steps violate the GPU PSTD batch contract");
+
+        assert_eq!(
+            error.to_string(),
+            "Invalid input: GPU PSTD requires time_steps > 0 and finite positive dt; got steps=0 dt=0.0000001"
+        );
+    }
+
+    /// The provider refuses two absorption exponents while it prepares the
+    /// host snapshot of the medium, before it acquires a device.
+    #[cfg(feature = "gpu")]
+    #[test]
+    fn gpu_selection_reports_the_provider_medium_rejection() {
+        use kwavers_medium::heterogeneous::HeterogeneousMedium;
+
+        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+        let uniform = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let mut medium = HeterogeneousMedium::new(8, 8, 8, false);
+        medium
+            .sound_speed
+            .iter_mut()
+            .for_each(|value| *value = 1_500.0);
+        medium.density.iter_mut().for_each(|value| *value = 1_000.0);
+        medium.absorption.iter_mut().for_each(|value| *value = 0.2);
+        medium.alpha_power.iter_mut().for_each(|value| *value = 1.3);
+        medium.alpha_power[[0, 0, 1]] = 1.7;
+        let request = SimulationRunRequest {
+            medium: &medium,
+            ..gpu_request(&grid, &uniform)
+        };
+
+        let error = SimulationRunner::run(&request, Vec::new())
+            .expect_err("two absorption exponents violate the GPU PSTD medium contract");
+
+        assert_eq!(
+            error.to_string(),
+            "Feature not available: Hephaestus PSTD requires one active absorption exponent; medium flat index 1 uses 1.7"
+        );
+    }
+
     #[cfg(feature = "gpu")]
     #[test]
     #[ignore = "requires a GPU device; run on the scheduled self-hosted GPU job"]

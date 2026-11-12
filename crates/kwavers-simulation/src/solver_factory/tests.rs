@@ -93,6 +93,24 @@ fn rejects_hephaestus_for_factory_hybrid_before_cpu_assembly() {
     );
 }
 
+#[test]
+fn assembles_the_leto_solver_for_leto_pstd() {
+    let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let config = SolverConfiguration {
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Leto,
+        dt: 1.0e-7,
+        ..SolverConfiguration::default()
+    };
+
+    let solver =
+        SimulationSolverFactory::create_solver(SolverType::PSTD, config, &grid, &medium).unwrap();
+
+    // The adapter built for `FftBackend::Hephaestus` reports "GpuPstd".
+    assert_eq!(solver.name(), "PSTD");
+}
+
 #[cfg(feature = "gpu")]
 #[test]
 fn assembles_the_gpu_adapter_for_hephaestus_pstd() {
@@ -110,6 +128,60 @@ fn assembles_the_gpu_adapter_for_hephaestus_pstd() {
 
     // The Leto solver built for `FftBackend::Leto` reports "PSTD".
     assert_eq!(solver.name(), "GpuPstd");
+}
+
+/// The Leto solver assembles for this medium, so a factory that fell
+/// back to it when the adapter refuses would return a solver here.
+#[cfg(feature = "gpu")]
+#[test]
+fn reports_the_adapter_rejection_for_hephaestus_pstd() {
+    use kwavers_medium::heterogeneous::HeterogeneousMedium;
+
+    let grid = Grid::new(2, 2, 2, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let mut medium = HeterogeneousMedium::new(2, 2, 2, false);
+    medium
+        .sound_speed
+        .iter_mut()
+        .for_each(|value| *value = 1_500.0);
+    medium.density.iter_mut().for_each(|value| *value = 1_000.0);
+    medium.absorption.iter_mut().for_each(|value| *value = 0.2);
+    medium.alpha_power.iter_mut().for_each(|value| *value = 1.3);
+    medium.alpha_power[[0, 0, 1]] = 1.7;
+    let config = SolverConfiguration {
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
+        dt: 1.0e-7,
+        ..SolverConfiguration::default()
+    };
+
+    let error = SimulationSolverFactory::create_solver(SolverType::PSTD, config, &grid, &medium)
+        .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "Feature not available: Hephaestus PSTD requires one active absorption exponent; medium flat index 1 uses 1.7"
+    );
+}
+
+#[cfg(feature = "gpu")]
+#[test]
+fn reports_the_adapter_time_step_rejection_for_hephaestus_pstd() {
+    let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let config = SolverConfiguration {
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
+        dt: 0.0,
+        ..SolverConfiguration::default()
+    };
+
+    let error = SimulationSolverFactory::create_solver(SolverType::PSTD, config, &grid, &medium)
+        .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "Invalid input: GPU PSTD requires finite positive dt; got 0"
+    );
 }
 
 #[cfg(not(feature = "gpu"))]

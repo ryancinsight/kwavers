@@ -160,7 +160,7 @@ fn final_field_readback_populates_solver_field_contract() {
 /// in `kwavers-gpu`), so the last sample of a sensor trace and the final
 /// pressure at that sensor are one provider value read back twice.
 #[test]
-#[ignore = "requires a GPU device; run on the scheduled self-hosted GPU job"]
+#[ignore = "requires a GPU device"]
 fn run_exposes_the_final_pressure_the_batch_recorded() {
     use kwavers_receiver::grid_sampling::{GridPoint, GridSensorSet};
     use kwavers_source::GridSource;

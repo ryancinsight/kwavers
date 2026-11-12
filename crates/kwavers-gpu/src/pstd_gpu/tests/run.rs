@@ -385,10 +385,10 @@ fn bench_gpu_pstd_bmode_grid() {
 }
 
 /// One solver serves four requests in an order that leaves the full-field
-/// staging buffer and the peak envelope of an earlier run allocated: each
-/// result holds exactly the outputs its own request names.
+/// staging buffer of an earlier run allocated: each result holds exactly the
+/// outputs its own request names.
 #[test]
-#[ignore = "requires a GPU device; run on the scheduled self-hosted GPU job"]
+#[ignore = "requires a GPU device"]
 fn gpu_pstd_returns_only_the_outputs_each_request_names() {
     let n = 32usize;
     let points = n * n * n;

@@ -91,13 +91,21 @@ a grid of three distinct extents, with exact peak statistics, and on a device
 that the final pressure at each sensor equals the last sample that sensor
 recorded in the same batch. The factory regressions verify that a Hephaestus
 PSTD configuration assembles the GPU adapter, and is rejected in a build
-without the `gpu` feature. Feature-configured runner regressions execute a
+without the `gpu` feature, and that a Leto configuration assembles the Leto
+solver. Feature-configured runner regressions execute a
 non-power-of-two Hephaestus case and reject unsupported contracts instead of
-selecting Leto.
+selecting Leto. Two factory regressions (a medium with two absorption
+exponents; a zero time step) and two runner regressions (such a medium;
+zero time steps) verify the message of the adapter's or the provider's
+refusal, which a fall-back to Leto on that error would replace with a
+solver, a result or another error. No regression makes the provider return
+a device error.
 
-Regressions that need a device are ignored by default, and no hosted
-workflow runs the `gpu` build of `kwavers-simulation`: the evidence for them
-is a run on a host with an adapter.
+Of the regressions that need a device, the four-request one, the
+CPU-reference one and those of the adapter and the runner are ignored by
+default; the full-output one returns early when it finds no adapter. No
+workflow runs the tests of the `gpu` build of `kwavers-simulation`, so the
+evidence for its device regressions is a run on a host with an adapter.
 
 ### Theorem: output requests cannot fabricate fields
 
