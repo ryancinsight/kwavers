@@ -2,7 +2,7 @@
 
 ## KW-SIM-HYBRID-RUNNER-DISPATCH — The runner sends a Hybrid request to the PSTD dispatch [patch] — todo
 
-priority: correctness; needs: none; basis: b3b2c3a372c8ceaf6f330637383e4d2cd11c43c4; scope: `crates/kwavers-simulation/src/runner.rs`, `crates/kwavers-simulation/src/solver_factory.rs`
+priority: correctness; needs: none; basis: d1a3d463bfed5532f06d6ca5405ea64075335b27; scope: `crates/kwavers-simulation/src/runner.rs`, `crates/kwavers-simulation/src/solver_factory.rs`
 
 - **Origin.** Found while reading the runner for #1053; read, not run.
 - **Read at the basis.** `SimulationRunner::run` maps `SolverType::Hybrid` with `FftBackend::Leto` to `dispatch::pstd::run`, or to `run_with_thermal` when the request carries thermal coupling (`runner.rs` lines 43 to 49). `crates/kwavers-simulation/src/dispatch/pstd.rs` does not contain `solver_type`. For the same selection `SimulationSolverFactory` builds `HybridSolver::new(hybrid_config_from(&config), grid, medium)` (`solver_factory.rs` lines 174 and 175). Whether a Hybrid request and a PSTD request return different sensor data through the runner is not known; no run was made.
