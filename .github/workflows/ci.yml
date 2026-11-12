@@ -144,10 +144,10 @@ jobs:
     permissions:
       contents: read
 
-  # A workflow file that is valid YAML but invalid GitHub Actions fails no
-  # check: GitHub schedules a run with no jobs and registers nothing on the
-  # pull request, so the gate the file defines silently does not run. The
-  # shared Atlas guard analyses every workflow file here.
+  # The shared Atlas guard, by its script, runs actionlint on each workflow
+  # file here. Its header says why (relayed, not observed here): a file that
+  # is valid YAML but invalid GitHub Actions fails no check; GitHub schedules
+  # a run with no jobs and registers nothing on the pull request.
   workflow-lint:
     name: Workflows are valid
     needs: changes
