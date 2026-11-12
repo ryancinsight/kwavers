@@ -32,7 +32,6 @@
 <a id="kw-lint-1"></a>- [KW-LINT-1](backlog/kw-lint-1.md) — Burn down the clippy debt baseline [patch] — todo
 <a id="kw-manifest-implementation-2026-09-09"></a>- [KW-MANIFEST-IMPLEMENTATION-2026-09-09](backlog/kw-manifest-implementation-2026-09-09.md) — Reduce the implementation-bearing manifests [patch] [arch] — todo
 <a id="kw-mat-043"></a>- [KW-MAT-043](backlog/kw-mat-043.md) — Direct FWI L-BFGS provider ownership [patch] [arch] — todo
-<a id="kw-provider-convergence"></a>- [KW-PROVIDER-CONVERGENCE](backlog/kw-provider-convergence.md) — Converge kwavers onto the fleet provider lines (eunomia 0.12, hermes 0.10, leto 0.48) [patch] — todo
 <a id="kw-py-uvlock-stale-2026-09-21"></a>- [KW-PY-UVLOCK-STALE-2026-09-21](backlog/kw-py-uvlock-stale-2026-09-21.md) — The Python dev lockfile is stale against its own pyproject [patch] — todo
 <a id="kw-ray-040"></a>- [KW-RAY-040](backlog/kw-ray-040.md) — Layered focus-path contract [minor] — todo
 <a id="kw-release-crates-01"></a>- [KW-RELEASE-CRATES-01](backlog/kw-release-crates-01.md) — Publish the Rust package closure [patch] — blocked
