@@ -16,6 +16,12 @@ Accepted
   private bounded radix-2 FFT. The output and no-substitution decisions remain
   unchanged; the current selector and provider limits below reflect that
   migration.
+- Revision (2026-11-11): no decision changed. The Verification section
+  names the regressions added in ryancinsight/kwavers#1053, after three
+  mutations of the code this record governs passed every test: the factory
+  building the Leto solver for a Hephaestus request, the adapter keeping
+  its zero arrays after a batch, and the provider returning final fields
+  that were not requested.
 
 ## Context
 
@@ -74,13 +80,32 @@ that snapshot across batches instead of duplicating preparation logic.
 
 ## Verification
 
-The GPU regression requests full output from a real WGPU batch and verifies
-field cardinality and finite pressure. The adapter regression proves exact
-row-major transfer into the generic solver fields and exact peak statistics.
-Feature-configured runner regressions execute a non-power-of-two Hephaestus
-case and reject unsupported contracts instead of selecting Leto. Package
-compilation and Nextest provide compiler and
-value-semantic evidence; a real GPU device is required for the WGPU run path.
+The provider regressions run real WGPU batches. One requests full output and
+verifies field cardinality and finite pressure. One sends four requests
+through one solver and verifies that each result holds exactly the outputs
+its request names. One compares the final staggered velocities with the
+independent CPU reference.
+
+The adapter regressions verify the row-major transfer element by element on
+a grid of three distinct extents, with exact peak statistics, and on a device
+that the final pressure at each sensor equals the last sample that sensor
+recorded in the same batch. The factory regressions verify that a Hephaestus
+PSTD configuration assembles the GPU adapter, and is rejected in a build
+without the `gpu` feature, and that a Leto configuration assembles the Leto
+solver. Feature-configured runner regressions execute a
+non-power-of-two Hephaestus case and reject unsupported contracts instead of
+selecting Leto. Two factory regressions (a medium with two absorption
+exponents; a zero time step) and two runner regressions (such a medium;
+zero time steps) verify the message of the adapter's or the provider's
+refusal. For each of the four requests the Leto path returns a solver or
+`Ok`, so handing that back in place of the refusal fails the regression.
+No regression makes the provider return an error at or after acquisition.
+
+Of the regressions that need a device, the four-request one, the
+CPU-reference one and those of the adapter and the runner are ignored by
+default; the full-output one returns early when it finds no adapter. No
+workflow runs the tests of the `gpu` build of `kwavers-simulation`, so the
+evidence for its device regressions is a run on a host with an adapter.
 
 ### Theorem: output requests cannot fabricate fields
 

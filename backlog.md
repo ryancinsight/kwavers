@@ -23,7 +23,7 @@
 <a id="kw-edition-2021-behind-current-2026-09-09"></a>- [KW-EDITION-2021-BEHIND-CURRENT-2026-09-09](backlog/kw-edition-2021-behind-current-2026-09-09.md) — 25 crates on edition 2021, resolver 2 [patch] — todo
 <a id="kw-errors-docs-are-template-output-2026-09-09"></a>- [KW-ERRORS-DOCS-ARE-TEMPLATE-OUTPUT-2026-09-09](backlog/kw-errors-docs-are-template-output-2026-09-09.md) — 300 functions document an error they cannot return [patch] — todo
 <a id="kw-fwi-pstd-adjoint-reciprocity"></a>- [KW-FWI-PSTD-ADJOINT-RECIPROCITY](backlog/kw-fwi-pstd-adjoint-reciprocity.md) — The PSTD adjoint-reciprocity check never ran [patch] — todo
-<a id="kw-gpu-048"></a>- [KW-GPU-048](backlog/kw-gpu-048.md) — GPU PSTD output and dispatch honesty [major] — todo
+<a id="kw-gpu-plan-capacity"></a>- [KW-GPU-PLAN-CAPACITY](backlog/kw-gpu-plan-capacity.md) — A GPU PSTD request beyond device capacity has no tested outcome [patch] — todo
 <a id="kw-gpu-060"></a>- [KW-GPU-060](backlog/kw-gpu-060.md) — Hephaestus backend-kernel ownership [major] — todo
 <a id="kw-gpu-061"></a>- [KW-GPU-061](backlog/kw-gpu-061.md) — Extend GPU PSTD FFT lattice [minor] — todo
 <a id="kw-gpu-062"></a>- [KW-GPU-062](backlog/kw-gpu-062.md) — GPU PSTD peak-pressure output [major] — todo
@@ -45,5 +45,6 @@
 <a id="kwavers-coupling-contract-001"></a>- [KWAVERS-COUPLING-CONTRACT-001](backlog/kwavers-coupling-contract-001.md) — Medium-aware field-coupling inputs [minor] — todo
 <a id="kw-examples-oversized-923"></a>- [KW-EXAMPLES-OVERSIZED-923](backlog/kw-examples-oversized-923.md) — Examples and tests grown or touched by #923 stay over the 500-line target [patch] — todo
 <a id="kw-gpu-host-tests-unrun"></a>- [KW-GPU-HOST-TESTS-UNRUN](backlog/kw-gpu-host-tests-unrun.md) — kwavers-gpu device tests pass silently on an adapter-less runner [patch] — todo
+<a id="kw-gpu-device-error-substitute"></a>- [KW-GPU-DEVICE-ERROR-SUBSTITUTE](backlog/kw-gpu-device-error-substitute.md) — No regression makes the GPU PSTD provider return an error at or after device acquisition [patch] — todo
 <a id="kw-swe-clamp-test-residuals"></a>- [KW-SWE-CLAMP-TEST-RESIDUALS](backlog/kw-swe-clamp-test-residuals.md) — No workflow test command here selects the SWE integration test, and two clamp-test thresholds are underived [patch] — todo
 <a id="kw-board-offset-statuses"></a>- [KW-BOARD-OFFSET-STATUSES](backlog/kw-board-offset-statuses.md) — 14 entries moved to `todo` from off-set statuses must name their open acceptance clause with a witness, or be closed [patch] — todo

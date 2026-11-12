@@ -105,9 +105,18 @@ fn constructs_for_valid_power_of_two_grid() {
     assert!(adapter.recorded_sensor_pressure().is_none());
 }
 
+/// `len` consecutive whole numbers from `start`, each exact in `f32`.
+fn ramp(start: f32, len: usize) -> Vec<f32> {
+    std::iter::successors(Some(start), |value| Some(value + 1.0))
+        .take(len)
+        .collect()
+}
+
+/// Three distinct extents: a transfer that reorders the axes cannot put the
+/// flat provider index back on the element it belongs to.
 #[test]
 fn final_field_readback_populates_solver_field_contract() {
-    let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let grid = Grid::new(5, 6, 7, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
         solver_type: SolverType::PSTD,
@@ -117,25 +126,88 @@ fn final_field_readback_populates_solver_field_contract() {
     };
     let mut adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
     let field_len = grid.nx * grid.ny * grid.nz;
+    assert_eq!(field_len, 210);
 
     adapter
         .store_final_fields(PstdFinalFields {
-            pressure: (0..field_len).map(|index| index as f32).collect(),
-            velocity_x: (0..field_len).map(|index| (1000 + index) as f32).collect(),
-            velocity_y: (0..field_len).map(|index| (2000 + index) as f32).collect(),
-            velocity_z: (0..field_len).map(|index| (3000 + index) as f32).collect(),
+            pressure: ramp(0.0, field_len),
+            velocity_x: ramp(1000.0, field_len),
+            velocity_y: ramp(2000.0, field_len),
+            velocity_z: ramp(3000.0, field_len),
         })
         .expect("field vectors match the adapter grid");
 
-    assert_eq!(adapter.pressure_field()[[0, 0, 0]], 0.0);
-    assert_eq!(adapter.pressure_field()[[7, 7, 7]], 511.0);
+    // Row-major: the provider's flat index is `(i * ny + j) * nz + k`.
     let (velocity_x, velocity_y, velocity_z) = adapter.velocity_fields();
-    assert_eq!(velocity_x[[7, 7, 7]], 1511.0);
-    assert_eq!(velocity_y[[7, 7, 7]], 2511.0);
-    assert_eq!(velocity_z[[7, 7, 7]], 3511.0);
+    let mut flat = 0.0_f64;
+    for i in 0..grid.nx {
+        for j in 0..grid.ny {
+            for k in 0..grid.nz {
+                assert_eq!(adapter.pressure_field()[[i, j, k]], flat);
+                assert_eq!(velocity_x[[i, j, k]], 1000.0 + flat);
+                assert_eq!(velocity_y[[i, j, k]], 2000.0 + flat);
+                assert_eq!(velocity_z[[i, j, k]], 3000.0 + flat);
+                flat += 1.0;
+            }
+        }
+    }
     let statistics = adapter.statistics();
-    assert_eq!(statistics.max_pressure, 511.0);
-    assert_eq!(statistics.max_velocity, 3511.0);
+    assert_eq!(statistics.max_pressure, 209.0);
+    assert_eq!(statistics.max_velocity, 3209.0);
+}
+
+/// The pressure record is the last pass of a time step (`encode_time_step`
+/// in `kwavers-gpu`), so the last sample of a sensor trace and the final
+/// pressure at that sensor are one provider value read back twice.
+#[test]
+#[ignore = "requires a GPU device"]
+fn run_exposes_the_final_pressure_the_batch_recorded() {
+    use kwavers_receiver::grid_sampling::{GridPoint, GridSensorSet};
+    use kwavers_source::GridSource;
+    use leto::{Array2, Array3};
+
+    const STEPS: usize = 3;
+    let grid = Grid::new(7, 4, 3, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let config = SolverConfiguration {
+        solver_type: SolverType::PSTD,
+        fft_backend: FftBackend::Hephaestus,
+        dt: 1.0e-7,
+        ..SolverConfiguration::default()
+    };
+    let mut adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
+    let mut source_mask = Array3::zeros([7, 4, 3]);
+    source_mask[[3, 2, 1]] = 1.0;
+    adapter.set_grid_source(GridSource {
+        p_mask: Some(source_mask),
+        p_signal: Some(
+            Array2::from_shape_vec([1, STEPS], vec![0.0, 1.0, 0.0])
+                .expect("one source row with one sample per step"),
+        ),
+        ..GridSource::new_empty()
+    });
+    // In row-major order, as the provider numbers its sensors.
+    let sensors = [[3, 2, 1], [5, 1, 2]];
+    adapter
+        .add_sensor(&GridSensorSet::from_points(
+            sensors
+                .iter()
+                .map(|&[i, j, k]| GridPoint::new(i, j, k))
+                .collect(),
+        ))
+        .unwrap();
+
+    adapter.run(STEPS).expect("the device executes the batch");
+
+    let recorded = adapter
+        .recorded_sensor_pressure()
+        .expect("the batch recorded both sensors");
+    assert_eq!(recorded.shape(), [2, STEPS]);
+    for (row, &[i, j, k]) in sensors.iter().enumerate() {
+        let last_sample = recorded[[row, STEPS - 1]];
+        assert_ne!(last_sample, 0.0, "sensor {row} recorded no pressure");
+        assert_eq!(adapter.pressure_field()[[i, j, k]], last_sample);
+    }
 }
 
 #[test]
