@@ -1,0 +1,165 @@
+//! Buffer capacity of a GPU PSTD plan against the limits a device enables.
+//!
+//! `wgpu` rejects a buffer larger than `max_buffer_size` when the buffer is
+//! created, and a storage binding larger than
+//! `max_storage_buffer_binding_size` when its bind group is created. The
+//! provider creates buffers and bind groups through calls that return no
+//! error, so either rejection reaches the uncaptured-error handler, which
+//! panics. The plan is therefore checked against both limits before the
+//! provider creates its first buffer.
+
+use kwavers_core::error::{KwaversError, KwaversResult};
+
+/// Bytes of one `f32`, the element type of every buffer the plan holds.
+const ELEMENT_BYTES: u64 = 4;
+const _: () = assert!(std::mem::size_of::<f32>() == 4);
+
+/// The two device limits a storage buffer of the plan must fit, in bytes.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(in crate::pstd_gpu) struct StorageBufferLimits {
+    /// Largest buffer the device creates.
+    pub(in crate::pstd_gpu) max_buffer_size: u64,
+    /// Largest storage binding the device accepts in a bind group.
+    pub(in crate::pstd_gpu) max_storage_buffer_binding_size: u64,
+}
+
+impl StorageBufferLimits {
+    /// Read the limits `device` enables.
+    pub(in crate::pstd_gpu) fn enabled_on(device: &wgpu::Device) -> Self {
+        let limits = device.limits();
+        Self {
+            max_buffer_size: limits.max_buffer_size,
+            max_storage_buffer_binding_size: limits.max_storage_buffer_binding_size,
+        }
+    }
+}
+
+/// Element counts of the two buffers that can be the largest of a plan.
+///
+/// `pml_xyz` packs the three PML arrays, three values per grid point; every
+/// field, medium, k-space and absorption buffer holds one value per grid
+/// point and so never exceeds it. `shifts_all` holds four values per axis
+/// sample (`precompute_kspace_shifts`), which exceeds `pml_xyz` on a grid of
+/// few points. `None` marks a count beyond `usize`.
+fn largest_buffers(shape: [usize; 3]) -> [(&'static str, Option<usize>); 2] {
+    let [nx, ny, nz] = shape;
+    let points = nx.checked_mul(ny).and_then(|xy| xy.checked_mul(nz));
+    let axis_samples = nx.checked_add(ny).and_then(|xy| xy.checked_add(nz));
+    [
+        ("pml_xyz", points.and_then(|points| points.checked_mul(3))),
+        (
+            "shifts_all",
+            axis_samples.and_then(|samples| samples.checked_mul(4)),
+        ),
+    ]
+}
+
+/// Refuse a plan one of whose buffers exceeds a limit the device enables.
+///
+/// # Errors
+///
+/// [`KwaversError::ResourceLimitExceeded`] naming the buffer, the bytes it
+/// needs, and the limit it exceeds; the same variant when the byte count of
+/// a buffer does not fit `u64`.
+pub(in crate::pstd_gpu) fn check_plan_capacity(
+    shape: [usize; 3],
+    limits: StorageBufferLimits,
+) -> KwaversResult<()> {
+    let [nx, ny, nz] = shape;
+    for (buffer, elements) in largest_buffers(shape) {
+        let bytes = elements
+            .and_then(|elements| u64::try_from(elements).ok())
+            .and_then(|elements| elements.checked_mul(ELEMENT_BYTES))
+            .ok_or_else(|| KwaversError::ResourceLimitExceeded {
+                message: format!(
+                    "GPU PSTD buffer `{buffer}` of a {nx}x{ny}x{nz} grid has a byte count beyond u64"
+                ),
+            })?;
+        for (limit, limit_bytes) in [
+            ("max_buffer_size", limits.max_buffer_size),
+            (
+                "max_storage_buffer_binding_size",
+                limits.max_storage_buffer_binding_size,
+            ),
+        ] {
+            if bytes > limit_bytes {
+                return Err(KwaversError::ResourceLimitExceeded {
+                    message: format!(
+                        "GPU PSTD buffer `{buffer}` needs {bytes} bytes; the device enables {limit} = {limit_bytes} bytes"
+                    ),
+                });
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{check_plan_capacity, StorageBufferLimits};
+    use kwavers_core::error::{KwaversError, KwaversResult};
+
+    /// `pml_xyz` of a 16x16x16 grid: three `f32` values for each of 4096 points.
+    const PACKED_PML_BYTES: u64 = 3 * 4096 * 4;
+
+    fn limits(max_buffer_size: u64, max_storage_buffer_binding_size: u64) -> StorageBufferLimits {
+        StorageBufferLimits {
+            max_buffer_size,
+            max_storage_buffer_binding_size,
+        }
+    }
+
+    fn refusal(result: KwaversResult<()>) -> String {
+        match result {
+            Err(KwaversError::ResourceLimitExceeded { message }) => message,
+            other => panic!("expected ResourceLimitExceeded, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_plan_that_meets_both_limits_exactly_is_admitted() {
+        let result = check_plan_capacity([16, 16, 16], limits(PACKED_PML_BYTES, PACKED_PML_BYTES));
+
+        assert!(matches!(result, Ok(())), "{result:?}");
+    }
+
+    #[test]
+    fn one_byte_under_the_packed_pml_buffer_names_the_exceeded_limit() {
+        let under = PACKED_PML_BYTES - 1;
+
+        assert_eq!(
+            refusal(check_plan_capacity([16, 16, 16], limits(under, PACKED_PML_BYTES))),
+            "GPU PSTD buffer `pml_xyz` needs 49152 bytes; the device enables max_buffer_size = 49151 bytes"
+        );
+        assert_eq!(
+            refusal(check_plan_capacity([16, 16, 16], limits(PACKED_PML_BYTES, under))),
+            "GPU PSTD buffer `pml_xyz` needs 49152 bytes; the device enables max_storage_buffer_binding_size = 49151 bytes"
+        );
+    }
+
+    /// A 1x1x2 grid packs 3 * 2 PML values (24 bytes) and holds
+    /// 4 * (1 + 1 + 2) shift values (64 bytes).
+    #[test]
+    fn the_shift_buffer_governs_a_grid_of_few_points() {
+        let admitted = check_plan_capacity([1, 1, 2], limits(64, 64));
+        assert!(matches!(admitted, Ok(())), "{admitted:?}");
+
+        assert_eq!(
+            refusal(check_plan_capacity([1, 1, 2], limits(63, 64))),
+            "GPU PSTD buffer `shifts_all` needs 64 bytes; the device enables max_buffer_size = 63 bytes"
+        );
+    }
+
+    #[test]
+    fn a_point_count_beyond_usize_is_refused() {
+        let result = check_plan_capacity([usize::MAX, 2, 1], limits(u64::MAX, u64::MAX));
+
+        assert_eq!(
+            refusal(result),
+            format!(
+                "GPU PSTD buffer `pml_xyz` of a {}x2x1 grid has a byte count beyond u64",
+                usize::MAX
+            )
+        );
+    }
+}

@@ -3,7 +3,23 @@
 use super::super::super::GpuPstdSolver;
 use super::super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 use crate::pstd_gpu::state::PstdStateBuilder;
+use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
+
+/// Why solver construction refused a request.
+pub(in crate::pstd_gpu::pipeline) enum ConstructionError {
+    /// An input failed validation, or the provider could not build its state.
+    Rejected(String),
+    /// The plan exceeds a limit of the provider context; the provider's
+    /// error is kept whole so a caller can match on its variant.
+    Capacity(KwaversError),
+}
+
+impl From<String> for ConstructionError {
+    fn from(message: String) -> Self {
+        Self::Rejected(message)
+    }
+}
 
 impl<P> GpuPstdSolver<P>
 where
@@ -15,8 +31,10 @@ where
     ///
     /// # Errors
     ///
-    /// Returns `Err` if any input array shape is inconsistent with `grid` or
-    /// if the provider cannot build its execution state.
+    /// Returns `Err` if any input array shape is inconsistent with `grid`, if
+    /// the plan exceeds a limit of `context` (the message then starts with
+    /// "Resource limit exceeded"), or if the provider cannot build its
+    /// execution state.
     pub fn new(
         context: P::Context,
         grid: &Grid,
@@ -25,9 +43,27 @@ where
         pml: PmlArrays<'_>,
         absorption: AbsorptionArrays<'_>,
     ) -> Result<Self, String> {
+        Self::construct(context, grid, medium, solver, pml, absorption).map_err(|error| match error
+        {
+            ConstructionError::Rejected(message) => message,
+            ConstructionError::Capacity(error) => error.to_string(),
+        })
+    }
+
+    /// Validate the inputs, check the plan against the capacity of `context`,
+    /// then build the provider state.
+    pub(in crate::pstd_gpu::pipeline) fn construct(
+        context: P::Context,
+        grid: &Grid,
+        medium: MediumArrays<'_>,
+        solver: SolverParams,
+        pml: PmlArrays<'_>,
+        absorption: AbsorptionArrays<'_>,
+    ) -> Result<Self, ConstructionError> {
         let total = super::super::super::validate_pstd_grid_shape(grid)?;
         validate_solver_params(solver)?;
         validate_input_lengths(total, &medium, &pml, &absorption)?;
+        P::check_plan_capacity(&context, grid).map_err(ConstructionError::Capacity)?;
 
         let nx = grid.nx;
         let ny = grid.ny;

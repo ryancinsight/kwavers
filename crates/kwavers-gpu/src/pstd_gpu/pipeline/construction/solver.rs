@@ -2,6 +2,7 @@ use super::super::super::PstdParams;
 use super::super::bind_groups::{
     build_bg_absorb, build_bg_fields, build_bg_kspace, AbsorbBuffers, FieldBuffers, KspaceBuffers,
 };
+use super::super::capacity::{check_plan_capacity, StorageBufferLimits};
 use super::super::{
     AbsorptionArrays, MediumArrays, PmlArrays, PstdBindGroupLayoutProvider, PstdBufferProvider,
     PstdPipelineProvider, SolverParams, WgpuPstdBindGroupFactory, WgpuPstdBindGroupLayoutFactory,
@@ -17,11 +18,19 @@ use crate::pstd_gpu::state::{
 };
 use hephaestus_core::{ComputeDevice, FftDirection, FftOperands, FftOps, StridedView};
 use hephaestus_wgpu::{WgpuDevice, WgpuFftOps};
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use leto::Layout;
 
 impl PstdStateBuilder for WgpuPstdStateProvider {
     type Context = GpuProviderContext<WgpuDevice>;
+
+    fn check_plan_capacity(context: &Self::Context, grid: &Grid) -> KwaversResult<()> {
+        check_plan_capacity(
+            [grid.nx, grid.ny, grid.nz],
+            StorageBufferLimits::enabled_on(context.device()),
+        )
+    }
 
     fn build_state(
         context: Self::Context,

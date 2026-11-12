@@ -5,4 +5,6 @@
 
 mod entry;
 mod kspace;
+
+pub(super) use entry::ConstructionError;
 mod solver;

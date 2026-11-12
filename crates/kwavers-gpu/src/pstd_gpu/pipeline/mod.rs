@@ -10,6 +10,7 @@ mod auto_device;
 mod bgl;
 mod bind_groups;
 mod buffers;
+mod capacity;
 mod construction;
 mod pipelines;
 

@@ -22,6 +22,20 @@ pub trait PstdStateBuilder: PstdStateProvider {
     /// Provider-owned execution context consumed by PSTD construction.
     type Context;
 
+    /// Refuse a plan whose buffers exceed what `context` enables.
+    ///
+    /// The solver calls this after it validates its inputs and before
+    /// [`Self::build_state`]. The default refuses nothing: it is the contract
+    /// of a provider whose context bounds no buffer.
+    ///
+    /// # Errors
+    ///
+    /// `KwaversError::ResourceLimitExceeded` naming the buffer, the bytes it
+    /// needs, and the limit it exceeds.
+    fn check_plan_capacity(_context: &Self::Context, _grid: &Grid) -> KwaversResult<()> {
+        Ok(())
+    }
+
     /// Build provider-owned PSTD state.
     ///
     /// # Errors
