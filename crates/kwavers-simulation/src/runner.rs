@@ -131,6 +131,67 @@ mod tests {
         }
     }
 
+    fn leto_request<'a>(grid: &'a Grid, medium: &'a HomogeneousMedium) -> SimulationRunRequest<'a> {
+        SimulationRunRequest {
+            fft_backend: FftBackend::Leto,
+            sensor_mask: Some(leto::Array3::from_elem([8, 8, 8], true)),
+            ..gpu_request(grid, medium)
+        }
+    }
+
+    /// `f64` prints these values as `0`, `-0.0000001`, `NaN` and `inf`.
+    #[test]
+    fn leto_selection_refuses_a_time_step_that_is_not_finite_and_positive() {
+        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        for (dt, printed) in [
+            (0.0, "0"),
+            (-1.0e-7, "-0.0000001"),
+            (f64::NAN, "NaN"),
+            (f64::INFINITY, "inf"),
+        ] {
+            let mut request = leto_request(&grid, &medium);
+            request.dt = dt;
+
+            let error = SimulationRunner::run(&request, Vec::new())
+                .expect_err("the PSTD solver cannot advance by this time step");
+
+            assert_eq!(
+                error.to_string(),
+                format!("Invalid input: PSTDConfig.dt must be finite and positive; got {printed}")
+            );
+        }
+    }
+
+    #[test]
+    fn leto_selection_refuses_zero_time_steps() {
+        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let mut request = leto_request(&grid, &medium);
+        request.time_steps = 0;
+
+        let error = SimulationRunner::run(&request, Vec::new())
+            .expect_err("a PSTD run of zero steps records nothing");
+
+        assert_eq!(
+            error.to_string(),
+            "Invalid input: PSTD requires time_steps > 0; got 0"
+        );
+    }
+
+    /// The request the two refusal tests start from runs.
+    #[test]
+    fn leto_selection_runs_the_request_the_refusals_start_from() {
+        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let request = leto_request(&grid, &medium);
+
+        let result = SimulationRunner::run(&request, Vec::new())
+            .expect("eight steps at 100 ns on an 8x8x8 grid run");
+
+        assert_eq!(result.sensor_data.shape(), [512, 8]);
+    }
+
     #[cfg(not(feature = "gpu"))]
     #[test]
     fn gpu_selection_without_feature_returns_feature_error() {
@@ -218,9 +279,9 @@ mod tests {
         );
     }
 
-    /// The provider refuses zero steps before it acquires a device. With
-    /// the sensor mask the Leto dispatch returns `Ok` for this request, so
-    /// handing back its outcome in place of the refusal fails this test.
+    /// The provider refuses zero steps before it acquires a device. The
+    /// Leto dispatch refuses them with another message, so handing back its
+    /// outcome in place of the refusal fails this test.
     #[cfg(feature = "gpu")]
     #[test]
     fn gpu_selection_reports_the_provider_rejection() {

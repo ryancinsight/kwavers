@@ -8,6 +8,7 @@ use leto::Array3;
 use serde::{Deserialize, Serialize};
 
 use kwavers_boundary::{CPMLConfig, DomainPmlConfig};
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Whether a power-law absorption carries its causal dispersion term.
 ///
@@ -102,6 +103,27 @@ pub struct PSTDConfig {
     pub kspace_method: KSpaceMethod,
     /// Spatial coordinate geometry (Cartesian 3-D or axisymmetric cylindrical).
     pub geometry: SolverGeometry,
+}
+
+impl PSTDConfig {
+    /// Refuse a time step that is zero, negative or not finite.
+    ///
+    /// `PSTDSolver::new` builds the k-space correction and the CPML profiles
+    /// from `dt`, and each step advances the fields by `dt`.
+    ///
+    /// # Errors
+    ///
+    /// [`KwaversError::InvalidInput`] naming the value.
+    pub(crate) fn validate_time_step(&self) -> KwaversResult<()> {
+        if self.dt.is_finite() && self.dt > 0.0 {
+            Ok(())
+        } else {
+            Err(KwaversError::InvalidInput(format!(
+                "PSTDConfig.dt must be finite and positive; got {}",
+                self.dt
+            )))
+        }
+    }
 }
 
 impl Default for PSTDConfig {

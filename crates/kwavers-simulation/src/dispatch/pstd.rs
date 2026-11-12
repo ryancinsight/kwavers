@@ -84,7 +84,10 @@ pub fn power_law_absorption_mode(
 /// # Errors
 ///
 /// Returns an error when PSTD setup, source registration, propagation, or
-/// result extraction fails.
+/// result extraction fails. A request with zero time steps is refused as
+/// [`KwaversError::InvalidInput`], as the Hephaestus dispatch refuses it;
+/// so is a time step that is zero, negative or not finite, by
+/// `PSTDSolver::new`.
 pub fn run(
     req: &SimulationRunRequest<'_>,
     sources: Vec<Box<dyn KwaversSource>>,
@@ -181,10 +184,18 @@ mod tests;
 // ── Solver preparation ────────────────────────────────────────────────────────
 
 /// Build and configure a PSTD solver (without running it).
+///
+/// A request with zero time steps advances nothing; it is refused here,
+/// before any solver state is built, as the Hephaestus dispatch refuses it.
 pub(crate) fn prepare_solver(
     req: &SimulationRunRequest<'_>,
     sources: Vec<Box<dyn KwaversSource>>,
 ) -> KwaversResult<(PSTDSolver, Grid)> {
+    if req.time_steps == 0 {
+        return Err(KwaversError::InvalidInput(
+            "PSTD requires time_steps > 0; got 0".to_owned(),
+        ));
+    }
     let sensor_mask = req
         .sensor_mask
         .clone()
