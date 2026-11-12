@@ -2,7 +2,7 @@
 
 ## KW-CI-APT-SINGLE-MIRROR — An unreachable apt source ends in a timeout, not an apt error [patch] [ci] — todo
 
-priority: verification; needs: none; basis: 2891e767b23fbd89270bdbac8ee48402a8e39780; scope: `.github/actions/install-system-dependencies/action.yml` (steps `Refresh Ubuntu package index`, `Install Ubuntu packages`); `.github/workflows/ci.yml` (`cuda-runtime-build`, step `Install container prerequisites`; job `apt-mirror-selection`); `.github/actions/install-system-dependencies/select-mirrors.sh`; `scripts/tests/test_ubuntu_mirror_selection.py`
+priority: verification; needs: none; basis: b3b2c3a372c8ceaf6f330637383e4d2cd11c43c4; scope: `.github/actions/install-system-dependencies/action.yml` (steps `Refresh Ubuntu package index`, `Install Ubuntu packages`); `.github/workflows/ci.yml` (`cuda-runtime-build`, step `Install container prerequisites`; job `apt-mirror-selection`); `.github/actions/install-system-dependencies/select-mirrors.sh`; `scripts/tests/test_ubuntu_mirror_selection.py`
 
 - **Outcome:** an unreachable source ends in an apt error inside the step bound. The second-source half (an unreachable mirror is dropped from the mirror list before the refresh) is delivered by ryancinsight/kwavers#1049.
 - **Finding.** Both refreshes run `Acquire::Retries=3` with 20 s timeouts under an 8-minute `timeout`. Run 42967312932 had ten jobs end on exit 124 from that `timeout` with no apt error. Since apt 2.1.x a temporary fetch failure may exit 0 unless `--error-on=any` or `APT::Update::Error-Mode` is set (recalled, not read).
