@@ -43,7 +43,7 @@ where
     /// - `SystemError::GpuNotAvailable` when this host has no compatible
     ///   accelerator adapter (typed, so a caller can select a CPU backend);
     /// - `KwaversError::GpuError` when a present adapter fails device creation;
-    /// - `KwaversError::ResourceLimitExceeded` when a buffer the provider sizes
+    /// - `KwaversError::ResourceLimitExceeded` when `pml_xyz` or `shifts_all`
     ///   exceeds a limit the acquired device enables; the message names the
     ///   buffer, the bytes it needs, and the limit;
     /// - `KwaversError::InvalidInput` when the solver rejects its parameters or

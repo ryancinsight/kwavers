@@ -22,7 +22,7 @@ pub trait PstdStateBuilder: PstdStateProvider {
     /// Provider-owned execution context consumed by PSTD construction.
     type Context;
 
-    /// Refuse a plan whose provider-sized buffers exceed what `context` enables.
+    /// Refuse a plan the provider can tell `context` cannot hold.
     ///
     /// The solver calls this after it validates its inputs and before
     /// [`Self::build_state`]. The default refuses nothing: it is the contract

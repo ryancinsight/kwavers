@@ -1,10 +1,10 @@
-//! Capacity of the buffers a GPU PSTD provider sizes, against device limits.
+//! Capacity check of `pml_xyz` and `shifts_all`, two buffers of a GPU PSTD plan.
 //!
 //! `wgpu` rejects a buffer larger than `max_buffer_size` when it is created
 //! and a storage binding larger than `max_storage_buffer_binding_size` when
 //! its bind group is created. The provider makes both through calls that
 //! return no error, so either rejection panics in the uncaptured-error
-//! handler. These buffers are checked before the provider creates one.
+//! handler. `pml_xyz` and `shifts_all` are checked before any buffer exists.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -32,13 +32,13 @@ impl StorageBufferLimits {
     }
 }
 
-/// Element counts of the largest buffers this provider sizes itself.
+/// Element counts of `pml_xyz` and `shifts_all`, with `None` for a count beyond `usize`.
 ///
 /// `pml_xyz` packs the three PML arrays, three values per grid point; every
 /// field, medium, k-space and absorption buffer holds one value per point.
 /// `shifts_all` holds four values per axis sample and exceeds `pml_xyz` on
-/// some grids, every `N`x1x1 grid among them. Hephaestus sizes the workspace
-/// of its FFT plan; it is not planned here. `None` marks a count beyond `usize`.
+/// some grids, every `N`x1x1 grid among them. Not planned here: the workspace
+/// of the FFT plan, which Hephaestus sizes, and the buffers a run sizes.
 fn largest_buffers(shape: [usize; 3]) -> [(&'static str, Option<usize>); 2] {
     let [nx, ny, nz] = shape;
     let points = nx.checked_mul(ny).and_then(|xy| xy.checked_mul(nz));
@@ -52,7 +52,7 @@ fn largest_buffers(shape: [usize; 3]) -> [(&'static str, Option<usize>); 2] {
     ]
 }
 
-/// Refuse a plan one of whose provider-sized buffers exceeds an enabled limit.
+/// Refuse a plan whose `pml_xyz` or `shifts_all` exceeds a limit the device enables.
 ///
 /// # Errors
 ///
