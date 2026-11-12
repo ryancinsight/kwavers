@@ -1,10 +1,10 @@
-//! Buffer capacity of a GPU PSTD plan against the limits a device enables.
+//! Capacity of the buffers a GPU PSTD provider sizes, against device limits.
 //!
 //! `wgpu` rejects a buffer larger than `max_buffer_size` when it is created
 //! and a storage binding larger than `max_storage_buffer_binding_size` when
 //! its bind group is created. The provider makes both through calls that
 //! return no error, so either rejection panics in the uncaptured-error
-//! handler. The plan is checked before the provider creates a buffer.
+//! handler. These buffers are checked before the provider creates one.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -32,13 +32,13 @@ impl StorageBufferLimits {
     }
 }
 
-/// Element counts of the two buffers that can be the largest of a plan.
+/// Element counts of the largest buffers this provider sizes itself.
 ///
 /// `pml_xyz` packs the three PML arrays, three values per grid point; every
-/// field, medium, k-space and absorption buffer holds one value per grid
-/// point and so never exceeds it. `shifts_all` holds four values per axis
-/// sample (`precompute_kspace_shifts`), which exceeds `pml_xyz` on a grid of
-/// few points. `None` marks a count beyond `usize`.
+/// field, medium, k-space and absorption buffer holds one value per point.
+/// `shifts_all` holds four values per axis sample and exceeds `pml_xyz` on
+/// some grids, every `N`x1x1 grid among them. Hephaestus sizes the workspace
+/// of its FFT plan; it is not planned here. `None` marks a count beyond `usize`.
 fn largest_buffers(shape: [usize; 3]) -> [(&'static str, Option<usize>); 2] {
     let [nx, ny, nz] = shape;
     let points = nx.checked_mul(ny).and_then(|xy| xy.checked_mul(nz));
@@ -52,13 +52,13 @@ fn largest_buffers(shape: [usize; 3]) -> [(&'static str, Option<usize>); 2] {
     ]
 }
 
-/// Refuse a plan one of whose buffers exceeds a limit the device enables.
+/// Refuse a plan one of whose provider-sized buffers exceeds an enabled limit.
 ///
 /// # Errors
 ///
 /// [`KwaversError::ResourceLimitExceeded`] naming the buffer, the bytes it
-/// needs, and the limit it exceeds; the same variant when the byte count of
-/// a buffer does not fit `u64`.
+/// needs, and the limit it exceeds; the same variant when the element or
+/// byte count of a buffer overflows.
 pub(in crate::pstd_gpu) fn check_plan_capacity(
     shape: [usize; 3],
     limits: StorageBufferLimits,
@@ -70,7 +70,7 @@ pub(in crate::pstd_gpu) fn check_plan_capacity(
             .and_then(|elements| elements.checked_mul(ELEMENT_BYTES))
             .ok_or_else(|| KwaversError::ResourceLimitExceeded {
                 message: format!(
-                    "GPU PSTD buffer `{buffer}` of a {nx}x{ny}x{nz} grid has a byte count beyond u64"
+                    "GPU PSTD buffer `{buffer}` of a {nx}x{ny}x{nz} grid has an element or byte count that overflows"
                 ),
             })?;
         for (limit, limit_bytes) in [
@@ -155,7 +155,7 @@ mod tests {
         assert_eq!(
             refusal(result),
             format!(
-                "GPU PSTD buffer `pml_xyz` of a {}x2x1 grid has a byte count beyond u64",
+                "GPU PSTD buffer `pml_xyz` of a {}x2x1 grid has an element or byte count that overflows",
                 usize::MAX
             )
         );

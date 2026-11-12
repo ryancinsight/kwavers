@@ -67,8 +67,8 @@ that snapshot across batches instead of duplicating preparation logic.
 - At this decision point a peak-over-time consumer remained unsupported; ADR
   040 now provides the provider-side envelope. Construction refuses, with
   `ResourceLimitExceeded`, a plan whose packed PML or shift buffer exceeds a
-  device buffer limit (ryancinsight/kwavers#1059); the buffers a run sizes
-  by sensors and steps are not checked.
+  device buffer limit (ryancinsight/kwavers#1059); the Hephaestus FFT plan
+  and the buffers a run sizes by sensors and steps are not checked there.
 - Lossless PSTD remains available on a 23-buffer device. Absorption is an
   explicit 31-buffer capability requirement, not a reason to use Leto.
 
