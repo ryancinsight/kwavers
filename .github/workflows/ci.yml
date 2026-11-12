@@ -144,6 +144,20 @@ jobs:
     permissions:
       contents: read
 
+  # A workflow file that is valid YAML but invalid GitHub Actions fails no
+  # check: GitHub schedules a run with no jobs and registers nothing on the
+  # pull request, so the gate the file defines silently does not run. The
+  # shared Atlas guard analyses every workflow file here.
+  workflow-lint:
+    name: Workflows are valid
+    needs: changes
+    if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
+    # No timeout-minutes here, for the reason given on `semver` above; the
+    # bound lives inside workflow-lint.yml itself.
+    uses: ryancinsight/atlas/.github/workflows/workflow-lint.yml@b408be289b21d88da9bf544d83c2b93371ce0ff2
+    permissions:
+      contents: read
+
   # Runs first and alone: it needs no toolchain, no cache and no build, and it
   # guards the one artifact whose correctness cannot be checked from inside the
   # environment that produces it. Working on this repository inside the Atlas
@@ -1372,6 +1386,7 @@ jobs:
     if: always()
     needs:
       - changes
+      - workflow-lint
       - lockfile
       - apt-mirror-selection
       - pinn-validation
