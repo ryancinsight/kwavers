@@ -10,7 +10,7 @@ use kwavers_grid::Grid;
 pub(in crate::pstd_gpu::pipeline) enum ConstructionError {
     /// An input failed validation, or the provider could not build its state.
     Rejected(String),
-    /// The plan exceeds a limit of the provider context; the provider's
+    /// The capacity check of the provider refused the plan; its
     /// error is kept whole so a caller can match on its variant.
     Capacity(KwaversError),
 }
@@ -32,8 +32,8 @@ where
     /// # Errors
     ///
     /// Returns `Err` if any input array shape is inconsistent with `grid`, if
-    /// the plan exceeds a limit of `context` (the message then starts with
-    /// "Resource limit exceeded"), or if the provider cannot build its
+    /// the capacity check of the provider refuses the plan (the message then
+    /// starts with "Resource limit exceeded"), or if it cannot build its
     /// execution state.
     pub fn new(
         context: P::Context,
@@ -50,8 +50,8 @@ where
         })
     }
 
-    /// Validate the inputs, check the plan against the capacity of `context`,
-    /// then build the provider state.
+    /// Validate the inputs, run the capacity check of the provider, then
+    /// build the provider state.
     pub(in crate::pstd_gpu::pipeline) fn construct(
         context: P::Context,
         grid: &Grid,

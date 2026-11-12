@@ -8,7 +8,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-/// Bytes of one `f32`, the element type of every buffer the plan holds.
+/// Bytes of one `f32`, the element type of `pml_xyz` and `shifts_all`.
 const ELEMENT_BYTES: u64 = 4;
 const _: () = assert!(std::mem::size_of::<f32>() == 4);
 
@@ -39,7 +39,7 @@ impl StorageBufferLimits {
 /// `shifts_all` holds four values per axis sample and exceeds `pml_xyz` on
 /// some grids, every `N`x1x1 grid among them. Not planned here: the workspace
 /// of the FFT plan, which Hephaestus sizes, and the buffers a run sizes.
-fn largest_buffers(shape: [usize; 3]) -> [(&'static str, Option<usize>); 2] {
+fn checked_buffers(shape: [usize; 3]) -> [(&'static str, Option<usize>); 2] {
     let [nx, ny, nz] = shape;
     let points = nx.checked_mul(ny).and_then(|xy| xy.checked_mul(nz));
     let axis_samples = nx.checked_add(ny).and_then(|xy| xy.checked_add(nz));
@@ -64,7 +64,7 @@ pub(in crate::pstd_gpu) fn check_plan_capacity(
     limits: StorageBufferLimits,
 ) -> KwaversResult<()> {
     let [nx, ny, nz] = shape;
-    for (buffer, elements) in largest_buffers(shape) {
+    for (buffer, elements) in checked_buffers(shape) {
         let bytes = elements
             .and_then(|elements| u64::try_from(elements).ok())
             .and_then(|elements| elements.checked_mul(ELEMENT_BYTES))

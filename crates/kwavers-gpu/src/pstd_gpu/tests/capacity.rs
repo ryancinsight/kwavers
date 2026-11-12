@@ -68,12 +68,12 @@ fn solver_at_limit(max_buffer_size: u64) -> Result<GpuPstdSolver, String> {
 }
 
 /// Ties the planned byte count to the allocator: at a limit equal to the
-/// packed PML buffer the device creates every buffer of the plan.
+/// packed PML buffer the solver builds.
 #[test]
 #[ignore = "requires a GPU device"]
 fn a_plan_at_the_buffer_limit_builds() {
     let solver = solver_at_limit(PACKED_PML_BYTES)
-        .unwrap_or_else(|message| panic!("the plan fits the device limit: {message}"));
+        .unwrap_or_else(|message| panic!("the solver builds at this limit: {message}"));
 
     assert_eq!([solver.nx, solver.ny, solver.nz], SHAPE);
 }
@@ -84,7 +84,7 @@ fn a_plan_at_the_buffer_limit_builds() {
 #[ignore = "requires a GPU device"]
 fn a_limit_between_a_field_and_the_packed_pml_is_refused() {
     assert_eq!(
-        solver_at_limit(2 * FIELD_BYTES).expect_err("the plan exceeds the device limit"),
+        solver_at_limit(2 * FIELD_BYTES).expect_err("`pml_xyz` exceeds the device limit"),
         "Resource limit exceeded: GPU PSTD buffer `pml_xyz` needs 49152 bytes; the device enables max_buffer_size = 32768 bytes"
     );
 }
@@ -95,7 +95,7 @@ fn a_limit_between_a_field_and_the_packed_pml_is_refused() {
 #[ignore = "requires a GPU device"]
 fn a_limit_below_one_field_is_refused_before_any_buffer() {
     assert_eq!(
-        solver_at_limit(FIELD_BYTES / 2).expect_err("the plan exceeds the device limit"),
+        solver_at_limit(FIELD_BYTES / 2).expect_err("`pml_xyz` exceeds the device limit"),
         "Resource limit exceeded: GPU PSTD buffer `pml_xyz` needs 49152 bytes; the device enables max_buffer_size = 8192 bytes"
     );
 }
