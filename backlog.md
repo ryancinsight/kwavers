@@ -44,7 +44,7 @@
 <a id="kwavers-coupling-contract-001"></a>- [KWAVERS-COUPLING-CONTRACT-001](backlog/kwavers-coupling-contract-001.md) — Medium-aware field-coupling inputs [minor] — todo
 <a id="kw-examples-oversized-923"></a>- [KW-EXAMPLES-OVERSIZED-923](backlog/kw-examples-oversized-923.md) — Examples and tests grown or touched by #923 stay over the 500-line target [patch] — todo
 <a id="kw-gpu-host-tests-unrun"></a>- [KW-GPU-HOST-TESTS-UNRUN](backlog/kw-gpu-host-tests-unrun.md) — kwavers-gpu device tests pass silently on an adapter-less runner [patch] — todo
-<a id="kw-gpu-device-error-substitute"></a>- [KW-GPU-DEVICE-ERROR-SUBSTITUTE](backlog/kw-gpu-device-error-substitute.md) — No regression is built to make the GPU PSTD provider return an error at or after device acquisition [patch] — todo
+<a id="kw-gpu-device-error-substitute"></a>- [KW-GPU-DEVICE-ERROR-SUBSTITUTE](backlog/kw-gpu-device-error-substitute.md) — The one regression in which the GPU PSTD provider fails at or after device acquisition needs an adapter [patch] — todo
 <a id="kw-swe-clamp-test-residuals"></a>- [KW-SWE-CLAMP-TEST-RESIDUALS](backlog/kw-swe-clamp-test-residuals.md) — No workflow test command here selects the SWE integration test, and two clamp-test thresholds are underived [patch] — todo
 <a id="kw-board-offset-statuses"></a>- [KW-BOARD-OFFSET-STATUSES](backlog/kw-board-offset-statuses.md) — 14 entries moved to `todo` from off-set statuses must name their open acceptance clause with a witness, or be closed [patch] — todo
 <a id="kw-gpu-adapter-field-states"></a>- [KW-GPU-ADAPTER-FIELD-STATES](backlog/kw-gpu-adapter-field-states.md) — GPU PSTD adapter accessor docs name no value before a batch, and the Rustdoc of `pressure_field` is contradicted after a peak run [patch] — todo
@@ -56,3 +56,4 @@
 <a id="kw-dep-eunomia-requirement-lag"></a>- [KW-DEP-EUNOMIA-REQUIREMENT-LAG](backlog/kw-dep-eunomia-requirement-lag.md) — The Eunomia requirement admits no version its repository now holds [patch] — todo
 <a id="kw-gpu-fft-plan-capacity"></a>- [KW-GPU-FFT-PLAN-CAPACITY](backlog/kw-gpu-fft-plan-capacity.md) — A GPU PSTD plan whose FFT workspace or dispatch exceeds a device limit is refused as `InvalidInput`, after field buffers exist [patch] — blocked
 <a id="kw-gpu-run-buffer-capacity"></a>- [KW-GPU-RUN-BUFFER-CAPACITY](backlog/kw-gpu-run-buffer-capacity.md) — A GPU PSTD run whose record buffer exceeds a device buffer limit panics [patch] — todo
+<a id="kw-gpu-pstd-buffer-request"></a>- [KW-GPU-PSTD-BUFFER-REQUEST](backlog/kw-gpu-pstd-buffer-request.md) — GPU PSTD requests a 128 MiB buffer limit whatever the adapter supports [minor] — todo
