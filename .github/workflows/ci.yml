@@ -144,6 +144,20 @@ jobs:
     permissions:
       contents: read
 
+  # The shared Atlas guard, by its script, runs actionlint on each workflow
+  # file here. Its header says why (relayed, not observed here): a file that
+  # is valid YAML but invalid GitHub Actions fails no check; GitHub schedules
+  # a run with no jobs and registers nothing on the pull request.
+  workflow-lint:
+    name: Workflows are valid
+    needs: changes
+    if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && needs.changes.outputs.code == 'true' }}
+    # No timeout-minutes here, for the reason given on `semver` above; the
+    # bound lives inside workflow-lint.yml itself.
+    uses: ryancinsight/atlas/.github/workflows/workflow-lint.yml@b408be289b21d88da9bf544d83c2b93371ce0ff2
+    permissions:
+      contents: read
+
   # Runs first and alone: it needs no toolchain, no cache and no build, and it
   # guards the one artifact whose correctness cannot be checked from inside the
   # environment that produces it. Working on this repository inside the Atlas
@@ -257,7 +271,7 @@ jobs:
             exit 1
           fi
           for FORBIDDEN in ${line#*:}; do
-            if grep -qE "^kwavers-$FORBIDDEN[[:space:]]*=" "$MANIFEST"; then
+            if grep -qE "^kwavers-${FORBIDDEN}[[:space:]]*=" "$MANIFEST"; then
               echo "::error::layering violation: kwavers-$CRATE depends on kwavers-$FORBIDDEN"
               FAILED=1
             fi
@@ -666,7 +680,7 @@ jobs:
           cmp /etc/apt/apt-mirrors.txt "$RUNNER_TEMP/mirrors.expected"
           hosts=$(cut -f1 /etc/apt/apt-mirrors.txt | sed -e 's|^[a-z]*://||' -e 's|/.*||' | sort -u)
           # One live mirror is enough to install from, so the count is reported, not required.
-          echo "distinct hosts ($(echo "$hosts" | wc -l)): $(echo $hosts)"
+          echo "distinct hosts ($(echo "$hosts" | wc -l)): $(echo "$hosts" | paste -sd ' ' -)"
           dead_line=$(grep -E '^unreachable http://192\.0\.2\.1/ubuntu/ ' "$log")
           echo "$dead_line"
           pattern='^unreachable [^ ]+ ([0-9]+)\.[0-9]{3}s: '
@@ -1372,6 +1386,7 @@ jobs:
     if: always()
     needs:
       - changes
+      - workflow-lint
       - lockfile
       - apt-mirror-selection
       - pinn-validation

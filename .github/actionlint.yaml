@@ -1,0 +1,6 @@
+# Runner labels of this repository that actionlint does not list itself.
+# gpu-parity.yml runs on `[self-hosted, linux, x64, cuda]`; actionlint
+# 1.7.12 reported `cuda` there as unknown and none of the other three.
+self-hosted-runner:
+  labels:
+    - cuda

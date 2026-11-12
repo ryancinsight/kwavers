@@ -128,7 +128,7 @@ jobs:
             local revision="$1"
             local benches="$revision/crates/kwavers/benches"
 
-            local files targets modules covered uncovered orphaned
+            local files targets modules covered uncovered orphaned name
 
             files="$(
               find "$benches" -maxdepth 1 -type f -name '*.rs' -printf '%f\n' \
@@ -175,14 +175,14 @@ jobs:
             uncovered="$(comm -23 <(printf '%s\n' "$files") <(printf '%s\n' "$covered"))"
             if [[ -n "$uncovered" ]]; then
               echo "::error::$revision: bench files that are neither a Cargo target nor a mod of one:"
-              printf '  %s\n' $uncovered
+              while IFS= read -r name; do printf '  %s\n' "$name"; done <<< "$uncovered"
               return 1
             fi
 
             orphaned="$(comm -13 <(printf '%s\n' "$files") <(printf '%s\n' "$targets"))"
             if [[ -n "$orphaned" ]]; then
               echo "::error::$revision: Cargo bench targets with no backing file:"
-              printf '  %s\n' $orphaned
+              while IFS= read -r name; do printf '  %s\n' "$name"; done <<< "$orphaned"
               return 1
             fi
           }
