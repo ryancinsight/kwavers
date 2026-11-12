@@ -48,3 +48,7 @@
 <a id="kw-gpu-device-error-substitute"></a>- [KW-GPU-DEVICE-ERROR-SUBSTITUTE](backlog/kw-gpu-device-error-substitute.md) — No regression makes the GPU PSTD provider return an error at or after device acquisition [patch] — todo
 <a id="kw-swe-clamp-test-residuals"></a>- [KW-SWE-CLAMP-TEST-RESIDUALS](backlog/kw-swe-clamp-test-residuals.md) — No workflow test command here selects the SWE integration test, and two clamp-test thresholds are underived [patch] — todo
 <a id="kw-board-offset-statuses"></a>- [KW-BOARD-OFFSET-STATUSES](backlog/kw-board-offset-statuses.md) — 14 entries moved to `todo` from off-set statuses must name their open acceptance clause with a witness, or be closed [patch] — todo
+<a id="kw-gpu-adapter-field-states"></a>- [KW-GPU-ADAPTER-FIELD-STATES](backlog/kw-gpu-adapter-field-states.md) — GPU PSTD adapter fields before a batch and after a peak run are unspecified [patch] — todo
+<a id="kw-pstd-zero-time-step"></a>- [KW-PSTD-ZERO-TIME-STEP](backlog/kw-pstd-zero-time-step.md) — The Leto PSTD path accepts a time step of zero and zero steps [patch] — todo
+<a id="kw-sim-hybrid-runner-dispatch"></a>- [KW-SIM-HYBRID-RUNNER-DISPATCH](backlog/kw-sim-hybrid-runner-dispatch.md) — The runner sends a Hybrid request to the PSTD dispatch [patch] — todo
+<a id="kw-sim-pstd-no-sensor-contract"></a>- [KW-SIM-PSTD-NO-SENSOR-CONTRACT](backlog/kw-sim-pstd-no-sensor-contract.md) — The two PSTD dispatches differ on a request without sensors [patch] — todo

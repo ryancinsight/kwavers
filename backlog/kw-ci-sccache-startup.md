@@ -2,11 +2,11 @@
 
 ## KW-CI-SCCACHE-STARTUP — A hosted job fails before compiling when the sccache server does not start [patch] — todo
 
-priority: verification; needs: none; basis: ea5f0a4d666663ae74d189e1718cfc5836e6e2cb; scope: `.github/workflows/ci.yml`, `.github/workflows/benchmark-regression.yml`
+priority: verification; needs: none; basis: ea5f0a4d666663ae74d189e1718cfc5836e6e2cb; scope: `.github/workflows/ci.yml`, `.github/workflows/benchmark-regression.yml`, `.github/workflows/python-wheel-smoke.yml`
 
 - **Finding.** In pipeline run 43106894660 (the ready run of #1051), job 130812537917 `Library tests (shard 2 of 3)` failed ten seconds into its test step with exit code 102: `sccache: error: Timed out waiting for server startup. Maybe the remote service is unreachable?`, raised on `rustc -vV` while cargo read the workspace. No crate was compiled and no test ran. Shards 1 and 3 of the same run passed, and `CI gate` failed with shard 2. The re-run of the failed jobs (attempt 2 of the same run) passed shard 2 and `CI gate`.
 - **Read at the basis:** six jobs of `ci.yml` (lines 218, 455, 529, 702, 896, 1135) and two of `benchmark-regression.yml` (lines 77, 243) set `RUSTC_WRAPPER: sccache` with `SCCACHE_GHA_ENABLED: "true"` for the whole job, so every compiler call of those jobs needs the sccache server, and the server needs the hosting cache service when it starts. No step checks that the server started.
-- **Not known:** how often this happens. One occurrence was observed; the run history was not searched.
+- **Not known:** how often this happens. One occurrence was observed; the run history was not searched. `python-wheel-smoke.yml` passes `sccache: true` to its wheel-build action twice (lines 88 and 170); what that action does with it was not read.
 - **Acceptance:** either a job whose sccache server cannot start compiles and tests without the wrapper and says so in its step summary, proven by a run in which the server is made to fail; or a recorded decision that such a job fails and is re-run, with the rate measured from the run history.
 - **Non-goals:** no change to what the jobs build or test; no removal of the cache.
-- **Next step:** count the message in the failed pipeline runs of the last 30 days (`gh run list --workflow ci.yml --status failure`, then `gh run view --log-failed` per run); with the rate known, choose between the two acceptance branches.
+- **Next step:** count the message over the job attempts of the last 30 days, not over failed runs: the observed run concludes success since its second attempt, and the first verdict on #1052 (comment 6808741611) found it absent from `gh run list --status failure` and noted that the command lists 20 runs unless `--limit` is given. List the runs of `ci.yml` in the window whatever their conclusion, and read the failed jobs of every attempt of each; with the rate known, choose between the two acceptance branches.
