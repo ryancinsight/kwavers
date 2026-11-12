@@ -218,9 +218,9 @@ mod tests {
         );
     }
 
-    /// The provider refuses zero steps before it acquires a device. A
-    /// dispatch that ran Leto when the provider fails would return that
-    /// path's result or error in place of this message.
+    /// The provider refuses zero steps before it acquires a device. With
+    /// the sensor mask the Leto dispatch returns `Ok` for this request, so
+    /// handing back its outcome in place of the refusal fails this test.
     #[cfg(feature = "gpu")]
     #[test]
     fn gpu_selection_reports_the_provider_rejection() {
@@ -228,6 +228,7 @@ mod tests {
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
         let mut request = gpu_request(&grid, &medium);
         request.time_steps = 0;
+        request.sensor_mask = Some(leto::Array3::from_elem([8, 8, 8], true));
 
         let error = SimulationRunner::run(&request, Vec::new())
             .expect_err("zero time steps violate the GPU PSTD batch contract");
@@ -239,7 +240,7 @@ mod tests {
     }
 
     /// The provider refuses two absorption exponents while it prepares the
-    /// host snapshot of the medium, before it acquires a device.
+    /// medium snapshot; the Leto dispatch returns `Ok` for this request.
     #[cfg(feature = "gpu")]
     #[test]
     fn gpu_selection_reports_the_provider_medium_rejection() {
@@ -258,6 +259,7 @@ mod tests {
         medium.alpha_power[[0, 0, 1]] = 1.7;
         let request = SimulationRunRequest {
             medium: &medium,
+            sensor_mask: Some(leto::Array3::from_elem([8, 8, 8], true)),
             ..gpu_request(&grid, &uniform)
         };
 
@@ -272,7 +274,7 @@ mod tests {
 
     #[cfg(feature = "gpu")]
     #[test]
-    #[ignore = "requires a GPU device; run on the scheduled self-hosted GPU job"]
+    #[ignore = "requires a GPU device"]
     fn gpu_selection_executes_a_hephaestus_request_on_a_device() {
         use leto::{Array2, Array3};
 

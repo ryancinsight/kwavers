@@ -97,9 +97,9 @@ non-power-of-two Hephaestus case and reject unsupported contracts instead of
 selecting Leto. Two factory regressions (a medium with two absorption
 exponents; a zero time step) and two runner regressions (such a medium;
 zero time steps) verify the message of the adapter's or the provider's
-refusal, which a fall-back to Leto on that error would replace with a
-solver, a result or another error. No regression makes the provider return
-a device error.
+refusal. For each of the four requests the Leto path returns a solver or
+`Ok`, so handing that back in place of the refusal fails the regression.
+No regression makes the provider return an error at or after acquisition.
 
 Of the regressions that need a device, the four-request one, the
 CPU-reference one and those of the adapter and the runner are ignored by
