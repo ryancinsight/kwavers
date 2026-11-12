@@ -71,7 +71,7 @@ fn solver_at_limit(max_buffer_size: u64) -> Result<GpuPstdSolver, String> {
 /// packed PML buffer the solver builds.
 #[test]
 #[ignore = "requires a GPU device"]
-fn a_plan_at_the_buffer_limit_builds() {
+fn the_test_grid_builds_at_the_packed_pml_limit() {
     let solver = solver_at_limit(PACKED_PML_BYTES)
         .unwrap_or_else(|message| panic!("the solver builds at this limit: {message}"));
 
