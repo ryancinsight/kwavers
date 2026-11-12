@@ -3,5 +3,8 @@
 //! SRP: changes when the buffer layout, shader path, push-constant size,
 //! or pipeline entry-point names change.
 
+mod entry;
 mod kspace;
+
+pub(super) use entry::ConstructionError;
 mod solver;

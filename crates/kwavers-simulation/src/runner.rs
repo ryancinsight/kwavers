@@ -272,6 +272,38 @@ mod tests {
         );
     }
 
+    /// The provider requests a `max_buffer_size` of 128 MiB (134217728
+    /// bytes). The packed PML buffer of a 256x256x256 grid holds three `f32`
+    /// values for each of 16777216 points: 201326592 bytes. With the sensor
+    /// the Leto dispatch returns `Ok` for this request, so handing back its
+    /// outcome in place of the refusal fails this test.
+    #[cfg(feature = "gpu")]
+    #[test]
+    #[ignore = "requires a GPU device"]
+    fn gpu_selection_reports_a_plan_beyond_device_capacity() {
+        use kwavers_core::error::KwaversError;
+
+        let grid = Grid::new(256, 256, 256, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let mut request = gpu_request(&grid, &medium);
+        request.time_steps = 1;
+        let mut sensor_mask = leto::Array3::from_elem([256, 256, 256], false);
+        sensor_mask[[128, 128, 128]] = true;
+        request.sensor_mask = Some(sensor_mask);
+
+        let error = SimulationRunner::run(&request, Vec::new())
+            .expect_err("the packed PML buffer exceeds the buffer size the provider requests");
+
+        assert!(
+            matches!(error, KwaversError::ResourceLimitExceeded { .. }),
+            "{error:?}"
+        );
+        assert_eq!(
+            error.to_string(),
+            "Resource limit exceeded: GPU PSTD buffer `pml_xyz` needs 201326592 bytes; the device enables max_buffer_size = 134217728 bytes"
+        );
+    }
+
     #[cfg(feature = "gpu")]
     #[test]
     #[ignore = "requires a GPU device"]
