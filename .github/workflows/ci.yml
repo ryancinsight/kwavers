@@ -271,7 +271,7 @@ jobs:
             exit 1
           fi
           for FORBIDDEN in ${line#*:}; do
-            if grep -qE "^kwavers-$FORBIDDEN[[:space:]]*=" "$MANIFEST"; then
+            if grep -qE "^kwavers-${FORBIDDEN}[[:space:]]*=" "$MANIFEST"; then
               echo "::error::layering violation: kwavers-$CRATE depends on kwavers-$FORBIDDEN"
               FAILED=1
             fi
@@ -680,7 +680,7 @@ jobs:
           cmp /etc/apt/apt-mirrors.txt "$RUNNER_TEMP/mirrors.expected"
           hosts=$(cut -f1 /etc/apt/apt-mirrors.txt | sed -e 's|^[a-z]*://||' -e 's|/.*||' | sort -u)
           # One live mirror is enough to install from, so the count is reported, not required.
-          echo "distinct hosts ($(echo "$hosts" | wc -l)): $(echo $hosts)"
+          echo "distinct hosts ($(echo "$hosts" | wc -l)): $(echo "$hosts" | paste -sd ' ' -)"
           dead_line=$(grep -E '^unreachable http://192\.0\.2\.1/ubuntu/ ' "$log")
           echo "$dead_line"
           pattern='^unreachable [^ ]+ ([0-9]+)\.[0-9]{3}s: '

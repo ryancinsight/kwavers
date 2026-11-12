@@ -175,14 +175,14 @@ jobs:
             uncovered="$(comm -23 <(printf '%s\n' "$files") <(printf '%s\n' "$covered"))"
             if [[ -n "$uncovered" ]]; then
               echo "::error::$revision: bench files that are neither a Cargo target nor a mod of one:"
-              printf '  %s\n' $uncovered
+              sed 's/^/  /' <<< "$uncovered"
               return 1
             fi
 
             orphaned="$(comm -13 <(printf '%s\n' "$files") <(printf '%s\n' "$targets"))"
             if [[ -n "$orphaned" ]]; then
               echo "::error::$revision: Cargo bench targets with no backing file:"
-              printf '  %s\n' $orphaned
+              sed 's/^/  /' <<< "$orphaned"
               return 1
             fi
           }

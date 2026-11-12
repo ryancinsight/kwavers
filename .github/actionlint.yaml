@@ -1,0 +1,6 @@
+# Labels of this repository's self-hosted runners. actionlint knows only
+# GitHub's hosted labels, so it reports any other label as unknown.
+# gpu-parity.yml runs on `[self-hosted, linux, x64, cuda]`.
+self-hosted-runner:
+  labels:
+    - cuda
