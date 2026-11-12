@@ -1,6 +1,6 @@
 <a id="kw-gpu-adapter-field-states"></a>
 
-## KW-GPU-ADAPTER-FIELD-STATES — GPU PSTD adapter accessor docs name no value before a batch and a wrong one after a peak run [patch] — todo
+## KW-GPU-ADAPTER-FIELD-STATES — GPU PSTD adapter accessor docs name no value before a batch, and the Rustdoc of `pressure_field` is contradicted after a peak run [patch] — todo
 
 priority: verification; needs: none; basis: fa8c4a892787ec8907ddb504ac3a7fb62bf3874c; scope: `crates/kwavers-simulation/src/solver_adapters/gpu_pstd.rs`, `docs/adr/037-gpu-pstd-output-contract.md`
 
