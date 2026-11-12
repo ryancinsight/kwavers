@@ -16,8 +16,7 @@ const FIELD_BYTES: u64 = 4096 * 4;
 /// `pml_xyz` of the grid: three `f32` values for each of 4096 points.
 const PACKED_PML_BYTES: u64 = 3 * FIELD_BYTES;
 
-/// Build a lossless solver for the `SHAPE` grid on a device whose
-/// `max_buffer_size` is `max_buffer_size`.
+/// A lossless `SHAPE` solver on a device with the given `max_buffer_size`.
 fn solver_at_limit(max_buffer_size: u64) -> Result<GpuPstdSolver, String> {
     let context = GpuProviderContext::<WgpuDevice>::with_features_and_limits(
         WgpuDevice::acquisition_preference(),

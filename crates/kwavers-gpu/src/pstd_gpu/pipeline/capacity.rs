@@ -1,12 +1,10 @@
 //! Buffer capacity of a GPU PSTD plan against the limits a device enables.
 //!
-//! `wgpu` rejects a buffer larger than `max_buffer_size` when the buffer is
-//! created, and a storage binding larger than
-//! `max_storage_buffer_binding_size` when its bind group is created. The
-//! provider creates buffers and bind groups through calls that return no
-//! error, so either rejection reaches the uncaptured-error handler, which
-//! panics. The plan is therefore checked against both limits before the
-//! provider creates its first buffer.
+//! `wgpu` rejects a buffer larger than `max_buffer_size` when it is created
+//! and a storage binding larger than `max_storage_buffer_binding_size` when
+//! its bind group is created. The provider makes both through calls that
+//! return no error, so either rejection panics in the uncaptured-error
+//! handler. The plan is checked before the provider creates a buffer.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

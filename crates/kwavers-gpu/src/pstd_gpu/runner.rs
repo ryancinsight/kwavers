@@ -88,6 +88,7 @@ impl Default for GpuPstdRunConfig {
 /// - A host without a compatible accelerator adapter returns
 ///   `SystemError::GpuNotAvailable`; a present adapter that fails returns
 ///   `KwaversError::GpuError`.
+/// - A plan beyond a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
 pub fn run_gpu_pstd(
     grid: &Grid,
     medium: &dyn Medium,
@@ -108,6 +109,7 @@ pub fn run_gpu_pstd(
 ///
 /// Returns `KwaversError::InvalidInput` for an invalid grid, source, medium,
 /// sensor mask, configuration, or provider acquisition failure.
+/// A plan beyond a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
 pub fn run_gpu_pstd_with_outputs(
     grid: &Grid,
     medium: &dyn Medium,
@@ -164,6 +166,7 @@ pub fn run_gpu_pstd_with_snapshot_outputs(
 /// - A host without a compatible accelerator adapter returns
 ///   `SystemError::GpuNotAvailable`; a present adapter that fails returns
 ///   `KwaversError::GpuError`.
+/// - A plan beyond a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
 pub fn run_gpu_pstd_with_provider<P>(
     grid: &Grid,
     medium: &dyn Medium,
@@ -202,6 +205,7 @@ where
 ///
 /// Returns `KwaversError::InvalidInput` for an invalid grid, source, medium,
 /// sensor mask, configuration, or provider acquisition failure.
+/// A plan beyond a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
 pub fn run_gpu_pstd_with_provider_outputs<P>(
     grid: &Grid,
     medium: &dyn Medium,
