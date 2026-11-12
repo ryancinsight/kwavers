@@ -99,7 +99,8 @@ exponents; a zero time step) and two runner regressions (such a medium;
 zero time steps) verify the message of the adapter's or the provider's
 refusal. For each of the four requests the Leto path returns a solver or
 `Ok`, so handing that back in place of the refusal fails the regression.
-No regression makes the provider return an error at or after acquisition.
+No regression is built to make the provider return an error at or after
+acquisition.
 
 Of the regressions that need a device, the four-request one, the
 CPU-reference one and those of the adapter and the runner are ignored by
