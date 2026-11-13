@@ -48,7 +48,6 @@
 <a id="kw-swe-clamp-test-residuals"></a>- [KW-SWE-CLAMP-TEST-RESIDUALS](backlog/kw-swe-clamp-test-residuals.md) — No workflow test command here selects the SWE integration test, and two clamp-test thresholds are underived [patch] — todo
 <a id="kw-board-offset-statuses"></a>- [KW-BOARD-OFFSET-STATUSES](backlog/kw-board-offset-statuses.md) — 14 entries moved to `todo` from off-set statuses must name their open acceptance clause with a witness, or be closed [patch] — todo
 <a id="kw-gpu-adapter-field-states"></a>- [KW-GPU-ADAPTER-FIELD-STATES](backlog/kw-gpu-adapter-field-states.md) — GPU PSTD adapter accessor docs name no value before a batch, and the Rustdoc of `pressure_field` is contradicted after a peak run [patch] — todo
-<a id="kw-sim-hybrid-runner-dispatch"></a>- [KW-SIM-HYBRID-RUNNER-DISPATCH](backlog/kw-sim-hybrid-runner-dispatch.md) — The runner sends a Hybrid request to the PSTD dispatch [patch] — todo
 <a id="kw-sim-pstd-no-sensor-contract"></a>- [KW-SIM-PSTD-NO-SENSOR-CONTRACT](backlog/kw-sim-pstd-no-sensor-contract.md) — The two PSTD dispatches differ on a request without sensors [patch] — todo
 <a id="kw-gpu-unpinned-refusal-fallback"></a>- [KW-GPU-UNPINNED-REFUSAL-FALLBACK](backlog/kw-gpu-unpinned-refusal-fallback.md) — A Leto fall-back on GPU PSTD provider errors other than the pinned refusals fails no test [patch] — todo
 <a id="kw-ci-semver-not-run"></a>- [KW-CI-SEMVER-NOT-RUN](backlog/kw-ci-semver-not-run.md) — No hosted run compares a public surface when a change lands [patch] — todo
@@ -66,3 +65,4 @@
 <a id="kw-unc-morris-saltelli"></a>- [KW-UNC-MORRIS-SALTELLI](backlog/kw-unc-morris-saltelli.md) — Sensitivity analysis offers correlation screening only, while the provider now has the Morris and Saltelli estimators [minor] — todo
 <a id="kw-ci-doctests-one-package"></a>- [KW-CI-DOCTESTS-ONE-PACKAGE](backlog/kw-ci-doctests-one-package.md) — No hosted job or push gate runs the doctests of any package but `kwavers` [patch] [ci] — todo
 <a id="kw-hook-nextest-config-ungated"></a>- [KW-HOOK-NEXTEST-CONFIG-UNGATED](backlog/kw-hook-nextest-config-ungated.md) — A push changing only `.config/nextest.toml` passes the pre-push hook with no package gated [patch] [ci] — todo
+<a id="kw-py-hybrid-refused"></a>- [KW-PY-HYBRID-REFUSED](backlog/kw-py-hybrid-refused.md) — Python callers offer a Hybrid solver that `Simulation.run` refuses [patch] — todo
