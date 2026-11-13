@@ -58,3 +58,10 @@
 <a id="kw-gpu-run-buffer-capacity"></a>- [KW-GPU-RUN-BUFFER-CAPACITY](backlog/kw-gpu-run-buffer-capacity.md) — A GPU PSTD run whose record buffer exceeds a device buffer limit panics [patch] — todo
 <a id="kw-gpu-pstd-buffer-request"></a>- [KW-GPU-PSTD-BUFFER-REQUEST](backlog/kw-gpu-pstd-buffer-request.md) — GPU PSTD requests a 128 MiB buffer limit whatever the adapter supports [minor] — todo
 <a id="kwavers-aeq-met-70"></a>- [KWAVERS-AEQ-MET-70](backlog/kwavers-aeq-met-70.md) — Inventory raw public metrics in the remaining transducer families [arch] — todo
+<a id="kw-ci-gate-passes-drafts"></a>- [KW-CI-GATE-PASSES-DRAFTS](backlog/kw-ci-gate-passes-drafts.md) — The CI gate and Architecture gate pass a draft pull request whose jobs were all skipped [patch] [ci] — todo
+<a id="kw-ci-ubuntu-latest-unpinned"></a>- [KW-CI-UBUNTU-LATEST-UNPINNED](backlog/kw-ci-ubuntu-latest-unpinned.md) — 23 workflow jobs and one wheel-smoke matrix cell run on the moving `ubuntu-latest` image [patch] [ci] — todo
+<a id="kw-fdtd-avx512-doc"></a>- [KW-FDTD-AVX512-DOC](backlog/kw-fdtd-avx512-doc.md) — The FDTD solver doc advertises AVX-512 kernels that were deleted [patch] — todo
+<a id="kw-fdtd-sigma-test-slow"></a>- [KW-FDTD-SIGMA-TEST-SLOW](backlog/kw-fdtd-sigma-test-slow.md) — The FDTD sigma-factor test runs at two thirds of its 60 s bound in a parallel run [patch] [perf] — todo
+<a id="kw-nextest-exclusive-remainder"></a>- [KW-NEXTEST-EXCLUSIVE-REMAINDER](backlog/kw-nextest-exclusive-remainder.md) — Root-package binaries and `ci` overrides still hold nextest slots exclusively, and the 25 m bound is underived [patch] [ci] — todo
+<a id="kw-py-leto-compat-regrowth"></a>- [KW-PY-LETO-COMPAT-REGROWTH](backlog/kw-py-leto-compat-regrowth.md) — A local numpy-Leto conversion module serves 26 binding files, contradicting its closed gap record [patch] [arch] — todo
+<a id="kw-unc-morris-saltelli"></a>- [KW-UNC-MORRIS-SALTELLI](backlog/kw-unc-morris-saltelli.md) — Sensitivity analysis offers correlation screening only, while the provider now has the Morris and Saltelli estimators [minor] — todo
