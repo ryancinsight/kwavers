@@ -65,4 +65,4 @@
 <a id="kw-py-leto-compat-regrowth"></a>- [KW-PY-LETO-COMPAT-REGROWTH](backlog/kw-py-leto-compat-regrowth.md) — A local numpy-Leto conversion module serves 25 binding files, contradicting its closed gap record [patch] [arch] — todo
 <a id="kw-unc-morris-saltelli"></a>- [KW-UNC-MORRIS-SALTELLI](backlog/kw-unc-morris-saltelli.md) — Sensitivity analysis offers correlation screening only, while the provider now has the Morris and Saltelli estimators [minor] — todo
 <a id="kw-ci-doctests-one-package"></a>- [KW-CI-DOCTESTS-ONE-PACKAGE](backlog/kw-ci-doctests-one-package.md) — No hosted job or push gate runs the doctests of any package but `kwavers` [patch] [ci] — todo
-<a id="kw-hook-nextest-config-ungated"></a>- [KW-HOOK-NEXTEST-CONFIG-UNGATED](backlog/kw-hook-nextest-config-ungated.md) — A push changing only `.config/nextest.toml` passes the pre-push hook with no package gated [patch] [ci] — blocked
+<a id="kw-hook-nextest-config-ungated"></a>- [KW-HOOK-NEXTEST-CONFIG-UNGATED](backlog/kw-hook-nextest-config-ungated.md) — A push changing only `.config/nextest.toml` passes the pre-push hook with no package gated [patch] [ci] — todo
