@@ -3,11 +3,12 @@
 # prevents runaway tests from blocking the lib suite. The global cap covers
 # the serialised full-grid-sim group's sum: the heavy validations (kzk ~60-90 s,
 # PSTD sigma comparison 160 s measured, the viscoacoustic decay family at
-# 60-105 s each) run one at a time through the group's max-threads = 1, so
-# kwavers-solver's per-package run alone sums past the old 15-minute bound
+# 60-105 s each) ran one at a time through the group's max-threads = 1, so
+# kwavers-solver's per-package run alone summed past the old 15-minute bound
 # under the gate's load -- the 910 s abort left 1090 tests unrun (measured
 # 2026-10-03). 25 minutes is the derived bound: the measured serial sum plus
-# the light suite's parallel time.
+# the light suite's parallel time. kwavers-solver's tests no longer join the
+# group, so its per-package run is bounded by the longest test, not the sum.
 # This matches the kwavers standards.yaml policy: "cargo nextest with a strict
 # 60-second [per-test] timeout when available".
 global-timeout = "25m"
@@ -55,28 +56,38 @@ slow-timeout = { period = "60s", terminate-after = 5, grace-period = "10s" }
 
 [test-groups]
 integration = { max-threads = 2 }
-# Full-grid FWI, theranostic, viscoacoustic, FDTD, and PSTD tests internally
-# parallelize through the Moirai or Rayon worker pool. The group serializes
-# these tests with each other; their profile overrides also reserve every
-# Nextest slot so unrelated processes cannot oversubscribe the active solver.
-# The timeout and assertions are unchanged.
+# Theranostic and root-package FDTD/PSTD tests internally parallelize through
+# the Moirai or Rayon worker pool. The group serializes these tests with each
+# other; their profile overrides also reserve every Nextest slot so unrelated
+# processes cannot oversubscribe the active solver. kwavers-solver's tests are
+# not members: a run of the kwavers-solver and kwavers-simulation packages with
+# the group and slot reservation (244.6 s) against without them (68.8 s) passed
+# all 1243 tests in both, so the reservation added 176 s of serialization and
+# prevented no failure. A group limit is for a shared external resource, as
+# the gpu group below.
 full-grid-sim = { max-threads = 1 }
 # WGPU device creation and queue polling are serialized on Windows because
 # concurrent DX12 adapter contexts can trigger a driver access violation even
 # when each test owns an independent Hephaestus device.
 gpu = { max-threads = 1 }
 
-# Full-wave FWI and theranostic tests share the same CPU-saturating group as the
-# other full-grid solvers. This preserves the ordinary 30 s performance target
-# and 60 s termination contract without cross-group oversubscription. The
-# same override carries a 120 s termination measured for this group on the
-# Windows dev host (66.5 s isolated, kwavers-therapy theranostic inverse,
-# 2026-09-28); CI's Linux runners hold these tests inside the ordinary 60 s
-# contract, so the wider bound is local-platform scale, not a CI change.
+# Theranostic tests share the CPU-saturating group with the root-package
+# solvers below. This preserves the ordinary 30 s performance target and 60 s
+# termination contract without cross-group oversubscription. The same override
+# carries a 120 s termination measured for this group on the Windows dev host
+# (66.5 s isolated, kwavers-therapy theranostic inverse, 2026-09-28); CI's
+# Linux runners hold these tests inside the ordinary 60 s contract, so the
+# wider bound is local-platform scale, not a CI change.
 [[profile.default.overrides]]
-filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count) | test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion) | test(k_mu_gradient_3d_is_valid_descent_direction)'
+filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count)'
 test-group = 'full-grid-sim'
 threads-required = "num-test-threads"
+slow-timeout = { period = "30s", terminate-after = 4, grace-period = "10s" }
+
+# Elastic FWI runs beside the rest of kwavers-solver's tests: 10-36 s measured
+# (2026-11-13, 24-thread Windows host, full two-package run in parallel).
+[[profile.default.overrides]]
+filter = 'package(kwavers-solver) & (test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion) | test(k_mu_gradient_3d_is_valid_descent_direction))'
 slow-timeout = { period = "30s", terminate-after = 4, grace-period = "10s" }
 
 # Heavy full-grid FDTD/PSTD acoustic-simulation binaries use the same capped
@@ -95,19 +106,15 @@ threads-required = "num-test-threads"
 # heights per sigma factor; 160 s measured, its single-simulation siblings
 # 55-120 s under the full-suite load), and the 2-D diagonal decay
 # validation runs two 96x96x3000-step viscoacoustic simulations (m = 4
-# and m = 6), which exhausts the 120 s group bound under gate load.
-# Overrides apply first-match, so this block precedes the group override
-# below, which would otherwise cap the decay test at 120 s.
+# and m = 6), which exhausts the 120 s bound under gate load.
+# Overrides apply first-match, so this block precedes the override below,
+# which would otherwise cap the decay test at 120 s.
 [[profile.default.overrides]]
 filter = 'test(pstd_sigma_factor_three_outperforms_the_kwave_default) | test(decay_matches_dispersion_2d_diagonal)'
-test-group = 'full-grid-sim'
-threads-required = "num-test-threads"
 slow-timeout = { period = "60s", terminate-after = 6, grace-period = "10s" }
 
 [[profile.default.overrides]]
 filter = 'package(kwavers-solver) & (test(/forward::viscoacoustic::tests::/) | test(/kuznetsov/) | test(/forward::nonlinear::kzk::validation::/))'
-test-group = 'full-grid-sim'
-threads-required = "num-test-threads"
 slow-timeout = { period = "30s", terminate-after = 4, grace-period = "10s" }
 
 
