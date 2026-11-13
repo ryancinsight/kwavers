@@ -1,14 +1,17 @@
 [profile.default]
 # Per-test slow-warn at 10 s and forced termination at 60 s (six 10 s windows)
-# prevents runaway tests from blocking the lib suite. The global cap covers
-# the serialised full-grid-sim group's sum: the heavy validations (kzk ~60-90 s,
-# PSTD sigma comparison 160 s measured, the viscoacoustic decay family at
-# 60-105 s each) ran one at a time through the group's max-threads = 1, so
-# kwavers-solver's per-package run alone summed past the old 15-minute bound
-# under the gate's load -- the 910 s abort left 1090 tests unrun (measured
-# 2026-10-03). 25 minutes is the derived bound: the measured serial sum plus
-# the light suite's parallel time. kwavers-solver's tests no longer join the
-# group, so its per-package run is bounded by the longest test, not the sum.
+# prevents runaway tests from blocking the lib suite. The global cap was
+# derived from the serialised full-grid-sim group's sum: the heavy validations
+# (kzk ~60-90 s, PSTD sigma comparison 160 s measured, the viscoacoustic decay
+# family at 60-105 s each) ran one at a time through the group's
+# max-threads = 1, so kwavers-solver's per-package run alone summed past the
+# old 15-minute bound under the gate's load -- the 910 s abort left 1090 tests
+# unrun (measured 2026-10-03). kwavers-solver's tests no longer join the
+# group: the kwavers-solver and kwavers-simulation run takes 68.1 s
+# (2026-11-13), and its wall time is bounded below by its longest test
+# (59.0 s in that run). The 25-minute value is kept for the remaining group
+# users (theranostic, root-package binaries), whose serial sum is not
+# re-measured; tightening it requires that measurement.
 # This matches the kwavers standards.yaml policy: "cargo nextest with a strict
 # 60-second [per-test] timeout when available".
 global-timeout = "25m"
@@ -84,8 +87,10 @@ test-group = 'full-grid-sim'
 threads-required = "num-test-threads"
 slow-timeout = { period = "30s", terminate-after = 4, grace-period = "10s" }
 
-# Elastic FWI runs beside the rest of kwavers-solver's tests: 10-36 s measured
-# (2026-11-13, 24-thread Windows host, full two-package run in parallel).
+# Elastic FWI runs beside the rest of kwavers-solver's tests: 4.764 s
+# (k_mu_gradient_3d) to 36.960 s (fwi_outperforms_linear_inversion) measured
+# on 2026-11-13 (24-thread Windows host, kwavers-solver and kwavers-simulation
+# run in parallel, 68.109 s total).
 [[profile.default.overrides]]
 filter = 'package(kwavers-solver) & (test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion) | test(k_mu_gradient_3d_is_valid_descent_direction))'
 slow-timeout = { period = "30s", terminate-after = 4, grace-period = "10s" }
