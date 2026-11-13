@@ -58,3 +58,4 @@
 <a id="kw-gpu-fft-plan-capacity"></a>- [KW-GPU-FFT-PLAN-CAPACITY](backlog/kw-gpu-fft-plan-capacity.md) — A GPU PSTD plan whose FFT workspace or dispatch exceeds a device limit is refused as `InvalidInput`, after field buffers exist [patch] — blocked
 <a id="kw-gpu-run-buffer-capacity"></a>- [KW-GPU-RUN-BUFFER-CAPACITY](backlog/kw-gpu-run-buffer-capacity.md) — A GPU PSTD run whose record buffer exceeds a device buffer limit panics [patch] — todo
 <a id="kw-gpu-pstd-buffer-request"></a>- [KW-GPU-PSTD-BUFFER-REQUEST](backlog/kw-gpu-pstd-buffer-request.md) — GPU PSTD requests a 128 MiB buffer limit whatever the adapter supports [minor] — todo
+<a id="kwavers-aeq-met-70"></a>- [KWAVERS-AEQ-MET-70](backlog/kwavers-aeq-met-70.md) — Inventory raw public metrics in the remaining transducer families [arch] — todo
