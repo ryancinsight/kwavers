@@ -82,9 +82,27 @@ fn the_time_step_is_checked_before_the_step_count() {
 
 #[test]
 fn the_smallest_positive_time_step_is_accepted() {
-    construct_with(PSTDConfig {
+    let solver = construct_with(PSTDConfig {
         dt: f64::MIN_POSITIVE,
         ..Default::default()
     })
     .expect("a finite positive dt passes the time step check");
+
+    assert_eq!(solver.config.dt.to_bits(), f64::MIN_POSITIVE.to_bits());
+}
+
+/// `seed_ivp_from_pressure` reads `dt` again, after the constructor
+/// checked it. Only code of this crate can change `config`, and the check
+/// the seeding runs is the constructor's, with the same message.
+#[test]
+fn seeding_the_initial_velocity_refuses_a_time_step_that_is_not_finite_and_positive() {
+    let mut solver =
+        construct_with(PSTDConfig::default()).expect("the default configuration builds");
+    solver.config.dt = 0.0;
+
+    let Err(KwaversError::InvalidInput(message)) = solver.seed_ivp_from_pressure() else {
+        panic!("a zero dt must be rejected as invalid input");
+    };
+
+    assert_eq!(message, "PSTDConfig.dt must be finite and positive; got 0");
 }
