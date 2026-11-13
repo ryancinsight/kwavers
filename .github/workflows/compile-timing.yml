@@ -18,7 +18,9 @@ env:
 jobs:
   cold-compile:
     name: Cold compile of the shared GPU-consumer test graph
-    runs-on: ubuntu-latest
+    # ubuntu-latest is Ubuntu 26.04; this build links kwavers-python against the
+    # image Python (see hephaestus run 43478624177).
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
