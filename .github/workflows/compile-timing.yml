@@ -18,7 +18,9 @@ env:
 jobs:
   cold-compile:
     name: Cold compile of the shared GPU-consumer test graph
-    runs-on: ubuntu-latest
+    # Pinned to the image of the recorded runs (33598014974, 33598013146):
+    # ubuntu-latest moved to 26.04, which would confound the timing series.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
