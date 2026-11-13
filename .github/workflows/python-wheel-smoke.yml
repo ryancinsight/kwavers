@@ -111,7 +111,11 @@ jobs:
   kwave-comparison:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: k-Wave comparison (Ubuntu)
-    runs-on: ubuntu-latest
+    # Pinned: the k-Wave binary links libhdf5_serial.so.103 and
+    # libhdf5_serial_hl.so.100, which Ubuntu 24.04 ships and 26.04 does
+    # not. ubuntu-latest moved to 26.04 and failed the step below on the
+    # 2026-11-13 schedule (run 43368710771).
+    runs-on: ubuntu-24.04
     # Same debug-on-pull-request split as `base-wheel` above: the release
     # wheel build measured 11.9m here as well (run 37653455660), while the
     # parity suites themselves run in under half a minute. The per-test
