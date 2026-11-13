@@ -37,7 +37,6 @@
 <a id="kw-ray-040"></a>- [KW-RAY-040](backlog/kw-ray-040.md) — Layered focus-path contract [minor] — todo
 <a id="kw-release-crates-01"></a>- [KW-RELEASE-CRATES-01](backlog/kw-release-crates-01.md) — Publish the Rust package closure [patch] — blocked
 <a id="kw-sim-test-compile-graph"></a>- [KW-SIM-TEST-COMPILE-GRAPH](backlog/kw-sim-test-compile-graph.md) — Reduce simulation test build latency [patch] [perf] — todo
-<a id="kw-sol-054"></a>- [KW-SOL-054](backlog/kw-sol-054.md) — Repair AVX-512 FDTD layout contract [patch] — todo
 <a id="kw-vis-105"></a>- [KW-VIS-105](backlog/kw-vis-105.md) — Visualization renderer ignores the field type, and engine tests leave four behaviours unpinned [patch] — todo
 <a id="kwavers-aeq-met-66"></a>- [KWAVERS-AEQ-MET-66](backlog/kwavers-aeq-met-66.md) — Type thermal-diffusion quantities [major] [arch] — blocked
 <a id="kwavers-aeq-met-69"></a>- [KWAVERS-AEQ-MET-69](backlog/kwavers-aeq-met-69.md) — Type B-mode scan-conversion geometry [major] [arch] — todo
@@ -57,4 +56,13 @@
 <a id="kw-gpu-run-buffer-capacity"></a>- [KW-GPU-RUN-BUFFER-CAPACITY](backlog/kw-gpu-run-buffer-capacity.md) — A GPU PSTD run whose record buffer exceeds a device buffer limit panics [patch] — todo
 <a id="kw-gpu-pstd-buffer-request"></a>- [KW-GPU-PSTD-BUFFER-REQUEST](backlog/kw-gpu-pstd-buffer-request.md) — GPU PSTD requests a 128 MiB buffer limit whatever the adapter supports [minor] — todo
 <a id="kwavers-aeq-met-70"></a>- [KWAVERS-AEQ-MET-70](backlog/kwavers-aeq-met-70.md) — Inventory raw public metrics in the remaining transducer families [arch] — todo
+<a id="kw-ci-gate-passes-drafts"></a>- [KW-CI-GATE-PASSES-DRAFTS](backlog/kw-ci-gate-passes-drafts.md) — The CI gate and Architecture gate pass a draft pull request whose jobs were all skipped [patch] [ci] — todo
+<a id="kw-ci-ubuntu-latest-unpinned"></a>- [KW-CI-UBUNTU-LATEST-UNPINNED](backlog/kw-ci-ubuntu-latest-unpinned.md) — 23 workflow jobs and one wheel-smoke matrix cell run on the moving `ubuntu-latest` image [patch] [ci] — todo
+<a id="kw-fdtd-avx512-doc"></a>- [KW-FDTD-AVX512-DOC](backlog/kw-fdtd-avx512-doc.md) — The FDTD solver doc and a standing fact advertise AVX-512 kernels that were deleted [patch] — todo
+<a id="kw-fdtd-sigma-test-slow"></a>- [KW-FDTD-SIGMA-TEST-SLOW](backlog/kw-fdtd-sigma-test-slow.md) — The FDTD sigma-factor test runs at two thirds of its 60 s bound in a parallel run [patch] [perf] — todo
+<a id="kw-nextest-exclusive-remainder"></a>- [KW-NEXTEST-EXCLUSIVE-REMAINDER](backlog/kw-nextest-exclusive-remainder.md) — Root-package binaries and `ci` overrides still hold nextest slots exclusively, and the 25 m bound is underived [patch] [ci] — todo
+<a id="kw-py-leto-compat-regrowth"></a>- [KW-PY-LETO-COMPAT-REGROWTH](backlog/kw-py-leto-compat-regrowth.md) — A local numpy-Leto conversion module serves 25 binding files, contradicting its closed gap record [patch] [arch] — todo
+<a id="kw-unc-morris-saltelli"></a>- [KW-UNC-MORRIS-SALTELLI](backlog/kw-unc-morris-saltelli.md) — Sensitivity analysis offers correlation screening only, while the provider now has the Morris and Saltelli estimators [minor] — todo
+<a id="kw-ci-doctests-one-package"></a>- [KW-CI-DOCTESTS-ONE-PACKAGE](backlog/kw-ci-doctests-one-package.md) — No hosted job or push gate runs the doctests of any package but `kwavers` [patch] [ci] — todo
+<a id="kw-hook-nextest-config-ungated"></a>- [KW-HOOK-NEXTEST-CONFIG-UNGATED](backlog/kw-hook-nextest-config-ungated.md) — A push changing only `.config/nextest.toml` passes the pre-push hook with no package gated [patch] [ci] — todo
 <a id="kw-py-hybrid-refused"></a>- [KW-PY-HYBRID-REFUSED](backlog/kw-py-hybrid-refused.md) — Python callers offer a Hybrid solver that `Simulation.run` refuses [patch] — todo
