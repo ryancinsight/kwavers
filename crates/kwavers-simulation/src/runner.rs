@@ -102,7 +102,7 @@ mod tests {
     use kwavers_solver::config::{FftBackend, SolverType};
     use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
     use kwavers_solver::forward::pstd::config::CompatibilityMode;
-    use kwavers_source::GridSource;
+    use kwavers_source::{GridSource, SourceMode};
 
     fn gpu_request<'a>(grid: &'a Grid, medium: &'a HomogeneousMedium) -> SimulationRunRequest<'a> {
         SimulationRunRequest {
@@ -135,6 +135,32 @@ mod tests {
         SimulationRunRequest {
             fft_backend: FftBackend::Leto,
             sensor_mask: Some(leto::Array3::from_elem([8, 8, 8], true)),
+            ..gpu_request(grid, medium)
+        }
+    }
+
+    /// A pressure source of mode `Dirichlet` at the grid centre, for the
+    /// backend selected: the Leto solver runs it, and the Hephaestus
+    /// provider has no such source.
+    fn dirichlet_source_request<'a>(
+        grid: &'a Grid,
+        medium: &'a HomogeneousMedium,
+        fft_backend: FftBackend,
+    ) -> SimulationRunRequest<'a> {
+        let mut mask = leto::Array3::zeros([8, 8, 8]);
+        mask[[4, 4, 4]] = 1.0;
+        SimulationRunRequest {
+            fft_backend,
+            sensor_mask: Some(leto::Array3::from_elem([8, 8, 8], true)),
+            grid_source: GridSource {
+                p_mask: Some(mask),
+                p_signal: Some(
+                    leto::Array2::from_shape_vec([1, 8], vec![1.0; 8])
+                        .expect("one signal row of eight steps"),
+                ),
+                p_mode: SourceMode::Dirichlet,
+                ..GridSource::new_empty()
+            },
             ..gpu_request(grid, medium)
         }
     }
@@ -188,6 +214,20 @@ mod tests {
 
         let result = SimulationRunner::run(&request, Vec::new())
             .expect("eight steps at 100 ns on an 8x8x8 grid run");
+
+        assert_eq!(result.sensor_data.shape(), [512, 8]);
+    }
+
+    /// The request of `gpu_selection_reports_the_provider_source_rejection`
+    /// runs on the Leto solver, so a fall-back to it would return a record.
+    #[test]
+    fn leto_selection_runs_a_dirichlet_pressure_source() {
+        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let request = dirichlet_source_request(&grid, &medium, FftBackend::Leto);
+
+        let result = SimulationRunner::run(&request, Vec::new())
+            .expect("the Leto solver runs a Dirichlet pressure source");
 
         assert_eq!(result.sensor_data.shape(), [512, 8]);
     }
@@ -330,6 +370,26 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "Feature not available: Hephaestus PSTD requires one active absorption exponent; medium flat index 1 uses 1.7"
+        );
+    }
+
+    /// The provider has no Dirichlet pressure source and refuses one while it
+    /// assembles the source schedule, before it acquires a device. The Leto
+    /// dispatch runs this request (`leto_selection_runs_a_dirichlet_pressure_source`),
+    /// so a fall-back to it on this refusal returns a record.
+    #[cfg(feature = "gpu")]
+    #[test]
+    fn gpu_selection_reports_the_provider_source_rejection() {
+        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let request = dirichlet_source_request(&grid, &medium, FftBackend::Hephaestus);
+
+        let error = SimulationRunner::run(&request, Vec::new())
+            .expect_err("the GPU PSTD provider has no Dirichlet pressure source");
+
+        assert_eq!(
+            error.to_string(),
+            "Invalid input: GPU PSTD does not support Dirichlet pressure sources"
         );
     }
 
