@@ -789,55 +789,7 @@ metric was found in their current public boundaries. Their complex values are
 Eunomia representation data at existing dimensions and reduce to real
 observables at formula or reporting boundaries.
 
-## Review 2026-07-29 — PR #325 unresolved blocker closeout
-
-Three non-outdated review threads remained valid at `fc3ac0308`. The repository
-manifest overrode Aequitas with a required `../aequitas` checkout; dense
-non-empty vessel masks could produce no centerline and divide by
-`f64::MIN_POSITIVE`; and both historical-baseline metadata checks omitted
-`--locked` after manifest alignment.
-
-The closeout removes the Aequitas path patch and records one canonical Git
-source at `ce3ef7a6` in `Cargo.lock`, rejects a non-empty mask with no usable
-centerline through an exact typed error regression, and adds `--locked` to both
-metadata checks. Both benchmark jobs copy all 26 tracked package manifests plus
-`Cargo.lock`. No source fallback, compatibility adapter, or fabricated diameter
-path is present. Exact-head hosted gates remain the final closure evidence
-because the mutable local Atlas overlay has an unrelated Apollo dual-path
-collision and does not reproduce the pinned CI provider graph.
-
-## Review 2026-07-31 — KW-AEQ-MET-04 source-level closure
-
-The only current review finding on the vessel-metrics slice was redundant
-centerline extraction in `VesselSegmentation::segment`: classification already
-derived the validated centerline used for the physical diameter. The classifier
-now returns that centerline with the classification, and segmentation reuses it
-for physical total length. This removes one mask traversal and one medial-axis
-pass without changing the Aequitas `Length`/`Velocity` contracts or the
-invalid-input behavior.
-
-The re-audit still finds no missing Aequitas metric dimension in the named
-CFDrs, Helios, or Kwavers consumer boundaries. Public complex values remain
-Eunomia-backed formula/storage values; none of the audited physical contracts
-requires a separate imaginary unit. PR #325 merged as Kwavers main
-`cc5c9c4dd`; exact-head Code Coverage passed in 39m33s and Test Suite Coverage
-passed in 32m45s, with the remaining required matrix checks also green.
-
-- Review 2026-07-28: PR #325's original provider blocker is closed through
-  Mnemosyne PR #31 and the synchronized Atlas graph above. The immutable graph
-  checkout and exact-head hosted vessel tests are green; the benchmark graph
-  normalization defect is also closed by `640470d48` and run `30411366697`.
-
-- Review 2026-07-23: `KWAVERS-AEQ-MET-04` is implemented on PR #325 at commit
-  `9f95aa826`. `VoxelSpacing` validates positive
-  finite anisotropic Aequitas `Length` components; vessel diameter, centerline,
-  and total length return physical `Length<f64>` values; Doppler frequency,
-  sound speed, and velocity use typed Aequitas quantities. The child source,
-  diagnostics caller, ADR 047, changelog, tests, and API documentation are
-  synchronized. Formatting and metadata validation pass; focused compilation
-  is blocked before Kwavers sources by peer `mnemosyne-heap` errors for the
-  unhandled `TierSelection::Hbm` and `TierSelection::Gddr` variants in three
-  matches. This is independent of open PR #324 and Aequitas PR #7.
+## Review residuals (2026-07)
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
   wheels but the Linux and Windows base-wheel smoke imports failed because
@@ -855,21 +807,6 @@ passed in 32m45s, with the remaining required matrix checks also green.
   `29968431955` were still active; its legacy-migration run `29968431907`
   passed. The rebased PR #313 combined-head matrix supersedes those incomplete
   checks for final integration evidence.
-- Review 2026-07-22: the six-test `kwavers-therapy` serialization override was
-  a downstream containment for Moirai bounded-admission failures, not a solver
-  resource requirement. Moirai PR #83 now executes rejected indexed chunks on
-  the caller under the same panic boundary and exposes borrowing scopes;
-  Atlas graph `c982fe0` pins that merge and RITK's Reqwest 0.13 migration.
-  KW-CI-068 deletes the workaround, removes the inherited Reqwest 0.11 TLS
-  advisory chain, records the replacement certificate-data license, and
-  re-runs the unchanged value-semantic tests under ordinary scheduling.
-  Implementation head `eb80ad2` passes exact-head architecture, CI/coverage,
-  migration-audit, and benchmark workflows (`29964349679`, `29964349756`,
-  `29964349739`, and `29964349692`). Concurrent Python-portability PR #312
-  passed its exact-head matrix (`29963556227`, `29963556297`, `29963556225`,
-  and `29963556257`) and merged as default `1dc60bd`; the closure rebases onto
-  that state and replaces its provisional `a534313` provider pin with canonical
-  merged graph `c982fe0`.
 - Review 2026-07-17: the provider-owned GPU PSTD result exposed only sensor
   traces and optional final fields, but the treatment-planning quantity is
   `max_t |p|`, not the final pressure frame. The WGPU path now reserves one
@@ -886,30 +823,6 @@ passed in 32m45s, with the remaining required matrix checks also green.
   separately from the final field. Residual: the private full-wave consumer
   remains to be wired to the explicit output API; allocation capacity remains
   device- and plan-dependent.
-
-- Review 2026-07-20: local lock regeneration inherited mutable sibling
-  Hephaestus and Gaia revisions, adding a second Aequitas source and deleting
-  packages still required by the coordinated graph. Hosted `--locked` jobs
-  rejected the mismatch before compilation. The workflows now materialize
-  every provider from Atlas merge `05b7f5d`; direct Aequitas and Proteus pins
-  match that graph, `Cargo.lock` resolves one Aequitas source identity, and the
-  consumer-local moving-`main` checkout action remains deleted.
-
-- Review 2026-07-20: Tarpaulin instrumentation made the test-suite
-  `test_grid_creation_performance` wall-clock assertion exceed its empirical
-  10 ms threshold while the constructed grid remained correct. Test-process
-  elapsed time is not a portable performance oracle. Grid and
-  homogeneous-medium construction remain measured by the Criterion
-  `testing_infrastructure` benchmark; the instrumented native test lane now
-  retains only value-semantic assertions.
-
-- Review 2026-07-20: PR review found the singleton-x pressure-source case
-  normalized its schedule over the active y/z axes but injected into all three
-  split-density fields. The WGSL entry point now gates x, y, and z injection
-  independently, with host scaling and shader-structure regressions for a
-  `1 × 2 × 2` grid. The same review removed an orphaned, uncompiled conversion
-  leaf and corrected every example-book source-link depth plus the identified
-  DG, seismic, and transcranial content drift.
 
 - Review 2026-07-17: the ignored public GPU parity fixture compared a CPU final
   pressure volume from a plane-wave source with a GPU sensor trace from a
@@ -953,93 +866,6 @@ passed in 32m45s, with the remaining required matrix checks also green.
   clinical-imaging graph resolving path and Git Leto identities concurrently.
   Analysis semver extraction completes and reports the intended major class.
 
-- Hosted boundary 2026-07-20: run `29781981026` passed the migration audits,
-  layer boundary, Miri, and security gates but cloned a moving Atlas `main`
-  revision after the PR lockfile was generated. Every compile/test failure
-  stopped at Cargo's locked-graph check before compiling Kwavers. The shared
-  Atlas-owned checkout action now pins provider graph `05b7f5d`, whose
-  provider gitlinks match the locally verified graph. PR 298 owns the final
-  hosted matrix and merge evidence; the locked-provider boundary has no source
-  residual.
-
-- Structural boundary 2026-07-20: the Tyche migration touched a 794-line
-  clinical workflow example spanning modality execution, result storage, and
-  presentation. It is now a 127-line manifest/root with 168/161/157/106/91/
-  60-line modality, execution, presentation, clinical, result, and metric
-  leaves. The no-op cloned uncertainty maps and `Box<dyn UncertaintyResult>`
-  vector are deleted, and the CFL helper statically dispatches over its medium.
-  CEUS now retains the provider-owned Leto map without a
-  collect-and-reconstruct copy. Default/GPU checks and warning-denied Clippy
-  pass.
-
-- Reporting boundary 2026-07-20: `generate_report` required
-  `&[Box<dyn UncertaintyResult>]` and collected a second reference vector.
-  Runtime heterogeneity remains an explicit cold-boundary exception, but the
-  report now borrows `&[&dyn UncertaintyResult]` directly. A pointer-identity
-  regression proves the returned detailed-results slice is the caller's slice.
-
-- Provider identity 2026-07-20: current Coeus declares Apollo by Git while
-  Kwavers declares Apollo by synchronized path. Without an Apollo source patch,
-  Cargo resolves two `apollo-fft` identities and rewrites the lock. The patch
-  maps Apollo's Git packages to the Atlas checkout; locked metadata then
-  resolves unchanged.
-
-- Review 2026-07-17: `kwavers-medium/src/wrapper.rs` duplicated each
-  continuous-coordinate accessor as a `dyn Medium` function and a
-  `*_at_core` generic forwarder. The canonical functions now carry the
-  `CoreMedium` bound, point-wise interface detection calls them directly, and
-  the compatibility-shaped exports are deleted. Evidence tier: type-level
-  equivalence plus source residue scan; package check passes and locked nightly
-  Nextest runs 187/187 tests in 1.801 seconds. Because the deleted symbols were
-  public, ADR 038 classifies the change as [major] and `kwavers-medium` is now
-  4.0.0; no compatibility re-export is retained.
-
-- Review 2026-07-17: the Atlas main pointer advanced Hephaestus with the
-  aggregate `DeviceLimits` field
-  `max_buffers_and_acceleration_structures_per_shader_stage`. Four Kwavers GPU
-  requirement builders still used the old struct shape, blocking hosted
-  Architecture Validation job `87946612531`. WGPU, CUDA, baseline, and
-  beamforming builders now propagate the field explicitly. The provider-limit
-  lift theorem is structural: WGPU preserves the aggregate budget, and CUDA
-  preserves capability absence as `None`; Hephaestus remains the sole mapping
-  owner. Hosted and focused feature verification remain open.
-
-- Review 2026-07-17: the AVX-512 FDTD kernels treated Leto `Array3<[x, y, z]>`
-  as if x were unit-stride and skipped right-edge interior tails. Hosted job
-  `87932791305` observed the resulting uniform-pressure defect. Pressure and
-  velocity now use C-order strides `(ny*nz, nz, 1)`, retain scalar tails, and
-  validate C-contiguous inputs before raw-pointer dispatch. Full-interior and
-  three-axis analytical contracts cover the regression. Local package test
-  compilation and seven focused AVX-512 Nextest cases pass. Residual: the
-  fresh hosted matrix remains pending.
-
-- Review 2026-07-17: the provider-owned GPU PSTD output contract exposed three
-  stale ignored parity tests still assigning the old five-argument `Vec<f32>`
-  return. All calls now pass the sensor-trace-only output request and consume
-  `PstdRunResult::sensor_data` directly. Hosted job `87936633879` supplied the
-  exact compiler evidence; package-scoped nightly rustfmt is clean. Residual:
-  focused Nextest and the fresh hosted rerun.
-
-- Review 2026-07-17: `.github/workflows/deploy.yml` was obsolete. It referenced
-  absent `Dockerfile` and `k8s` artifacts and combined `uses` with `run` in one
-  step; Actions run `29593287070` failed at workflow parsing. The workflow is
-  deleted, leaving only runnable provider-aware validation workflows. Evidence
-  tier: repository file inventory and authoritative Actions status.
-
-- Review 2026-07-17: supported Cargo workflows had live-resolution commands
-  without `--locked` and malformed step indentation in the build, convergence,
-  validation, and coverage jobs. Both YAML documents now parse and all graph-
-  consuming commands carry `--locked`; the change is workflow-only. Evidence
-  tier: local YAML parser and diff checks. Residual: hosted rerun evidence.
-
-- Review 2026-07-17: hosted Architecture Validation still checked the
-  pre-format finite-window PSTD test at job `87924378467`; the local source is
-  now canonical under nightly rustfmt. The CUDA job previously failed because
-  the container lacked `openssl.pc` (`openssl-sys`); `libssl-dev` is now part of
-  the container prerequisite set. Evidence tier: authoritative Actions logs
-  plus local formatter output. Residual: the corrected head needs a fresh
-  hosted run.
-
 - Review 2026-07-17: the Atlas integration branch now supplies merged Apollo
   `157467e` (`apollo-fft 0.24.0`) and RITK `a5e375f`; Kwavers `Cargo.lock` was
   synchronized to Apollo `0.24.0`. The focused locked suite passes 1,036/1,036
@@ -1071,41 +897,6 @@ passed in 32m45s, with the remaining required matrix checks also green.
   blocked outside this repository's authorized scope. Release SemVer checking
   remains a separate release gate.
 
-- Closed 2026-07-16: `Grid::size` is an unchecked legacy convenience method,
-  while public dimensions can be mutated after construction. `Grid::checked_size`
-  now supplies the fallible cardinality contract at allocation boundaries, and
-  construction rejects non-finite spacing before deriving `k_max`; exact
-  overflow and non-finite-spacing regressions pass under locked offline Nextest.
-  Evidence tier: native compilation and value-semantic regression.
-- Closed 2026-07-17: `kwavers-math`'s 3-D axis-transform facade delegates
-  directly to Apollo's cached axis plan methods, so callers already sharing
-  the axis plan do not allocate or translate a second complex field. The
-  full-transform facade is audited separately above because it formerly kept
-  a distinct conversion path. Evidence tier: native compilation and
-  value-semantic regression execution.
-
-- Closed 2026-07-17: Kwavers exposed an obsolete boolean GPU FFT probe after
-  Apollo moved device acquisition to the Hephaestus provider. The probe and
-  public re-export are deleted. GPU tests now acquire `WgpuDevice`, construct
-  Apollo's `WgpuBackend`, and propagate GPU execution errors. GPU-enabled
-  Nextest passes 265/265, including spectrum parity and reusable-buffer
-  round-trip contracts; warning-denied all-feature Clippy, docs, and doctests
-  pass. The CI action previously consumed a stale Atlas integration branch
-  whose RITK pin predated the repair; it now resolves the Atlas default graph.
-  The CUDA container now installs the missing OpenSSL development package used
-  by the current RITK/DICOM graph. Its `openssl-sys` build selects `CC=clang`,
-  so the container also installs the compiler executable in addition to
-  `libclang-dev`. The benchmark workflow now invokes the
-  Rust `kwavers` package explicitly rather than attempting to link the PyO3
-  extension as a benchmark executable; its stable/beta/nightly plotting
-  build/test matrix uses the same package boundary. Evidence tier: native compilation and
-  value-semantic tests.
-
-- Closed 2026-07-17: `Grid` dimensions are public for interoperability, so
-  callers that allocate one value per grid point can use `Grid::checked_size`
-  after external mutation. Construction rejects non-finite spacing before
-  deriving `k_max`; 40/40 package tests, warning-denied Clippy, docs, and
-  doctests pass. Evidence tier: native compilation and value-semantic tests.
 - Residual verification risk: `cargo semver-checks check-release --package
   kwavers-math` cannot obtain a registry baseline because `kwavers-math` is
   unpublished. The earlier temporary-baseline path additionally resolved
@@ -1202,80 +993,6 @@ passed in 32m45s, with the remaining required matrix checks also green.
   rather than suppressed. Residual: rerun the full remote matrix against the
   corrected PR head.
 
-- Closed 2026-07-15: Kwavers had no repository-root Cargo-deny policy and CI
-  resolved a crate-local policy instead of one scoped to the deployable Kwavers
-  graph. The root policy now rejects unknown registries and Git sources, permits
-  only Crates.io plus the required Consus and cutile origins, and carries exact
-  license exceptions for `cuda-oxide@0.4.0`, `colored@3.1.1`, and
-  `epaint@0.25.0`. Unused direct DICOM 0.8 workspace pins are removed; the lock
-  now resolves RITK's DICOM 0.10 graph and fixed advisory releases. Evidence
-  tier: Cargo-deny license/advisory/source checks and a locked all-feature
-  `kwavers-core` compile plus 69 focused Nextest cases. Residual: `spin` 0.9.8
-  (Flume 0.11.1) and `spin` 0.10.0 (Burn) are yanked but have no advisory; both
-  remain warnings until their upstream constraints change. The broader
-  all-feature workspace check remains independently blocked by two
-  `kwavers-solver` generic-backend compile errors.
-
-- Corrected 2026-07-15: analytic baseband removes `exp(j 2πf₀τ)` from every
-  channel, so complex DAS must restore that phase after fractional interpolation
-  and before coherent summation. `demodulate_rf_to_iq` owns the finite,
-  Nyquist-valid real-RF transform; complex active DAS now requires its carrier,
-  shares the real kernel's geometry/transmit-delay/apodization law, and
-  rephases every physical path. The snapshot path delegates to that provider
-  surface, deleting its duplicate FFT/Hilbert implementation. Evidence tier:
-  a fractional-delay complex-I/Q value regression plus exact Nyquist rejection;
-  `kwavers-analysis` Nextest passes 711/711 and warning-denied Clippy passes.
-  Rustdoc completes with 57 existing unresolved links outside this contract,
-  and doctests pass 1/1 with 21 intentionally ignored. Residual: slow-time
-  frames must arise from explicit physical scatterer states; no API synthesizes
-  arbitrary inter-frame phase progression.
-
-- Closed 2026-07-15: active sector imaging needed the same plane-wave or
-  virtual-source transmit arrival in its phantom RF and its receive-DAS
-  reconstruction, but Kwavers exposed only monostatic RF and receive-only DAS.
-  `TransmitWavefront` now validates three-dimensional plane and diverging
-  events, their physical total path, and their spreading; the generalized DAS
-  receives a validated transmit-delay vector for each image point. The existing
-  `kwavers-transducer::ultrafast` APIs stay as specialized 2-D linear-array
-  delay processors rather than becoming an invalid 3-D abstraction. Evidence
-  tier: closed-form point-scatterer timing/spreading plus active-event
-  localization and invalid-input regressions (12/12 + 6/6 locked Nextest).
-  Residual: complex I/Q beamforming and slow-time ensemble synthesis require a
-  separate provider contract; real DAS output is not treated as I/Q.
-
-- Closed 2026-07-15: the fUS reference performed complex NumPy SVD and power
-  reduction because Kwavers' existing clutter filter accepts only centred real
-  slow-time matrices. `IqSvdClutterFilter` now owns the uncentred complex I/Q
-  contract by exact realification; every complex singular mode maps to a paired
-  real mode, so a rank cut removes `2k` singular values. The provider returns
-  filtered I/Q and `Σ_t |I/Q|²` together. The stale Demené reference now names
-  IEEE TMI 34(11), 2271-2285 (2015), DOI 10.1109/TMI.2015.2428634. Evidence
-tier: realification identity, 3/3 locked value-semantic provider tests,
-warning-denied Clippy, package Rustdoc with its 57 pre-existing unresolved links
-outside the I/Q files, and a downstream consumer's independent 14/14 CPython boundary/
-reference suite. Residual: this is the fUS I/Q domain contract; a generic public
-complex SVD remains outside its justified scope.
-
-- Closed 2026-07-15: the autocorrelation provider exposed velocity and
-  normalized variance but forced each consumer that needed a Doppler power map
-  to duplicate lag-zero reduction. `AutocorrelationEstimate` now owns all three
-  maps from the same lag window, and the legacy tuple delegates to it. A
-  coherent complex-I/Q oracle establishes `R1 = mean(I_n * conj(I_n+1))`, its
-  negative velocity sign for positive phase progression, unit power, and zero
-  coherence loss. Evidence tier: value-semantic provider test, focused locked
-  Nextest 5/5, default-feature warning-denied Clippy, and Rustdoc. Residual:
-  all-feature Clippy is independently blocked in `wgpu-hal` 30.0.0 by the
-  workspace `windows` 0.61/0.62 Direct3D type split before this crate builds.
-
-- Closed 2026-07-15: layered field evaluation kept its ordered segment path
-  private to `RayleighIntegralSpec`, forcing downstream Python focus control to
-  reimplement or omit the same physics. `RayleighPropagationPath` now owns
-  layer-order validation plus phase/attenuation accumulation, while
-  `RayleighIntegralSpec` consumes that path directly. Evidence tier: exact
-  segment/error contracts, locked 217/217 `kwavers-transducer` Nextest, and
-  warning-denied Clippy/Rustdoc. Consumer wheel verification remains tracked in
-  `KW-RAY-040` until the downstream consumer's gate completes.
-
 - Closed 2026-07-14: Kwavers declared Gaia from Git and corrected it only via
   a workspace-root source patch. Cargo ignores that patch when a downstream
   package is isolated, causing a downstream consumer's SemVer packaging to select historical
@@ -1285,44 +1002,12 @@ complex SVD remains outside its justified scope.
   package tests. Residual: isolated packaging now reaches Moirai's independent
   Themis Git-version mismatch; its owner is Moirai, not this dependency edge.
 
-- Closed 2026-07-14: forward PSTD consumers unconditionally compiled clinical
-  image I/O and registration because both `kwavers-physics` and
-  `kwavers-solver` declared `kwavers-imaging` unconditionally. ADR-036 makes
-  the clinical surface explicit, retains only pure thermoelastic material laws
-  outside it, and updates in-workspace clinical consumers. Locked Nextest passes
-  1,554/1,554 without `clinical-imaging`, 1,710/1,710 with it, and 29/29 in
-  a downstream consumer; reverse dependency resolution finds no `ritk-filter` package in
-  Leo's active graph. Evidence tier: manifest/source audit, value-semantic
-  regressions, locked feature-matrix integration, and active graph proof.
-
-- Closed 2026-07-14: KWaveArray clamped arbitrarily distant source samples to
-  the nearest grid boundary before evaluating sinc, creating false source
-  support. The BLI mapper now accepts a sample only when its finite stencil
-  window overlaps the grid. Evidence tier: exact clipped-versus-distant source
-  regression, Leo focus-delay integration, and locked package execution.
-
 - Open documentation baseline 2026-07-14: `cargo doc -p kwavers-physics
   --all-features --no-deps` emits 575 unresolved intra-doc-link warnings in
   pre-existing Physics modules. The clinical-imaging boundary files emit none;
   the package documentation gate is therefore not warning-clean. Evidence tier:
   all-feature Rustdoc execution. Re-open trigger: a focused Rustdoc correction
   increment that rewrites the unresolved links and bracketed unit annotations.
-
-- Closed 2026-07-14: KWaveArray could rasterize finite discs but not the
-  independently driven planar annular sectors already accepted by the Rayleigh
-  provider. `PlanarApertureGeometry` is now the shared validated geometry;
-  equal-area sector sampling and normalized BLI stencils preserve analytical
-  source area and per-sector signals. Evidence tier: type-level geometry reuse,
-  analytical area equality, value-semantic source-matrix regression, Clippy,
-  215/215 Nextest, doctests, and Rustdoc.
-
-- Closed 2026-07-14: the finite-aperture provider exposed only complete
-  circular pistons, forcing hybrid C/D Fresnel cells either to collapse
-  independently driven electrodes or approximate annular sectors downstream.
-  ADR-035 replaces that boundary with one oriented planar-aperture kernel over
-  disk and annular-sector bounds. Evidence tier: analytical area equality,
-  coherent sector-superposition differential equality, retained disk oracles,
-  warning-denied Clippy, 214/214 Nextest, doctests, and warning-clean Rustdoc.
 
 - Closed 2026-07-13: downstream finite-aperture propagation duplicated the
   circular-piston diffraction factor at each surface point and used equal
@@ -1337,41 +1022,11 @@ complex SVD remains outside its justified scope.
   surface is classified [minor] by source review; no machine semver proof is
   claimed.
 
-- Closed 2026-07-13: the workspace-wide Leto `ndarray-compat` feature concealed
-  21 same-type conversions across beamforming, PAM, BEM, FEM, FDTD, PSTD, and
-  thermal coupling. The feature and conversions are deleted; matrix inversion
-  uses `leto-ops` while Kwavers retains its eigendecomposition and complex-solve
-  contracts. Evidence tier: compile-time integration, warning-denied locked
-  package Clippy, and 908/908 value-semantic package tests with one existing
-  skip and no test reaching the 30-second threshold.
-
 - Closed 2026-07-12: `nd_to_leto1` and `leto1_to_nd1` duplicated Leto's owned
   rank-1 ndarray conversions and coupled ten PyO3 consumers to a local
   compatibility module. All consumers now invoke the provider conversions
   directly. Evidence tier: compile-time integration, warning-denied package
   Clippy, focused package tests, and exact static residual audit.
-
-- Closed 2026-07-11: six rank-specific PyO3 complex converters copied complete
-  arrays between identical `eunomia::Complex64` aliases. The converters and all
-  24 runtime call sites are deleted; the Leto/NumPy boundary remains explicit.
-  Follow-through also deletes the 29 stale same-type conversions exposed by
-  package Clippy. Evidence tier: compile-time type identity, package
-  compilation, static source audit, warning-denied package Clippy, and 6/6
-  focused package tests.
-
-- Closed 2026-07-11: `kwavers-boundary` duplicated Leto indexed traversal in a
-  consumer-owned `parallel` module and retained an otherwise-unused direct
-  Moirai dependency. CPML, smoothing, and adaptive coupling now use the
-  canonical const-generic Leto operations, and the duplicate module and direct
-  dependency are deleted. Evidence tier: compile-time integration,
-  value-semantic package tests, warning-denied Clippy, and static source audit.
-
-- Closed 2026-07-10: `kwavers-physics` was the sole direct `ndarray-npy`
-  consumer. `consus-npy` now owns bounded typed NPY/NPZ parsing, and the
-  consumer constructs Leto arrays directly from the owned payload. Evidence
-  tier: NumPy-generated provider fixture, compile-time typed integration, five
-  value-semantic consumer tests, warning-denied library Clippy, and 39 focused
-  adjacent physics regressions.
 
 - Closed 2026-07-10: six production documentation sites described removed
   Rayon, Tokio, nalgebra, or ndarray execution. Their contracts now match the
