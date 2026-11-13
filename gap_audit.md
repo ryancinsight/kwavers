@@ -4536,8 +4536,8 @@ resolution; current state is a sound mitigation, not a full fix.
   the lib-uses-thiserror rule and should be removed in that refactor.
   File: `crates/kwavers-core/src/error/mod.rs`.
 - **DEBT-2 (L):** `solver::interface::factory::RegistrationEngine` trait now has
-  zero implementors (its only impl was the dead one removed in CLD-14-adjacent
-  cleanup). Candidate removal once confirmed no external/plugin consumer.
+  zero implementors (its only impl was a dead one, since removed).
+  Candidate removal once confirmed no external/plugin consumer.
 - **DEBT-4 (C) — RESOLVED (2026-06-01):** FWI finite-window Born adjoint-gradient
   mismatch FIXED. Root cause: a discrete-adjoint **off-by-one** in
   `finite_window::adjoint_backward_pass`. The forward source `s[m] = −χ·accel[m]`
