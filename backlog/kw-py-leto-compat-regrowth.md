@@ -1,6 +1,6 @@
 <a id="kw-py-leto-compat-regrowth"></a>
 
-## KW-PY-LETO-COMPAT-REGROWTH — A local numpy-Leto conversion module serves 26 binding files, contradicting its closed gap record [patch] [arch] — todo
+## KW-PY-LETO-COMPAT-REGROWTH — A local numpy-Leto conversion module serves 25 binding files, contradicting its closed gap record [patch] [arch] — todo
 
 priority: architecture; needs: none; basis: 38eaf2f90eccd74d11ce3d0e836cbad7d4606ae0; scope: `crates/kwavers-python/src/breast_fwi_bindings/complex_compat.rs` and every file that imports it
 
