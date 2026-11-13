@@ -130,15 +130,11 @@ fn assembles_the_gpu_adapter_for_hephaestus_pstd() {
     assert_eq!(solver.name(), "GpuPstd");
 }
 
-/// The Leto solver assembles for this medium, so a factory that fell
-/// back to it when the adapter refuses would return a solver here.
+/// A 2x2x2 medium of one sound speed, density, absorption coefficient and
+/// absorption exponent.
 #[cfg(feature = "gpu")]
-#[test]
-fn reports_the_adapter_rejection_for_hephaestus_pstd() {
-    use kwavers_medium::heterogeneous::HeterogeneousMedium;
-
-    let grid = Grid::new(2, 2, 2, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let mut medium = HeterogeneousMedium::new(2, 2, 2, false);
+fn absorbing_medium() -> kwavers_medium::heterogeneous::HeterogeneousMedium {
+    let mut medium = kwavers_medium::heterogeneous::HeterogeneousMedium::new(2, 2, 2, false);
     medium
         .sound_speed
         .iter_mut()
@@ -146,6 +142,16 @@ fn reports_the_adapter_rejection_for_hephaestus_pstd() {
     medium.density.iter_mut().for_each(|value| *value = 1_000.0);
     medium.absorption.iter_mut().for_each(|value| *value = 0.2);
     medium.alpha_power.iter_mut().for_each(|value| *value = 1.3);
+    medium
+}
+
+/// The Leto solver assembles for this medium, so a factory that fell
+/// back to it when the adapter refuses would return a solver here.
+#[cfg(feature = "gpu")]
+#[test]
+fn reports_the_adapter_rejection_for_hephaestus_pstd() {
+    let grid = Grid::new(2, 2, 2, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let mut medium = absorbing_medium();
     medium.alpha_power[[0, 0, 1]] = 1.7;
     let config = SolverConfiguration {
         solver_type: SolverType::PSTD,
@@ -181,6 +187,44 @@ fn reports_the_adapter_time_step_rejection_for_hephaestus_pstd() {
     assert_eq!(
         error.to_string(),
         "Invalid input: GPU PSTD requires finite positive dt; got 0"
+    );
+}
+
+/// The adapter refuses a negative absorption coefficient while it reads the
+/// medium. The Leto solver assembles for the same medium, so a factory that
+/// fell back to it when the adapter refuses would return a solver here.
+#[cfg(feature = "gpu")]
+#[test]
+fn reports_the_adapter_coefficient_rejection_for_hephaestus_pstd() {
+    let grid = Grid::new(2, 2, 2, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let mut medium = absorbing_medium();
+    medium.absorption[[0, 0, 1]] = -0.2;
+    let config = |fft_backend| SolverConfiguration {
+        solver_type: SolverType::PSTD,
+        fft_backend,
+        dt: 1.0e-7,
+        ..SolverConfiguration::default()
+    };
+
+    let leto = SimulationSolverFactory::create_solver(
+        SolverType::PSTD,
+        config(FftBackend::Leto),
+        &grid,
+        &medium,
+    )
+    .unwrap();
+    let error = SimulationSolverFactory::create_solver(
+        SolverType::PSTD,
+        config(FftBackend::Hephaestus),
+        &grid,
+        &medium,
+    )
+    .unwrap_err();
+
+    assert_eq!(leto.name(), "PSTD");
+    assert_eq!(
+        error.to_string(),
+        "Invalid input: GPU PSTD medium alpha coefficient at flat index 1 must be finite and non-negative; got -0.2"
     );
 }
 

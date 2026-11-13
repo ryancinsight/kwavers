@@ -133,6 +133,7 @@ impl PSTDSolver {
         medium: &dyn Medium,
         source: GridSource,
     ) -> KwaversResult<Self> {
+        config.validate_time_step()?;
         let grid = Arc::new(grid);
         let nz_c = grid.nz / 2 + 1; // half-spectrum length for r2c z-axis
         if config.compatibility_mode == CompatibilityMode::Reference {

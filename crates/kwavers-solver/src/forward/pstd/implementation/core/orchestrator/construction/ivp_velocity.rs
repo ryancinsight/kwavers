@@ -1,7 +1,7 @@
 //! IVP staggered leapfrog velocity initialisation for `PSTDSolver`.
 
 use super::PSTDSolver;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use leto::Array1;
 use leto::Array3 as LetoArray3;
@@ -291,15 +291,10 @@ impl PSTDSolver {
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn initialize_ivp_velocity(&mut self) -> KwaversResult<()> {
+        self.config.validate_time_step()?;
         let dt = self.config.dt;
         let has_y = self.grid.ny > 1;
         let has_z = self.grid.nz > 1;
-
-        if !dt.is_finite() || dt <= 0.0 {
-            return Err(KwaversError::InvalidInput(format!(
-                "dt must be finite and positive, got {dt}"
-            )));
-        }
 
         let half_dt = dt / 2.0;
 
