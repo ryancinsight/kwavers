@@ -14,6 +14,7 @@
 <a id="kw-ci-094"></a>- [KW-CI-094](backlog/kw-ci-094.md) — The recurseml check errors on itself and is permanently red [patch] — todo
 <a id="kw-ci-apt-single-mirror"></a>- [KW-CI-APT-SINGLE-MIRROR](backlog/kw-ci-apt-single-mirror.md) — An unreachable apt source ends in a timeout, not an apt error [patch] [ci] — todo
 <a id="kw-ci-classifier-residuals"></a>- [KW-CI-CLASSIFIER-RESIDUALS](backlog/kw-ci-classifier-residuals.md) — The changed-path classifier trusts a file list it does not check [patch] [ci] — todo
+<a id="kw-ci-therapy-exclusive"></a>- [KW-CI-THERAPY-EXCLUSIVE](backlog/kw-ci-therapy-exclusive.md) — Four kwavers-therapy tests still run alone [patch] — todo
 <a id="kw-ci-per-pr-matrix-starvation-2026-09-08"></a>- [KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08](backlog/kw-ci-per-pr-matrix-starvation-2026-09-08.md) — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — todo
 <a id="kw-ci-sccache-startup"></a>- [KW-CI-SCCACHE-STARTUP](backlog/kw-ci-sccache-startup.md) — A hosted job fails before compiling when the sccache server does not start [patch] — todo
 <a id="kw-dep-039"></a>- [KW-DEP-039](backlog/kw-dep-039.md) — Make Gaia an Atlas-local dependency [patch] — todo
