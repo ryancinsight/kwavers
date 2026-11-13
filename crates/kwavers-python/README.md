@@ -253,7 +253,7 @@ Linear acoustic wave equation in heterogeneous media:
 - **PSTD**: Pseudospectral Time-Domain (spectral spatial accuracy), with
   `FftBackend.Leto` for Apollo CPU transforms over Leto storage or
   `FftBackend.Hephaestus` for prepared GPU transforms
-- **Hybrid**: adaptive switching between FDTD and PSTD
+- **Hybrid**: adaptive switching between FDTD and PSTD in the Rust solver; `Simulation.run` refuses it, because the simulation runner cannot pass a run request's grid source or sensor recording to that solver
 - **Elastic**, **ElasticPSTD**: compressional + shear wave propagation
 - **Helmholtz**, **BEM**: frequency-domain and boundary-element formulations
 - **DG**: hybrid spectral / discontinuous-Galerkin for shock capturing
@@ -368,7 +368,7 @@ cargo clippy -p kwavers-python --all-targets -- -D warnings
 ## Status
 
 Alpha — the API may change. The k-Wave-compatible surface (grid, medium, source, sensor,
-FDTD/PSTD/Hybrid/DG simulation with PML boundaries and recorded sensor modes) is
+FDTD/PSTD/DG simulation with PML boundaries and recorded sensor modes) is
 implemented and parity-tested. Heterogeneous and elastic media, transducer arrays, FWI,
 and the transcranial/theranostic workflows are exposed and covered by the Python test
 suite. GPU execution is selected at run time by the Rust `kwavers-gpu` backend when a

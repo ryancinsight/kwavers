@@ -49,7 +49,6 @@
 <a id="kw-swe-clamp-test-residuals"></a>- [KW-SWE-CLAMP-TEST-RESIDUALS](backlog/kw-swe-clamp-test-residuals.md) — No workflow test command here selects the SWE integration test, and two clamp-test thresholds are underived [patch] — todo
 <a id="kw-board-offset-statuses"></a>- [KW-BOARD-OFFSET-STATUSES](backlog/kw-board-offset-statuses.md) — 14 entries moved to `todo` from off-set statuses must name their open acceptance clause with a witness, or be closed [patch] — todo
 <a id="kw-gpu-adapter-field-states"></a>- [KW-GPU-ADAPTER-FIELD-STATES](backlog/kw-gpu-adapter-field-states.md) — GPU PSTD adapter accessor docs name no value before a batch, and the Rustdoc of `pressure_field` is contradicted after a peak run [patch] — todo
-<a id="kw-sim-hybrid-runner-dispatch"></a>- [KW-SIM-HYBRID-RUNNER-DISPATCH](backlog/kw-sim-hybrid-runner-dispatch.md) — The runner sends a Hybrid request to the PSTD dispatch [patch] — todo
 <a id="kw-sim-pstd-no-sensor-contract"></a>- [KW-SIM-PSTD-NO-SENSOR-CONTRACT](backlog/kw-sim-pstd-no-sensor-contract.md) — The two PSTD dispatches differ on a request without sensors [patch] — todo
 <a id="kw-gpu-unpinned-refusal-fallback"></a>- [KW-GPU-UNPINNED-REFUSAL-FALLBACK](backlog/kw-gpu-unpinned-refusal-fallback.md) — A Leto fall-back on GPU PSTD provider errors other than the pinned refusals fails no test [patch] — todo
 <a id="kw-ci-semver-not-run"></a>- [KW-CI-SEMVER-NOT-RUN](backlog/kw-ci-semver-not-run.md) — No hosted run compares a public surface when a change lands [patch] — todo

@@ -20,6 +20,9 @@ impl SimulationRunner {
     ///
     /// # Errors
     /// - Returns `KwaversError::InvalidInput` for unsupported solver/config combos.
+    /// - Returns `KwaversError::FeatureNotAvailable` for `SolverType::Hybrid`:
+    ///   the runner has no path that hands a request's grid source and sensor
+    ///   recording to `HybridSolver`, and it does not answer with PSTD.
     /// - Propagates solver creation and runtime errors.
     pub fn run(
         req: &SimulationRunRequest<'_>,
@@ -40,13 +43,13 @@ impl SimulationRunner {
                     "Hybrid does not yet support FftBackend::Hephaestus".to_owned(),
                 ))
             }
-            SolverType::Hybrid => {
-                if let Some(thermal) = req.thermal {
-                    dispatch::pstd::run_with_thermal(req, sources, thermal)
-                } else {
-                    dispatch::pstd::run(req, sources)
-                }
-            }
+            SolverType::Hybrid => Err(KwaversError::FeatureNotAvailable(
+                "SolverType::Hybrid is not supported by SimulationRunner: HybridSolver builds \
+                 its inner solvers with an empty grid source and keeps them private, so the \
+                 request's grid source and sensor recording cannot reach them; select \
+                 SolverType::PSTD or SolverType::FDTD"
+                    .to_owned(),
+            )),
             #[cfg(feature = "gpu")]
             SolverType::PSTD => dispatch::pstd::run_gpu(req, sources),
             #[cfg(not(feature = "gpu"))]
@@ -261,6 +264,28 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "Feature not available: Hybrid does not yet support FftBackend::Hephaestus"
+        );
+    }
+
+    /// The request of `leto_selection_runs_the_request_the_refusals_start_from`
+    /// changed only in its solver: the PSTD dispatch answers it with a record,
+    /// so a Hybrid selection handed to that dispatch fails this test.
+    #[test]
+    fn hybrid_selection_is_refused_instead_of_answered_by_pstd() {
+        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        let mut request = leto_request(&grid, &medium);
+        request.solver_type = SolverType::Hybrid;
+
+        let error = SimulationRunner::run(&request, Vec::new())
+            .expect_err("the PSTD dispatch must not answer a Hybrid request");
+
+        assert_eq!(
+            error.to_string(),
+            "Feature not available: SolverType::Hybrid is not supported by SimulationRunner: \
+             HybridSolver builds its inner solvers with an empty grid source and keeps them \
+             private, so the request's grid source and sensor recording cannot reach them; \
+             select SolverType::PSTD or SolverType::FDTD"
         );
     }
 
