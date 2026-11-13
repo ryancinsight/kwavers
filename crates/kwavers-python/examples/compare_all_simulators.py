@@ -176,13 +176,13 @@ def select_simulators() -> list:
     # Check if pykwavers-only mode is requested
     pykwavers_only = os.environ.get("KWAVERS_PYKWAVERS_ONLY", "").lower() in ("1", "true", "yes")
 
-    # Always include pykwavers solvers if available
+    # Always include pykwavers solvers if available. Hybrid is not listed:
+    # `Simulation.run` refuses `SolverType.Hybrid` (KW-PY-HYBRID-REFUSED).
     if PYKWAVERS_AVAILABLE:
         simulators.extend(
             [
                 SimulatorType.PYKWAVERS_FDTD,
                 SimulatorType.PYKWAVERS_PSTD,
-                SimulatorType.PYKWAVERS_HYBRID,
             ]
         )
 

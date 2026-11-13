@@ -57,3 +57,4 @@
 <a id="kw-gpu-run-buffer-capacity"></a>- [KW-GPU-RUN-BUFFER-CAPACITY](backlog/kw-gpu-run-buffer-capacity.md) — A GPU PSTD run whose record buffer exceeds a device buffer limit panics [patch] — todo
 <a id="kw-gpu-pstd-buffer-request"></a>- [KW-GPU-PSTD-BUFFER-REQUEST](backlog/kw-gpu-pstd-buffer-request.md) — GPU PSTD requests a 128 MiB buffer limit whatever the adapter supports [minor] — todo
 <a id="kwavers-aeq-met-70"></a>- [KWAVERS-AEQ-MET-70](backlog/kwavers-aeq-met-70.md) — Inventory raw public metrics in the remaining transducer families [arch] — todo
+<a id="kw-py-hybrid-refused"></a>- [KW-PY-HYBRID-REFUSED](backlog/kw-py-hybrid-refused.md) — Python callers offer a Hybrid solver that `Simulation.run` refuses [patch] — todo
