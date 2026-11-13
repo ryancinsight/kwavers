@@ -47,6 +47,40 @@ before any hypothesis about its mechanism.
 there is nothing to truncate, so a taper only adds a position-dependent weight.
 Centre the gate on the true emission time, not on step zero plus transit.
 
+## Live Aequitas closure — 2026-08-05
+
+
+### KWAVERS-AEQ-MET-60 — transducer design/propagation metric gap (closed 2026-08-03)
+
+The live audit found and implemented the remaining raw physical boundary in
+`crates/kwavers-transducer/src/design/{mod,propagation}.rs`. Aperture design
+now publishes aperture dimensions, operating frequency, sound speed, pitch,
+element dimensions, kerf, wavelength, fill factor, and element/channel
+coordinates through Aequitas. Focused propagation now publishes center/focus
+coordinates, frequency, sound speed, drive current, pressure-per-current,
+acoustic impedance, focal pressure, SI intensity, mechanical index, and
+axial/lateral widths through Aequitas. The Kwavers driver validation and
+experiment adapters construct the typed contracts and extract legacy Pa,
+W/cm², and mm values only at their reporting boundary.
+
+ADR 099 records the contract and the Eunomia rule: real/quadrature values in
+the coherent propagation formula remain one observable signal, so no imaginary
+SI unit is valid. Local evidence is transducer Nextest 226/226 with one
+skipped, driver Nextest 489/489, strict offline Clippy, formatting, diff, and
+scoped residue scans. The local Atlas overlay prevents locked Cargo commands
+from resolving without generated lock churn, and local doctests timed out
+during that overlay compilation before a test diagnostic. The hosted
+repository-owned matrix passes at final head `27ce1029a`, including Code
+Coverage `91783721511` and Test Suite Coverage `91783718417`; Kwavers PR #338
+merges as `7ec566b694598f11d4ceb7bb8721e70384f40689`. The external RecurseML
+analyzer report is non-gating and is not source-change evidence.
+
+This item is bounded to the design and focused-propagation family and its
+direct callers. `transducers/acquisition_geometry.rs` element coordinates and
+the focused, hemispherical, MEMS, flexible, and two-dimensional array
+families remain separate audit candidates. The next item is the shared
+`TransducerGeometry` acquisition-coordinate contract.
+
 ## Review residuals (2026-07)
 
 - Review 2026-07-22: Python release run `29967429949` built the stable-ABI
