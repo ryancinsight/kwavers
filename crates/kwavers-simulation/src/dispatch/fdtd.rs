@@ -1,6 +1,8 @@
 //! FDTD solver dispatch.
 
-use crate::dispatch::shared::{recording_modes_from_strings, trim_initial_recorder_sample};
+use crate::dispatch::shared::{
+    empty_sensor_record, recording_modes_from_strings, trim_initial_recorder_sample,
+};
 use crate::types::extract_full_grid_stats;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_boundary::cpml::CPMLConfig;
@@ -17,7 +19,9 @@ use kwavers_source::Source as KwaversSource;
 /// # Errors
 ///
 /// Returns an error when recorder configuration, CPML setup, source
-/// registration, or the orchestrated FDTD run fails.
+/// registration, or the orchestrated FDTD run fails. A request without
+/// sensors is not an error: its `sensor_data` has no rows
+/// ([`SimulationRunRequest::sensor_mask`]).
 pub fn run(
     req: &SimulationRunRequest<'_>,
     sources: Vec<Box<dyn KwaversSource>>,
@@ -91,11 +95,21 @@ pub fn run(
     solver.run_orchestrated(req.time_steps)?;
 
     let stats = solver.sensor_recorder.extract_all_stats();
-    let full_data = solver
-        .extract_recorded_sensor_data()
-        .ok_or_else(|| KwaversError::Io(std::io::Error::other("No sensor data recorded")))?;
-    let sensor_data =
-        trim_initial_recorder_sample(full_data, req.time_steps, req.record_start_index);
+    let sensor_data = match solver.extract_recorded_sensor_data() {
+        Some(full_data) => {
+            trim_initial_recorder_sample(full_data, req.time_steps, req.record_start_index)
+        }
+        // No sensor was requested: the record has no rows, as the PSTD
+        // dispatches return it.
+        None if solver.sensor_recorder.sensor_indices().is_empty() => {
+            empty_sensor_record(req.time_steps, req.record_start_index)
+        }
+        None => {
+            return Err(KwaversError::Io(std::io::Error::other(
+                "No sensor data recorded",
+            )))
+        }
+    };
     let full_grid_stats = extract_full_grid_stats(&solver.sensor_recorder);
 
     Ok(SimulationRunResult {
@@ -116,3 +130,6 @@ pub fn run(
         thermal_dose: None,
     })
 }
+
+#[cfg(test)]
+mod tests;

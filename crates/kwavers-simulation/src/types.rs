@@ -50,7 +50,7 @@ pub fn extract_full_grid_stats(recorder: &SensorRecorder) -> FullGridStats {
 pub struct SimulationRunResult {
     /// Pressure time series at sensor positions: `(n_sensors, time_steps)`.
     ///
-    /// A PSTD request without sensors yields `n_sensors = 0` (see
+    /// A PSTD or FDTD request without sensors yields `n_sensors = 0` (see
     /// [`SimulationRunRequest::sensor_mask`]).
     pub sensor_data: leto::Array2<f64>,
     /// Pressure spatial statistics (p_max/min/rms/final sampled at sensors).
@@ -109,12 +109,12 @@ pub struct SimulationRunRequest<'a> {
 
     pub grid_source: GridSource,
     /// Grid points recorded by the PSTD dispatches, `FftBackend::Leto` and
-    /// `FftBackend::Hephaestus` alike.
+    /// `FftBackend::Hephaestus` alike, and by the FDTD dispatch.
     ///
     /// `None`, and a mask with no true element, request no sensors: the run
     /// succeeds and `sensor_data` has shape `(0, steps)`, where `steps` is
-    /// `time_steps` less the samples `record_start_index` skips. Neither
-    /// dispatch returns an error for the absence of sensors.
+    /// `time_steps` less the samples `record_start_index` skips. None of the
+    /// three dispatches returns an error for the absence of sensors.
     pub sensor_mask: Option<NdArray3<bool>>,
     pub transducer_ordered_indices: Option<Vec<(usize, usize, usize)>>,
     pub record_modes: Vec<String>,

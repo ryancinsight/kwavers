@@ -105,6 +105,19 @@ pub(crate) fn trim_initial_recorder_sample(
     }
 }
 
+/// The record of a request without sensors: no rows, and the columns the same
+/// request with a sensor records.
+pub(crate) fn empty_sensor_record(
+    time_steps: usize,
+    record_start_index: usize,
+) -> leto::Array2<f64> {
+    trim_initial_recorder_sample(
+        leto::Array2::zeros([0, time_steps]),
+        time_steps,
+        record_start_index,
+    )
+}
+
 /// Trim the initial recorder sample (record-start offset) from a view.
 pub(crate) fn trim_initial_recorder_view(
     recorded_data: leto::ArrayView2<'_, f64>,

@@ -15,3 +15,5 @@ pub mod poroelastic;
 pub mod pstd;
 pub mod rayleigh_sommerfeld;
 pub(crate) mod shared;
+#[cfg(test)]
+pub(crate) mod test_support;

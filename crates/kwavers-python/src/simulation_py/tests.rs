@@ -3,8 +3,15 @@ mod simulation_contract_tests {
     use super::super::Simulation;
     use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, nd_to_leto2};
     use crate::grid_py::Grid;
+    use crate::medium_py::MediumInner;
     use crate::misc_bindings::time_reversal_reconstruction_impl;
+    use crate::sensor_py::Sensor;
+    use kwavers_grid::Grid as KwaversGrid;
+    use kwavers_medium::HomogeneousMedium;
     use kwavers_receiver::recorder::fields::SensorRecordField;
+    use kwavers_solver::forward::pstd::checkpoint::PSTDCheckpoint;
+    use kwavers_solver::forward::pstd::config::{CompatibilityMode, PowerLawDispersion};
+    use kwavers_source::GridSource;
     use numpy::ndarray::{array, Array2};
 
     #[test]
@@ -89,5 +96,91 @@ mod simulation_contract_tests {
 
         assert_eq!(reconstruction.shape(), [6, 6, 1]);
         assert!(reconstruction.iter().all(|&value| value == 0.0));
+    }
+
+    /// A checkpoint restore whose sensor mask has no true element answers
+    /// with the record the PSTD dispatch returns for that request: no rows and
+    /// `total_steps` columns, not an `Io` error.
+    #[test]
+    fn a_checkpoint_restore_without_sensors_returns_an_empty_record() {
+        let grid = KwaversGrid::new(12, 12, 12, 1.0e-3, 1.0e-3, 1.0e-3).expect("a valid 12^3 grid");
+        let medium = MediumInner::Homogeneous(Box::new(HomogeneousMedium::new(
+            1000.0, 1500.0, 0.0, 0.0, &grid,
+        )));
+        let total_steps = 4;
+        let checkpoint_steps = 2;
+        let dt = 1.0e-7;
+        let mut mask = leto::Array3::zeros([12, 12, 12]);
+        mask[[6, 6, 6]] = 1.0;
+        let grid_source = GridSource {
+            p_mask: Some(mask),
+            p_signal: Some(
+                leto::Array2::from_shape_vec([1, total_steps], vec![0.0, 1.0, 0.0, 0.0])
+                    .expect("one signal row of total_steps samples"),
+            ),
+            ..GridSource::new_empty()
+        };
+        let sensor = Sensor {
+            sensor_type: "mask".to_string(),
+            position: None,
+            mask: Some(leto::Array3::from_elem([12, 12, 12], false)),
+            record_modes: Vec::new(),
+            record_start_index: 1,
+        };
+        let path = std::env::temp_dir().join(format!(
+            "kwavers-no-sensor-restore-{}.checkpoint",
+            std::process::id()
+        ));
+
+        Simulation::run_pstd_to_checkpoint(
+            &grid,
+            &medium,
+            total_steps,
+            checkpoint_steps,
+            dt,
+            CompatibilityMode::Optimal,
+            false,
+            0.0,
+            1.5,
+            PowerLawDispersion::default(),
+            grid_source.clone(),
+            Vec::new(),
+            Some(&sensor),
+            None,
+            Some(2),
+            None,
+            true,
+            None,
+            &path,
+        )
+        .expect("the run to the checkpoint succeeds");
+        let checkpoint = PSTDCheckpoint::load(&path).expect("the saved checkpoint loads");
+
+        let result = Simulation::run_pstd_from_checkpoint_loaded(
+            &grid,
+            &medium,
+            total_steps,
+            dt,
+            CompatibilityMode::Optimal,
+            false,
+            0.0,
+            1.5,
+            PowerLawDispersion::default(),
+            grid_source,
+            Vec::new(),
+            Some(&sensor),
+            None,
+            Some(2),
+            None,
+            true,
+            None,
+            checkpoint,
+            total_steps - checkpoint_steps,
+            &path,
+            &[],
+        )
+        .expect("a restore without sensors runs");
+
+        assert_eq!(result.sensor_data.shape(), [0, total_steps]);
     }
 }
