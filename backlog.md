@@ -55,7 +55,6 @@
 <a id="kw-gpu-run-buffer-capacity"></a>- [KW-GPU-RUN-BUFFER-CAPACITY](backlog/kw-gpu-run-buffer-capacity.md) — A GPU PSTD run whose record buffer exceeds a device buffer limit panics [patch] — todo
 <a id="kw-gpu-pstd-buffer-request"></a>- [KW-GPU-PSTD-BUFFER-REQUEST](backlog/kw-gpu-pstd-buffer-request.md) — GPU PSTD requests a 128 MiB buffer limit whatever the adapter supports [minor] — todo
 <a id="kwavers-aeq-met-70"></a>- [KWAVERS-AEQ-MET-70](backlog/kwavers-aeq-met-70.md) — Inventory raw public metrics in the remaining transducer families [arch] — todo
-<a id="kw-ci-gate-passes-drafts"></a>- [KW-CI-GATE-PASSES-DRAFTS](backlog/kw-ci-gate-passes-drafts.md) — The CI gate and Architecture gate pass a draft pull request whose jobs were all skipped [patch] [ci] — todo
 <a id="kw-ci-ubuntu-latest-unpinned"></a>- [KW-CI-UBUNTU-LATEST-UNPINNED](backlog/kw-ci-ubuntu-latest-unpinned.md) — 23 workflow jobs and one wheel-smoke matrix cell run on the moving `ubuntu-latest` image [patch] [ci] — todo
 <a id="kw-fdtd-avx512-doc"></a>- [KW-FDTD-AVX512-DOC](backlog/kw-fdtd-avx512-doc.md) — The FDTD solver doc and a standing fact advertise AVX-512 kernels that were deleted [patch] — todo
 <a id="kw-fdtd-sigma-test-slow"></a>- [KW-FDTD-SIGMA-TEST-SLOW](backlog/kw-fdtd-sigma-test-slow.md) — The FDTD sigma-factor test runs at two thirds of its 60 s bound in a parallel run [patch] [perf] — todo
@@ -65,3 +64,5 @@
 <a id="kw-ci-doctests-one-package"></a>- [KW-CI-DOCTESTS-ONE-PACKAGE](backlog/kw-ci-doctests-one-package.md) — No hosted job or push gate runs the doctests of any package but `kwavers` [patch] [ci] — todo
 <a id="kw-hook-nextest-config-ungated"></a>- [KW-HOOK-NEXTEST-CONFIG-UNGATED](backlog/kw-hook-nextest-config-ungated.md) — A push changing only `.config/nextest.toml` passes the pre-push hook with no package gated [patch] [ci] — todo
 <a id="kw-py-hybrid-refused"></a>- [KW-PY-HYBRID-REFUSED](backlog/kw-py-hybrid-refused.md) — Python callers offer a Hybrid solver that `Simulation.run` refuses [patch] — todo
+<a id="kw-sim-no-sensor-io-error"></a>- [KW-SIM-NO-SENSOR-IO-ERROR](backlog/kw-sim-no-sensor-io-error.md) — The FDTD dispatch and the Python PSTD checkpoint restore still fail a no-sensor request with an `Io` error [patch] — todo
+<a id="kw-sim-sensor-mask-doc"></a>- [KW-SIM-SENSOR-MASK-DOC](backlog/kw-sim-sensor-mask-doc.md) — The Rustdoc of `SimulationRunRequest::sensor_mask` says no sensors are requested by `None`, which is false beside `transducer_ordered_indices` [patch] — todo

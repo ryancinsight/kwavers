@@ -1381,6 +1381,14 @@ jobs:
   # branch waits for a check that cannot come. This job always runs, so it is
   # the one name the branch can require for every job below it, whatever each
   # one did.
+  #
+  # `skipped` is not `success`, so the gate reads results instead of only
+  # counting failures. A draft pull request skips every heavy job and would
+  # otherwise report green with nothing run (kwavers#1087 landed that way), so
+  # the gate refuses a draft; `ready_for_review` re-runs the workflow once the
+  # pull request is ready. On a ready pull request whose paths the classifier
+  # marks as code, every job that must run there has to report `success`: a
+  # skip there is a defect in the classifier or a job condition, never a pass.
   ci-gate:
     name: CI gate
     if: always()
@@ -1404,20 +1412,63 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Fail if any job failed or was cancelled
+      - name: Fail on a draft, a failed job, or a required job that did not run
         shell: bash
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          PULL_REQUEST_DRAFT: ${{ github.event.pull_request.draft || false }}
+          CODE: ${{ needs.changes.outputs.code }}
+          APT: ${{ needs.changes.outputs.apt }}
           RESULTS: ${{ join(needs.*.result, ' ') }}
+          WORKFLOW_LINT_RESULT: ${{ needs.workflow-lint.result }}
+          LOCKFILE_RESULT: ${{ needs.lockfile.result }}
+          LIB_TESTS_RESULT: ${{ needs.lib-tests.result }}
+          PINN_VALIDATION_RESULT: ${{ needs.pinn-validation.result }}
+          PYTHON_SURFACE_RESULT: ${{ needs.python-surface.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          SECURITY_RESULT: ${{ needs.security.result }}
+          MEMORY_SAFETY_RESULT: ${{ needs.memory-safety.result }}
+          VALIDATION_RESULT: ${{ needs.validation.result }}
+          APT_MIRROR_SELECTION_RESULT: ${{ needs.apt-mirror-selection.result }}
         run: |
           set -uo pipefail
           echo "job results: $RESULTS"
           echo "job results: $RESULTS" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$PULL_REQUEST_DRAFT" = "true" ]; then
+            echo "::error::Draft pull requests are not eligible for the required CI gate: their code jobs are skipped, so nothing was verified."
+            exit 1
+          fi
           case " $RESULTS " in
             *" failure "*|*" cancelled "*)
               echo "a gated job did not pass" >&2
               exit 1
               ;;
           esac
+          unmet=0
+          if [ "$APT" = "true" ] && [ "$APT_MIRROR_SELECTION_RESULT" != "success" ]; then
+            echo "::error::apt-mirror-selection ended with '$APT_MIRROR_SELECTION_RESULT' for a change that selects it."
+            unmet=1
+          fi
+          if [ "$EVENT_NAME" = "pull_request" ] && [ "$CODE" = "true" ]; then
+            entries=(
+              "workflow-lint=$WORKFLOW_LINT_RESULT"
+              "lockfile=$LOCKFILE_RESULT"
+              "lib-tests=$LIB_TESTS_RESULT"
+              "pinn-validation=$PINN_VALIDATION_RESULT"
+              "python-surface=$PYTHON_SURFACE_RESULT"
+              "build=$BUILD_RESULT"
+              "security=$SECURITY_RESULT"
+              "memory-safety=$MEMORY_SAFETY_RESULT"
+              "validation=$VALIDATION_RESULT"
+            )
+            for entry in "${entries[@]}"; do
+              if [ "${entry#*=}" != "success" ]; then
+                echo "::error::${entry%%=*} ended with '${entry#*=}' on a pull request whose changed paths need it."
+                unmet=1
+              fi
+            done
+          fi
+          exit "$unmet"
 
   # The counterpart to `CI gate`: one always-running check the branch can
   # require for every job folded in from the former standalone
@@ -1435,17 +1486,42 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Fail if any job failed or was cancelled
+      - name: Fail on a draft, a failed job, or a required job that did not run
         shell: bash
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          PULL_REQUEST_DRAFT: ${{ github.event.pull_request.draft || false }}
+          CODE: ${{ needs.changes.outputs.code }}
           RESULTS: ${{ join(needs.*.result, ' ') }}
+          INTEGRATION_RUNNER_WINDOWS_RESULT: ${{ needs.integration-runner-windows.result }}
+          ARCHITECTURE_CHECKS_RESULT: ${{ needs.architecture-checks.result }}
+          CLIPPY_RESULT: ${{ needs.clippy.result }}
         run: |
           set -uo pipefail
           echo "job results: $RESULTS"
           echo "job results: $RESULTS" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$PULL_REQUEST_DRAFT" = "true" ]; then
+            echo "::error::Draft pull requests are not eligible for the required Architecture gate: their code jobs are skipped, so nothing was verified."
+            exit 1
+          fi
           case " $RESULTS " in
             *" failure "*|*" cancelled "*)
               echo "a gated job did not pass" >&2
               exit 1
               ;;
           esac
+          unmet=0
+          if [ "$EVENT_NAME" = "pull_request" ] && [ "$CODE" = "true" ]; then
+            entries=(
+              "integration-runner-windows=$INTEGRATION_RUNNER_WINDOWS_RESULT"
+              "architecture-checks=$ARCHITECTURE_CHECKS_RESULT"
+              "clippy=$CLIPPY_RESULT"
+            )
+            for entry in "${entries[@]}"; do
+              if [ "${entry#*=}" != "success" ]; then
+                echo "::error::${entry%%=*} ended with '${entry#*=}' on a pull request whose changed paths need it."
+                unmet=1
+              fi
+            done
+          fi
+          exit "$unmet"
