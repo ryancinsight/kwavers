@@ -10,6 +10,22 @@ pub enum SubspaceSeparationMethod {
     /// CBR-based automatic selection: the smallest rank whose estimated
     /// clutter-to-residual power ratio reaches `target_cbr_db`.
     ///
+    /// `CBR(r)` is non-decreasing in `r` while residual power remains:
+    /// raising `r` moves one mode's floored power from the residual sum
+    /// into the clutter sum. The first rank at or above the target is
+    /// therefore the smallest clutter subspace whose residual-clutter
+    /// fraction `1/CBR` already falls below `1/target`: any smaller rank
+    /// leaves more clutter than specified, any larger rank keeps removing
+    /// modes past the point the target is met. This is eigenvalue-based
+    /// order selection in the sense of Yu and Lovstakken's review of
+    /// eigen-based clutter filter design (IEEE Trans. Ultrason.
+    /// Ferroelectr. Freq. Control, vol. 57, no. 5, pp. 1096-1111, May
+    /// 2010), whose design scenarios are parameterized by the
+    /// clutter-to-blood ratio itself; eigenvalue-difference/ratio
+    /// thresholding for order selection is laid out in Sec. III of the
+    /// precursor by Lovstakken, Yu and Torp (Proc. IEEE Ultrason. Symp.
+    /// 2007, pp. 2429-2432).
+    ///
     /// `target_cbr_db` is a power ratio in dB (`10 * log10`), converted with
     /// `/ 10`, matching `AdaptiveFilter::current_cbr_db`.
     /// A larger target removes more modes; a target above the maximum

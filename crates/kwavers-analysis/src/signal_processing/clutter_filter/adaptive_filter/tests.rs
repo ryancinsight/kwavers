@@ -213,6 +213,15 @@ fn test_rank_history_records_applied_rank() {
     filter.filter(&data).unwrap();
 
     assert_eq!(filter.rank_history(), &[3, 3, 3, 3]);
+
+    let config = AdaptiveFilterConfig {
+        separation_method: SubspaceSeparationMethod::FixedRank { clutter_rank: 5 },
+        ..Default::default()
+    };
+    let mut filter = AdaptiveFilter::new(config).unwrap();
+    filter.filter(&data).unwrap();
+
+    assert_eq!(filter.rank_history(), &[5, 5, 5, 5]);
 }
 
 /// Per-pixel result of the classical-Jacobi filter, the eigensolver the

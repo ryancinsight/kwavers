@@ -6,7 +6,6 @@
 <a id="kw-bio-043"></a>- [KW-BIO-043](backlog/kw-bio-043.md) — Asclepius response ownership [arch] [major] — todo
 <a id="kw-book-116"></a>- [KW-BOOK-116](backlog/kw-book-116.md) — Make the book gate execute a Rust oracle [patch] — todo
 <a id="kw-book-ch29-residuals"></a>- [KW-BOOK-CH29-RESIDUALS](backlog/kw-book-ch29-residuals.md) — Chapter 29 figures 5 and 6 cannot be regenerated [patch] — todo
-<a id="kw-cbr-facade-test-residuals"></a>- [KW-CBR-FACADE-TEST-RESIDUALS](backlog/kw-cbr-facade-test-residuals.md) — CBR selection doc and test residuals from #1020 and #1024 [patch] — todo
 <a id="kw-ci-049"></a>- [KW-CI-049](backlog/kw-ci-049.md) — Align Apollo provider lock [patch] — todo
 <a id="kw-ci-051"></a>- [KW-CI-051](backlog/kw-ci-051.md) — Remove obsolete deployment workflow [patch] — todo
 <a id="kw-ci-unlocked-cargo-commands"></a>- [KW-CI-UNLOCKED-CARGO-COMMANDS](backlog/kw-ci-unlocked-cargo-commands.md) — Three kinds of cargo command in the workflows run without `--locked` [patch] — todo

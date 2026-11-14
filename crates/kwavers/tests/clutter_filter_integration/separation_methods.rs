@@ -124,10 +124,10 @@ fn max_abs_diff(a: &[f64], b: &[f64]) -> f64 {
 ///
 /// ## CbrBased { 25 dB }
 ///
-/// `determine_clutter_rank` (filter.rs:259) returns the smallest `r` with
+/// `determine_clutter_rank` returns the smallest `r` with
 /// `CBR(r) >= 10^2.5 = 316.23`, where `estimate_cbr` (`EigenvalueSum`)
-/// floors every eigenvalue at zero (`max(lambda_i, 0)`, filter.rs:286 and
-/// :291): `CBR(r) = sum_(i<r) max(lambda_i, 0) / sum_(i>=r) max(lambda_i, 0)`.
+/// floors every eigenvalue at zero (`max(lambda_i, 0)` in `estimate_cbr`):
+/// `CBR(r) = sum_(i<r) max(lambda_i, 0) / sum_(i>=r) max(lambda_i, 0)`.
 /// The floor matters here. The lag-mean covariance is indefinite (the window
 /// term of the derivation above), so its eigenvalues carry a negative mass
 /// `N-` and, by fact 1, the floored residual is `|x|^2 - sum_(i<r) lambda_i
@@ -159,7 +159,9 @@ fn max_abs_diff(a: &[f64], b: &[f64]) -> f64 {
 /// The tightest margins are 2.1% (pixel 12, `CBR(7) = 323.00`) and 3.1%
 /// (pixel 13, `CBR(7) = 306.54`). The eigensolver's backward error moves
 /// each eigenvalue by at most `n^2 eps lambda_max = 2.7e-9`, and the
-/// residual sum at the crossing is at least 1.90 over at most 113 terms, so
+/// residual sum at the crossing is at least 1.89 over at most 113 terms
+/// (the measured minimum is 1.898 at pixel 0 under the `eigvalsh`
+/// computation above, so 1.89 holds with margin), so
 /// `CBR` carries a relative error below 2e-7, five orders under the
 /// margins: the ranks are exact. The numpy values are the prediction; the
 /// assertions below run the filter.

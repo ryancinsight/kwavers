@@ -238,21 +238,13 @@ impl AdaptiveFilter {
             }
             SubspaceSeparationMethod::CbrBased { target_cbr_db } => {
                 // Threshold crossing from below: `CBR(rank)` is the clutter
-                // power in the first `rank` modes over the residual power, so
-                // the caller asks for the smallest clutter subspace whose
-                // residual-clutter fraction `1/CBR(rank)` already falls below
-                // `1/target` — i.e. the smallest `rank` with
-                // `CBR(rank) >= target`. For the eigenvalue-sum estimator this
-                // crossing is unique: with descending eigenvalues
-                // `CBR(r+1) - CBR(r)` has the sign of
-                // `lambda_{r+1} * total_power > 0`, so `CBR` is strictly
-                // increasing while residual power remains. (The mean/geometric
-                // estimators need not be monotone; there the first crossing
-                // still selects the smallest qualifying rank.) The old
-                // `<=` comparison returned rank 1 whenever `CBR(1)` already
-                // sat below the target and the `n/2` fallback otherwise, so
-                // the rank never tracked the target. When no rank reaches the
-                // target the fallback keeps the previous arbitrary choice.
+                // power in the first `rank` modes over the residual power.
+                // The selection rule and its derivation live on
+                // `SubspaceSeparationMethod::CbrBased`; the mean/geometric
+                // estimators need not be monotone, but the first crossing
+                // still selects the smallest qualifying rank there. When no
+                // rank reaches the target the fallback keeps the previous
+                // arbitrary choice.
                 let target_cbr_linear = 10.0_f64.powf(target_cbr_db / 10.0);
                 for rank in 1..n_eigenvalues {
                     let cbr = self.estimate_cbr(eigenvalues, rank);
