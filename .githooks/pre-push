@@ -1158,7 +1158,10 @@ else
 fi
 
 if [ -n "$gate_base" ]; then
-  if ! gate_changed="$(git diff --name-only "$gate_base" "$gate_sha")"; then
+  # Both sides of a rename: with rename detection git lists only the
+  # destination, so a source file moved under a skipped path (`backlog/`,
+  # `.github/`) left the package it was removed from ungated.
+  if ! gate_changed="$(git diff --no-renames --name-only "$gate_base" "$gate_sha")"; then
     echo "pre-push: BLOCKED -- could not discover changed paths between $gate_base and $gate_sha." >&2
     exit 1
   fi
@@ -1432,11 +1435,27 @@ excluded_manifests=""
 standalone_manifests=""
 while IFS= read -r changed_path; do
   [ -n "$changed_path" ] || continue
-  # Git hooks and CI definitions are input to no cargo invocation. Without
-  # this, a single-package repository mapped them to its root package and a
-  # hook-only push ran clippy, tests and rustdoc for the whole package.
-  case "$changed_path" in
+  # Git hooks, CI definitions and the repository-root board files are input to
+  # no cargo invocation. Without this, a single-package repository mapped them
+  # to its root package and a hook-only or board-only push ran clippy, tests
+  # and rustdoc for the whole package, queued behind every peer's build lease
+  # until the push deadline. A 2026-11-13 `git grep` for board path literals
+  # in `*.rs` and `*.toml` on every registered member's default branch found
+  # no include, embed or read of a root board file; nothing re-checks it.
+  # The match is on the repository-relative path (the meta root passes paths
+  # relative to `tools/<ws>/`), so a nested file of the same name, such as
+  # `docs/checklist.md` or `tools/<ws>/backlog.md`, takes the ownership walk.
+  # Under `backlog/` only a top-level markdown file skips: `backlog/x.rs` or
+  # `backlog/sub/Cargo.toml` can be compiled code, so `backlog/*/*` is
+  # matched first (a case `*` also spans `/`) and falls to the ownership walk.
+  repository_path="$changed_path"
+  if [ "$workspace_manifest" != "Cargo.toml" ]; then
+    repository_path="$(dirname "$workspace_manifest")/$changed_path"
+  fi
+  case "$repository_path" in
     .githooks/* | .github/*) continue ;;
+    backlog/*/*) ;;
+    backlog.md | backlog/*.md | gap_audit.md | checklist.md) continue ;;
   esac
   owner_dir="$(dirname "$changed_path")"
   package_dir=""
@@ -1460,9 +1479,9 @@ while IFS= read -r changed_path; do
     esac
     continue
   fi
-  if [ -z "$package_dir" ] \
-    && { [ "$changed_path" = "Cargo.toml" ] || [ "$changed_path" = "Cargo.lock" ]; } \
-    && [ -f "$gate_manifest_path" ]; then
+  if [ -z "$package_dir" ] && [ "$changed_path" = "Cargo.toml" ] \
+    && [ -f "$gate_manifest_path" ] \
+    && grep -qE '^\[workspace\]' "$gate_manifest_path" 2>/dev/null; then
     while IFS=$'\t' read -r _workspace_manifest workspace_package; do
       [ -n "$workspace_package" ] || continue
       case " $gate_packages " in
@@ -1902,9 +1921,8 @@ MESSAGE
 # A manifest whose base fails to compile leaves its own packages to their
 # rows, said on the push: a push must still be able to fix a broken default
 # branch. Any other base failure refuses, since the gate could not judge. A
-# package the base lacks stays under its row. A newly locked standalone
-# package is held to zero only after real Cargo proves the closed historical
-# parent shape from immutable exports.
+# package the base lacks counts zero; new history has no base and is held to
+# the rows.
 
 # package_names <manifest>: the workspace package names of <manifest>.
 package_names() {
@@ -2004,19 +2022,11 @@ MESSAGE
 # cast_base_step <manifest-relative> <packages>: the base's sites for those
 # packages, which then join the base comparison.
 cast_base_step() {
-  local relative="$1" wanted="$2" newly_owned="${3:-}" present="" package_name names sites
+  local relative="$1" wanted="$2" present="" package_name names sites
   [ -n "$base_export" ] || return 0
   sites="$(mktemp "$tmp_base/pg-casts.XXXXXX")"
   run_temps+=("$sites")
   printf '[]' > "$sites"
-  if [ "$newly_owned" = true ]; then
-    cast_base_sites+=(--base-sites "$sites")
-    for package_name in $wanted; do
-      cast_base_sites+=(--base-package "$package_name")
-      cast_base_sites+=(--zero-base-package "$package_name")
-    done
-    return 0
-  fi
   if [ -f "$base_export/$relative" ]; then
     names="$(package_names "$base_export/$relative" | tr -d '\r')" || {
       echo "pre-push: BLOCKED -- cargo metadata fails for $relative at the pushed base ${gate_base:0:12}, so the cast gate cannot judge it." >&2
@@ -2062,7 +2072,6 @@ if [ -n "$cast_gate" ]; then
   gate_log="$(mktemp "$tmp_base/pg-log.XXXXXX")"
   run_temps+=("$gate_log")
   base_reasons=""
-  new_owner_manifests=""
   if [ -n "$gate_base" ]; then
     base_reasons="$("$python_bin" "$cast_gate" base-triggers --repo "$repo_root" \
       --base "$gate_base" --tip "$gate_sha" | tr -d '\r')" || {
@@ -2070,11 +2079,9 @@ if [ -n "$cast_gate" ]; then
       exit 1
     }
   fi
-  # Unsupported shapes reuse this immutable base export for the ordinary
-  # historical comparison below.
-  if [ -n "$gate_base" ] \
-    && { [ -n "$base_reasons" ] || [ -n "${standalone_manifests// /}" ]; } \
-    && [ -z "$base_export" ]; then
+  # One base export serves every workspace of this push.
+  if [ -n "$base_reasons" ] && [ -z "$base_export" ]; then
+    echo "pre-push: cast counts are compared with the pushed base (${base_reasons%%$'\n'*})" >&2
     base_export="$gate_parent/base-${repo_root##*/}"
     mkdir -p "$base_export"
     base_export="$(cd "$base_export" && { pwd -W 2>/dev/null || pwd; })"
@@ -2086,31 +2093,7 @@ if [ -n "$cast_gate" ]; then
       fi
     fi
   fi
-  if [ -n "$gate_base" ] && [ -n "${standalone_manifests// /}" ]; then
-    owner_arguments=()
-    for standalone_manifest in $standalone_manifests; do
-      owner_arguments+=(--manifest "$standalone_manifest")
-    done
-    metadata_timeout=$((600 - SECONDS))
-    if [ "$metadata_timeout" -le 0 ]; then
-      echo "pre-push: BLOCKED -- no gate deadline remains for Cargo ownership metadata" >&2
-      exit 1
-    fi
-    new_owner_manifests="$("$python_bin" "$cast_gate" new-standalone-owners \
-      --repo "$repo_root" --base "$gate_base" --tip "$gate_sha" \
-      --base-export "$base_export" --tip-export "$gate_export" \
-      --metadata-timeout "$metadata_timeout" \
-      "${owner_arguments[@]}" | tr -d '\r')" || {
-      echo "pre-push: BLOCKED -- the cast gate could not classify standalone owners in ${gate_base:0:12}..${gate_sha:0:12}" >&2
-      exit 1
-    }
-  fi
-  if [ -n "$base_reasons" ] || [ -n "$new_owner_manifests" ]; then
-    comparison_reason="${base_reasons%%$'\n'*}"
-    [ -n "$comparison_reason" ] || comparison_reason="a standalone manifest first owns its lock"
-    echo "pre-push: cast counts are compared with the pushed base ($comparison_reason)" >&2
-  fi
-  if [ -n "${gate_packages// /}" ] && [ -n "$base_reasons" ]; then
+  if [ -n "${gate_packages// /}" ]; then
     cast_base_step Cargo.toml "$gate_packages"
   fi
   for standalone_manifest in $standalone_manifests; do
@@ -2118,11 +2101,7 @@ if [ -n "$cast_gate" ]; then
       echo "pre-push: BLOCKED -- cargo metadata fails for the standalone crate $standalone_manifest, so the cast gate cannot judge it." >&2
       exit 1
     }
-    newly_owned=false
-    case $'\n'"$new_owner_manifests"$'\n' in
-      *$'\n'"$standalone_manifest"$'\n'*) newly_owned=true ;;
-    esac
-    cast_base_step "$standalone_manifest" "$standalone_names" "$newly_owned"
+    cast_base_step "$standalone_manifest" "$standalone_names"
     standalone_sites="$(mktemp "$tmp_base/pg-casts.XXXXXX")"
     run_temps+=("$standalone_sites")
     standalone_status=0
