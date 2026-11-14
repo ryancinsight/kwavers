@@ -1,46 +1,13 @@
 use super::{power_law_absorption_mode, prepare_solver, run};
 use crate::configs::NonlinearConfig;
+use crate::dispatch::test_support::{centre_source, request};
 use crate::types::SimulationRunRequest;
 use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousMedium;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
-use kwavers_solver::config::SolverType;
-use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
-use kwavers_solver::forward::pstd::config::{CompatibilityMode, PowerLawDispersion};
-use kwavers_source::grid_source::GridSource;
-
-fn request<'a>(
-    grid: &'a Grid,
-    medium: &'a HomogeneousMedium,
-    nonlinear: &'a NonlinearConfig,
-) -> SimulationRunRequest<'a> {
-    SimulationRunRequest {
-        grid,
-        medium,
-        time_steps: 4,
-        dt: 1e-8,
-        solver_type: SolverType::PSTD,
-        fft_backend: kwavers_solver::config::FftBackend::Leto,
-        pml: None,
-        helmholtz: None,
-        nonlinear: Some(nonlinear),
-        thermal: None,
-        poroelastic: None,
-        compatibility_mode: CompatibilityMode::Optimal,
-        kspace_correction: KSpaceCorrectionMode::None,
-        axisymmetric: false,
-        grid_source: GridSource::default(),
-        sensor_mask: None,
-        transducer_ordered_indices: None,
-        record_modes: Vec::new(),
-        record_start_index: 0,
-        transducers_for_rs: &[],
-        elastic_velocity_source: None,
-        elastic_ivp_axis: None,
-    }
-}
+use kwavers_solver::forward::pstd::config::PowerLawDispersion;
 
 /// The requested dispersion reaches the PSTD solver: at `y = 1` the causal
 /// form is rejected with its alternative named, and absorption without
@@ -122,21 +89,6 @@ fn an_explicit_coefficient_outranks_the_medium() {
             alpha_power: 1.1
         }
     );
-}
-
-/// One pressure source at the grid centre of a 7x4x3 grid, so the run
-/// propagates a field the absent sensors do not record.
-fn centre_source() -> GridSource {
-    let mut mask = leto::Array3::zeros([7, 4, 3]);
-    mask[[3, 2, 1]] = 1.0;
-    GridSource {
-        p_mask: Some(mask),
-        p_signal: Some(
-            leto::Array2::from_shape_vec([1, 3], vec![0.0, 1.0, 0.0])
-                .expect("one signal row of three steps"),
-        ),
-        ..GridSource::new_empty()
-    }
 }
 
 /// A request without a sensor mask, and one whose mask has no true element,
