@@ -2,10 +2,12 @@
 //!
 //! Handles PSTD, PSTD+Thermal, and GPU PSTD dispatch paths.
 
-use leto::{Array3, SliceArg};
+use leto::{Array2, Array3, SliceArg};
 
 use crate::configs::ThermalConfig;
-use crate::dispatch::shared::{record_modes_to_spec, trim_initial_recorder_view};
+use crate::dispatch::shared::{
+    record_modes_to_spec, trim_initial_recorder_sample, trim_initial_recorder_view,
+};
 use crate::types::extract_full_grid_stats;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_boundary::cpml::CPMLConfig;
@@ -87,7 +89,8 @@ pub fn power_law_absorption_mode(
 /// result extraction fails. A request with zero time steps is refused as
 /// [`KwaversError::InvalidInput`], as the Hephaestus dispatch refuses it;
 /// so is a time step that is zero, negative or not finite, by
-/// `PSTDSolver::new`.
+/// `PSTDSolver::new`. A request without sensors is not an error: its
+/// `sensor_data` has no rows ([`SimulationRunRequest::sensor_mask`]).
 pub fn run(
     req: &SimulationRunRequest<'_>,
     sources: Vec<Box<dyn KwaversSource>>,
@@ -365,11 +368,21 @@ pub(crate) fn extract_result(
     record_start_index: usize,
 ) -> KwaversResult<SimulationRunResult> {
     let stats = solver.sensor_recorder.extract_all_stats();
-    let full_data = solver
-        .sensor_recorder
-        .recorded_pressure_view()
-        .ok_or_else(|| KwaversError::Io(std::io::Error::other("No sensor data recorded")))?;
-    let sensor_data = trim_initial_recorder_view(full_data, time_steps, record_start_index);
+    let sensor_data = match solver.sensor_recorder.recorded_pressure_view() {
+        Some(full_data) => trim_initial_recorder_view(full_data, time_steps, record_start_index),
+        // No sensor was requested: the record has no rows, as the
+        // Hephaestus dispatch returns it.
+        None if solver.sensor_recorder.sensor_indices().is_empty() => trim_initial_recorder_sample(
+            Array2::zeros([0, time_steps]),
+            time_steps,
+            record_start_index,
+        ),
+        None => {
+            return Err(KwaversError::Io(std::io::Error::other(
+                "No sensor data recorded",
+            )))
+        }
+    };
 
     let ux_data = solver
         .sensor_recorder
