@@ -1445,13 +1445,17 @@ while IFS= read -r changed_path; do
   # The match is on the repository-relative path (the meta root passes paths
   # relative to `tools/<ws>/`), so a nested file of the same name, such as
   # `docs/checklist.md` or `tools/<ws>/backlog.md`, takes the ownership walk.
+  # Under `backlog/` only a top-level markdown file skips: `backlog/x.rs` or
+  # `backlog/sub/Cargo.toml` can be compiled code, so `backlog/*/*` is
+  # matched first (a case `*` also spans `/`) and falls to the ownership walk.
   repository_path="$changed_path"
   if [ "$workspace_manifest" != "Cargo.toml" ]; then
     repository_path="$(dirname "$workspace_manifest")/$changed_path"
   fi
   case "$repository_path" in
     .githooks/* | .github/*) continue ;;
-    backlog.md | backlog/* | gap_audit.md | checklist.md) continue ;;
+    backlog/*/*) ;;
+    backlog.md | backlog/*.md | gap_audit.md | checklist.md) continue ;;
   esac
   owner_dir="$(dirname "$changed_path")"
   package_dir=""
