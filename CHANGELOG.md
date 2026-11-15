@@ -4,6 +4,23 @@
 
 ### Changed
 
+- **Breaking:** Advance the Eunomia and Moirai provider contracts. The
+  Moirai-parallel requirement moves from 0.11.0 to 0.12.0 and the Leto and
+  Leto-ops requirements widen to `>=0.47.1, <0.49.0` so the 0.48 line
+  resolves; the Eunomia requirement already admits the 0.12 line and the
+  regenerated lock selects it. The lock is regenerated outside the Atlas
+  dependency overlay and names one revision per provider repository, with every
+  provider row at its repository's current default head. `kwavers-math`
+  re-exports Eunomia's `Complex32` and `Complex64`, and Rust treats the type of
+  Eunomia 0.11 and the same-named type of Eunomia 0.12 as distinct nominal
+  types, so code generic over the Eunomia 0.11 `Complex64` type no longer
+  satisfies Kwavers's public bounds; update the imports to 0.12 and select the
+  same provider cohort before using Kwavers's public generic types. Consumers
+  already using concrete scalar types keep the same Kwavers API. Moirai 0.12.0
+  removes the required `StateWord::get_mut` method, which Kwavers neither
+  implements nor calls, so no Kwavers source changes with the move. See
+  [ADR 0138](docs/adr/0138-eunomia-moirai-provider-contract.md).
+
 - **Breaking:** `AcousticProperties::alpha_coefficient` returns
   `ReciprocalLength<f64>` (Np/m at the 1 MHz reference) and
   `MaterialFields::alpha0_db` becomes `alpha0` in the same SI units. The

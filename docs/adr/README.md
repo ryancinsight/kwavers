@@ -22,6 +22,7 @@
 | [011](011-workspace-crate-split.md) | Workspace crate split of the `kwavers` monolith | Accepted |
 | [012](012-monomorphization-boundary-policy.md) | Monomorphization & dynamic-dispatch boundary policy | Accepted |
 | [013](013-acoustic-ct-radon-fbp.md) | Acoustic Computed Tomography: Radon Transform + Filtered Backprojection | Accepted |
+| [0138](0138-eunomia-moirai-provider-contract.md) | Advance the Eunomia and Moirai provider contracts | Accepted |
 | [014](014-acoustoelasticity-murnaghan.md) | Acousto-elasticity: Murnaghan Stress-Dependent Wave Speed + Pre-Stress Inversion | Accepted |
 | [015](015-cmut-pmut-mems-models.md) | CMUT vs PMUT MEMS Transducer Models (Flexible / IVUS) | Accepted |
 | [016](016-exact-adjoint-fwi-self-adjoint-engine.md) | Exact discrete-adjoint FWI via a self-adjoint second-order acoustic engine | Accepted |
