@@ -128,8 +128,13 @@ impl Simulation {
     ///     Acoustic medium
     /// source : Source or list[Source]
     ///     Acoustic source(s)
-    /// sensor : Sensor
-    ///     Field sensor
+    /// sensor : Sensor or TransducerArray2D
+    ///     For zero recording points in PSTD, use ``Sensor.from_mask``
+    ///     with an all-false array matching the grid shape.
+    ///     ``Simulation.run`` accepts a transducer array sensor with
+    ///     ``FftBackend.Leto`` and records pressure in transducer grid-point
+    ///     order. ``FftBackend.Hephaestus`` raises ``RuntimeError`` for this
+    ///     sensor type when running PSTD.
     /// solver : SolverType, optional
     ///     Solver type (default: FDTD)
     ///
