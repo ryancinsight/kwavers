@@ -2,7 +2,7 @@
 
 ## KW-DEP-040 — Migrate first-party floors past Apollo 0.28 / Consus 0.2 [minor] — todo
 
-priority: tightening; needs: none; scope: `Cargo.toml`, `Cargo.lock`
+priority: tightening; needs: none; scope: `Cargo.toml`, `Cargo.lock`; milestone: M-solvers-core
 
 - **Outcome:** fresh (non-`--locked`) resolution succeeds against current stack mains again.
 - **Acceptance:** `lockfile.py --check` green; `cargo update` over the first-party set completes; focused suites stay green; the committed lock keeps standalone form (git sources intact, no `[[patch.unused]]`).

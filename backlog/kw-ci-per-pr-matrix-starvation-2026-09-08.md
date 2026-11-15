@@ -2,7 +2,7 @@
 
 ## KW-CI-PER-PR-MATRIX-STARVATION-2026-09-08 — Per-PR CI runs the scheduled matrix [patch] [ci] [perf] — todo
 
-priority: tightening; needs: none; scope: `.github/workflows/ci.yml`, `main` required checks
+priority: tightening; needs: none; scope: `.github/workflows/ci.yml`, `main` required checks; milestone: M-4.0
 
 - **Outcome:** the pull-request path runs the affected-scope checks; the full matrix (extra toolchains, heavy validation, coverage, feature matrix) moves to the scheduled selection-drift backstop, bringing verification round-trip toward the five-minute job target.
 - **Measured 2026-09-08, `main` runs:** CI/CD Pipeline 94 and 114 min wall clock, Architecture Validation 75 min, Deploy mdBook 64 and 95 min; job runtimes sum to about 82 min but run in parallel, so most wall clock is inter-job queueing (runner starvation). One pull request started about 24 checks across 5 always-on workflows.

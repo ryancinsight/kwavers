@@ -2,7 +2,7 @@
 
 ## KW-GPU-060 — Hephaestus backend-kernel ownership [major] — todo
 
-priority: architecture; needs: none; scope: `crates/kwavers-gpu/src/backend/`, `crates/kwavers-gpu/src/pstd_gpu/`, ADR 039
+priority: architecture; needs: none; scope: `crates/kwavers-gpu/src/backend/`, `crates/kwavers-gpu/src/pstd_gpu/`, ADR 039; milestone: M-solvers-core
 
 - **Outcome:** concrete WGPU buffer allocation, pipeline execution and shader dispatch sit behind a Hephaestus-owned provider trait, so WGPU and CUDA implement one operation contract with no algorithm call-site branches. `WgpuComputeProvider` uses Hephaestus typed transfer plus `binary_elementwise_into` and `WgslMultiStorageKernel`; the local buffer/pipeline managers and their unsafe device-pointer ownership are deleted; Leto stays only at the host-array boundary.
 - **Decision:** [ADR 039](docs/adr/039-hephaestus-backend-kernel-ownership.md).

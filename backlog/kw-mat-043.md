@@ -2,7 +2,7 @@
 
 ## KW-MAT-043 — Direct FWI L-BFGS provider ownership [patch] [arch] — todo
 
-priority: architecture; needs: none; scope: the two FWI production callers, the focused FWI L-BFGS tests, `crates/kwavers-math/src/optimization/`
+priority: architecture; needs: none; scope: the two FWI production callers, the focused FWI L-BFGS tests, `crates/kwavers-math/src/optimization/`; milestone: M-solvers-core
 
 - **Outcome:** use `leto_ops::application::optimization::LbfgsMemory` directly in every in-scope FWI caller; the consumer owns no adapter, fallback or duplicate memory implementation.
 - **Baseline:** `crates/kwavers-math/src/optimization/lbfgs.rs` is already absent (deleted by the math SSOT migration) and must not be recreated. The public `kwavers-math` re-export stays outside this FWI caller cutover.

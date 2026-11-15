@@ -2,7 +2,7 @@
 
 ## KW-CI-CLASSIFIER-RESIDUALS — The changed-path classifier trusts a file list it does not check [patch] [ci] — todo
 
-priority: verification; needs: none; basis: 95a79d4b2cf05ca2d388c5f1c9f28e7889f75d2a; scope: `.github/workflows/ci.yml` (the `changes` job, step `Classify the changed paths`, and `on.push.paths-ignore`)
+priority: verification; needs: none; basis: 95a79d4b2cf05ca2d388c5f1c9f28e7889f75d2a; scope: `.github/workflows/ci.yml` (the `changes` job, step `Classify the changed paths`, and `on.push.paths-ignore`); milestone: M-4.0
 
 - **Source.** Findings the judges of #1030 and #1034 filed; neither pull request changed them.
 - **Unchecked list length.** The step classifies the entries of `pulls/<n>/files`. GitHub documents that endpoint as returning at most 3000 files (REST reference, "List pull requests files"), and the step does not compare the entry count with the pull request's `changed_files` field. Past the cap it sees only the first 3000 entries and can report `code=false` for a pull request that changes code. An empty list also reports `code=false`, because `code` starts `false` and only a listed path sets it.

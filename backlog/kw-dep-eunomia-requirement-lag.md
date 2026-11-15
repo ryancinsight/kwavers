@@ -2,7 +2,7 @@
 
 ## KW-DEP-EUNOMIA-REQUIREMENT-LAG — The Eunomia requirement admits no version its repository now holds [patch] — todo
 
-priority: architecture; needs: none; basis: 9b2b75c590efb6503f92d01aee2fae79ef73690e; scope: `Cargo.toml`, `Cargo.lock`
+priority: architecture; needs: none; basis: 9b2b75c590efb6503f92d01aee2fae79ef73690e; scope: `Cargo.toml`, `Cargo.lock`; milestone: M-solvers-core
 
 - **Read at the basis.** `Cargo.toml` line 63 requires `eunomia = { version = "0.11.0", git = "https://github.com/ryancinsight/eunomia", ... }`, and `Cargo.lock` pins eunomia 0.11.0 at d8ee31abf9e10c3aaa4efd67ed5912a612086115.
 - **Observed by the integrator of #1059**, from its lane `worktrees/kw-swefix2` on its development host: a resolution outside the lockfile (the `cargo update` that `cargo semver-checks` 0.51.0 runs) fails with "failed to select a version for the requirement `eunomia = \"^0.11.0\"`; candidate versions found which didn't match: 0.12.0; location searched: Git repository https://github.com/ryancinsight/eunomia". Locked builds are unaffected.

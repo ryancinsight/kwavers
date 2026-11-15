@@ -2,7 +2,7 @@
 
 ## KW-BIO-043 — Asclepius response ownership [arch] [major] — todo
 
-priority: architecture; needs: none; basis: acef6520f6e5c590ff73e1f39ee3e66361df7dcc; scope: CEM43, Arrhenius damage and independent-insult composition in `kwavers-physics`, `kwavers-therapy`, `kwavers-python`; provider manifests
+priority: architecture; needs: none; basis: acef6520f6e5c590ff73e1f39ee3e66361df7dcc; scope: CEM43, Arrhenius damage and independent-insult composition in `kwavers-physics`, `kwavers-therapy`, `kwavers-python`; provider manifests; milestone: M-imaging-capability
 
 - **Outcome:** production CEM43 and Arrhenius formulas exist only in Asclepius; every in-scope consumer delegates through Aequitas quantities; invalid observations return errors without partially updating persistent state; Python stays a conversion-only PyO3 boundary. Grids, treatment policy, tissue parameter catalogs and the independent bioheat validation oracle stay Kwavers-owned.
 - **Decision:** [ADR 044](docs/adr/044-asclepius-response-ownership.md); the change is breaking (public duplicate response functions removed).

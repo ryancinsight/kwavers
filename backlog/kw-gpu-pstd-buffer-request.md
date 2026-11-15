@@ -2,7 +2,7 @@
 
 ## KW-GPU-PSTD-BUFFER-REQUEST — GPU PSTD requests a 128 MiB buffer limit whatever the adapter supports [minor] — todo
 
-priority: feature; needs: none; basis: d1a3d463bfed5532f06d6ca5405ea64075335b27; scope: `crates/kwavers-gpu/src/gpu/device.rs`, `crates/kwavers-gpu/src/pstd_gpu/pipeline/auto_device.rs`, `crates/kwavers-gpu/src/pstd_gpu/pipeline/capacity.rs`
+priority: feature; needs: none; basis: d1a3d463bfed5532f06d6ca5405ea64075335b27; scope: `crates/kwavers-gpu/src/gpu/device.rs`, `crates/kwavers-gpu/src/pstd_gpu/pipeline/auto_device.rs`, `crates/kwavers-gpu/src/pstd_gpu/pipeline/capacity.rs`; milestone: M-solvers-core
 
 - **Origin.** #1059 refuses a plan whose `pml_xyz` or `shifts_all` exceeds a limit the device enables. The provider asks for that limit itself.
 - **Read at the basis.** `minimal_compute_limits` (`crates/kwavers-gpu/src/gpu/device.rs` line 300) requests `max_buffer_size: 128 * 1024 * 1024` (line 302). `pstd_required_limits` (`pipeline/auto_device.rs` line 70) starts from `WgpuDevice::required_limits()`, which starts from `minimal_compute_limits` (`device.rs` lines 81 and 82). At the locked Hephaestus revision (72ffa0577952411a27182782637248a2c8a02ead), `DeviceLimits` (`crates/hephaestus-core/src/domain/device.rs` line 43) has no field for the storage binding size, and `wgpu_limits_from_device_limits` (`crates/hephaestus-wgpu/src/infrastructure/device/features.rs`, from line 69) takes `max_buffer_size` from the request and every limit it does not name from `wgpu::Limits::downlevel_defaults` (`..downlevel`).

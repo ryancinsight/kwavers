@@ -2,7 +2,7 @@
 
 ## ATLAS-KWAVERS-HEPHAESTUS-VIS-104 — Multi-field hand-off and fallback render entries have no value test [patch] — todo
 
-priority: verification; needs: none; basis: ea5f0a4d666663ae74d189e1718cfc5836e6e2cb; scope: `crates/kwavers-analysis/src/visualization/fallback/mod.rs`, `crates/kwavers-analysis/src/visualization/mod.rs`, `crates/kwavers-analysis/src/visualization/engine/`
+priority: verification; needs: none; basis: ea5f0a4d666663ae74d189e1718cfc5836e6e2cb; scope: `crates/kwavers-analysis/src/visualization/fallback/mod.rs`, `crates/kwavers-analysis/src/visualization/mod.rs`, `crates/kwavers-analysis/src/visualization/engine/`; milestone: M-imaging-capability
 
 - **Open clause, rendering half:** "initialized GPU rendering processes every field". The module is compiled only in the `gpu-visualization` build (`crates/kwavers-analysis/src/lib.rs` lines 10-11). There the uploads of a multi-field render are tested (`test_initialized_render_multi_field_transfers_every_field`, `visualization/mod.rs`, from #1051); the hand-off to the renderer is not. `render_multi_field` drops the frame that `render_multi_volume` returns, and `test_render_multi_field_hands_later_fields_to_the_renderer` asserts the renderer's rejection of a second field without transparency, which any hand-off of two or more fields produces.
 - **Witness:** in `render_multi_field` (`engine/mod.rs`), the iterator that pairs field types with fields was changed three ways, one at a time: `.take(2)` appended, so that two of three fields are handed over; every type paired with the first field; the fields reversed. With each, all 35 tests of `visualization::` pass at the head of #1051.

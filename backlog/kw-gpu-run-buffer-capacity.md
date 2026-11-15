@@ -2,7 +2,7 @@
 
 ## KW-GPU-RUN-BUFFER-CAPACITY — A GPU PSTD run whose record buffer exceeds a device buffer limit panics [patch] — todo
 
-priority: correctness; needs: none; basis: d1a3d463bfed5532f06d6ca5405ea64075335b27; scope: `crates/kwavers-gpu/src/pstd_gpu/time_loop/`, `crates/kwavers-gpu/src/pstd_gpu/pipeline/`, `crates/kwavers-gpu/src/pstd_gpu/runner.rs`, `crates/kwavers-simulation/src/runner.rs`, `docs/adr/037-gpu-pstd-output-contract.md`
+priority: correctness; needs: none; basis: d1a3d463bfed5532f06d6ca5405ea64075335b27; scope: `crates/kwavers-gpu/src/pstd_gpu/time_loop/`, `crates/kwavers-gpu/src/pstd_gpu/pipeline/`, `crates/kwavers-gpu/src/pstd_gpu/runner.rs`, `crates/kwavers-simulation/src/runner.rs`, `docs/adr/037-gpu-pstd-output-contract.md`; milestone: M-solvers-core
 
 - **Origin.** The second verdict on #1059 (comment 6815427401, finding 1). #1059 checks two construction buffers, `pml_xyz` and `shifts_all`; the buffers a run sizes are checked nowhere.
 - **Read at the basis.** In `crates/kwavers-gpu/src/pstd_gpu/time_loop/buffer.rs`, `output_storage_lengths` (line 18) sizes the record at `n_sensors.max(1) * nt` values (line 24), plus one value per grid point when peak pressure is recorded. `build_run_cache` (line 80) creates `sensor_data` with that length (lines 108 and 109) and `sensor_indices`, `source_data`, `vel_x_data` and `sensor_staging` (lines 107 to 115); `ensure_field_staging_buffer` creates `final_field_staging` (line 76). Each goes through a `WgpuPstdBufferFactory` call that returns no error (`pipeline/buffers.rs`).

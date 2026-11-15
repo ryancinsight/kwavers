@@ -2,7 +2,7 @@
 
 ## KW-BOOK-116 — Make the book gate execute a Rust oracle [patch] — todo
 
-priority: verification; needs: none; scope: `.github/workflows/book-pages.yml`, `docs/book/examples/basic_simulation.md`
+priority: verification; needs: none; scope: `.github/workflows/book-pages.yml`, `docs/book/examples/basic_simulation.md`; milestone: M-4.0
 
 - **Outcome:** the published Kwavers book executes one deterministic Rust oracle and the shared workflow builds the exact package before `mdbook test`.
 - **State:** implementation complete locally (locked `kwavers` build, `cargo fmt --check`, `mdbook test docs/book`, `mdbook build docs/book` pass); hosted verification pending. The standalone link checker still reports pre-existing source links outside the book root and incomplete mathematical-link parsing, tracked as separate documentation cleanup.

@@ -2,7 +2,7 @@
 
 ## KW-ARCH-036 — Clinical-imaging dependency boundary [major] — todo
 
-priority: architecture; needs: none; scope: `kwavers-physics`, `kwavers-solver`, direct clinical consumers
+priority: architecture; needs: none; scope: `kwavers-physics`, `kwavers-solver`, direct clinical consumers; milestone: M-imaging-capability
 
 - **Driver:** a downstream consumer's forward PSTD package reached `ritk-filter` through unconditional clinical image I/O and registration dependencies.
 - **Acceptance:** that consumer no longer reaches `ritk-filter`; PSTD builds and its finite-aperture boundary regression runs through the native Kwavers path; every in-workspace user of gated clinical APIs opts in explicitly.

@@ -2,7 +2,7 @@
 
 ## KW-GPU-TEARDOWN — Dissolve the remaining internal `kwavers/src` into the layered crates [arch] — todo
 
-priority: architecture; needs: none; scope: `crates/kwavers/src`, `crates/kwavers-gpu`, `crates/kwavers-solver` GPU surfaces
+priority: architecture; needs: none; scope: `crates/kwavers/src`, `crates/kwavers-gpu`, `crates/kwavers-solver` GPU surfaces; milestone: M-solvers-core
 
 - **Outcome:** `kwavers` is a thin facade. The bulk is GPU: a `kwavers-gpu` leaf owns the `ComputeBackend`/`FdtdGpuAccelerator` surfaces that stay in solver and consolidates all three scattered GPU paths, with wgpu-v26 bit-rot repaired as part of the move (user decision 2026-06-03).
 - **Delivered so far:** the `kwavers-gpu` scaffold.

@@ -2,7 +2,7 @@
 
 ## KW-HOOK-NEXTEST-CONFIG-UNGATED — A push changing only `.config/nextest.toml` passes the pre-push hook with no package gated [patch] [ci] — todo
 
-priority: verification; needs: ATLAS-HOOK-NEXTEST-CONFIG-OWNER, ATLAS-HOOK-FLEET-BLOB-DRIFT; basis: 38eaf2f90eccd74d11ce3d0e836cbad7d4606ae0; scope: `.githooks/pre-push` (deployed copy; the cure edits the Atlas owner `scripts/git-hooks/pre-push`)
+priority: verification; needs: ATLAS-HOOK-NEXTEST-CONFIG-OWNER, ATLAS-HOOK-FLEET-BLOB-DRIFT; basis: 38eaf2f90eccd74d11ce3d0e836cbad7d4606ae0; scope: `.githooks/pre-push` (deployed copy; the cure edits the Atlas owner `scripts/git-hooks/pre-push`); milestone: M-4.0
 
 - **Finding.** `.githooks/pre-push:1463-1481` maps `Cargo.toml` or `Cargo.lock` (`:1464`) to every workspace member and drops any other path outside a package directory (`:1479`); `:1601-1603` then returns 0 with "no package owns the changed files in $workspace_manifest; local gate not needed". A `.config/nextest.toml` change sets every test's slot, group and termination time, yet gates no test. kwavers#1066 records it (body line 27, "Pre-push gating").
 - **Atlas main.** Line 3 declares a "single owned copy" that `scripts/atlas-lock-form.py sync-hooks` deploys. Atlas `origin/main` f19af27ce maps at `scripts/git-hooks/pre-push:1463-1465` a root `Cargo.toml` only, under a `[workspace]` guard; `Cargo.lock` and `.config/nextest.toml` are unmapped, and `:1602` prints the same message.

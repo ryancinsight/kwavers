@@ -2,7 +2,7 @@
 
 ## KW-SWE-CLAMP-TEST-RESIDUALS — No workflow test command here selects the SWE integration test, and two clamp-test thresholds are underived [patch] — todo
 
-priority: verification; needs: none; basis: c37a2f41e0cfed9fd2f5b7de634e362724ba1a17; scope: `crates/kwavers-solver/src/forward/elastic/swe/integration/tests.rs`, `crates/kwavers-solver/tests/allocation_contracts.rs`, `.github/workflows/ci.yml`
+priority: verification; needs: none; basis: c37a2f41e0cfed9fd2f5b7de634e362724ba1a17; scope: `crates/kwavers-solver/src/forward/elastic/swe/integration/tests.rs`, `crates/kwavers-solver/tests/allocation_contracts.rs`, `.github/workflows/ci.yml`; milestone: M-solvers-core
 
 - **Source.** Findings F1 and F3 filed by the judge of #1039 when `KW-SWE-DEGENERATE-AXIS` (delivered by #1025) left the board. Paths below without a crate prefix are under `crates/kwavers-solver/src/forward/elastic/swe/`.
 - **Integration test not selected.** `crates/kwavers-solver/tests/allocation_contracts.rs` is the only file under `crates/kwavers-solver/tests/`; its `swe_solver` builds a 2x2x2 grid, where the `n >= 3` guard in `integration/integrator/clamp.rs` clamps no axis. No `nextest` or `cargo test` command in `.github/workflows/*.yml` selects it: the commands naming `kwavers-solver` are four `--lib` runs (`ci.yml:1088-1097`) and one `--run-ignored ignored-only` run filtered to tests named `kuznetsov` (`ci.yml:1231`), and the file holds no ignored test; the workspace shards are `--lib` (`ci.yml:555`); every other command names `kwavers`, `kwavers-gpu`, `kwavers-therapy`, `kwavers-simulation` or `kwavers-python`. The workflows this repository calls from Atlas were not read.

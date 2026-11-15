@@ -2,7 +2,7 @@
 
 ## KW-ARCH-065 — Consolidate optical transport in Hyperion [major] [arch] — todo
 
-priority: architecture; needs: none; scope: Hyperion integration in `kwavers-medium`, `kwavers-physics`, `kwavers-solver`; provider-graph pins; ADR 046
+priority: architecture; needs: none; scope: Hyperion integration in `kwavers-medium`, `kwavers-physics`, `kwavers-solver`; provider-graph pins; ADR 046; milestone: M-solvers-core
 
 - **Outcome:** Hyperion is the only owner of reduced scattering, coefficient validation, albedo, diffusion, effective attenuation, penetration depth, optical depth and transmission; every superseded Kwavers owner is deleted. Non-goals: general electromagnetic solvers, Monte Carlo ownership, photoacoustic source policy, chromophore spectra, release.
 - **Decision:** [ADR 046](docs/adr/046-hyperion-optical-transport-ownership.md).

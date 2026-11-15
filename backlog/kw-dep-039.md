@@ -2,7 +2,7 @@
 
 ## KW-DEP-039 — Make Gaia an Atlas-local dependency [patch] — todo
 
-priority: architecture; needs: none; scope: root `Cargo.toml` Gaia dependency; a downstream consumer's SemVer integration
+priority: architecture; needs: none; scope: root `Cargo.toml` Gaia dependency; a downstream consumer's SemVer integration; milestone: M-solvers-core
 
 - **Driver:** Cargo ignores Kwavers' root `[patch]` tables when a private downstream consumer's SemVer checker packages it, so that consumer's transitive Gaia Git source resolved a historical revision lacking the Eunomia dependency.
 - **Acceptance as written:** Kwavers declares the live Atlas Gaia checkout directly, deletes the redundant Gaia source patch, and the consumer's historical SemVer comparison resolves through the local Gaia-to-Eunomia graph.
