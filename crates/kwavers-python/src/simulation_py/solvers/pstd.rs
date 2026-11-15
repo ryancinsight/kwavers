@@ -282,12 +282,23 @@ impl Simulation {
 
         checkpoint.validate_restore_contract(grid.nx, grid.ny, grid.nz, total_steps, dt)?;
 
-        let full_data = solver
-            .run_from_checkpoint_loaded(checkpoint, checkpoint_path, remaining_steps)?
-            .ok_or_else(|| KwaversError::Io(std::io::Error::other("No sensor data recorded")))?;
+        let restored =
+            solver.run_from_checkpoint_loaded(checkpoint, checkpoint_path, remaining_steps)?;
 
         let stats = solver.sensor_recorder.extract_all_stats();
-        let sensor_data = Self::trim_initial_recorder_sample(full_data, total_steps, 1);
+        let sensor_data = match restored {
+            Some(full_data) => Self::trim_initial_recorder_sample(full_data, total_steps, 1),
+            // No sensor was requested: the record has no rows, as the PSTD
+            // dispatch returns it.
+            None if solver.sensor_recorder.sensor_indices().is_empty() => {
+                leto::Array2::zeros([0, total_steps])
+            }
+            None => {
+                return Err(KwaversError::Io(std::io::Error::other(
+                    "No sensor data recorded",
+                )))
+            }
+        };
 
         let ux_data = solver
             .sensor_recorder

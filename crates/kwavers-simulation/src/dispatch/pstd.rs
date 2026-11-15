@@ -2,11 +2,11 @@
 //!
 //! Handles PSTD, PSTD+Thermal, and GPU PSTD dispatch paths.
 
-use leto::{Array2, Array3, SliceArg};
+use leto::{Array3, SliceArg};
 
 use crate::configs::ThermalConfig;
 use crate::dispatch::shared::{
-    record_modes_to_spec, trim_initial_recorder_sample, trim_initial_recorder_view,
+    empty_sensor_record, record_modes_to_spec, trim_initial_recorder_view,
 };
 use crate::types::extract_full_grid_stats;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
@@ -372,11 +372,9 @@ pub(crate) fn extract_result(
         Some(full_data) => trim_initial_recorder_view(full_data, time_steps, record_start_index),
         // No sensor was requested: the record has no rows, as the
         // Hephaestus dispatch returns it.
-        None if solver.sensor_recorder.sensor_indices().is_empty() => trim_initial_recorder_sample(
-            Array2::zeros([0, time_steps]),
-            time_steps,
-            record_start_index,
-        ),
+        None if solver.sensor_recorder.sensor_indices().is_empty() => {
+            empty_sensor_record(time_steps, record_start_index)
+        }
         None => {
             return Err(KwaversError::Io(std::io::Error::other(
                 "No sensor data recorded",
