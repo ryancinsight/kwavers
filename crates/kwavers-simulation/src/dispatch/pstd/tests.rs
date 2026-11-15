@@ -202,3 +202,40 @@ fn both_backends_return_an_empty_record_for_a_request_without_sensors() {
         assert_eq!(result.sensor_data.shape(), [0, 3], "{fft_backend:?}");
     }
 }
+
+#[test]
+fn leto_pstd_ordered_sensor_indices_override_the_mask() {
+    use crate::runner::SimulationRunner;
+
+    let grid = Grid::new(7, 4, 3, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid grid");
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let nonlinear = NonlinearConfig::default();
+    let mut populated_mask = leto::Array3::from_elem([7, 4, 3], false);
+    populated_mask[[0, 0, 0]] = true;
+    populated_mask[[1, 0, 0]] = true;
+
+    for (sensor_mask, indices, rows) in [
+        (None, vec![(3, 2, 1)], 1),
+        (
+            Some(leto::Array3::from_elem([7, 4, 3], false)),
+            vec![(3, 2, 1)],
+            1,
+        ),
+        (Some(populated_mask.clone()), vec![(3, 2, 1)], 1),
+        (Some(populated_mask), Vec::new(), 0),
+    ] {
+        let request = SimulationRunRequest {
+            time_steps: 3,
+            dt: 1.0e-7,
+            grid_source: centre_source(),
+            sensor_mask,
+            transducer_ordered_indices: Some(indices),
+            ..request(&grid, &medium, &nonlinear)
+        };
+
+        let result = SimulationRunner::run(&request, Vec::new())
+            .expect("Leto PSTD accepts explicit sensor ordering");
+
+        assert_eq!(result.sensor_data.shape(), [rows, 3]);
+    }
+}
