@@ -69,9 +69,12 @@ pub(in crate::pstd_gpu) struct BufferNeed {
 
 /// Refuse when any listed buffer exceeds a limit the device enables.
 ///
-/// The refusal names the buffer, the bytes it needs, and the limit; an
-/// overflowing element or byte count is refused with `overflow_subject`
-/// naming whose count overflowed.
+/// # Errors
+///
+/// [`KwaversError::ResourceLimitExceeded`] naming the buffer, the bytes it
+/// needs, and the limit it exceeds; the same variant when an element or
+/// byte count overflows, with `overflow_subject` naming whose count
+/// overflowed.
 pub(in crate::pstd_gpu) fn check_byte_counts(
     needs: &[BufferNeed],
     limits: &StorageBufferLimits,
@@ -97,6 +100,12 @@ pub(in crate::pstd_gpu) fn check_byte_counts(
     Ok(())
 }
 
+/// Refuse when `bytes` exceeds one device limit.
+///
+/// # Errors
+///
+/// [`KwaversError::ResourceLimitExceeded`] naming the buffer, the bytes it
+/// needs, and the limit it exceeds.
 fn check_limit(buffer: &str, bytes: u64, limit: &str, limit_bytes: u64) -> KwaversResult<()> {
     if bytes > limit_bytes {
         return Err(KwaversError::ResourceLimitExceeded {

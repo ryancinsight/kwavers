@@ -188,9 +188,13 @@ pub trait PstdRunState {
 
     /// Check the buffers a run sizes before the provider creates any of them.
     ///
-    /// The default accepts every run; a provider that sizes fallible buffers
-    /// refuses with [`KwaversError::ResourceLimitExceeded`] naming the
-    /// buffer, the bytes it needs, and the limit it exceeds.
+    /// The default accepts every run.
+    ///
+    /// # Errors
+    ///
+    /// A provider that sizes fallible buffers refuses with
+    /// `KwaversError::ResourceLimitExceeded` naming the buffer, the bytes
+    /// it needs, and the limit it exceeds.
     fn check_run_capacity(
         &self,
         _scalars: PstdRunScalars,
