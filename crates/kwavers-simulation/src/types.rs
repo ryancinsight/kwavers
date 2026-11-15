@@ -108,14 +108,23 @@ pub struct SimulationRunRequest<'a> {
     pub axisymmetric: bool,
 
     pub grid_source: GridSource,
-    /// Grid points recorded by the PSTD dispatches, `FftBackend::Leto` and
-    /// `FftBackend::Hephaestus` alike.
+    /// Boolean grid mask selecting recording points. Each `true` selects one point.
     ///
-    /// `None`, and a mask with no true element, request no sensors: the run
-    /// succeeds and `sensor_data` has shape `(0, steps)`, where `steps` is
-    /// `time_steps` less the samples `record_start_index` skips. Neither
-    /// dispatch returns an error for the absence of sensors.
+    /// When [`Self::transducer_ordered_indices`] is `None`, an absent mask
+    /// (`None`) or a grid-shaped mask with all entries `false` requests no
+    /// sensors. Both PSTD backends accept this configuration and return
+    /// [`SimulationRunResult::sensor_data`] with shape `(0, steps)`, where
+    /// `steps` is `time_steps` less the samples `record_start_index` skips.
     pub sensor_mask: Option<NdArray3<bool>>,
+    /// Explicitly ordered `(x, y, z)` sensor grid indices.
+    ///
+    /// On Leto PSTD, `Some(indices)` takes precedence over [`Self::sensor_mask`]
+    /// when selecting recording points. The pressure record has one row per
+    /// index, in the supplied order. An empty list selects zero points.
+    /// Leto PSTD rejects explicit ordering when external PML padding is active.
+    ///
+    /// Hephaestus PSTD rejects any `Some` value with
+    /// [`kwavers_core::error::KwaversError::FeatureNotAvailable`].
     pub transducer_ordered_indices: Option<Vec<(usize, usize, usize)>>,
     pub record_modes: Vec<String>,
     pub record_start_index: usize,
