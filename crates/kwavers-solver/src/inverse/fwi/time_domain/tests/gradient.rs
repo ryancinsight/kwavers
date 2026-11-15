@@ -408,6 +408,7 @@ fn test_fwi_adjoint_gradient_is_valid_descent_direction() {
 #[test]
 fn test_fwi_pstd_adjoint_gradient_is_valid_descent_direction() {
     use crate::config::SolverType;
+    use eunomia::FloatElement;
 
     let (nx, ny, nz) = (32usize, 32, 32);
     let dx = 1e-3;
@@ -423,7 +424,7 @@ fn test_fwi_pstd_adjoint_gradient_is_valid_descent_direction() {
     let dt = 1e-7;
     let mut p_signal = Array2::zeros((1, nt));
     for t in 0..20 {
-        let phase = (t as f64) * 0.35;
+        let phase = f64::from_count(t) * 0.35;
         p_signal[[0, t]] = (-phase * phase * 0.25).exp() * (2.0 * phase).sin();
     }
     let source = GridSource {
@@ -466,7 +467,7 @@ fn test_fwi_pstd_adjoint_gradient_is_valid_descent_direction() {
         if near_boundary {
             continue;
         }
-        let axial = (-((ix as f64 - 16.0).powi(2)) / 0.98).exp();
+        let axial = (-((f64::from_count(ix) - 16.0).powi(2)) / 0.98).exp();
         *value = axial;
     }
     let mut source_mute = Array3::zeros(dims);
@@ -515,7 +516,7 @@ fn test_fwi_pstd_adjoint_gradient_is_valid_descent_direction() {
         .indexed_iter_mut()
         .expect("invariant: owned array yields indexed iterator")
     {
-        *value *= (iy as f64) / (ny as f64);
+        *value *= f64::from_count(iy) / f64::from_count(ny);
     }
 
     let directional = |dir: &Array3<f64>| -> f64 {
