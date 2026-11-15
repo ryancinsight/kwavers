@@ -1,16 +1,19 @@
-//! Capacity check of `pml_xyz` and `shifts_all`, two buffers of a GPU PSTD plan.
+//! Capacity check of the buffers a GPU PSTD plan or run sizes.
 //!
 //! `wgpu` rejects a buffer larger than `max_buffer_size` when it is created
 //! and a storage binding larger than `max_storage_buffer_binding_size` when
 //! its bind group is created. The provider makes both through calls that
 //! return no error, so either rejection panics in the uncaptured-error
-//! handler. `pml_xyz` and `shifts_all` are checked before any buffer exists.
+//! handler. Plan buffers are checked at construction; the buffers a run
+//! sizes by sensors and steps are checked before the run creates any of
+//! them (the time loop inventories them next to `build_run_cache`).
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-/// Bytes of one `f32`, the element type of `pml_xyz` and `shifts_all`.
-const ELEMENT_BYTES: u64 = 4;
+/// Bytes of one buffer element: an `f32` sample or a `u32` index.
+pub(in crate::pstd_gpu) const ELEMENT_BYTES: u64 = 4;
 const _: () = assert!(std::mem::size_of::<f32>() == 4);
+const _: () = assert!(std::mem::size_of::<u32>() == 4);
 
 /// The two device limits a storage buffer of the plan must fit, in bytes.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -52,6 +55,59 @@ fn checked_buffers(shape: [usize; 3]) -> [(&'static str, Option<usize>); 2] {
     ]
 }
 
+/// One buffer's byte need: `None` when its element or byte count overflows.
+pub(in crate::pstd_gpu) struct BufferNeed {
+    /// Buffer label used in diagnostics and the refusal message.
+    pub(in crate::pstd_gpu) name: &'static str,
+    /// Bytes the buffer needs, or `None` when the element or byte count overflows.
+    pub(in crate::pstd_gpu) bytes: Option<u64>,
+    /// Whether the buffer is bound as storage: storage-bound buffers must fit
+    /// both device limits, while host readback buffers are never bound and
+    /// check only `max_buffer_size`.
+    pub(in crate::pstd_gpu) storage_bound: bool,
+}
+
+/// Refuse when any listed buffer exceeds a limit the device enables.
+///
+/// The refusal names the buffer, the bytes it needs, and the limit; an
+/// overflowing element or byte count is refused with `overflow_subject`
+/// naming whose count overflowed.
+pub(in crate::pstd_gpu) fn check_byte_counts(
+    needs: &[BufferNeed],
+    limits: &StorageBufferLimits,
+    overflow_subject: &str,
+) -> KwaversResult<()> {
+    for need in needs {
+        let bytes = need.bytes.ok_or_else(|| KwaversError::ResourceLimitExceeded {
+            message: format!(
+                "GPU PSTD buffer `{}` {overflow_subject} has an element or byte count that overflows",
+                need.name
+            ),
+        })?;
+        check_limit(need.name, bytes, "max_buffer_size", limits.max_buffer_size)?;
+        if need.storage_bound {
+            check_limit(
+                need.name,
+                bytes,
+                "max_storage_buffer_binding_size",
+                limits.max_storage_buffer_binding_size,
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn check_limit(buffer: &str, bytes: u64, limit: &str, limit_bytes: u64) -> KwaversResult<()> {
+    if bytes > limit_bytes {
+        return Err(KwaversError::ResourceLimitExceeded {
+            message: format!(
+                "GPU PSTD buffer `{buffer}` needs {bytes} bytes; the device enables {limit} = {limit_bytes} bytes"
+            ),
+        });
+    }
+    Ok(())
+}
+
 /// Refuse a plan whose `pml_xyz` or `shifts_all` exceeds a limit the device enables.
 ///
 /// # Errors
@@ -64,32 +120,14 @@ pub(in crate::pstd_gpu) fn check_plan_capacity(
     limits: StorageBufferLimits,
 ) -> KwaversResult<()> {
     let [nx, ny, nz] = shape;
-    for (buffer, elements) in checked_buffers(shape) {
-        let bytes = elements
+    let needs = checked_buffers(shape).map(|(buffer, elements)| BufferNeed {
+        name: buffer,
+        bytes: elements
             .and_then(|elements| u64::try_from(elements).ok())
-            .and_then(|elements| elements.checked_mul(ELEMENT_BYTES))
-            .ok_or_else(|| KwaversError::ResourceLimitExceeded {
-                message: format!(
-                    "GPU PSTD buffer `{buffer}` of a {nx}x{ny}x{nz} grid has an element or byte count that overflows"
-                ),
-            })?;
-        for (limit, limit_bytes) in [
-            ("max_buffer_size", limits.max_buffer_size),
-            (
-                "max_storage_buffer_binding_size",
-                limits.max_storage_buffer_binding_size,
-            ),
-        ] {
-            if bytes > limit_bytes {
-                return Err(KwaversError::ResourceLimitExceeded {
-                    message: format!(
-                        "GPU PSTD buffer `{buffer}` needs {bytes} bytes; the device enables {limit} = {limit_bytes} bytes"
-                    ),
-                });
-            }
-        }
-    }
-    Ok(())
+            .and_then(|elements| elements.checked_mul(ELEMENT_BYTES)),
+        storage_bound: true,
+    });
+    check_byte_counts(&needs, &limits, &format!("of a {nx}x{ny}x{nz} grid"))
 }
 
 #[cfg(test)]

@@ -9,10 +9,12 @@ use super::super::{
     },
     GpuPstdSolver, PstdParams,
 };
+use super::buffer::check_run_buffer_capacity;
 use super::commands::{PstdCommandProvider, WgpuPstdCommandProvider};
 use super::encode::StepCtx;
 use super::passes::{PstdPassProvider, SourceActivity, StepBindGroups, WgpuPstdPassProvider};
 use hephaestus_core::{GroupedCommandStream, KernelDevice};
+use kwavers_core::error::KwaversResult;
 
 impl PstdRunScalars {
     #[inline]
@@ -179,6 +181,20 @@ fn validate_run_inputs(
 }
 
 impl PstdRunState for WgpuPstdState {
+    fn check_run_capacity(
+        &self,
+        scalars: PstdRunScalars,
+        inputs: &PstdRunInputs<'_>,
+    ) -> KwaversResult<()> {
+        use super::super::pipeline::capacity::StorageBufferLimits;
+
+        check_run_buffer_capacity(
+            scalars,
+            inputs,
+            &StorageBufferLimits::enabled_on(self.device()),
+        )
+    }
+
     fn run_pstd(
         &mut self,
         scalars: PstdRunScalars,
