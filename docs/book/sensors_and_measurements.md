@@ -388,9 +388,17 @@ source location, matching delay-and-sum beamforming (§8.5).
 
 ## 8.6 Sensor Recording Contract
 
-The sensor recording contract defines the invariants that govern how the kwavers sensor
-recorder accumulates field data during simulation and outputs it to Python (pykwavers)
-or to binary checkpoint files.
+The algorithm below describes recording points selected by a binary mask. When
+`transducer_ordered_indices` is absent, both PSTD backends accept an absent mask
+or a grid-shaped, all-false mask. The Rust pressure result then has zero rows
+and one column per retained time sample. In Python, use `Sensor.from_mask` with
+an all-false array to request zero points.
+
+Leto PSTD gives explicit transducer indices precedence over the mask when
+selecting recording points. It records one pressure row per index in the
+supplied order. Hephaestus PSTD rejects explicit ordering with
+`KwaversError::FeatureNotAvailable`, surfaced as `RuntimeError` by Python
+`Simulation.run`.
 
 ### Algorithm 8.1 — Sensor Recording Contract
 
@@ -406,7 +414,7 @@ Output:
     where M = mask.nonzero() count in Fortran order
 
 Contract invariants:
-  I1: M = mask.sum() > 0                            (at least one active sensor)
+  I1: M = mask.sum()                                (zero or more active sensors)
   I2: active_indices ordered by Fortran-order (x fast, then y, then z)
   I3: data.shape == (M, nt) for each recorded field
   I4: data[f][i, t] == field(active_cell[i]) at time t, no rounding or normalization
@@ -437,8 +445,8 @@ k-Wave MATLAB stores multi-dimensional arrays in Fortran (column-major) order. W
 NumPy/Python default (C order) has the last index varying fastest: `p[x, y]` stores y
 fastest.
 
-The critical invariant is: **the `i`-th row of the sensor data matrix must correspond
-to the `i`-th active cell in Fortran-order enumeration of the sensor mask**.
+For mask-based recording, the `i`-th row corresponds to the `i`-th active cell
+in Fortran-order enumeration of the sensor mask.
 
 The bug that was present before the fix:
 ```python

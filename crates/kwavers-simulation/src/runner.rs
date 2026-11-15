@@ -320,6 +320,30 @@ mod tests {
 
     #[cfg(feature = "gpu")]
     #[test]
+    fn hephaestus_pstd_rejects_ordered_sensor_indices_before_device_acquisition() {
+        use kwavers_core::error::KwaversError;
+
+        let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+
+        for indices in [vec![(4, 4, 4)], Vec::new()] {
+            let request = SimulationRunRequest {
+                transducer_ordered_indices: Some(indices),
+                ..gpu_request(&grid, &medium)
+            };
+
+            let error = SimulationRunner::run(&request, Vec::new())
+                .expect_err("Hephaestus PSTD rejects explicit sensor ordering");
+
+            let KwaversError::FeatureNotAvailable(message) = error else {
+                panic!("expected FeatureNotAvailable for explicit sensor ordering, got {error:?}");
+            };
+            assert!(message.contains("explicit transducer sensor ordering"));
+        }
+    }
+
+    #[cfg(feature = "gpu")]
+    #[test]
     fn gpu_selection_rejects_sensor_shape_before_device_acquisition() {
         use leto::Array3;
 
