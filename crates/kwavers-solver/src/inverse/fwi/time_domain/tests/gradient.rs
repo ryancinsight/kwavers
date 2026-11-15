@@ -388,6 +388,194 @@ fn test_fwi_adjoint_gradient_is_valid_descent_direction() {
     );
 }
 
+/// PSTD adjoint-reciprocity: the same descent-direction check as
+/// `test_fwi_adjoint_gradient_is_valid_descent_direction`, run through the
+/// PSTD spectral operator. The adjoint pass dispatches on
+/// `FwiParameters::solver_type` exactly like the forward pass, so forward
+/// and adjoint share the PSTD stencil and boundary treatment; a wiring
+/// regression that broke the PSTD adjoint (wrong solver, dropped source
+/// scaling, non-time-reversed stepping) flips a sign here and fails.
+///
+/// Geometry is the FDTD template scaled clear of the PSTD CPML (10 cells
+/// per dimension on grids above 20): the 32³ grid keeps source (ix=12),
+/// receivers (ix=20) and the slab (centred 16) two cells clear of the PML
+/// inner edge, mirroring the template's margins. Assertions are structural
+/// only — sign agreement (reciprocity), non-triviality, finite positive κ —
+/// with no tuned magnitude band: the PSTD approximate-adjoint spread is
+/// uncharacterised, and a band would encode one run's numbers as spec.
+/// # Panics
+/// - Panics on any assertion failure or solver error.
+#[test]
+fn test_fwi_pstd_adjoint_gradient_is_valid_descent_direction() {
+    use crate::config::SolverType;
+    use eunomia::FloatElement;
+
+    let (nx, ny, nz) = (32usize, 32, 32);
+    let dx = 1e-3;
+    let grid = Grid::new(nx, ny, nz, dx, dx, dx).expect("grid");
+    let dims = (nx, ny, nz);
+    let c0 = SOUND_SPEED_WATER_SIM;
+
+    // Acquisition mirrors the template: one pressure source on the left, a
+    // receiver plane on the right, all two cells clear of the 10-cell PML.
+    let mut p_mask = Array3::from_elem(dims, 0.0_f64);
+    p_mask[[12, 16, 16]] = 1.0;
+    let nt = 100usize;
+    let dt = 1e-7;
+    let mut p_signal = Array2::zeros((1, nt));
+    for t in 0..20 {
+        let phase = f64::from_count(t) * 0.35;
+        p_signal[[0, t]] = (-phase * phase * 0.25).exp() * (2.0 * phase).sin();
+    }
+    let source = GridSource {
+        p0: None,
+        u0: None,
+        p_mask: Some(p_mask),
+        p_signal: Some(p_signal),
+        p_mode: SourceMode::Additive,
+        u_mask: None,
+        u_signal: None,
+        u_mode: SourceMode::default(),
+    };
+    let mut sensor_mask = Array3::from_elem(dims, false);
+    for iy in 12..20 {
+        for iz in 12..20 {
+            sensor_mask[[20, iy, iz]] = true;
+        }
+    }
+    let geometry = FwiGeometry::new(source, sensor_mask);
+
+    let parameters = FwiParameters {
+        nt,
+        dt,
+        frequency: 5e5,
+        solver_type: SolverType::PSTD,
+        ..FwiParameters::default()
+    };
+    let processor = FwiProcessor::new(parameters);
+
+    // Boundary-clear perturbation direction (max magnitude 1): a smooth slab
+    // centred at ix=16 (between source ix=12 and receivers ix=20), flat in
+    // y,z, hard-zeroed within 2 cells of the PML inner edge so it never
+    // overlaps the source, the receiver plane, or the PML.
+    let mut delta_m = Array3::zeros(dims);
+    for ([ix, iy, iz], value) in delta_m
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
+        let near_boundary = ix < 12 || iy < 12 || iz < 12 || ix >= 20 || iy >= 20 || iz >= 20;
+        if near_boundary {
+            continue;
+        }
+        let axial = (-((f64::from_count(ix) - 16.0).powi(2)) / 0.98).exp();
+        *value = axial;
+    }
+    let mut source_mute = Array3::zeros(dims);
+    source_mute[[12, 16, 16]] = 1.0;
+
+    let mut true_model = Array3::from_elem(dims, c0);
+    leto_ops::zip_mut_with(true_model.view_mut(), &delta_m.view(), |c, d| {
+        *c += 100.0 * *d
+    })
+    .expect("invariant: FWI field shapes match");
+    let model = Array3::from_elem(dims, c0);
+
+    let observed = processor
+        .generate_synthetic_data(&true_model, &geometry, &grid)
+        .expect("observed data");
+
+    let (synth0, history0) = processor
+        .forward_model(&model, &geometry, &grid)
+        .expect("forward at m");
+    let j0 = processor
+        .compute_misfit_objective(&observed, &synth0)
+        .expect("J(m)");
+    let residual = processor
+        .compute_adjoint_source(&observed, &synth0)
+        .expect("adjoint source");
+    let adjoint_source = processor
+        .build_adjoint_source(&residual, &geometry)
+        .expect("adjoint grid source");
+    let gradient = processor
+        .adjoint_model(
+            &adjoint_source,
+            &model,
+            &grid,
+            &history0,
+            Some(&source_mute),
+        )
+        .expect("adjoint gradient");
+
+    assert!(
+        j0 > 0.0,
+        "data misfit at the starting model must be non-zero; J(m) = {j0:e}"
+    );
+
+    let mut delta_m_b = delta_m.clone();
+    for ([_, iy, _], value) in delta_m_b
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
+        *value *= f64::from_count(iy) / f64::from_count(ny);
+    }
+
+    let directional = |dir: &Array3<f64>| -> f64 {
+        gradient
+            .iter()
+            .zip(dir.iter())
+            .map(|(&g, &d)| g * d)
+            .sum::<f64>()
+    };
+
+    let fd_slope = |dir: &Array3<f64>| -> f64 {
+        let central = |eps: f64| -> f64 {
+            let objective_at = |scale: f64| -> f64 {
+                let mut perturbed = model.clone();
+                leto_ops::zip_mut_with(perturbed.view_mut(), &dir.view(), |c, d| *c += scale * *d)
+                    .expect("invariant: FWI field shapes match");
+                let synth = processor
+                    .generate_synthetic_data(&perturbed, &geometry, &grid)
+                    .expect("forward at perturbed model");
+                processor
+                    .compute_misfit_objective(&observed, &synth)
+                    .expect("perturbed objective")
+            };
+            (objective_at(eps) - objective_at(-eps)) / (2.0 * eps)
+        };
+        let eps = 4.0_f64;
+        (4.0 * central(eps / 2.0) - central(eps)) / 3.0
+    };
+
+    let g_a = directional(&delta_m);
+    let g_b = directional(&delta_m_b);
+    let fd_a = fd_slope(&delta_m);
+    let fd_b = fd_slope(&delta_m_b);
+
+    assert!(
+        g_a.abs() > 0.0 && g_b.abs() > 0.0,
+        "directional derivatives must be non-trivial; g·δm_a = {g_a:e}, g·δm_b = {g_b:e}"
+    );
+    assert!(
+        g_a * fd_a > 0.0,
+        "direction A: adjoint and finite difference must share sign; g·δm_a = {g_a:e}, FD = {fd_a:e}"
+    );
+    assert!(
+        g_b * fd_b > 0.0,
+        "direction B: adjoint and finite difference must share sign; g·δm_b = {g_b:e}, FD = {fd_b:e}"
+    );
+
+    // Reciprocity in κ form: an exact discrete adjoint gives κ ≡ 1; this
+    // path is approximate (same caveats as the FDTD check), so assert only
+    // finite, positive κ — a valid descent direction with no tuned band.
+    for (name, g, fd) in [("a", g_a, fd_a), ("b", g_b, fd_b)] {
+        let kappa = g / fd;
+        assert!(
+            kappa.is_finite() && kappa > 0.0,
+            "PSTD κ must be finite and positive; κ_{name} = {kappa:.3} (g·δm={g:e}, FD={fd:e})"
+        );
+    }
+}
+
 /// Smoke test: heterogeneous-ρ end-to-end FWI run produces a non-trivial
 /// gradient that differs from the constant-ρ run. Does not assert a
 /// closed-form ratio because the FDTD wavefield itself is perturbed by ρ.
