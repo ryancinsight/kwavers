@@ -2,7 +2,7 @@
 
 ## KW-CI-051 — Remove obsolete deployment workflow [patch] — todo
 
-priority: verification; needs: none; basis: a3a72689be0fbfed3f64231c52186eac79dedc15; scope: `.github/workflows/deploy.yml` (deleted)
+priority: verification; needs: none; basis: a3a72689be0fbfed3f64231c52186eac79dedc15; scope: `.github/workflows/deploy.yml` (deleted); milestone: M-4.0
 
 - **Outcome:** no workflow refers to deployment artifacts the repository does not hold or carries invalid step syntax, and the CI surface is the one the acceptance names.
 - **Acceptance:** no workflow references absent deployment artifacts or invalid step syntax; the supported CI surface stays architecture validation, migration audit and the provider-aware build/test workflow.

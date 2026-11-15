@@ -2,7 +2,7 @@
 
 ## KW-CI-DOCTESTS-ONE-PACKAGE — No hosted job or push gate runs the doctests of any package but `kwavers` [patch] [ci] — todo
 
-priority: verification; needs: none; basis: 38eaf2f90eccd74d11ce3d0e836cbad7d4606ae0; scope: `.github/workflows/ci.yml`
+priority: verification; needs: none; basis: 38eaf2f90eccd74d11ce3d0e836cbad7d4606ae0; scope: `.github/workflows/ci.yml`; milestone: M-4.0
 
 - **Finding.** `git grep -n -e '--doc' origin/main -- .github scripts .githooks` returns three lines, `ci.yml:452`, `:585` and `:953`, each `cargo test ... --doc -p kwavers`. No other workflow, script or hook runs a doctest, and `cargo test --workspace` does not appear.
 - **Push gate.** The pre-push hook runs `cargo nextest run` and `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps` (`.githooks/pre-push:2327`, `:2359`); neither executes a doc example.

@@ -2,7 +2,7 @@
 
 ## KW-MANIFEST-IMPLEMENTATION-2026-09-09 — Reduce the implementation-bearing manifests [patch] [arch] — todo
 
-priority: tightening; needs: none; scope: every `lib.rs`/`mod.rs` carrying more than twenty body lines under `crates/`
+priority: tightening; needs: none; scope: every `lib.rs`/`mod.rs` carrying more than twenty body lines under `crates/`; milestone: M-solvers-core
 
 - **The class.** `lib.rs` and `mod.rs` are module manifests: the tree, curated re-exports, and crate or module docs. The fleet scan counts a manifest with more than twenty body lines; this repository held 290, the largest at 463 body lines.
 - **Delivered:** `inverse/fwi/time_domain/self_adjoint/mod.rs` split into `types`, `operators`, `forward` and `gradient` (manifest 39 lines, zero body); the MOFI aligner `mod.rs` followed. About 280 remain.

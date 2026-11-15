@@ -2,7 +2,7 @@
 
 ## KW-SIM-TEST-COMPILE-GRAPH — Reduce simulation test build latency [patch] [perf] — todo
 
-priority: tightening; needs: none; scope: `kwavers-simulation` and `kwavers-python` dependency/feature graphs, `.cargo/config.toml` alias `test-gpu-consumers`, `.github/workflows/compile-timing.yml`
+priority: tightening; needs: none; scope: `kwavers-simulation` and `kwavers-python` dependency/feature graphs, `.cargo/config.toml` alias `test-gpu-consumers`, `.github/workflows/compile-timing.yml`; milestone: M-solvers-core
 
 - **Outcome:** reduce the cold compile/link cost of the GPU-enabled simulation and Python test harnesses while retaining every value-semantic test.
 - **Entry evidence:** isolated cold runs spent 2m37s and 2m15s compiling the two GPU-enabled graphs against 0.617s and 1.661s of test execution; 431 of 444 Python normal/dev packages are in the simulation graph, so separate invocations rebuild the shared graph.

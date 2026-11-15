@@ -2,7 +2,7 @@
 
 ## KW-ERRORS-DOCS-ARE-TEMPLATE-OUTPUT-2026-09-09 — 300 functions document an error they cannot return [patch] — todo
 
-priority: verification; needs: none; scope: `# Errors` sections across `crates/`; `xtask/src/errors_doc_audit.rs`
+priority: verification; needs: none; scope: `# Errors` sections across `crates/`; `xtask/src/errors_doc_audit.rs`; milestone: M-4.0
 
 - **Outcome:** an `# Errors` section names the condition that produces the error, or it does not exist.
 - **Measured 2026-09-09:** 1141 copies of ``- Returns [`Err`] if an internal constraint is violated.`` in 544 files and 297 of a second template (``Propagates any [`crate::KwaversError`] ...``). 300 of those sit on functions that cannot fail (the signature returns neither `Result` nor `Option`); the remaining ~840 sit on fallible functions but name no invariant, input range or remedy.

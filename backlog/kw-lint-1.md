@@ -2,7 +2,7 @@
 
 ## KW-LINT-1 — Burn down the clippy debt baseline [patch] — todo
 
-priority: tightening; needs: none; scope: `[workspace.lints.clippy]` in the root `Cargo.toml`; every `crates/*` member
+priority: tightening; needs: none; scope: `[workspace.lints.clippy]` in the root `Cargo.toml`; every `crates/*` member; milestone: M-4.0
 
 - **Outcome:** the debt block in `[workspace.lints.clippy]` is empty, so the Atlas floor is enforced whole. `unused_self`, `return_self_not_must_use` and `unnecessary_literal_bound` are already clean.
 - **Baseline at adoption** (`cargo clippy -p kwavers --features pinn --lib`, which lints every path member): 1390 warnings. `unused_self` 257, `unwrap_used` 255, `missing_panics_doc` 225, `missing_errors_doc` 119, then a ~200-warning tail across 25 lints.

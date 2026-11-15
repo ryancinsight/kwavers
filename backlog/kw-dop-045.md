@@ -2,7 +2,7 @@
 
 ## KW-DOP-045 — Signed pulsed-wave spectral Doppler [minor] — todo
 
-priority: feature; needs: none; basis: acef6520f6e5c590ff73e1f39ee3e66361df7dcc; scope: `crates/kwavers-analysis/src/signal_processing/doppler/`
+priority: feature; needs: none; basis: acef6520f6e5c590ff73e1f39ee3e66361df7dcc; scope: `crates/kwavers-analysis/src/signal_processing/doppler/`; milestone: M-imaging-capability
 
 - **Driver:** a downstream consumer's moving-scatterer sector ensemble needs a pulsed-wave provider that retains reverse-flow bins; the former one-sided magnitude API discarded that physical degree of freedom.
 - **Outcome:** the pulsed-wave provider returns a signed two-sided spectrum, and every public path of it rejects invalid geometry and an FFT shorter than the ensemble.

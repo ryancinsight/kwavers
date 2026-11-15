@@ -2,7 +2,7 @@
 
 ## KW-UNC-MORRIS-SALTELLI — Sensitivity analysis offers correlation screening only, while the provider now has the Morris and Saltelli estimators [minor] — todo
 
-priority: feature; needs: none; basis: 38eaf2f90eccd74d11ce3d0e836cbad7d4606ae0; scope: `crates/kwavers-analysis/src/ml/uncertainty/sensitivity_analysis/`, `crates/kwavers-analysis/src/ml/uncertainty/quantifier.rs`, `docs/adr/043-tyche-uncertainty-provider.md`
+priority: feature; needs: none; basis: 38eaf2f90eccd74d11ce3d0e836cbad7d4606ae0; scope: `crates/kwavers-analysis/src/ml/uncertainty/sensitivity_analysis/`, `crates/kwavers-analysis/src/ml/uncertainty/quantifier.rs`, `docs/adr/043-tyche-uncertainty-provider.md`; milestone: M-imaging-capability
 
 - **Read at the basis.** `SensitivityAnalyzer::analyze` (`analyzer.rs:41-73`) runs Latin-hypercube sampling into `CorrelationScreening` and returns squared correlations; its only non-test caller is `quantifier.rs:255`. ADR 043 (`:44-46`) says genuine Morris and Saltelli methods "remain Tyche provider capability gaps"; `gap_audit.md:263-265` says Tyche does not yet provide them.
 - **Provider state.** The locked Tyche (456b4c489, `Cargo.lock`) defines `MorrisScreening` (`statistics/sensitivity/elementary.rs:172`) and Saltelli `SobolIndices` (`sobol.rs:23`), both with an `OUTPUTS` const-generic; Tyche's `backlog.md:149-150` at 1172fd967 records them delivered.

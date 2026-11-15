@@ -2,7 +2,7 @@
 
 ## KW-GPU-ADAPTER-FIELD-STATES — GPU PSTD adapter accessor docs name no value before a batch, and the Rustdoc of `pressure_field` is contradicted after a peak run [patch] — todo
 
-priority: verification; needs: none; basis: d1a3d463bfed5532f06d6ca5405ea64075335b27; scope: `crates/kwavers-simulation/src/solver_adapters/gpu_pstd.rs`, `docs/adr/037-gpu-pstd-output-contract.md`
+priority: verification; needs: none; basis: d1a3d463bfed5532f06d6ca5405ea64075335b27; scope: `crates/kwavers-simulation/src/solver_adapters/gpu_pstd.rs`, `docs/adr/037-gpu-pstd-output-contract.md`; milestone: M-solvers-core
 
 - **Origin.** Found while reading the adapter for #1053; the first verdict there (comment 6810004764, F8) pointed to the peak run, and the first verdict on #1055 (comment 6812387488, F1) to the accessor's Rustdoc and to ADR 037.
 - **Read at the basis.** `GpuPstdSimulationAdapter::new` fills its pressure and three velocity arrays with zeros (`gpu_pstd.rs` lines 123 to 126). `run_peak_pressure` (line 153) calls `store_peak_pressure` and not `store_final_fields`, and its doc says it does not download final pressure or velocity frames (lines 144 and 145); so after it the four arrays keep what the last `run` stored, or the zeros. The Rustdoc of `pressure_field` (line 377) says it returns "the final GPU-read pressure field from the most recent batch". That names no value before a batch, and it is contradicted by the reading above when the most recent batch is a peak run. `velocity_fields` (line 382) has no Rustdoc; the module doc says "after `run()`" of both. `statistics` (line 390) folds the three stored velocity arrays into `max_velocity` in every state.

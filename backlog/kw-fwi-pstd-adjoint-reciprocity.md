@@ -2,7 +2,7 @@
 
 ## KW-FWI-PSTD-ADJOINT-RECIPROCITY — The PSTD adjoint-reciprocity check never ran [patch] — todo
 
-priority: verification; needs: none; scope: `crates/kwavers-solver/src/inverse/fwi/time_domain/forward.rs`; FWI adjoint tests
+priority: verification; needs: none; scope: `crates/kwavers-solver/src/inverse/fwi/time_domain/forward.rs`; FWI adjoint tests; milestone: M-solvers-core
 
 - **Verified:** `FwiParameters::build_solver_for_forward` dispatches `SolverType::{FDTD, PSTD}` to `build_fdtd_boxed`/`build_pstd_boxed` and returns `Box<dyn Solver>`; the FDTD forward smoke test and the unsupported-type rejection test pass.
 - **Not verified:** the PSTD adjoint-reciprocity check, the one live residual of T15b.

@@ -104,3 +104,4 @@
 | [135](135-medium-absorption-unit-contract.md) | Medium absorption stays dB/cm in storage, Np/m at the boundary | Accepted |
 | [136](136-rectangle-planar-consolidation.md) | One rectangle element in the k-Wave array | Accepted |
 | [137](137-pstd-dispersion-is-run-configuration.md) | Power-law dispersion is part of every PSTD run's configuration | Accepted |
+| [138](138-release-scope-4-0.md) | Kwavers release scope for 4.0 | Accepted |

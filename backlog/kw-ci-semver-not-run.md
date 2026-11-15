@@ -2,7 +2,7 @@
 
 ## KW-CI-SEMVER-NOT-RUN — No hosted run compares a public surface when a change lands [patch] — todo
 
-priority: verification; needs: none; basis: 9b2b75c590efb6503f92d01aee2fae79ef73690e; scope: `.github/workflows/ci.yml`
+priority: verification; needs: none; basis: 9b2b75c590efb6503f92d01aee2fae79ef73690e; scope: `.github/workflows/ci.yml`; milestone: M-4.0
 
 - **Origin.** #1059 adds a public trait method to `kwavers-gpu`; no hosted job compared its API with a baseline, and the local tool did not complete.
 - **Read at the basis.** `ci.yml` calls the Atlas `semver-gate.yml` at 50802ef4c975bdb1e668b94a700d8310f0348e9c only when the event is not a pull request (line 137). In that workflow, `semver-pr` runs only on a pull request (its line 141) and `semver-release` only on the `release-gate` input, a release event or a tag push (its lines 243 to 246). So a push to `main` runs neither. The comment at `ci.yml` lines 126 to 130 says the blocking comparison runs on pushes to main. `rust-release.yml` runs the release comparison on `workflow_dispatch` and for a release tag that starts with `crate-` (lines 36 to 41).

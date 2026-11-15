@@ -2,7 +2,7 @@
 
 ## KW-CI-049 — Align Apollo provider lock [patch] — todo
 
-priority: verification; needs: KW-SWE-CLAMP-TEST-RESIDUALS; basis: 4d6724c0ebd02de4d22abee6cdd6d41dae236354; scope: `Cargo.lock`, provider-graph synchronization
+priority: verification; needs: KW-SWE-CLAMP-TEST-RESIDUALS; basis: 4d6724c0ebd02de4d22abee6cdd6d41dae236354; scope: `Cargo.lock`, provider-graph synchronization; milestone: M-imaging-capability
 
 - **Outcome:** the lock follows the merged Apollo provider, and the three packages the acceptance names stay green under `--locked`.
 - **Acceptance:** the lock records Apollo `0.24.0`, the version supplied by the merged Apollo PR #45, and the focused locked suite (`cargo nextest run --locked -p kwavers-gpu -p kwavers-simulation -p kwavers-solver`, 1,036/1,036 with four skipped) stays value-semantic green.

@@ -2,7 +2,7 @@
 
 ## KW-GPU-UNPINNED-REFUSAL-FALLBACK — A Leto fall-back on GPU PSTD provider errors other than the pinned refusals fails no test [patch] — todo
 
-priority: verification; needs: none; basis: d1a3d463bfed5532f06d6ca5405ea64075335b27; scope: `crates/kwavers-simulation/src/dispatch/pstd/gpu.rs`, `crates/kwavers-simulation/src/runner.rs`, `crates/kwavers-gpu/src/pstd_gpu/runner.rs`
+priority: verification; needs: none; basis: d1a3d463bfed5532f06d6ca5405ea64075335b27; scope: `crates/kwavers-simulation/src/dispatch/pstd/gpu.rs`, `crates/kwavers-simulation/src/runner.rs`, `crates/kwavers-gpu/src/pstd_gpu/runner.rs`; milestone: M-solvers-core
 
 - **Origin.** The third verdict on #1053 (comment 6812090897, finding 2) reports a fall-back that passes every test and is on no item. `KW-GPU-DEVICE-ERROR-SUBSTITUTE` holds the errors at or after device acquisition; this item holds the provider's other errors before it.
 - **Run by the integrator of #1056 at fa8c4a892787ec8907ddb504ac3a7fb62bf3874c**, on its development host, which has an adapter: the `?` on the `run_gpu_pstd` call in `run_gpu` (`dispatch/pstd/gpu.rs`; the call starts at line 47, its `?` is at line 62) was replaced by a `match`, two ways, and the 119 tests of the `gpu` build of `kwavers-simulation` were run with `--run-ignored all`. A fall-back to the Leto dispatch for an `InvalidInput` whose message lacks "time_steps" passed all 119. So did a fall-back for every error except an `InvalidInput` whose message holds "time_steps" and a `FeatureNotAvailable`. Both also act on errors at acquisition, which the other item holds: the `InvalidInput` that `with_auto_device` returns lacks "time_steps".

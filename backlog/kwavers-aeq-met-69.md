@@ -2,7 +2,7 @@
 
 ## KWAVERS-AEQ-MET-69 — Type B-mode scan-conversion geometry [major] [arch] — todo
 
-priority: architecture; needs: none; basis: a3a72689be0fbfed3f64231c52186eac79dedc15; scope: `crates/kwavers-analysis/src/signal_processing/b_mode/`, direct tests, ADR 105
+priority: architecture; needs: none; basis: a3a72689be0fbfed3f64231c52186eac79dedc15; scope: `crates/kwavers-analysis/src/signal_processing/b_mode/`, direct tests, ADR 105; milestone: M-imaging-capability
 
 - **Outcome:** beam angles use Aequitas `Angle` and apex/range/grid extents use `Length`. Conversion to radians/metres is confined to the trigonometric, interpolation-index and Cartesian-raster formula boundaries; no compatibility fields or forwarding constructors remain. Dense RF/image arrays stay scalar numerical storage.
 - **Eunomia:** B-mode geometry is real-valued; a complex RF representation at an upstream signal boundary keeps the existing observable unit, with no imaginary angle or length unit.
