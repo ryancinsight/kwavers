@@ -27,26 +27,39 @@ pub(super) fn clamp_walls(field: &mut ElasticWaveField, scratch: &mut ElasticSte
     zero_wall_planes(&mut scratch.az);
 }
 
-/// Zero the six outer wall planes of a volume field.
+/// Zero the outer wall planes of a volume field, one axis pair at a time.
+///
+/// A wall pair is clamped only when the axis has interior cells (`n >= 3`).
+/// With fewer than 3 cells the two walls cover the whole axis, so clamping
+/// would freeze the entire domain instead of its boundary: the solver's
+/// thin-slab and plane-strain modes (`nz = 1`) evolve a single layer freely
+/// and were stable without any clamp there, while the edge-growth channel
+/// needs wall-adjacent interior rows to inject energy.
 fn zero_wall_planes(values: &mut leto::Array3<f64>) {
     let shape = values.shape();
     let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-    for j in 0..ny {
-        for k in 0..nz {
-            values[[0, j, k]] = 0.0;
-            values[[nx - 1, j, k]] = 0.0;
-        }
-    }
-    for i in 0..nx {
-        for k in 0..nz {
-            values[[i, 0, k]] = 0.0;
-            values[[i, ny - 1, k]] = 0.0;
-        }
-    }
-    for i in 0..nx {
+    if nx >= 3 {
         for j in 0..ny {
-            values[[i, j, 0]] = 0.0;
-            values[[i, j, nz - 1]] = 0.0;
+            for k in 0..nz {
+                values[[0, j, k]] = 0.0;
+                values[[nx - 1, j, k]] = 0.0;
+            }
+        }
+    }
+    if ny >= 3 {
+        for i in 0..nx {
+            for k in 0..nz {
+                values[[i, 0, k]] = 0.0;
+                values[[i, ny - 1, k]] = 0.0;
+            }
+        }
+    }
+    if nz >= 3 {
+        for i in 0..nx {
+            for j in 0..ny {
+                values[[i, j, 0]] = 0.0;
+                values[[i, j, nz - 1]] = 0.0;
+            }
         }
     }
 }
