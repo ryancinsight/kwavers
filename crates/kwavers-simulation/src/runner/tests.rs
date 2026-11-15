@@ -1,3 +1,7 @@
+//! `SimulationRunner` dispatch-selection tests.
+//! Moved out of `runner.rs` so the dispatch module stays under the
+//! 500-line file budget; no behavior change.
+
 use super::SimulationRunner;
 use crate::types::SimulationRunRequest;
 use kwavers_grid::Grid;
