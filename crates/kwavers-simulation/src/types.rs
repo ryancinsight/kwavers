@@ -110,6 +110,11 @@ pub struct SimulationRunRequest<'a> {
     pub grid_source: GridSource,
     /// Boolean grid mask selecting recording points. Each `true` selects one point.
     ///
+    /// [`Self::transducer_ordered_indices`], when `Some`, takes precedence on
+    /// Leto PSTD: its recorder is built from those indices and this mask is
+    /// ignored. Hephaestus PSTD refuses such a request with
+    /// [`kwavers_core::error::KwaversError::FeatureNotAvailable`].
+    ///
     /// When [`Self::transducer_ordered_indices`] is `None`, an absent mask
     /// (`None`) or a grid-shaped mask with all entries `false` requests no
     /// sensors. Both PSTD backends and the FDTD dispatch accept this

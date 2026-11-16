@@ -343,6 +343,37 @@ fn gpu_selection_reports_the_provider_source_rejection() {
     );
 }
 
+/// Explicit sensor ordering takes precedence over `sensor_mask` on the Leto
+/// dispatch, which runs these requests
+/// (`leto_pstd_ordered_sensor_indices_override_the_mask`). The provider cannot
+/// preserve the order and refuses them before it acquires a device, whatever
+/// the mask holds.
+#[cfg(feature = "gpu")]
+#[test]
+fn gpu_selection_refuses_explicit_sensor_ordering() {
+    use kwavers_core::error::KwaversError;
+
+    let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+    let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+
+    for sensor_mask in [None, Some(leto::Array3::from_elem([8, 8, 8], true))] {
+        let request = SimulationRunRequest {
+            sensor_mask,
+            transducer_ordered_indices: Some(vec![(1, 2, 3)]),
+            ..gpu_request(&grid, &medium)
+        };
+
+        let error = SimulationRunner::run(&request, Vec::new())
+            .expect_err("the GPU PSTD provider cannot preserve sensor ordering");
+
+        assert!(
+            matches!(&error, KwaversError::FeatureNotAvailable(reason)
+                if reason.contains("explicit transducer sensor ordering")),
+            "{error}"
+        );
+    }
+}
+
 /// The provider requests a `max_buffer_size` of 128 MiB (134217728
 /// bytes). The packed PML buffer of a 256x256x256 grid holds three `f32`
 /// values for each of 16777216 points: 201326592 bytes. With the sensor

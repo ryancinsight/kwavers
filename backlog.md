@@ -61,4 +61,3 @@
 <a id="kw-ci-doctests-one-package"></a>- [KW-CI-DOCTESTS-ONE-PACKAGE](backlog/kw-ci-doctests-one-package.md) — No hosted job or push gate runs the doctests of any package but `kwavers` [patch] [ci] — todo
 <a id="kw-hook-nextest-config-ungated"></a>- [KW-HOOK-NEXTEST-CONFIG-UNGATED](backlog/kw-hook-nextest-config-ungated.md) — A push changing only `.config/nextest.toml` passes the pre-push hook with no package gated [patch] [ci] — todo
 <a id="kw-py-hybrid-refused"></a>- [KW-PY-HYBRID-REFUSED](backlog/kw-py-hybrid-refused.md) — Python callers offer a Hybrid solver that `Simulation.run` refuses [patch] — todo
-<a id="kw-sim-sensor-mask-doc"></a>- [KW-SIM-SENSOR-MASK-DOC](backlog/kw-sim-sensor-mask-doc.md) — The Rustdoc of `SimulationRunRequest::sensor_mask` says no sensors are requested by `None`, which is false beside `transducer_ordered_indices` [patch] — todo

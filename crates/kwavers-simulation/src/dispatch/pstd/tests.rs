@@ -191,3 +191,41 @@ fn leto_pstd_ordered_sensor_indices_override_the_mask() {
         assert_eq!(result.sensor_data.shape(), [rows, 3]);
     }
 }
+
+/// An ordered index records the same pressure history as a mask selecting
+/// that point; the shape assertions above cannot tell a recorder built from
+/// the wrong point from the right one.
+#[test]
+fn leto_pstd_ordered_index_records_the_masked_point() {
+    use crate::runner::SimulationRunner;
+
+    let grid = Grid::new(7, 4, 3, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid grid");
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
+    let nonlinear = NonlinearConfig::default();
+    let mut point_mask = leto::Array3::from_elem([7, 4, 3], false);
+    point_mask[[3, 2, 1]] = true;
+
+    let record = |sensor_mask, transducer_ordered_indices| {
+        let request = SimulationRunRequest {
+            time_steps: 3,
+            dt: 1.0e-7,
+            grid_source: centre_source(),
+            sensor_mask,
+            transducer_ordered_indices,
+            ..request(&grid, &medium, &nonlinear)
+        };
+        SimulationRunner::run(&request, Vec::new())
+            .expect("Leto PSTD records one point")
+            .sensor_data
+    };
+
+    let masked = record(Some(point_mask), None);
+    let ordered = record(None, Some(vec![(3, 2, 1)]));
+
+    assert_eq!(ordered.shape(), [1, 3]);
+    assert_eq!(ordered, masked);
+    assert!(
+        ordered.iter().any(|&pressure| pressure != 0.0),
+        "the source point records a non-zero pressure"
+    );
+}
