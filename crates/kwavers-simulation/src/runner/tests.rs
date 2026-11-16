@@ -1,3 +1,7 @@
+//! `SimulationRunner` dispatch-selection tests.
+//! Moved out of `runner.rs` so the dispatch module stays under the
+//! 500-line file budget; no behavior change.
+
 use super::SimulationRunner;
 use crate::types::SimulationRunRequest;
 use kwavers_grid::Grid;
@@ -369,6 +373,56 @@ fn gpu_selection_reports_a_plan_beyond_device_capacity() {
         error.to_string(),
         "Resource limit exceeded: GPU PSTD buffer `pml_xyz` needs 201326592 bytes; the device enables max_buffer_size = 134217728 bytes"
     );
+}
+
+/// The provider requests a `max_buffer_size` of 128 MiB (134217728
+/// bytes). A full sensor mask on a 16x16x16 grid records 4096 traces;
+/// 8193 steps hold 134234112 bytes in `sensor_data`. With the sensors
+/// the Leto dispatch returns `Ok` for this request, so handing back its
+/// outcome in place of the refusal fails this test. A check moved
+/// after the first run buffer panics in the uncaptured-error handler
+/// instead of returning here, so this test also pins the check order.
+#[cfg(feature = "gpu")]
+#[test]
+#[ignore = "requires a GPU device"]
+fn gpu_selection_reports_a_run_beyond_device_capacity() {
+    use kwavers_core::error::KwaversError;
+
+    let grid = Grid::new(16, 16, 16, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+    let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+    let mut request = gpu_request(&grid, &medium);
+    request.time_steps = 8193;
+    request.sensor_mask = Some(leto::Array3::from_elem([16, 16, 16], true));
+
+    let error = SimulationRunner::run(&request, Vec::new())
+        .expect_err("the record buffer exceeds the buffer size the provider requests");
+
+    assert!(
+        matches!(error, KwaversError::ResourceLimitExceeded { .. }),
+        "{error:?}"
+    );
+    assert_eq!(
+        error.to_string(),
+        "Resource limit exceeded: GPU PSTD buffer `sensor_data` needs 134234112 bytes; the device enables max_buffer_size = 134217728 bytes"
+    );
+}
+
+/// The same grid with 8192 steps records exactly 134217728 bytes, the
+/// limit the provider requests, and runs.
+#[cfg(feature = "gpu")]
+#[test]
+#[ignore = "requires a GPU device"]
+fn gpu_selection_runs_a_run_within_device_capacity() {
+    let grid = Grid::new(16, 16, 16, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid test grid");
+    let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+    let mut request = gpu_request(&grid, &medium);
+    request.time_steps = 8192;
+    request.sensor_mask = Some(leto::Array3::from_elem([16, 16, 16], true));
+
+    let result = SimulationRunner::run(&request, Vec::new())
+        .expect("a record at exactly the device buffer limit runs");
+
+    assert_eq!(result.sensor_data.shape(), [4096, 8192]);
 }
 
 #[cfg(feature = "gpu")]

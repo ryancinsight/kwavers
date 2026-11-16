@@ -50,7 +50,6 @@
 <a id="kw-ci-semver-not-run"></a>- [KW-CI-SEMVER-NOT-RUN](backlog/kw-ci-semver-not-run.md) — No hosted run compares a public surface when a change lands [patch] — todo
 <a id="kw-dep-eunomia-requirement-lag"></a>- [KW-DEP-EUNOMIA-REQUIREMENT-LAG](backlog/kw-dep-eunomia-requirement-lag.md) — The Eunomia requirement admits no version its repository now holds [patch] — todo
 <a id="kw-gpu-fft-plan-capacity"></a>- [KW-GPU-FFT-PLAN-CAPACITY](backlog/kw-gpu-fft-plan-capacity.md) — A GPU PSTD plan whose FFT workspace or dispatch exceeds a device limit is refused as `InvalidInput`, after field buffers exist [patch] — blocked
-<a id="kw-gpu-run-buffer-capacity"></a>- [KW-GPU-RUN-BUFFER-CAPACITY](backlog/kw-gpu-run-buffer-capacity.md) — A GPU PSTD run whose record buffer exceeds a device buffer limit panics [patch] — todo
 <a id="kw-gpu-pstd-buffer-request"></a>- [KW-GPU-PSTD-BUFFER-REQUEST](backlog/kw-gpu-pstd-buffer-request.md) — GPU PSTD requests a 128 MiB buffer limit whatever the adapter supports [minor] — todo
 <a id="kwavers-aeq-met-70"></a>- [KWAVERS-AEQ-MET-70](backlog/kwavers-aeq-met-70.md) — Inventory raw public metrics in the remaining transducer families [arch] — todo
 <a id="kw-ci-ubuntu-latest-unpinned"></a>- [KW-CI-UBUNTU-LATEST-UNPINNED](backlog/kw-ci-ubuntu-latest-unpinned.md) — 23 workflow jobs and one wheel-smoke matrix cell run on the moving `ubuntu-latest` image [patch] [ci] — todo

@@ -185,6 +185,23 @@ pub trait PstdRunState {
         scalars: PstdRunScalars,
         inputs: PstdRunInputs<'_>,
     ) -> Result<PstdRunResult, String>;
+
+    /// Check the buffers a run sizes before the provider creates any of them.
+    ///
+    /// The default accepts every run.
+    ///
+    /// # Errors
+    ///
+    /// A provider that sizes fallible buffers refuses with
+    /// `KwaversError::ResourceLimitExceeded` naming the buffer, the bytes
+    /// it needs, and the limit it exceeds.
+    fn check_run_capacity(
+        &self,
+        _scalars: PstdRunScalars,
+        _inputs: &PstdRunInputs<'_>,
+    ) -> KwaversResult<()> {
+        Ok(())
+    }
 }
 
 /// Provider-state contract for updating PSTD medium-dependent buffers.

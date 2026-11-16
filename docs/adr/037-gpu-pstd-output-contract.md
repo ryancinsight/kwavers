@@ -73,7 +73,10 @@ that snapshot across batches instead of duplicating preparation logic.
   040 now provides the provider-side envelope. Construction refuses, with
   `ResourceLimitExceeded`, a plan whose packed PML or shift buffer exceeds a
   device buffer limit (ryancinsight/kwavers#1059); the Hephaestus FFT plan
-  and the buffers a run sizes by sensors and steps are not checked there.
+  remains unchecked. The buffers a run sizes by sensors and steps are
+  refused with the same variant before the run creates a buffer
+  (ryancinsight/kwavers#1098; 2026-11-15: run-capacity check added, so only
+  the FFT plan workspace stays unchecked).
 - Lossless PSTD remains available on a 23-buffer device. Absorption is an
   explicit 31-buffer capability requirement, not a reason to use Leto.
 

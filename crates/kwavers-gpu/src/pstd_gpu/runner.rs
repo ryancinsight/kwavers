@@ -16,8 +16,8 @@
 
 use crate::pstd_gpu::{
     AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdAutoDeviceProvider,
-    PstdMediumSnapshot, PstdOutputRequest, PstdRunInputs, PstdRunResult, PstdRunState,
-    SolverParams, WgpuPstdStateProvider,
+    PstdMediumSnapshot, PstdOutputRequest, PstdRunInputs, PstdRunResult, PstdRunScalars,
+    PstdRunState, SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -88,7 +88,7 @@ impl Default for GpuPstdRunConfig {
 /// - A host without a compatible accelerator adapter returns
 ///   `SystemError::GpuNotAvailable`; a present adapter that fails returns
 ///   `KwaversError::GpuError`.
-/// - A PML or shift buffer over a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
+/// - A plan or run buffer over a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
 pub fn run_gpu_pstd(
     grid: &Grid,
     medium: &dyn Medium,
@@ -109,7 +109,7 @@ pub fn run_gpu_pstd(
 ///
 /// Returns `KwaversError::InvalidInput` for an invalid grid, source, medium,
 /// sensor mask, configuration, or provider acquisition failure.
-/// A PML or shift buffer over a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
+/// A plan or run buffer over a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
 pub fn run_gpu_pstd_with_outputs(
     grid: &Grid,
     medium: &dyn Medium,
@@ -139,7 +139,7 @@ pub fn run_gpu_pstd_with_outputs(
 /// Returns `KwaversError::InvalidInput` for an invalid grid, source, sensor
 /// mask, configuration, or snapshot/config mismatch, and propagates provider
 /// acquisition and execution failures.
-/// A PML or shift buffer over a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
+/// A plan or run buffer over a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
 pub fn run_gpu_pstd_with_snapshot_outputs(
     grid: &Grid,
     medium: &PstdMediumSnapshot,
@@ -167,7 +167,7 @@ pub fn run_gpu_pstd_with_snapshot_outputs(
 /// - A host without a compatible accelerator adapter returns
 ///   `SystemError::GpuNotAvailable`; a present adapter that fails returns
 ///   `KwaversError::GpuError`.
-/// - A PML or shift buffer over a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
+/// - A plan or run buffer over a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
 pub fn run_gpu_pstd_with_provider<P>(
     grid: &Grid,
     medium: &dyn Medium,
@@ -206,7 +206,7 @@ where
 ///
 /// Returns `KwaversError::InvalidInput` for an invalid grid, source, medium,
 /// sensor mask, configuration, or provider acquisition failure.
-/// A PML or shift buffer over a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
+/// A plan or run buffer over a device buffer limit returns `KwaversError::ResourceLimitExceeded`.
 pub fn run_gpu_pstd_with_provider_outputs<P>(
     grid: &Grid,
     medium: &dyn Medium,
@@ -360,17 +360,35 @@ where
         },
     )?;
 
+    let run_inputs = PstdRunInputs {
+        sensor_indices: &sensor_indices,
+        source_indices: &pressure_source.indices,
+        source_signals: &pressure_source.signals,
+        pressure_source_correction: pressure_source.uses_kspace_correction,
+        vel_x_indices: &vel_x_indices,
+        vel_x_signals: &vel_x_signals,
+        velocity_source_correction,
+        output_request,
+    };
+
+    // The provider sizes its record buffers from the same run scalars the
+    // solver loop receives below; refusing here keeps the typed variant and
+    // runs before the first buffer exists.
+    solver.state.check_run_capacity(
+        PstdRunScalars {
+            nx,
+            ny,
+            nz,
+            nt: time_steps,
+            dt,
+            nonlinear: has_nonlinear,
+            absorbing: has_absorption,
+        },
+        &run_inputs,
+    )?;
+
     solver
-        .run(PstdRunInputs {
-            sensor_indices: &sensor_indices,
-            source_indices: &pressure_source.indices,
-            source_signals: &pressure_source.signals,
-            pressure_source_correction: pressure_source.uses_kspace_correction,
-            vel_x_indices: &vel_x_indices,
-            vel_x_signals: &vel_x_signals,
-            velocity_source_correction,
-            output_request,
-        })
+        .run(run_inputs)
         .map_err(|error| KwaversError::GpuError(format!("GPU PSTD execution failed: {error}")))
 }
 

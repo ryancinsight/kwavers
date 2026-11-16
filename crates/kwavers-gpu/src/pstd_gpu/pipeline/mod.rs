@@ -10,7 +10,7 @@ mod auto_device;
 mod bgl;
 mod bind_groups;
 mod buffers;
-mod capacity;
+pub(in crate::pstd_gpu) mod capacity;
 mod construction;
 mod pipelines;
 
