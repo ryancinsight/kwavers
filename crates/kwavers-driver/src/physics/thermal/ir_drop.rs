@@ -88,14 +88,36 @@ pub fn ir_drop(
         inj[l] = -per_leaf; // load draws current
     }
 
-    // Node conductance sums + adjacency.
+    // Node conductance sums + adjacency. The neighbourhoods are held as one
+    // CSR pair — a neighbour-index run and a conductance run behind an offset
+    // table — so the Gauss–Seidel sweep reads each node's edges contiguously
+    // and the graph costs two allocations instead of a `Vec` header and heap
+    // block per node. Edges are inserted in the same order the per-node
+    // vectors used, so every node's summation order is unchanged.
     let mut gsum = vec![0.0f64; n];
-    let mut adj: Vec<Vec<(usize, f64)>> = vec![Vec::new(); n];
     for &(a, b, g) in &edges {
         gsum[a] += g;
         gsum[b] += g;
-        adj[a].push((b, g));
-        adj[b].push((a, g));
+    }
+    let mut adj_offsets = vec![0usize; n + 1];
+    for &(a, b, _) in &edges {
+        adj_offsets[a + 1] += 1;
+        adj_offsets[b + 1] += 1;
+    }
+    for node in 0..n {
+        adj_offsets[node + 1] += adj_offsets[node];
+    }
+    let adjacency_len = adj_offsets[n];
+    let mut adj_neighbours = vec![0usize; adjacency_len];
+    let mut adj_weights = vec![0.0f64; adjacency_len];
+    let mut cursor = adj_offsets[..n].to_vec();
+    for &(a, b, g) in &edges {
+        adj_neighbours[cursor[a]] = b;
+        adj_weights[cursor[a]] = g;
+        cursor[a] += 1;
+        adj_neighbours[cursor[b]] = a;
+        adj_weights[cursor[b]] = g;
+        cursor[b] += 1;
     }
 
     // Gauss–Seidel: V_i = (Σ_j g_ij V_j + I_i) / Σ_j g_ij, supply pinned at 0 (reference).
@@ -106,8 +128,8 @@ pub fn ir_drop(
                 continue;
             }
             let mut acc = inj[i];
-            for &(j, g) in &adj[i] {
-                acc += g * v[j];
+            for edge in adj_offsets[i]..adj_offsets[i + 1] {
+                acc += adj_weights[edge] * v[adj_neighbours[edge]];
             }
             v[i] = acc / gsum[i];
         }

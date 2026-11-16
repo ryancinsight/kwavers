@@ -240,6 +240,18 @@ fn ir_drop_boundary_zero_current() {
 }
 
 #[test]
+fn ir_drop_series_chain_is_bit_stable() {
+    let (b, vpp, supply) = board_with_chain(0.25);
+    let d = ir_drop(&b, vpp, supply, 1.0, 1.0, 40000).unwrap();
+    assert_eq!(
+        d.max_drop_v.to_bits(),
+        4_591_621_414_013_336_774,
+        "series-chain drop changed: {:.17}",
+        d.max_drop_v
+    );
+}
+
+#[test]
 fn ir_drop_boundary_no_tracks_returns_none() {
     // An empty board has no routed tracks on the net ⇒ function returns None.
     let spec = GridSpec::cover(Nm::from_mm(60.0), Nm::from_mm(10.0), Nm::from_mm(0.5), 2).unwrap();
