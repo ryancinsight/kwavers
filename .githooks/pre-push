@@ -366,6 +366,17 @@ trap remove_run_temps EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
+
+# Per-step wall-clock marks for a measured push. `ATLAS_GATE_PROGRESS_DIR` is
+# the runner's directory for one bounded gate, and each mark is this outer
+# shell's elapsed seconds at a section boundary, so consecutive marks give the
+# hook's own per-step cost. The identity stages write into the same directory
+# under the same clock (`ATLAS_GATE_ELAPSED_BASE`), so a stage time and a mark
+# are comparable rather than two clocks that both start at zero.
+mark_step() {
+  [ -z "${ATLAS_GATE_PROGRESS_DIR:-}" ] && return 0
+  printf '%s %s\n' "$1" "$SECONDS" >>"$ATLAS_GATE_PROGRESS_DIR/steps.log" 2>/dev/null || true
+}
 # new_run_temp <variable> <prefix>: a fresh directory, registered and owned.
 new_run_temp() {
   local created
@@ -388,6 +399,23 @@ default_branch_base() {
     base="$(git merge-base "$ref" "$tip" 2>/dev/null || true)"
     if [ -n "$base" ]; then
       printf '%s' "$base"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# The remote default branch's tip, or nothing. `origin/HEAD` follows a rename
+# (`origin/main` does not), so it is tried first. A branch update that merged
+# this tip brings its commits into `<remote>..<local>`; using the tip as the
+# range base excludes them, so mainline changes are not gated as though the
+# push had written them.
+default_branch_tip() {
+  local ref tip
+  for ref in origin/HEAD origin/main; do
+    tip="$(git rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
+    if [ -n "$tip" ]; then
+      printf '%s' "$tip"
       return 0
     fi
   done
@@ -531,6 +559,7 @@ pushed_tip=""
 # because stdin reads once: the gate cannot re-read it.
 gate_tip=""
 gate_range_base=""
+gate_budget_base=""
 if [ "${#content_lines[@]}" -eq 1 ]; then
   touches_dependency_state=no
   while read -r _local_ref local_sha _remote_ref remote_sha; do
@@ -552,13 +581,36 @@ if [ "${#content_lines[@]}" -eq 1 ]; then
         # no default branch known): the pushed revision is judged whole.
         gate_tip="$local_sha"
         gate_range_base=""
+        gate_budget_base=""
         touches_dependency_state=unknown
         break
       fi
     elif git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
       # Ordinary branch updates extend the remote tip, so only new commits
-      # enter the gate range.
+      # enter the gate range. An update that merged the fetched default brings
+      # that branch's commits into `<remote>..<local>`: the default tip is then
+      # the base, so a manifest changed on mainline is not gated (nor cast-
+      # budgeted) as though this push had written it. Without the merge the
+      # remote tip stays the base and only this push's commits are judged.
       base="$remote_sha"
+      merged_default="$(default_branch_tip || true)"
+      if [ -n "$merged_default" ] \
+        && git merge-base --is-ancestor "$merged_default" "$local_sha" 2>/dev/null; then
+        # Only a range that actually carries mainline commits takes the
+        # default tip as its base. A plain branch update also has the default
+        # as an ancestor, but every commit in `<remote>..<local>` is then the
+        # branch's own; using the default tip there would re-gate work already
+        # pushed.
+        range_total="$(git rev-list --count "$remote_sha".."$local_sha" 2>/dev/null || echo 0)"
+        range_own="$(git rev-list --count "$remote_sha".."$local_sha" \
+          --not "$merged_default" 2>/dev/null || echo 0)"
+        if [ "$range_own" -lt "$range_total" ]; then
+          base="$merged_default"
+        fi
+        gate_budget_base="$merged_default"
+      else
+        gate_budget_base="$base"
+      fi
     else
       # Publication branches may be rebuilt from a newer default branch.
       # Their previous tip is then outside the new history; gate the PR delta
@@ -568,6 +620,7 @@ if [ "${#content_lines[@]}" -eq 1 ]; then
       if [ -z "$base" ]; then
         gate_tip="$local_sha"
         gate_range_base=""
+        gate_budget_base=""
         touches_dependency_state=unknown
         break
       fi
@@ -575,6 +628,13 @@ if [ "${#content_lines[@]}" -eq 1 ]; then
     if [ -z "$gate_tip" ]; then
       gate_tip="$local_sha"
       gate_range_base="$base"
+      # The budget ratchet compares against the branch's default-branch base,
+      # not a previous tip that may already sit behind mainline: a board that
+      # shrank against main must not be refused for growing against the last
+      # pushed tip. New and rebuilt branches already use that base.
+      if [ -z "$gate_budget_base" ]; then
+        gate_budget_base="$base"
+      fi
     fi
     if git --no-replace-objects diff --quiet --no-ext-diff --no-textconv "$base" "$local_sha" -- \
       ':(glob)**/Cargo.toml' ':(glob)**/Cargo.lock'; then
@@ -818,6 +878,48 @@ if [ "${#push_lines[@]}" -gt 1 ]; then
   done
   exit "$refs_status"
 fi
+
+# One push of a ref at a time. A second concurrent push of the same ref would
+# gate the same commits a peer is already gating and contend for every build
+# lease of that work, so it is refused rather than made to wait. A push of
+# another ref is unaffected: the lock is keyed by the remote ref. This runs
+# after the multi-ref dispatch above, so a batch push's parent holds no ref's
+# lock while its per-ref re-entry takes it.
+if [ "$gate_phase" = "push" ] && [ "${#content_lines[@]}" -eq 1 ]; then
+  read -r _push_local_ref _push_sha _push_remote_ref _push_remote_sha <<<"${content_lines[0]}"
+  push_lock_key="$(printf '%s' "$_push_remote_ref" | git hash-object --stdin | cut -c1-16)"
+  push_lock_root="$repo_store/atlas-push-locks"
+  push_lock="$push_lock_root/$push_lock_key"
+  mkdir -p "$push_lock_root"
+  claim_push_lock() {
+    local staged="$push_lock.$$"
+    mkdir "$staged" 2>/dev/null || return 1
+    printf '%s\n' "$$" > "$staged/pid"
+    if mv -T "$staged" "$push_lock" 2>/dev/null; then
+      run_temps+=("$push_lock")
+      return 0
+    fi
+    rm -rf "$staged" 2>/dev/null || true
+    return 1
+  }
+  if ! claim_push_lock; then
+    push_holder="$(cat "$push_lock/pid" 2>/dev/null || true)"
+    if [ -n "$push_holder" ] && ! kill -0 "$push_holder" 2>/dev/null; then
+      # A killed gate leaves its lock: its owner is gone, so take it over.
+      rm -rf "$push_lock" 2>/dev/null || true
+    fi
+    if ! claim_push_lock; then
+      cat >&2 <<MESSAGE
+
+pre-push: BLOCKED -- another push of ${_push_remote_ref} is already running
+(pid ${push_holder:-unknown}). A second concurrent gate of the same ref would
+judge the same commits and contend for the same build leases. Wait for it to
+finish, then push again.
+MESSAGE
+      exit 1
+    fi
+  fi
+fi
 prepared_stack_scripts=""
 if [ "$prepared_tools_selected" -eq 1 ]; then
   if [[ ! "$prepared_tools" =~ ^[0-9a-f]{40}$ ]]; then
@@ -934,6 +1036,7 @@ MESSAGE
 fi
 fi
 # End of the lockfile section; the code gate below runs unconditionally.
+mark_step lockfile
 
 # ---------------------------------------------------------------------------
 # Artifact budgets: PM boards under their line budget, tracked images under
@@ -963,9 +1066,21 @@ fi
 range_args=()
 [ -n "$range_base" ] && range_args=(--base "$range_base")
 
+# The budget ratchet reads the pushed tip against the branch's default-branch
+# base (`gate_budget_base`), which a branch update may place ahead of its own
+# previous tip. The credential scan keeps the pushed range (`range_args`): a
+# credential is only new if this push introduced it.
+budget_base_rev="$range_base"
+if [ -n "$gate_budget_base" ] \
+  && git rev-parse --verify --quiet "$gate_budget_base^{commit}" >/dev/null 2>&1; then
+  budget_base_rev="$gate_budget_base"
+fi
+budget_args=()
+[ -n "$budget_base_rev" ] && budget_args=(--base "$budget_base_rev")
+
 budget_checker="${stack_scripts:+$stack_scripts/atlas-artifact-budget.py}"
 if [ -f "$budget_checker" ] && [ -n "$python_bin" ]; then
-  if ! "$python_bin" "$budget_checker" check --root "$repo_root" --rev "$range_rev" "${range_args[@]}"; then
+  if ! "$python_bin" "$budget_checker" check --root "$repo_root" --rev "$range_rev" "${budget_args[@]}"; then
     echo "pre-push: BLOCKED -- a PM board grew past its line budget or a tracked" >&2
     echo "image exceeds the byte budget. Compact the board (done items delete)," >&2
     echo "move evidence captures out of git, and push again." >&2
@@ -974,6 +1089,7 @@ if [ -f "$budget_checker" ] && [ -n "$python_bin" ]; then
 else
   echo "pre-push: artifact-budget checker not reachable from this clone; CI enforces it" >&2
 fi
+mark_step budget
 
 # Credentials: every commit the pushed range introduces, scanned before it
 # leaves the machine (scripts/atlas-secret-scan.py). A secret that reaches a
@@ -1014,6 +1130,8 @@ elif [ "$secret_status" -ne 0 ]; then
   echo "range was not scanned; the reason is the secret-scan line above." >&2
   exit 1
 fi
+
+mark_step secret-scan
 
 # Debt ratchet: the pushed revision's conformance classes may not rise above
 # the counts atlas records for this member. CI runs the same script through
@@ -1079,6 +1197,7 @@ if [ -n "$stack_baseline" ] && [ -n "$python_bin" ] \
 else
   echo "pre-push: no stack checker reachable from this clone; debt ratchet not run, CI enforces it" >&2
 fi
+mark_step debt-ratchet
 
 # ---------------------------------------------------------------------------
 # Fast local gate, scoped to the pushed range.
@@ -1457,6 +1576,25 @@ while IFS= read -r changed_path; do
     backlog/*/*) ;;
     backlog.md | backlog/*.md | gap_audit.md | checklist.md) continue ;;
   esac
+  # A nextest profile, toolchain pin, or cargo configuration schedules the
+  # packages it names -- every workspace package for a profile-level key -- so
+  # it is a package-independent input, not an unowned file. Walking up for a
+  # `Cargo.toml` from `.config/` finds none, and a virtual workspace root has
+  # no `[package]`, so such a push would end at "no package owns the changed
+  # files". The meta mapping (`select_meta_cargo_owners`) already treats these
+  # as global inputs; this is the same list for a member.
+  case "$changed_path" in
+    .config/nextest.toml | rust-toolchain | rust-toolchain.toml | .cargo/*)
+      while IFS=$'\t' read -r _workspace_manifest workspace_package; do
+        [ -n "$workspace_package" ] || continue
+        case " $gate_packages " in
+          *" $workspace_package "*) ;;
+          *) gate_packages="$gate_packages $workspace_package" ;;
+        esac
+      done <<< "$workspace_members"
+      continue
+      ;;
+  esac
   owner_dir="$(dirname "$changed_path")"
   package_dir=""
   excluded_manifest=""
@@ -1821,6 +1959,7 @@ run_identity_sequence() {
   done
   local identity_command
   identity_command=(
+    env "ATLAS_GATE_ELAPSED_BASE=$SECONDS"
     "$python_bin" "$identity_checker" run
     --root "$root"
     "${package_arguments[@]}"
@@ -1848,10 +1987,12 @@ shift 11
 cargo_command="${CARGO:-cargo}"
 record_stage() {
   printf "%s\n" "$1" >"$stage_file"
-  [ -z "$progress" ] || printf "%s started %s\n" "$1" "$SECONDS" >>"$progress/stages.log"
+  [ -z "$progress" ] || printf "%s started %s\n" "$1" \
+    "$(( ${ATLAS_GATE_ELAPSED_BASE:-0} + SECONDS ))" >>"$progress/stages.log"
 }
 complete_stage() {
-  [ -z "$progress" ] || printf "%s completed %s\n" "$1" "$SECONDS" >>"$progress/stages.log"
+  [ -z "$progress" ] || printf "%s completed %s\n" "$1" \
+    "$(( ${ATLAS_GATE_ELAPSED_BASE:-0} + SECONDS ))" >>"$progress/stages.log"
 }
 if [ "$run_clippy" = 1 ]; then
   record_stage clippy
@@ -2192,6 +2333,7 @@ else
   run_temps+=("$gate_log")
 fi
 
+mark_step gate-prep
 if [ "$identity_enabled" -eq 1 ]; then
   run_clippy=0
   run_tests=0
@@ -2455,8 +2597,10 @@ if [ "$stack_member" = "<meta>" ]; then
 else
   run_cargo_workspace_gate "Cargo.toml" "$gate_changed"
 fi
+mark_step gate
 
 # The gate ran every workspace; the recorded cast sites are judged as one
 # range, once, whether the push carried workspace packages, standalone crates,
 # or both.
 run_cast_check
+mark_step done
