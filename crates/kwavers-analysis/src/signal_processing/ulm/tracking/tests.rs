@@ -84,9 +84,10 @@ fn test_track_termination_after_max_gap() {
 #[test]
 fn test_hungarian_identity_assignment() {
     let n = 4;
-    let mut cost = vec![vec![1e6_f64; n]; n];
-    for (i, row) in cost.iter_mut().enumerate() {
-        row[i] = 0.0;
+    // Row-major, stride `n`.
+    let mut cost = vec![1e6_f64; n * n];
+    for i in 0..n {
+        cost[i * n + i] = 0.0;
     }
     let assignment = hungarian(&cost, n, n, 1e12);
     for (i, a) in assignment.iter().enumerate() {
@@ -100,16 +101,13 @@ fn test_hungarian_identity_assignment() {
 
 #[test]
 fn test_hungarian_minimum_cost() {
-    let cost = vec![
-        vec![4.0, 1.0, 3.0],
-        vec![2.0, 0.0, 5.0],
-        vec![3.0, 2.0, 2.0],
-    ];
+    // Row-major, stride 3.
+    let cost = vec![4.0, 1.0, 3.0, 2.0, 0.0, 5.0, 3.0, 2.0, 2.0];
     let assignment = hungarian(&cost, 3, 3, 1e12);
     let total: f64 = assignment
         .iter()
         .enumerate()
-        .map(|(i, &a)| cost[i][a.unwrap()])
+        .map(|(i, &a)| cost[i * 3 + a.expect("invariant: every track matched")])
         .sum();
     assert!(
         (total - 5.0).abs() < 1e-9,
