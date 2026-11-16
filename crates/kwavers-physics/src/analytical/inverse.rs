@@ -385,39 +385,49 @@ pub fn exponential_convergence_curve(
 /// Gaussian elimination with partial pivoting for flat square system.
 #[allow(clippy::needless_range_loop)]
 fn gaussian_elim_flat(mat_flat: &[f64], rhs: &[f64], n: usize) -> Vec<f64> {
-    let mut aug: Vec<Vec<f64>> = (0..n)
-        .map(|i| {
-            let mut row: Vec<f64> = mat_flat[i * n..(i + 1) * n].to_vec();
-            row.push(rhs[i]);
-            row
-        })
-        .collect();
+    // One row-major augmented block of `n` rows with stride `n + 1` instead of
+    // a `Vec` per row: the pivot search, the row swap and every elimination
+    // pass then walk contiguous memory, and the solve costs one allocation.
+    let stride = n + 1;
+    let mut aug = vec![0.0_f64; n * stride];
+    for row in 0..n {
+        aug[row * stride..row * stride + n].copy_from_slice(&mat_flat[row * n..(row + 1) * n]);
+        aug[row * stride + n] = rhs[row];
+    }
 
     for col in 0..n {
         // Partial pivot
         let pivot = (col..n)
-            .max_by(|&i, &j| aug[i][col].abs().total_cmp(&aug[j][col].abs()))
-            .unwrap();
-        aug.swap(col, pivot);
-        let diag = aug[col][col];
+            .max_by(|&i, &j| {
+                aug[i * stride + col]
+                    .abs()
+                    .total_cmp(&aug[j * stride + col].abs())
+            })
+            .expect("invariant: a pivot search runs over a non-empty row range");
+        if pivot != col {
+            for offset in 0..stride {
+                aug.swap(col * stride + offset, pivot * stride + offset);
+            }
+        }
+        let diag = aug[col * stride + col];
         if diag.abs() < 1e-300 {
             return vec![0.0; n];
         }
         for row in (col + 1)..n {
-            let f = aug[row][col] / diag;
+            let f = aug[row * stride + col] / diag;
             for k in col..=n {
-                let v = aug[col][k] * f;
-                aug[row][k] -= v;
+                let v = aug[col * stride + k] * f;
+                aug[row * stride + k] -= v;
             }
         }
     }
     let mut x = vec![0.0_f64; n];
     for i in (0..n).rev() {
-        x[i] = aug[i][n];
+        x[i] = aug[i * stride + n];
         for j in (i + 1)..n {
-            x[i] -= aug[i][j] * x[j];
+            x[i] -= aug[i * stride + j] * x[j];
         }
-        x[i] /= aug[i][i];
+        x[i] /= aug[i * stride + i];
     }
     x
 }
@@ -426,10 +436,9 @@ fn gaussian_elim_flat(mat_flat: &[f64], rhs: &[f64], n: usize) -> Vec<f64> {
 /// Returns unsorted eigenvalues.
 #[allow(clippy::needless_range_loop)]
 fn symmetric_eigenvalues(mat_flat: &[f64], n: usize) -> Vec<f64> {
-    // Copy to working array
-    let mut a: Vec<Vec<f64>> = (0..n)
-        .map(|i| mat_flat[i * n..(i + 1) * n].to_vec())
-        .collect();
+    // One row-major block with stride `n`, for the same reason as the
+    // elimination above: the rotation updates every row and column in turn.
+    let mut a: Vec<f64> = mat_flat[..n * n].to_vec();
 
     let max_iter = 100 * n * n;
     for _ in 0..max_iter {
@@ -439,8 +448,8 @@ fn symmetric_eigenvalues(mat_flat: &[f64], n: usize) -> Vec<f64> {
         let mut q = 1;
         for i in 0..n {
             for j in (i + 1)..n {
-                if a[i][j].abs() > max_val {
-                    max_val = a[i][j].abs();
+                if a[i * n + j].abs() > max_val {
+                    max_val = a[i * n + j].abs();
                     p = i;
                     q = j;
                 }
@@ -450,32 +459,32 @@ fn symmetric_eigenvalues(mat_flat: &[f64], n: usize) -> Vec<f64> {
             break;
         }
         // Compute Jacobi rotation angle
-        let theta = if (a[p][p] - a[q][q]).abs() < 1e-15 {
+        let theta = if (a[p * n + p] - a[q * n + q]).abs() < 1e-15 {
             std::f64::consts::PI / 4.0
         } else {
-            0.5 * ((2.0 * a[p][q]) / (a[p][p] - a[q][q])).atan()
+            0.5 * ((2.0 * a[p * n + q]) / (a[p * n + p] - a[q * n + q])).atan()
         };
         let c = theta.cos();
         let s = theta.sin();
         // Apply rotation
-        let app = c * c * a[p][p] + 2.0 * s * c * a[p][q] + s * s * a[q][q];
-        let aqq = s * s * a[p][p] - 2.0 * s * c * a[p][q] + c * c * a[q][q];
-        a[p][q] = 0.0;
-        a[q][p] = 0.0;
-        a[p][p] = app;
-        a[q][q] = aqq;
+        let app = c * c * a[p * n + p] + 2.0 * s * c * a[p * n + q] + s * s * a[q * n + q];
+        let aqq = s * s * a[p * n + p] - 2.0 * s * c * a[p * n + q] + c * c * a[q * n + q];
+        a[p * n + q] = 0.0;
+        a[q * n + p] = 0.0;
+        a[p * n + p] = app;
+        a[q * n + q] = aqq;
         for r in 0..n {
             if r != p && r != q {
-                let arp = c * a[r][p] + s * a[r][q];
-                let arq = -s * a[r][p] + c * a[r][q];
-                a[r][p] = arp;
-                a[p][r] = arp;
-                a[r][q] = arq;
-                a[q][r] = arq;
+                let arp = c * a[r * n + p] + s * a[r * n + q];
+                let arq = -s * a[r * n + p] + c * a[r * n + q];
+                a[r * n + p] = arp;
+                a[p * n + r] = arp;
+                a[r * n + q] = arq;
+                a[q * n + r] = arq;
             }
         }
     }
-    (0..n).map(|i| a[i][i]).collect()
+    (0..n).map(|i| a[i * n + i]).collect()
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -580,6 +589,35 @@ mod tests {
         assert!(exponential_convergence_curve(&[0.0], 1.0, 0.0, 0.0).is_err());
         assert!(exponential_convergence_curve(&[0.0], 1.0, 1.0, f64::NAN).is_err());
         assert!(exponential_convergence_curve(&[f64::NAN], 1.0, 1.0, 0.0).is_err());
+    }
+
+    #[test]
+    fn flat_kernels_are_bit_stable() {
+        // Bits measured from the pre-flattening `Vec<Vec<f64>>` kernels. The
+        // arithmetic order is unchanged, so neither may move.
+        let sv = matrix_singular_values(&[2.0, 1.0, 1.0, 2.0], 2, 2);
+        assert_eq!(
+            sv.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+            vec![4_613_937_818_241_073_153, 4_607_182_418_800_017_408],
+            "singular values changed: {sv:?}"
+        );
+        let (res, sol) = tikhonov_lcurve(
+            &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            &[1.0, 0.0, 1.0],
+            3,
+            2,
+            &[0.5],
+        );
+        assert_eq!(
+            res.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+            vec![4_606_057_906_291_383_473],
+            "residual norm changed: {res:?}"
+        );
+        assert_eq!(
+            sol.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+            vec![4_599_832_342_985_058_334],
+            "solution norm changed: {sol:?}"
+        );
     }
 
     #[test]
