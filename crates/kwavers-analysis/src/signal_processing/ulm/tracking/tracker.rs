@@ -60,23 +60,21 @@ impl HungarianTracker {
 
         let dmax2 = self.config.max_displacement * self.config.max_displacement;
         let big_m = 1e12_f64;
-        let cost: Vec<Vec<f64>> = (0..m)
-            .map(|i| {
-                let last = self.active_tracks[i].detections.last().unwrap();
-                (0..n)
-                    .map(|j| {
-                        let dx = last.x - detections[j].x;
-                        let dz = last.z - detections[j].z;
-                        let d2 = dx.mul_add(dx, dz * dz);
-                        if d2 <= dmax2 {
-                            d2
-                        } else {
-                            big_m
-                        }
-                    })
-                    .collect()
-            })
-            .collect();
+        // Row-major cost matrix, stride `n`: one allocation instead of one per
+        // track, and the solver below then walks it in memory order.
+        let mut cost = vec![big_m; m * n];
+        for (i, track) in self.active_tracks.iter().enumerate() {
+            let last = track
+                .detections
+                .last()
+                .expect("invariant: an active track carries at least one detection");
+            for (j, detection) in detections.iter().enumerate() {
+                let dx = last.x - detection.x;
+                let dz = last.z - detection.z;
+                let d2 = dx.mul_add(dx, dz * dz);
+                cost[i * n + j] = if d2 <= dmax2 { d2 } else { big_m };
+            }
+        }
 
         let assignment = hungarian(&cost, m, n, big_m);
 
@@ -157,6 +155,8 @@ impl HungarianTracker {
 
 /// Solve the linear assignment problem on a rectangular cost matrix (m tracks × n detections).
 ///
+/// `cost` is row-major with stride `n`.
+///
 /// # Theorem (Munkres 1957; Kuhn 1955)
 ///
 /// The minimum-cost perfect matching on an n×n cost matrix can be found in O(n³) time
@@ -165,18 +165,21 @@ impl HungarianTracker {
 /// # Returns
 /// `assignment[i]` = `Some(j)` if track `i` was matched to detection `j`,
 /// or `None` if the cost was ≥ `big_m` (gated out) or no matching was possible.
-pub(super) fn hungarian(cost: &[Vec<f64>], m: usize, n: usize, big_m: f64) -> Vec<Option<usize>> {
+pub(super) fn hungarian(cost: &[f64], m: usize, n: usize, big_m: f64) -> Vec<Option<usize>> {
     let sz = m.max(n);
-    let mut c: Vec<Vec<f64>> = (0..sz)
-        .map(|i| {
-            (0..sz)
-                .map(|j| if i < m && j < n { cost[i][j] } else { big_m })
-                .collect()
-        })
-        .collect();
+    if sz == 0 {
+        return Vec::new();
+    }
+    // One dense row-major block instead of a `Vec` per row: the reductions and
+    // the alternating-path scans below touch it `O(sz²)` times per iteration,
+    // and the padded square keeps every gated entry at `big_m`.
+    let mut c = vec![big_m; sz * sz];
+    for i in 0..m {
+        c[i * sz..i * sz + n].copy_from_slice(&cost[i * n..(i + 1) * n]);
+    }
 
     // Step 1: row reduce
-    for row in &mut c {
+    for row in c.chunks_exact_mut(sz) {
         let min_val = row.iter().copied().fold(f64::MAX, f64::min);
         for v in row.iter_mut() {
             *v -= min_val;
@@ -184,11 +187,10 @@ pub(super) fn hungarian(cost: &[Vec<f64>], m: usize, n: usize, big_m: f64) -> Ve
     }
 
     // Step 2: column reduce
-    #[allow(clippy::needless_range_loop)]
     for j in 0..sz {
-        let min_val = (0..sz).map(|i| c[i][j]).fold(f64::MAX, f64::min);
+        let min_val = (0..sz).map(|i| c[i * sz + j]).fold(f64::MAX, f64::min);
         for i in 0..sz {
-            c[i][j] -= min_val;
+            c[i * sz + j] -= min_val;
         }
     }
 
@@ -202,7 +204,7 @@ pub(super) fn hungarian(cost: &[Vec<f64>], m: usize, n: usize, big_m: f64) -> Ve
         col_assignment.fill(usize::MAX);
         for i in 0..sz {
             for j in 0..sz {
-                if c[i][j].abs() < 1e-9
+                if c[i * sz + j].abs() < 1e-9
                     && assignment[i] == usize::MAX
                     && col_assignment[j] == usize::MAX
                 {
@@ -229,7 +231,7 @@ pub(super) fn hungarian(cost: &[Vec<f64>], m: usize, n: usize, big_m: f64) -> Ve
                     continue;
                 }
                 for j in 0..sz {
-                    if c[i][j].abs() < 1e-9 && !col_cover[j] {
+                    if c[i * sz + j].abs() < 1e-9 && !col_cover[j] {
                         col_cover[j] = true;
                         if col_assignment[j] != usize::MAX && !marked_rows[col_assignment[j]] {
                             marked_rows[col_assignment[j]] = true;
@@ -253,8 +255,8 @@ pub(super) fn hungarian(cost: &[Vec<f64>], m: usize, n: usize, big_m: f64) -> Ve
         let mut delta = f64::MAX;
         for i in 0..sz {
             for j in 0..sz {
-                if !row_cover[i] && !col_cover[j] && c[i][j] < delta {
-                    delta = c[i][j];
+                if !row_cover[i] && !col_cover[j] && c[i * sz + j] < delta {
+                    delta = c[i * sz + j];
                 }
             }
         }
@@ -266,9 +268,9 @@ pub(super) fn hungarian(cost: &[Vec<f64>], m: usize, n: usize, big_m: f64) -> Ve
         for i in 0..sz {
             for j in 0..sz {
                 if !row_cover[i] && !col_cover[j] {
-                    c[i][j] -= delta;
+                    c[i * sz + j] -= delta;
                 } else if row_cover[i] && col_cover[j] {
-                    c[i][j] += delta;
+                    c[i * sz + j] += delta;
                 }
             }
         }
@@ -277,7 +279,7 @@ pub(super) fn hungarian(cost: &[Vec<f64>], m: usize, n: usize, big_m: f64) -> Ve
     (0..m)
         .map(|i| {
             let j = assignment[i];
-            if j < n && cost[i][j] < big_m / 2.0 {
+            if j < n && cost[i * n + j] < big_m / 2.0 {
                 Some(j)
             } else {
                 None
