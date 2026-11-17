@@ -4,6 +4,19 @@
 
 ### Changed
 
+- Admit the Leto 0.50 line: the Leto and Leto-ops requirements widen to
+  `>=0.47.1, <0.51.0`, and the lock moves Leto to 0.50.0 together with the six
+  provider repositories whose requirements admit it (Apollo, Athena, Coeus,
+  Gaia, Hephaestus, RITK), each at the first first-parent revision of its
+  default branch that does. Leto 0.50 removes `VecStorage::uninit`, which
+  Kwavers never calls, so no Kwavers source changes; `kwavers-field`'s
+  `leto::VecStorage` re-export keeps the type but cannot offer the removed
+  constructor to its callers. The lock was resolved outside the Atlas
+  dependency overlay: the provider hashes and the two Leto version rows were
+  set by direct edit and Cargo's own resolution normalised the file with no
+  further change. Consumers selecting Leto 0.50 select the same provider
+  cohort.
+
 - **Breaking:** Advance the Eunomia and Moirai provider contracts. The
   Moirai-parallel requirement moves from 0.11.0 to 0.12.0 and the Leto and
   Leto-ops requirements widen to `>=0.47.1, <0.49.0` so the 0.48 line
