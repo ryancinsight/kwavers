@@ -143,7 +143,7 @@ pub fn tikhonov_lcurve(
             mat[i * k + i] += lam;
         }
         // Solve
-        let x = gaussian_elim_flat(&mat, &atb, k);
+        let x = super::linear_solve::solve_flat(&mat, &atb, k);
         // Compute ‖Ax − b‖
         let mut res = vec![0.0_f64; nrows];
         for r in 0..nrows {
@@ -319,7 +319,7 @@ pub fn born_inversion_regularized(
         big_rhs[i] = ghy_re[i];
         big_rhs[i + k] = ghy_im[i];
     }
-    let x = gaussian_elim_flat(&big_mat, &big_rhs, n2);
+    let x = super::linear_solve::solve_flat(&big_mat, &big_rhs, n2);
     let x_re = x[..k].to_vec();
     let x_im = x[k..].to_vec();
     (x_re, x_im)
@@ -381,56 +381,6 @@ pub fn exponential_convergence_curve(
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
-
-/// Gaussian elimination with partial pivoting for flat square system.
-#[allow(clippy::needless_range_loop)]
-fn gaussian_elim_flat(mat_flat: &[f64], rhs: &[f64], n: usize) -> Vec<f64> {
-    // One row-major augmented block of `n` rows with stride `n + 1` instead of
-    // a `Vec` per row: the pivot search, the row swap and every elimination
-    // pass then walk contiguous memory, and the solve costs one allocation.
-    let stride = n + 1;
-    let mut aug = vec![0.0_f64; n * stride];
-    for row in 0..n {
-        aug[row * stride..row * stride + n].copy_from_slice(&mat_flat[row * n..(row + 1) * n]);
-        aug[row * stride + n] = rhs[row];
-    }
-
-    for col in 0..n {
-        // Partial pivot
-        let pivot = (col..n)
-            .max_by(|&i, &j| {
-                aug[i * stride + col]
-                    .abs()
-                    .total_cmp(&aug[j * stride + col].abs())
-            })
-            .expect("invariant: a pivot search runs over a non-empty row range");
-        if pivot != col {
-            for offset in 0..stride {
-                aug.swap(col * stride + offset, pivot * stride + offset);
-            }
-        }
-        let diag = aug[col * stride + col];
-        if diag.abs() < 1e-300 {
-            return vec![0.0; n];
-        }
-        for row in (col + 1)..n {
-            let f = aug[row * stride + col] / diag;
-            for k in col..=n {
-                let v = aug[col * stride + k] * f;
-                aug[row * stride + k] -= v;
-            }
-        }
-    }
-    let mut x = vec![0.0_f64; n];
-    for i in (0..n).rev() {
-        x[i] = aug[i * stride + n];
-        for j in (i + 1)..n {
-            x[i] -= aug[i * stride + j] * x[j];
-        }
-        x[i] /= aug[i * stride + i];
-    }
-    x
-}
 
 /// Compute eigenvalues of a symmetric matrix via Jacobi iteration.
 /// Returns unsorted eigenvalues.

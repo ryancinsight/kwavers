@@ -31,6 +31,7 @@ pub mod cavitation;
 pub mod elastography;
 pub mod imaging;
 pub mod inverse;
+mod linear_solve;
 pub mod murnaghan;
 pub mod photoacoustics;
 pub mod pulse_echo;

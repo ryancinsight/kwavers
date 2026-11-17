@@ -298,12 +298,12 @@ pub fn spectroscopic_unmixing_lstsq(spectra_matrix: &[Vec<f64>], measurements: &
         "spectra rows must match measurement length"
     );
 
-    // Compute AtA (n_chrom × n_chrom) and Atb (n_chrom)
-    let mut ata = vec![vec![0.0_f64; n_chrom]; n_chrom];
+    // Compute AtA (n_chrom × n_chrom, row-major) and Atb (n_chrom)
+    let mut ata = vec![0.0_f64; n_chrom * n_chrom];
     let mut atb = vec![0.0_f64; n_chrom];
     for i in 0..n_chrom {
         for j in 0..n_chrom {
-            ata[i][j] = (0..n_wav)
+            ata[i * n_chrom + j] = (0..n_wav)
                 .map(|k| spectra_matrix[k][i] * spectra_matrix[k][j])
                 .sum();
         }
@@ -312,7 +312,7 @@ pub fn spectroscopic_unmixing_lstsq(spectra_matrix: &[Vec<f64>], measurements: &
             .sum();
     }
 
-    gaussian_elimination(&ata, &atb)
+    super::linear_solve::solve_flat(&ata, &atb, n_chrom)
 }
 
 /// Spectroscopic unmixing sweep for two haemoglobin chromophores.
@@ -399,53 +399,6 @@ pub fn spectroscopic_unmixing_so2_sweep(
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
-
-/// Gaussian elimination with partial pivoting for square system A·x = b.
-/// Returns x. Panics if the system is singular.
-#[allow(clippy::needless_range_loop)]
-fn gaussian_elimination(a: &[Vec<f64>], b: &[f64]) -> Vec<f64> {
-    let n = b.len();
-    // Augmented matrix [A | b]
-    let mut aug: Vec<Vec<f64>> = a
-        .iter()
-        .zip(b.iter())
-        .map(|(row, &bi)| {
-            let mut r = row.clone();
-            r.push(bi);
-            r
-        })
-        .collect();
-
-    for col in 0..n {
-        // Partial pivot
-        let pivot_row = (col..n)
-            .max_by(|&i, &j| aug[i][col].abs().total_cmp(&aug[j][col].abs()))
-            .unwrap();
-        aug.swap(col, pivot_row);
-        let diag = aug[col][col];
-        if diag.abs() < 1e-300 {
-            // Singular or near-singular: return zeros
-            return vec![0.0; n];
-        }
-        for row in (col + 1)..n {
-            let factor = aug[row][col] / diag;
-            for k in col..=n {
-                let val = aug[col][k] * factor;
-                aug[row][k] -= val;
-            }
-        }
-    }
-    // Back substitution
-    let mut x = vec![0.0_f64; n];
-    for i in (0..n).rev() {
-        x[i] = aug[i][n];
-        for j in (i + 1)..n {
-            x[i] -= aug[i][j] * x[j];
-        }
-        x[i] /= aug[i][i];
-    }
-    x
-}
 
 /// HbO₂ molar absorption polynomial fit [m⁻¹/(mol/L)].
 /// Polynomial in wavelength `nm`, fit to Prahl tabulated values at 650–1000 nm.
@@ -545,6 +498,27 @@ mod tests {
     fn axial_resolution_water_1mhz() {
         let dz = pa_axial_resolution(MHZ_TO_HZ, SOUND_SPEED_WATER_SIM);
         assert!((dz - 750e-6).abs() < 1e-9);
+    }
+
+    #[test]
+    fn linear_solve_is_bit_stable() {
+        // Bits measured from the pre-consolidation elimination. The pivot rule,
+        // the singularity floor and the back-substitution order are unchanged,
+        // so the solutions may not move.
+        let square = vec![vec![2.0, 1.0], vec![1.0, 3.0]];
+        let x_square = spectroscopic_unmixing_lstsq(&square, &[5.0, 10.0]);
+        assert_eq!(
+            x_square.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+            vec![4_607_182_418_800_017_408, 4_613_937_818_241_073_152],
+            "square solution changed: {x_square:?}"
+        );
+        let rectangular = vec![vec![1.0, 2.0], vec![3.0, 1.0], vec![0.5, 4.0]];
+        let x_rect = spectroscopic_unmixing_lstsq(&rectangular, &[1.0, 2.0, 3.0]);
+        assert_eq!(
+            x_rect.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+            vec![4_600_877_379_321_698_713, 4_603_836_887_648_256_468],
+            "rectangular solution changed: {x_rect:?}"
+        );
     }
 
     #[test]
