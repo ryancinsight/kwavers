@@ -542,15 +542,11 @@ mod tests {
     }
 
     #[test]
-    fn flat_kernels_are_bit_stable() {
-        // Bits measured from the pre-flattening `Vec<Vec<f64>>` kernels. The
-        // arithmetic order is unchanged, so neither may move.
-        let sv = matrix_singular_values(&[2.0, 1.0, 1.0, 2.0], 2, 2);
-        assert_eq!(
-            sv.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
-            vec![4_613_937_818_241_073_153, 4_607_182_418_800_017_408],
-            "singular values changed: {sv:?}"
-        );
+    fn flat_solve_keeps_the_pre_flattening_bits() {
+        // The elimination path is IEEE arithmetic only - products, sums,
+        // divisions and a correctly rounded square root - so it yields the
+        // same bit pattern on every platform, and the bits measured from the
+        // pre-flattening kernels still hold.
         let (res, sol) = tikhonov_lcurve(
             &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             &[1.0, 0.0, 1.0],
@@ -567,6 +563,37 @@ mod tests {
             sol.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
             vec![4_599_832_342_985_058_334],
             "solution norm changed: {sol:?}"
+        );
+    }
+
+    #[test]
+    fn flat_jacobi_matches_the_analytic_singular_values() {
+        // The Jacobi rotation evaluates `cos` and `sin` of its rotation
+        // angle, so this path cannot be pinned to a bit pattern: the
+        // constant-folded release path and each platform's libm land within
+        // one ulp of the exact angle, and the last bit of the eigenvalue
+        // moves with it. The oracle is the analytic singular value instead.
+        //
+        // A = [[2, 1], [1, 2]] gives AᵀA = [[5, 4], [4, 5]], whose
+        // eigenvalues are 9 and 1, so the singular values are 3 and 1
+        // exactly. With c = cos θ and s = sin θ each within one ulp of
+        // 1/√2, the products c², s² and 2sc carry at most two ulp of
+        // absolute error, so the rotation's `app` and `aqq` carry at most
+        // 5·2·ulp(0.5) + 4·2·ulp(1) + 3·½·ulp(9) ≈ 5.6e-15, and the
+        // square root halves the relative error: 9.3e-16 on σ0 and 2.8e-15
+        // on σ1. The bounds below are four ulp of 3.0 (1.78e-15) and
+        // sixteen ulp of 1.0 (3.55e-15), each with margin over that
+        // derivation.
+        let sv = matrix_singular_values(&[2.0, 1.0, 1.0, 2.0], 2, 2);
+        let sigma0_tolerance = 8.0 * f64::EPSILON;
+        let sigma1_tolerance = 16.0 * f64::EPSILON;
+        assert!(
+            (sv[0] - 3.0).abs() <= sigma0_tolerance,
+            "singular value changed: {sv:?}"
+        );
+        assert!(
+            (sv[1] - 1.0).abs() <= sigma1_tolerance,
+            "singular value changed: {sv:?}"
         );
     }
 
