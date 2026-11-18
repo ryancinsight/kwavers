@@ -8,7 +8,10 @@ pub mod model;
 pub mod state;
 pub mod thresholds;
 
-pub use growth::rectified_diffusion_rate;
+pub use growth::{
+    rectified_diffusion_rate, rectified_diffusion_rate_checked,
+    RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO,
+};
 pub use model::{CavitationCore, CavitationModel};
 pub use state::{CavitationDose, CavitationMechanicsState};
 pub use thresholds::{
