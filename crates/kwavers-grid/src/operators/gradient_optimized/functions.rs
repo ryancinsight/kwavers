@@ -40,10 +40,12 @@ where
     let mut grad_y = Array3::<T>::zeros([nx, ny, nz]);
     let mut grad_z = Array3::<T>::zeros([nx, ny, nz]);
 
-    let coeffs = if let Some(cache) = cache {
+    let uncached_coeffs;
+    let coeffs: &[T] = if let Some(cache) = cache {
         cache.get_coefficients(order)
     } else {
-        FDCoefficients::first_derivative::<T>(order)
+        uncached_coeffs = FDCoefficients::first_derivative::<T>(order);
+        &uncached_coeffs
     };
 
     let stencil_radius = coeffs.len();

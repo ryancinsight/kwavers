@@ -22,6 +22,25 @@ pub enum FdAccuracyOrder {
     Eighth,
 }
 
+impl FdAccuracyOrder {
+    /// Dense table index of this order.
+    ///
+    /// The mapping is explicit so a table keyed by it needs no enum-to-integer
+    /// cast; [`Self::COUNT`] stays derived from the last variant through it.
+    #[must_use]
+    pub const fn index(self) -> usize {
+        match self {
+            Self::Second => 0,
+            Self::Fourth => 1,
+            Self::Sixth => 2,
+            Self::Eighth => 3,
+        }
+    }
+
+    /// Length of a table keyed by [`Self::index`].
+    pub const COUNT: usize = Self::Eighth.index() + 1;
+}
+
 /// Finite difference coefficients for different orders
 #[derive(Debug)]
 pub struct FDCoefficients;
