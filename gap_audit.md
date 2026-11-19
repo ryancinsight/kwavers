@@ -4364,9 +4364,3 @@ Standing facts (do NOT re-flag):
   allocation/conversion (route facade `_into` through apollo `_into`, reuse scratch
   buffers across timesteps) and verify no accuracy regression on the elastic_fwi
   convergence tests. Dedicated effort; do not rush.
-
-## Completed bubble model work
-
-The closed records for [KW-PHYS-002](docs/ref/kw-phys-002-closeout.md)
-and [KWAVERS-AEQ-MET-71](docs/ref/kwavers-aeq-met-71-closeout.md) retain the
-mass-transfer and pressure-typing evidence.
