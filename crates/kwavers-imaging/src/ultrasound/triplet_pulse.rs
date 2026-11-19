@@ -130,6 +130,10 @@ pub fn pulse_inversion_retention(order: f64) -> f64 {
 /// in transmission order. Returns the coherent sum (the mean); callers
 /// pass `&[ph0, ph120, ph240]` for 3P, `&[ph0, ph180]` for PI, or
 /// `&[ph0]` for 1P.
+///
+/// # Panics
+///
+/// Panics when `traces` is empty or its traces differ in length.
 #[must_use]
 pub fn coherent_sum(traces: &[Vec<f64>]) -> Vec<f64> {
     assert!(!traces.is_empty(), "coherent_sum needs at least one trace");
