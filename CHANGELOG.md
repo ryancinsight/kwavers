@@ -4,7 +4,7 @@
 
 ### Changed
 
-- **Breaking:** Three of Kwavers' four direct `chrono` edges leave the
+- **Breaking:** All four of Kwavers' direct `chrono` edges leave the
   workspace. `RUSTSEC-2026-0543` marks `chrono` unmaintained, and every
   version is affected: `kwavers-diagnostics`'s
   `ClinicalExaminationResult::timestamp` changes from
@@ -13,12 +13,14 @@
   headers in `kwavers-analysis` and `xtask` render UTC timestamps with
   `time::OffsetDateTime`. Consumers that read the examination timestamp as a
   UTC calendar value read the `SystemTime` offset from `UNIX_EPOCH`;
-  consumers that render it format that offset with `time`. `time` 0.3 was
-  already in the lock, so no new supply chain enters the graph. The fourth
-  edge, the `kwavers` package's integration-test dev-dependency, and the two
-  third-party paths that still carry `chrono` (`dicom-core`'s DICOM date
-  values through `ritk-io`, and `serde_with`'s optional `chrono` feature
-  through `plotly` under the audited all-features graph) are held under
+  consumers that render it format that offset with `time`. The `kwavers`
+  package's integration-test report timestamp is rendered from the same UTC
+  calendar fields. `time` 0.3 was already in the lock, so no new supply chain
+  enters the graph, and it is now a workspace dependency the three members
+  inherit rather than three separate declarations. The two third-party paths
+  that still carry `chrono` (`dicom-core`'s DICOM date values through
+  `ritk-io`, and `serde_with`'s optional `chrono` feature through `plotly`
+  under the audited all-features graph) are held under
   `KW-DEP-CHRONO-ADVISORY` with their removal trigger.
 
 - Admit the Leto 0.50 line: the Leto and Leto-ops requirements widen to

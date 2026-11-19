@@ -78,8 +78,6 @@ rand_distr = "0.4"
 rand_chacha = "0.3"
 # NOTE: medical-image I/O (DICOM, NIfTI, …) is owned by ritk-io and bridged in
 # `domain::imaging::medical::ritk_bridge`; kwavers has no direct format-crate deps.
-chrono = { version = "0.4", features = ["serde"] }
-
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"], optional = true }
 
 # Zero-copy serialization (Sprint 138 - Persona Requirements)
@@ -119,6 +117,8 @@ flate2 = { workspace = true }
 [dev-dependencies]
 # Minimal dev dependencies for testing only
 hyperion = { workspace = true }
+# RFC 3339 timestamps for integration-test reports (maintained; replaces chrono).
+time = { workspace = true }
 # Enable kwavers-solver's `test-util` feature so cross-crate test helpers
 # (kwavers_solver::plugin::test_support) are available to kwavers' own tests.
 kwavers-solver = { path = "../kwavers-solver", features = ["test-util"], version = "3.0.0" }

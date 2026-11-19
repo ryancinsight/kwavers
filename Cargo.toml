@@ -78,6 +78,9 @@ charls = { version = "0.4", features = ["static"] }
 clap = { version = "4", features = ["derive"] }
 flate2 = "1.0"
 tar = "0.4"
+# Calendar fields for report timestamps. Maintained, and it replaces the
+# unmaintained chrono edge (RUSTSEC-2026-0543) in this workspace.
+time = "0.3"
 indicatif = "0.17"
 dirs = "5.0"
 sha2 = "0.10"

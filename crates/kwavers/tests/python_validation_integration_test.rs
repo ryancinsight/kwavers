@@ -66,13 +66,22 @@ impl Default for ComprehensiveValidationReport {
 
 impl ComprehensiveValidationReport {
     pub fn new() -> Self {
+        let now = time::OffsetDateTime::now_utc();
         Self {
             grid_results: Vec::new(),
             signal_results: Vec::new(),
             source_results: Vec::new(),
             sensor_results: Vec::new(),
             solver_results: Vec::new(),
-            timestamp: chrono::Local::now().to_rfc3339(),
+            timestamp: format!(
+                "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+                now.year(),
+                u8::from(now.month()),
+                now.day(),
+                now.hour(),
+                now.minute(),
+                now.second(),
+            ),
         }
     }
 
