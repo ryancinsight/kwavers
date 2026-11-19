@@ -1,8 +1,8 @@
 //! PyO3 wrapper for homogeneous direct-field breast-FWI diagnostics.
 
-use super::complex_compat::nd_to_leto3;
 use super::py_convert::kwavers_to_py;
 use super::{PyBreastFwiPstdDatasetConfig, PyMultiRowRingArray};
+use crate::array_utils::ndarray::into_leto;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     diagnose_breast_ust_homogeneous_direct_field, BreastUstDirectFieldDiagnostics,
     BreastUstHomogeneousDirectFieldDiagnostics,
@@ -19,7 +19,7 @@ pub fn diagnose_breast_fwi_homogeneous_direct_field<'py>(
     frequencies_hz: Vec<f64>,
     config: &PyBreastFwiPstdDatasetConfig,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let sound_speed = nd_to_leto3(homogeneous_sound_speed_m_s.as_array().to_owned());
+    let sound_speed = into_leto(homogeneous_sound_speed_m_s.as_array().to_owned());
     let diagnostics = py
         .detach(|| {
             diagnose_breast_ust_homogeneous_direct_field(

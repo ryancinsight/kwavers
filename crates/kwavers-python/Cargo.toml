@@ -57,6 +57,8 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 [dev-dependencies]
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 # Embedded unit tests exercise NumPy conversion helpers through a real Python
 # interpreter. Maturin configures extension-module linking for wheel builds.
 pyo3 = { version = "0.30", features = ["auto-initialize"] }

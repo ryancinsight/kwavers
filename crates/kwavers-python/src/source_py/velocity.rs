@@ -87,9 +87,7 @@ impl Source {
             frequency: 0.0,
             amplitude: max_amp,
             position: None,
-            mask: Some(crate::breast_fwi_bindings::complex_compat::nd_to_leto3(
-                mask_arr,
-            )),
+            mask: Some(crate::array_utils::ndarray::into_leto(mask_arr)),
             signal: None,
             source_mode,
             initial_pressure: None,
@@ -202,9 +200,7 @@ impl Source {
             frequency: 0.0,
             amplitude: max_amp,
             position: None,
-            mask: Some(crate::breast_fwi_bindings::complex_compat::nd_to_leto3(
-                mask_arr,
-            )),
+            mask: Some(crate::array_utils::ndarray::into_leto(mask_arr)),
             signal: None,
             source_mode,
             initial_pressure: None,

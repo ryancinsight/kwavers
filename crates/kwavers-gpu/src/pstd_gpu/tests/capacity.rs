@@ -16,8 +16,8 @@ const FIELD_BYTES: u64 = 4096 * 4;
 /// `pml_xyz` of the grid: three `f32` values for each of 4096 points.
 const PACKED_PML_BYTES: u64 = 3 * FIELD_BYTES;
 
-/// A lossless `SHAPE` solver on a device with the given `max_buffer_size`.
-fn solver_at_limit(max_buffer_size: u64) -> Result<GpuPstdSolver, String> {
+/// Build a lossless solver on a device with the given allocation limit.
+fn solver_at_limit(shape: [usize; 3], max_buffer_size: u64) -> Result<GpuPstdSolver, String> {
     let context = GpuProviderContext::<WgpuDevice>::with_features_and_limits(
         WgpuDevice::acquisition_preference(),
         &[DeviceFeature::ImmediateData],
@@ -29,7 +29,7 @@ fn solver_at_limit(max_buffer_size: u64) -> Result<GpuPstdSolver, String> {
         },
     )
     .unwrap_or_else(|error| panic!("an ignored device test needs an adapter: {error:?}"));
-    let [nx, ny, nz] = SHAPE;
+    let [nx, ny, nz] = shape;
     let points = nx * ny * nz;
     let sound_speed = vec![1500.0f32; points];
     let density = vec![1000.0f32; points];
@@ -72,7 +72,7 @@ fn solver_at_limit(max_buffer_size: u64) -> Result<GpuPstdSolver, String> {
 #[test]
 #[ignore = "requires a GPU device"]
 fn the_test_grid_builds_at_the_packed_pml_limit() {
-    let solver = solver_at_limit(PACKED_PML_BYTES)
+    let solver = solver_at_limit(SHAPE, PACKED_PML_BYTES)
         .unwrap_or_else(|message| panic!("the solver builds at this limit: {message}"));
 
     assert_eq!([solver.nx, solver.ny, solver.nz], SHAPE);
@@ -84,7 +84,7 @@ fn the_test_grid_builds_at_the_packed_pml_limit() {
 #[ignore = "requires a GPU device"]
 fn a_limit_between_a_field_and_the_packed_pml_is_refused() {
     assert_eq!(
-        solver_at_limit(2 * FIELD_BYTES).expect_err("`pml_xyz` exceeds the device limit"),
+        solver_at_limit(SHAPE, 2 * FIELD_BYTES).expect_err("`pml_xyz` exceeds the device limit"),
         "Resource limit exceeded: GPU PSTD buffer `pml_xyz` needs 49152 bytes; the device enables max_buffer_size = 32768 bytes"
     );
 }
@@ -95,7 +95,23 @@ fn a_limit_between_a_field_and_the_packed_pml_is_refused() {
 #[ignore = "requires a GPU device"]
 fn a_limit_below_one_field_is_refused_before_any_buffer() {
     assert_eq!(
-        solver_at_limit(FIELD_BYTES / 2).expect_err("`pml_xyz` exceeds the device limit"),
+        solver_at_limit(SHAPE, FIELD_BYTES / 2).expect_err("`pml_xyz` exceeds the device limit"),
         "Resource limit exceeded: GPU PSTD buffer `pml_xyz` needs 49152 bytes; the device enables max_buffer_size = 8192 bytes"
     );
+}
+
+/// At this asymmetric shape, the non-radix axis needs 64 padded samples for
+/// each of 256 lines. The PML fits both limits. Only the FFT workspace differs.
+#[test]
+#[ignore = "requires a GPU device"]
+fn bluestein_workspace_is_checked_before_pstd_field_allocation() {
+    let shape = [17, 16, 16];
+    let error = solver_at_limit(shape, 65_535).expect_err("FFT workspace exceeds limit");
+    assert_eq!(
+        error,
+        "Resource limit exceeded: FFT workspace requires 65536, exceeding device max_buffer_size (bytes)=65535"
+    );
+    let accepted =
+        solver_at_limit(shape, 65_536).expect("the workspace fits at the inclusive ceiling");
+    assert_eq!([accepted.nx, accepted.ny, accepted.nz], shape);
 }

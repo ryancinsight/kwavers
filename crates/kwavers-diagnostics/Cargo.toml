@@ -33,7 +33,7 @@ serde = { version = "1.0", features = ["derive"] }
 anyhow = "1.0"
 log = "0.4"
 rand = "0.8"
-chrono = { version = "0.4", features = ["serde"] }
+horae-civil-time = { workspace = true }
 tracing = { version = "0.1", features = ["attributes"] }
 consus-hdf5 = { workspace = true }
 consus-core = { workspace = true }

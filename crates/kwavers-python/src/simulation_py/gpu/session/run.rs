@@ -72,7 +72,7 @@ impl GpuPstdSession {
 
         #[cfg(feature = "gpu")]
         {
-            use crate::breast_fwi_bindings::complex_compat::leto2_to_nd2;
+            use crate::array_utils::ndarray::into_ndarray;
             use kwavers_gpu::pstd_gpu::{PstdOutputRequest, PstdRunInputs};
 
             let total_t0 = std::time::Instant::now();
@@ -114,7 +114,7 @@ impl GpuPstdSession {
                 self.last_total_ns = total_t0.elapsed().as_nanos() as u64;
             }
 
-            Ok(PyArray2::from_owned_array(_py, leto2_to_nd2(out)))
+            Ok(PyArray2::from_owned_array(_py, into_ndarray(out)))
         }
     }
 }

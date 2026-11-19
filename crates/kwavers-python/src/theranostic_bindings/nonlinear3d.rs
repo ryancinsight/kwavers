@@ -10,7 +10,7 @@ use pyo3::types::{PyDict, PyList};
 use std::path::Path;
 
 use super::py_convert::{kwavers_to_py, labels_from_volume, metric3d_dict, points3_to_array};
-use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
+use crate::array_utils::ndarray::into_ndarray;
 use crate::ritk_image::load_ritk_nifti;
 
 #[pyfunction]
@@ -139,65 +139,65 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     use numpy::ndarray::Array1;
     let out = PyDict::new(py);
     out.set_item("anatomy", config.anatomy.label())?;
-    out.set_item("ct_hu", leto3_to_nd3(result.ct_hu).to_pyarray(py))?;
-    out.set_item("label", leto3_to_nd3(result.label).to_pyarray(py))?;
-    out.set_item("body_mask", leto3_to_nd3(result.body_mask).to_pyarray(py))?;
+    out.set_item("ct_hu", into_ndarray(result.ct_hu).to_pyarray(py))?;
+    out.set_item("label", into_ndarray(result.label).to_pyarray(py))?;
+    out.set_item("body_mask", into_ndarray(result.body_mask).to_pyarray(py))?;
     out.set_item(
         "target_mask",
-        leto3_to_nd3(result.target_mask).to_pyarray(py),
+        into_ndarray(result.target_mask).to_pyarray(py),
     )?;
     out.set_item(
         "inversion_mask",
-        leto3_to_nd3(result.inversion_mask).to_pyarray(py),
+        into_ndarray(result.inversion_mask).to_pyarray(py),
     )?;
     out.set_item(
         "background_sound_speed_m_s",
-        leto3_to_nd3(result.background_sound_speed_m_s).to_pyarray(py),
+        into_ndarray(result.background_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "true_sound_speed_m_s",
-        leto3_to_nd3(result.true_sound_speed_m_s).to_pyarray(py),
+        into_ndarray(result.true_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_sound_speed_m_s",
-        leto3_to_nd3(result.reconstructed_sound_speed_m_s).to_pyarray(py),
+        into_ndarray(result.reconstructed_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_delta_c_m_s",
-        leto3_to_nd3(result.reconstructed_delta_c_m_s).to_pyarray(py),
+        into_ndarray(result.reconstructed_delta_c_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "background_beta",
-        leto3_to_nd3(result.background_beta).to_pyarray(py),
+        into_ndarray(result.background_beta).to_pyarray(py),
     )?;
-    out.set_item("true_beta", leto3_to_nd3(result.true_beta).to_pyarray(py))?;
+    out.set_item("true_beta", into_ndarray(result.true_beta).to_pyarray(py))?;
     out.set_item(
         "reconstructed_beta",
-        leto3_to_nd3(result.reconstructed_beta).to_pyarray(py),
+        into_ndarray(result.reconstructed_beta).to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_delta_beta",
-        leto3_to_nd3(result.reconstructed_delta_beta).to_pyarray(py),
+        into_ndarray(result.reconstructed_delta_beta).to_pyarray(py),
     )?;
     out.set_item(
         "multiparameter_fwi_score",
-        leto3_to_nd3(result.multiparameter_fwi_score).to_pyarray(py),
+        into_ndarray(result.multiparameter_fwi_score).to_pyarray(py),
     )?;
     out.set_item(
         "nonlinear_fusion_score",
-        leto3_to_nd3(result.nonlinear_fusion_score).to_pyarray(py),
+        into_ndarray(result.nonlinear_fusion_score).to_pyarray(py),
     )?;
     out.set_item(
         "westervelt_peak_pressure_pa",
-        leto3_to_nd3(result.westervelt_peak_pressure_pa).to_pyarray(py),
+        into_ndarray(result.westervelt_peak_pressure_pa).to_pyarray(py),
     )?;
     out.set_item(
         "cavitation_source_density",
-        leto3_to_nd3(result.cavitation_source_density).to_pyarray(py),
+        into_ndarray(result.cavitation_source_density).to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_cavitation_density",
-        leto3_to_nd3(result.reconstructed_cavitation_density).to_pyarray(py),
+        into_ndarray(result.reconstructed_cavitation_density).to_pyarray(py),
     )?;
     out.set_item(
         "fwi_objective_history",

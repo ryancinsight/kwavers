@@ -7,19 +7,19 @@ use super::validator::ClinicalValidator;
 
 impl ClinicalValidator {
     /// Generate comprehensive clinical validation report (Markdown).
-    #[must_use]
+    ///
+    /// # Errors
+    /// Returns a clock error when the system time is outside the report calendar.
     pub fn generate_validation_report(
         &self,
         bmode_result: Option<&ClinicalValidationResult>,
         doppler_result: Option<&ClinicalValidationResult>,
         safety_result: Option<&ClinicalValidationResult>,
-    ) -> String {
+    ) -> kwavers_core::error::KwaversResult<String> {
+        let generated = horae_civil_time::UtcTimestamp::now().map_err(std::io::Error::other)?;
         let mut report = String::new();
         report.push_str("# Clinical Validation Report - Kwavers Ultrasound System\n\n");
-        report.push_str(&format!(
-            "**Generated**: {}\n\n",
-            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
-        ));
+        report.push_str(&format!("**Generated**: {generated:#}\n\n"));
 
         let all_passed = [bmode_result, doppler_result, safety_result]
             .iter()
@@ -140,6 +140,6 @@ impl ClinicalValidator {
             report.push_str("4. **Plan post-market surveillance** and updates\n");
         }
 
-        report
+        Ok(report)
     }
 }

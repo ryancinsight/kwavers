@@ -85,4 +85,5 @@ cuda-runtime = ["cuda-provider", "hephaestus-cuda/cuda"]
 [dev-dependencies]
 eunomia = { workspace = true }
 mnemosyne = { workspace = true }
+tracing-subscriber = { workspace = true }
 kwavers-solver = { path = "../kwavers-solver", features = ["test-util"], version = "3.0.0" }

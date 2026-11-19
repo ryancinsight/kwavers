@@ -2,7 +2,29 @@
 
 ## Unreleased
 
+### Breaking
+
+- [major] Use Horae's `UtcTimestamp` for the clinical examination timestamp.
+  Callers can construct it from Unix parts or parse an RFC 3339 record.
+  Clinical validation report generation returns `KwaversResult<String>` so a
+  caller can handle a system-clock range error. New tooling reports use UTC.
+
 ### Changed
+
+- [minor] Route standalone HTML plotting through Iris. Borrow time axes from
+  the recorder, keep pressure-slice order and values, and color spatial points
+  by their sampled pressure. Plot files render offline.
+- [patch] Refuse a GPU PSTD configuration that exceeds the FFT workspace or
+  dispatch limit before staging the boundary and absorption fields. The typed
+  Hephaestus query shares the planner's strategy. Six neutral PML fields
+  borrow a single host allocation.
+- [patch] Move analytical imaging, FDTD test families, and viscoacoustic
+  solver operations into domain modules. Correct the highest positive Fourier
+  mode on odd grids using the shared frequency convention. Keep even Nyquist
+  derivatives and inactive axes exactly zero.
+- [patch] Own the NumPy conversion at the Python boundary. Two const-generic
+  operations replace six rank-specific converters. Standard owned arrays move
+  their storage and strided owners retain logical C order.
 
 - [minor] Honor explicit sensor order in FDTD pressure recordings with optional
   statistics. Construct the recorder once, validate all coordinates against

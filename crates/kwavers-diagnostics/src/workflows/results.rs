@@ -11,7 +11,7 @@ pub struct ClinicalExaminationResult {
     /// Patient identifier
     pub patient_id: String,
     /// Examination timestamp
-    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub timestamp: horae_civil_time::UtcTimestamp,
     /// Fused multi-modal image
     pub fused_image: FusedImageResult,
     /// Tissue classification map

@@ -4,7 +4,7 @@
 //! read-only ndarray views and the authoritative validation/beamforming contract
 //! lives in `kwavers_analysis::signal_processing::pam`.
 
-use crate::breast_fwi_bindings::complex_compat::{leto1_to_nd1, nd_to_leto2};
+use crate::array_utils::ndarray::{into_leto, into_ndarray};
 use aequitas::systems::si::quantities::Length;
 use aequitas::systems::si::units::Meter;
 use kwavers_analysis::signal_processing::beamforming::adaptive::subspace::MUSIC;
@@ -85,7 +85,7 @@ fn hermitian_eigenvalues_complex(
     let mut v: Vec<f64> = result.eigenvalues.iter().cloned().collect();
     v.sort_by(|a, b| b.total_cmp(a));
     let eigenvalues = Array1::from(v);
-    Ok(PyArray1::from_owned_array(py, leto1_to_nd1(eigenvalues)).into())
+    Ok(PyArray1::from_owned_array(py, into_ndarray(eigenvalues)).into())
 }
 
 /// Deterministic Theorem 22.2 eigenspace PAM covariance eigenvalues.
@@ -203,13 +203,13 @@ fn passive_acoustic_map_das<'py>(
     };
     let pam = DelayAndSumPAM::new(sensors, config)
         .map_err(|err| PyValueError::new_err(format!("kwavers PAM config error: {err}")))?;
-    let passive_leto = nd_to_leto2(passive_data.as_array().to_owned());
-    let grid_leto = nd_to_leto2(grid_points.as_array().to_owned());
+    let passive_leto = into_leto(passive_data.as_array().to_owned());
+    let grid_leto = into_leto(grid_points.as_array().to_owned());
     let intensity = pam
         .beamform_view(passive_leto.view(), grid_leto.view())
         .map_err(|err| PyRuntimeError::new_err(format!("kwavers PAM error: {err}")))?;
 
-    Ok(PyArray1::from_owned_array(py, leto1_to_nd1(intensity)).into())
+    Ok(PyArray1::from_owned_array(py, into_ndarray(intensity)).into())
 }
 
 /// Active-imaging delay-and-sum reconstruction.
@@ -244,9 +244,9 @@ fn beamform_image_delay_and_sum<'py>(
     )
     .map_err(|err| PyValueError::new_err(format!("kwavers imaging_das config error: {err}")))?;
 
-    let sensor_leto = nd_to_leto2(sensor_data.as_array().to_owned());
-    let positions_leto = nd_to_leto2(sensor_positions.as_array().to_owned());
-    let grid_leto = nd_to_leto2(grid_points.as_array().to_owned());
+    let sensor_leto = into_leto(sensor_data.as_array().to_owned());
+    let positions_leto = into_leto(sensor_positions.as_array().to_owned());
+    let grid_leto = into_leto(grid_points.as_array().to_owned());
     let image = beamform_image_das(
         sensor_leto.view(),
         positions_leto.view(),
@@ -255,7 +255,7 @@ fn beamform_image_delay_and_sum<'py>(
     )
     .map_err(|err| PyRuntimeError::new_err(format!("kwavers imaging_das error: {err}")))?;
 
-    Ok(PyArray1::from_owned_array(py, leto1_to_nd1(image)).into())
+    Ok(PyArray1::from_owned_array(py, into_ndarray(image)).into())
 }
 
 fn parse_imaging_apodization(value: &str) -> PyResult<ImagingDasApodization> {

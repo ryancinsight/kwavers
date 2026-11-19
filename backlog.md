@@ -1,5 +1,7 @@
 # Backlog / Strategy
 
+<a id="kw-provider-cutovers"></a>- [KW-PROVIDER-CUTOVERS](backlog/kw-provider-cutovers.md) — Use Horae, Iris, and native RITK paths, and verify the numerical module split [major] [minor] — in progress
+
 <a id="atlas-kwavers-hephaestus-vis-104"></a>- [ATLAS-KWAVERS-HEPHAESTUS-VIS-104](backlog/atlas-kwavers-hephaestus-vis-104.md) — Multi-field hand-off and fallback render entries have no value test [patch] — todo
 <a id="kw-arch-036"></a>- [KW-ARCH-036](backlog/kw-arch-036.md) — Clinical-imaging dependency boundary [major] — todo
 <a id="kw-arch-065"></a>- [KW-ARCH-065](backlog/kw-arch-065.md) — Consolidate optical transport in Hyperion [major] [arch] — todo
@@ -49,14 +51,14 @@
 <a id="kw-gpu-unpinned-refusal-fallback"></a>- [KW-GPU-UNPINNED-REFUSAL-FALLBACK](backlog/kw-gpu-unpinned-refusal-fallback.md) — A Leto fall-back on GPU PSTD provider errors other than the pinned refusals fails no test [patch] — todo
 <a id="kw-ci-semver-not-run"></a>- [KW-CI-SEMVER-NOT-RUN](backlog/kw-ci-semver-not-run.md) — No hosted run compares a public surface when a change lands [patch] — todo
 <a id="kw-dep-eunomia-requirement-lag"></a>- [KW-DEP-EUNOMIA-REQUIREMENT-LAG](backlog/kw-dep-eunomia-requirement-lag.md) — The Eunomia requirement admits no version its repository now holds [patch] — todo
-<a id="kw-gpu-fft-plan-capacity"></a>- [KW-GPU-FFT-PLAN-CAPACITY](backlog/kw-gpu-fft-plan-capacity.md) — A GPU PSTD plan whose FFT workspace or dispatch exceeds a device limit is refused as `InvalidInput`, after field buffers exist [patch] — blocked
+<a id="kw-gpu-fft-plan-capacity"></a>- [KW-GPU-FFT-PLAN-CAPACITY](backlog/kw-gpu-fft-plan-capacity.md) — Check FFT capacity before GPU PSTD builds solver state [patch] — verified locally
 <a id="kw-gpu-pstd-buffer-request"></a>- [KW-GPU-PSTD-BUFFER-REQUEST](backlog/kw-gpu-pstd-buffer-request.md) — GPU PSTD requests a 128 MiB buffer limit whatever the adapter supports [minor] — todo
 <a id="kwavers-aeq-met-70"></a>- [KWAVERS-AEQ-MET-70](backlog/kwavers-aeq-met-70.md) — Inventory raw public metrics in the remaining transducer families [arch] — todo
 <a id="kw-ci-ubuntu-latest-unpinned"></a>- [KW-CI-UBUNTU-LATEST-UNPINNED](backlog/kw-ci-ubuntu-latest-unpinned.md) — 23 workflow jobs and one wheel-smoke matrix cell run on the moving `ubuntu-latest` image [patch] [ci] — todo
 <a id="kw-fdtd-avx512-doc"></a>- [KW-FDTD-AVX512-DOC](backlog/kw-fdtd-avx512-doc.md) — The FDTD solver doc and a standing fact advertise AVX-512 kernels that were deleted [patch] — todo
 <a id="kw-fdtd-sigma-test-slow"></a>- [KW-FDTD-SIGMA-TEST-SLOW](backlog/kw-fdtd-sigma-test-slow.md) — The FDTD sigma-factor test runs at two thirds of its 60 s bound in a parallel run [patch] [perf] — todo
 <a id="kw-nextest-exclusive-remainder"></a>- [KW-NEXTEST-EXCLUSIVE-REMAINDER](backlog/kw-nextest-exclusive-remainder.md) — Root-package binaries and `ci` overrides still hold nextest slots exclusively, and the 25 m bound is underived [patch] [ci] — todo
-<a id="kw-py-leto-compat-regrowth"></a>- [KW-PY-LETO-COMPAT-REGROWTH](backlog/kw-py-leto-compat-regrowth.md) — A local numpy-Leto conversion module serves 25 binding files, contradicting its closed gap record [patch] [arch] — todo
+<a id="kw-py-leto-compat-regrowth"></a>- [KW-PY-LETO-COMPAT-REGROWTH](backlog/kw-py-leto-compat-regrowth.md) — Own the const-generic NumPy conversion at the Python binding boundary [patch] [arch] — verified locally
 <a id="kw-unc-morris-saltelli"></a>- [KW-UNC-MORRIS-SALTELLI](backlog/kw-unc-morris-saltelli.md) — Sensitivity analysis offers correlation screening only, while the provider now has the Morris and Saltelli estimators [minor] — todo
 <a id="kw-ci-doctests-one-package"></a>- [KW-CI-DOCTESTS-ONE-PACKAGE](backlog/kw-ci-doctests-one-package.md) — No hosted job or push gate runs the doctests of any package but `kwavers` [patch] [ci] — todo
 <a id="kw-hook-nextest-config-ungated"></a>- [KW-HOOK-NEXTEST-CONFIG-UNGATED](backlog/kw-hook-nextest-config-ungated.md) — A push changing only `.config/nextest.toml` passes the pre-push hook with no package gated [patch] [ci] — todo

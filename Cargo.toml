@@ -62,6 +62,9 @@ mnemosyne-heap = { version = "0.7.0", git = "https://github.com/ryancinsight/Mne
 mnemosyne = { version = "0.10.1", git = "https://github.com/ryancinsight/Mnemosyne.git", package = "mnemosyne-memory" }
 eunomia = { version = ">=0.11.0, <0.13.0", git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
 numpy = "0.30"
+iris = { package = "iris-viz", version = "0.1.4", git = "https://github.com/ryancinsight/iris" }
+iris-plot-html = { version = "0.1.0", git = "https://github.com/ryancinsight/iris" }
+horae-civil-time = { version = "0.1.0", git = "https://github.com/ryancinsight/horae" }
 
 anyhow = "1.0"
 thiserror = "2.0"

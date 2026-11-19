@@ -14,7 +14,7 @@ use super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 use crate::{backend::init::GpuProviderContext, gpu::GpuDeviceProvider};
 use hephaestus_core::DeviceFeature;
 use hephaestus_wgpu::WgpuDevice;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 
 impl PstdAutoDeviceProvider for WgpuPstdStateProvider {
@@ -43,10 +43,9 @@ where
     /// - `SystemError::GpuNotAvailable` when this host has no compatible
     ///   accelerator adapter (typed, so a caller can select a CPU backend);
     /// - `KwaversError::GpuError` when a present adapter fails device creation;
-    /// - `KwaversError::ResourceLimitExceeded` when `pml_xyz`, `shifts_all`,
-    ///   or a buffer the run sizes by sensors and steps exceeds a limit the
-    ///   acquired device enables; the message names the buffer, the bytes it
-    ///   needs, and the limit;
+    /// - `KwaversError::ResourceLimitExceeded` when a solver buffer or FFT
+    ///   dispatch exceeds an enabled device limit. The message names the
+    ///   resource, required quantity and limit;
     /// - `KwaversError::InvalidInput` when the solver rejects its parameters or
     ///   fails to build its device state.
     pub fn with_auto_device(
@@ -58,13 +57,8 @@ where
     ) -> KwaversResult<Self> {
         let context = P::acquire_auto_context(solver.absorbing)?;
 
-        Self::construct(context, grid, medium, solver, pml, absorption).map_err(|error| match error
-        {
-            ConstructionError::Rejected(message) => KwaversError::InvalidInput(format!(
-                "GPU PSTD solver construction failed: {message}"
-            )),
-            ConstructionError::Capacity(error) => error,
-        })
+        Self::construct(context, grid, medium, solver, pml, absorption)
+            .map_err(ConstructionError::into_kwavers)
     }
 }
 

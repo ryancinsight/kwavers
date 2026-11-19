@@ -1,6 +1,6 @@
 //! PyO3 wrapper for Ali 2025 forward-operator equivalence diagnostics.
 
-use super::complex_compat::nd_to_leto3;
+use crate::array_utils::ndarray::into_leto;
 use eunomia::Complex64;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     forward_operator_equivalence_diagnostics_with_receiver_policy as breast_ust_forward_operator_equivalence_diagnostics_with_receiver_policy,
@@ -38,7 +38,7 @@ pub fn breast_fwi_operator_equivalence_diagnostics<'py>(
     frequency_bin_start_steps_per_frequency: Vec<usize>,
     receiver_channel_policy: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let observed = nd_to_leto3(observed_pressure.as_array().to_owned());
+    let observed = into_leto(observed_pressure.as_array().to_owned());
     let receiver_channel_policy = BreastUstReceiverChannelPolicy::parse(receiver_channel_policy)
         .map_err(kwavers_to_value_py)?;
     let mut owned_predictions =
@@ -46,7 +46,7 @@ pub fn breast_fwi_operator_equivalence_diagnostics<'py>(
     for (model, pressure) in predictions_by_model.iter() {
         let model = model.extract::<String>()?;
         let pressure = pressure.extract::<PyReadonlyArray3<'_, Complex64>>()?;
-        owned_predictions.push((model, nd_to_leto3(pressure.as_array().to_owned())));
+        owned_predictions.push((model, into_leto(pressure.as_array().to_owned())));
     }
 
     let diagnostics = py
@@ -87,8 +87,8 @@ pub fn breast_fwi_scattering_increment_diagnostics<'py>(
     observed_pressure: PyReadonlyArray3<'py, Complex64>,
     receiver_channel_policy: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let baseline = nd_to_leto3(homogeneous_baseline.as_array().to_owned());
-    let observed = nd_to_leto3(observed_pressure.as_array().to_owned());
+    let baseline = into_leto(homogeneous_baseline.as_array().to_owned());
+    let observed = into_leto(observed_pressure.as_array().to_owned());
     let receiver_channel_policy = BreastUstReceiverChannelPolicy::parse(receiver_channel_policy)
         .map_err(kwavers_to_value_py)?;
     let mut owned_predictions =
@@ -96,7 +96,7 @@ pub fn breast_fwi_scattering_increment_diagnostics<'py>(
     for (model, pressure) in predictions_by_model.iter() {
         let model = model.extract::<String>()?;
         let pressure = pressure.extract::<PyReadonlyArray3<'_, Complex64>>()?;
-        owned_predictions.push((model, nd_to_leto3(pressure.as_array().to_owned())));
+        owned_predictions.push((model, into_leto(pressure.as_array().to_owned())));
     }
 
     let diagnostics = py

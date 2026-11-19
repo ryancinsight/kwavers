@@ -13,5 +13,5 @@ mnemosyne = { workspace = true }
 clap = { version = "4.0", features = ["derive"] }
 walkdir = "2.3"
 regex = "1.8"
-chrono = "0.4"
+horae-civil-time = { workspace = true }
 wait-timeout = "0.2"

@@ -222,7 +222,7 @@ impl ClinicalWorkflowOrchestrator {
 
         Ok(ClinicalExaminationResult {
             patient_id: patient_id.to_owned(),
-            timestamp: chrono::Utc::now(),
+            timestamp: horae_civil_time::UtcTimestamp::now().map_err(std::io::Error::other)?,
             fused_image: fused_result,
             tissue_classification: analysis.tissue_properties,
             diagnostic_recommendations: analysis.recommendations,

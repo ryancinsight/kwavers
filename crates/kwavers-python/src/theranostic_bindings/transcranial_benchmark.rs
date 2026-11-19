@@ -1,6 +1,6 @@
 //! PyO3 binding for the skull-adaptive transcranial benchmark.
 
-use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3};
+use crate::array_utils::ndarray::into_ndarray;
 use kwavers_diagnostics::reconstruction::transcranial_ust::{
     resample_head_volume, select_head_slice,
 };
@@ -115,11 +115,11 @@ pub fn run_transcranial_skull_adaptive_benchmark_from_ritk_ct<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "reference_pressure_pa",
-        leto3_to_nd3(result.reference_pressure_pa).to_pyarray(py),
+        into_ndarray(result.reference_pressure_pa).to_pyarray(py),
     )?;
     out.set_item(
         "baseline_pressure_pa",
-        leto3_to_nd3(result.baseline_pressure_pa).to_pyarray(py),
+        into_ndarray(result.baseline_pressure_pa).to_pyarray(py),
     )?;
     out.set_item(
         "phases_rad",
@@ -139,7 +139,7 @@ pub fn run_transcranial_skull_adaptive_benchmark_from_ritk_ct<'py>(
     )?;
     out.set_item(
         "element_positions_m",
-        leto2_to_nd2(placement_result.element_positions_m).to_pyarray(py),
+        into_ndarray(placement_result.element_positions_m).to_pyarray(py),
     )?;
     out.set_item(
         "active_elements",

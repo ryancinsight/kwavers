@@ -1,3 +1,10 @@
+## 2026-11-19 — Provider and numerical module candidates
+
+See [KW-PROVIDER-CUTOVERS](backlog/kw-provider-cutovers.md) for the
+pinned providers, value-level results, and outstanding source and
+integration gates. Kwavers owns the Python ndarray conversion at its
+consuming boundary in accordance with Leto ADR 0017.
+
 ## Capability surveys by keyword produce false positives on name collisions
 
 Recorded 2026-08-12 from the Fullwave 2.5 parity comparison.
