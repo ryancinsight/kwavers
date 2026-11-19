@@ -1,7 +1,7 @@
 # KW-PROVIDER-CUTOVERS — Candidate evidence and remaining gates
 
 - Initial Kwavers baseline `45db5f1d0`. The candidate merges main `08a1a5054`.
-- Locked Git candidates: Horae `fd117ce2`, Iris `f4f6c951`, RITK `80753c5e`,
+- Locked Git candidates: Horae `fd117ce2`, Iris `f4f6c951`, RITK `9163710e`,
   and Hephaestus `42fdff43`. Reviewed source availability and fresh-consumer
   resolution remain release gates.
 - FDTD preserves explicit sensor order while collecting whole-grid statistics.
@@ -26,13 +26,18 @@
   boundary and absorption volumes. Without PML, six identity fields share
   one host allocation. See [KW-GPU-FFT-PLAN-CAPACITY](kw-gpu-fft-plan-capacity.md)
   for the numerical limits and device coverage.
-- The reconciled lock passes all 1,239 selected Kwavers tests and six
-  real-GPU capacity tests. The all-feature, all-target dependency audit
-  shows only the RITK route to Chrono. Formatting passes for 116 changed
-  Rust files. The staged numerical module families peak at 398 lines.
-- The original provider candidate also passes six Python array-boundary
-  tests with value, pointer identity, strided order, and ownership
-  assertions. The byte-level checks cover both transfer directions.
+- The final locked Nextest run passes 1,277 selected Kwavers tests,
+  including all 38 Python library tests, and six real-GPU capacity tests
+  run separately. The RITK pin passes 564 selected tests including the
+  parser-budget integration cases. Each Nextest run uses a 60-second limit.
+- The all-feature, all-target Cargo tree shows only the RITK route to
+  Chrono. Formatting passes for 116 changed Kwavers Rust files. The split
+  numerical module families peak at 398 lines.
+- The plotting-disabled build, clinical example, and Python validation
+  harness compile on the reconciled tree. Live external k-Wave parity,
+  hosted CI, and fresh-consumer resolution remain open.
+- The RITK comparison uses the verified `73f66b716` base. Its later
+  upstream geometry changes require an integration replay.
 - 103 other tracked Rust files still exceed the 500-line limit. The largest
   production module is the lithotripsy cavitation cloud. Split remaining
   modules by numerical operation and measure compile-time specialization,
