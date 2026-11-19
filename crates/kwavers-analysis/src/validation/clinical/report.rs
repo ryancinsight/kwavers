@@ -16,9 +16,15 @@ impl ClinicalValidator {
     ) -> String {
         let mut report = String::new();
         report.push_str("# Clinical Validation Report - Kwavers Ultrasound System\n\n");
+        let generated = time::OffsetDateTime::now_utc();
         report.push_str(&format!(
-            "**Generated**: {}\n\n",
-            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
+            "**Generated**: {:04}-{:02}-{:02} {:02}:{:02}:{:02} UTC\n\n",
+            generated.year(),
+            u8::from(generated.month()),
+            generated.day(),
+            generated.hour(),
+            generated.minute(),
+            generated.second(),
         ));
 
         let all_passed = [bmode_result, doppler_result, safety_result]

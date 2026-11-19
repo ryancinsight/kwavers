@@ -63,3 +63,4 @@
 <a id="kw-py-hybrid-refused"></a>- [KW-PY-HYBRID-REFUSED](backlog/kw-py-hybrid-refused.md) — Python callers offer a Hybrid solver that `Simulation.run` refuses [patch] — todo
 <a id="kw-sim-sensor-mask-doc"></a>- [KW-SIM-SENSOR-MASK-DOC](backlog/kw-sim-sensor-mask-doc.md) — The Rustdoc of `SimulationRunRequest::sensor_mask` says no sensors are requested by `None`, which is false beside `transducer_ordered_indices` [patch] — todo
 <a id="kw-fdtd-ordered-indices-ignored"></a>- [KW-FDTD-ORDERED-INDICES-IGNORED](backlog/kw-fdtd-ordered-indices-ignored.md) — The FDTD dispatch ignores `transducer_ordered_indices` once a recognised recording mode is set, and its Rustdoc is silent on FDTD [patch] — todo
+<a id="kw-dep-chrono-advisory"></a>- [KW-DEP-CHRONO-ADVISORY](backlog/kw-dep-chrono-advisory.md) — Clear the chrono advisory from the audited graph [patch] — todo
