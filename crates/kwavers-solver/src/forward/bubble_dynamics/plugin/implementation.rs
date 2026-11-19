@@ -179,7 +179,7 @@ impl Plugin for BubbleDynamicsPlugin {
                 }
             }
             BubbleModel::Gilmore => {
-                let solver = GilmoreSolver::new(self.config.params.clone());
+                let solver = Box::new(GilmoreSolver::new(self.config.params.clone()));
                 let states: HashMap<_, _> = positions
                     .iter()
                     .map(|&pos| (pos, BubbleState::new(&self.config.params)))
