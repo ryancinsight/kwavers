@@ -1663,7 +1663,7 @@ checksum = "e17592d60ebacc7d5e169f4663c5f84f9161cc90328abcfe8456f41e4dfcb284"
 [[package]]
 name = "horae-civil-time"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/horae#fd117ce2b2b92d11a4e8bc92322e7fb40aa61aae"
+source = "git+https://github.com/ryancinsight/horae?rev=fd117ce2b2b92d11a4e8bc92322e7fb40aa61aae#fd117ce2b2b92d11a4e8bc92322e7fb40aa61aae"
 
 [[package]]
 name = "http"
@@ -4283,7 +4283,7 @@ dependencies = [
 [[package]]
 name = "ritk-analyze"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4300,7 +4300,7 @@ dependencies = [
 [[package]]
 name = "ritk-annotation"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "ritk-spatial",
  "serde",
@@ -4311,7 +4311,7 @@ dependencies = [
 [[package]]
 name = "ritk-block-matching"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "apollo-fft",
@@ -4321,7 +4321,7 @@ dependencies = [
 [[package]]
 name = "ritk-codecs"
 version = "0.8.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "consus-core",
@@ -4333,7 +4333,7 @@ dependencies = [
 [[package]]
 name = "ritk-core"
 version = "0.11.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "coeus-core",
  "coeus-tensor",
@@ -4349,7 +4349,7 @@ dependencies = [
 [[package]]
 name = "ritk-dicom"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -4370,7 +4370,7 @@ dependencies = [
 [[package]]
 name = "ritk-diffusion-scheme"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "aequitas",
  "ritk-spatial",
@@ -4380,7 +4380,7 @@ dependencies = [
 [[package]]
 name = "ritk-filter"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "apollo-fft",
@@ -4411,7 +4411,7 @@ dependencies = [
 [[package]]
 name = "ritk-image"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-autograd",
@@ -4429,7 +4429,7 @@ dependencies = [
 [[package]]
 name = "ritk-image-io"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "ritk-codecs",
  "ritk-diffusion-scheme",
@@ -4441,7 +4441,7 @@ dependencies = [
 [[package]]
 name = "ritk-interpolation"
 version = "0.6.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4459,7 +4459,7 @@ dependencies = [
 [[package]]
 name = "ritk-io"
 version = "0.6.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -4505,7 +4505,7 @@ dependencies = [
 [[package]]
 name = "ritk-jpeg"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4518,7 +4518,7 @@ dependencies = [
 [[package]]
 name = "ritk-metaimage"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -4533,7 +4533,7 @@ dependencies = [
 [[package]]
 name = "ritk-mgh"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4548,7 +4548,7 @@ dependencies = [
 [[package]]
 name = "ritk-mif"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -4562,7 +4562,7 @@ dependencies = [
 [[package]]
 name = "ritk-minc"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4577,12 +4577,12 @@ dependencies = [
 [[package]]
 name = "ritk-morphology"
 version = "0.2.1"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 
 [[package]]
 name = "ritk-nifti"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4599,7 +4599,7 @@ dependencies = [
 [[package]]
 name = "ritk-nrrd"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -4616,7 +4616,7 @@ dependencies = [
 [[package]]
 name = "ritk-parcellation"
 version = "0.2.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "consus-core",
  "ritk-annotation",
@@ -4628,7 +4628,7 @@ dependencies = [
 [[package]]
 name = "ritk-png"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4640,7 +4640,7 @@ dependencies = [
 [[package]]
 name = "ritk-registration"
 version = "0.56.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-autograd",
@@ -4670,7 +4670,7 @@ dependencies = [
 [[package]]
 name = "ritk-segmentation"
 version = "0.5.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4689,7 +4689,7 @@ dependencies = [
 [[package]]
 name = "ritk-spatial"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "leto",
  "serde",
@@ -4699,7 +4699,7 @@ dependencies = [
 [[package]]
 name = "ritk-statistics"
 version = "0.6.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4714,7 +4714,7 @@ dependencies = [
 [[package]]
 name = "ritk-tensor-ops"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4729,7 +4729,7 @@ dependencies = [
 [[package]]
 name = "ritk-tiff"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4741,7 +4741,7 @@ dependencies = [
 [[package]]
 name = "ritk-transform"
 version = "0.3.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
@@ -4762,7 +4762,7 @@ dependencies = [
 [[package]]
 name = "ritk-vtk"
 version = "0.4.0"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 dependencies = [
  "anyhow",
  "coeus-core",
@@ -4780,7 +4780,7 @@ dependencies = [
 [[package]]
 name = "ritk-wgpu-compat"
 version = "0.2.1"
-source = "git+https://github.com/ryancinsight/ritk.git#5430dd8b1cd5b313b67b29fb4f21babfeb2e59af"
+source = "git+https://github.com/ryancinsight/ritk.git?rev=0602cfe8b5cd94c14a0220cea2cd66daa389933f#0602cfe8b5cd94c14a0220cea2cd66daa389933f"
 
 [[package]]
 name = "rkyv"

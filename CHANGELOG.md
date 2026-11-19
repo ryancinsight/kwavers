@@ -14,8 +14,8 @@
 ### Changed
 
 - [patch] Format UTC timestamps in clinical, tooling, and integration-test
-  reports with Horae. The remaining Chrono dependency is tracked in
-  KW-DEP-CHRONO-ADVISORY.
+  reports with Horae. Use the native RITK dataset and writer to clear the
+  last Chrono dependency, then retire its advisory hold.
 - [minor] Route standalone HTML plotting through Iris. Borrow time axes from
   the recorder, keep pressure-slice order and values, and color spatial points
   by their sampled pressure. Plot files render offline.

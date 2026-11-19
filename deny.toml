@@ -7,13 +7,6 @@ all-features = true
 [advisories]
 unmaintained = "workspace"
 yanked = "warn"
-ignore = [
-    # RUSTSEC-2026-0543 marks chrono unmaintained; every version is affected.
-    # The DICOM dataset backend still reaches chrono through dicom-core.
-    # Remove this hold when the native RITK cutover clears chrono from the
-    # audited graph. Tracked by KW-DEP-CHRONO-ADVISORY.
-    "RUSTSEC-2026-0543",
-]
 
 [licenses]
 allow = [

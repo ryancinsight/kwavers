@@ -4,6 +4,7 @@ See [KW-PROVIDER-CUTOVERS](backlog/kw-provider-cutovers.md) for the
 pinned providers, value-level results, and outstanding source and
 integration gates. Kwavers owns the Python ndarray conversion at its
 consuming boundary in accordance with Leto ADR 0017.
+The native provider and Chrono graph gates close in this cutover.
 
 ## Capability surveys by keyword produce false positives on name collisions
 

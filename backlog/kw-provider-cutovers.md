@@ -1,9 +1,10 @@
 # KW-PROVIDER-CUTOVERS — Candidate evidence and remaining gates
 
-- Initial Kwavers baseline `45db5f1d0`. The candidate merges main `08a1a5054`.
-- Locked Git candidates: Horae `fd117ce2`, Iris `f4f6c951`, RITK `9163710e`,
-  and Hephaestus `42fdff43`. Reviewed source availability and fresh-consumer
-  resolution remain release gates.
+- The cutover started at Kwavers `45db5f1d0` and now includes upstream
+  `7681bb35b` with Consus 0.5 storage contracts.
+- Locked candidate sources are Horae `fd117ce2`, Iris `f4f6c951`, RITK
+  `0602cfe8`, and Hephaestus `42fdff43`. Each revision is reachable through
+  a named GitHub branch.
 - FDTD preserves explicit sensor order while collecting whole-grid statistics.
   Where the replaced second recorder allocated S pressure rows with N samples,
   the redundant pressure allocation occupied 8 × S × N bytes.
@@ -14,8 +15,8 @@
 - Horae owns the Gregorian calendar and UTC serialization. Direct Chrono
   dependencies leave Kwavers and CFDrs. Hermes uses the same provider.
   Kwavers preserves the main branch's `SystemTime` diagnostic field and uses
-  Horae for civil-time reports. RITK reaches Chrono through the external
-  DICOM object and codec graph.
+  Horae for civil-time reports. Native RITK removes the final Chrono route
+  through the retired DICOM dataset.
 - RITK's native DIMSE transport and borrowed catalog selection pass 524
   selected DICOM tests. The catalog selection probe observes zero allocated
   bytes on a 32-frame input already in memory.
@@ -26,22 +27,21 @@
   boundary and absorption volumes. Without PML, six identity fields share
   one host allocation. See [KW-GPU-FFT-PLAN-CAPACITY](kw-gpu-fft-plan-capacity.md)
   for the numerical limits and device coverage.
-- The final locked Nextest run passes 1,277 selected Kwavers tests,
-  including all 38 Python library tests, and six real-GPU capacity tests
-  run separately. The RITK pin passes 564 selected tests including the
-  parser-budget integration cases. Each Nextest run uses a 60-second limit.
-- The all-feature, all-target Cargo tree shows only the RITK route to
-  Chrono. Formatting passes for 116 changed Kwavers Rust files. The split
-  numerical module families peak at 398 lines.
+- The earlier `1967dc251` candidate passes 1,277 selected Kwavers tests,
+  including all 38 Python library tests. Six real-GPU capacity tests run
+  separately. The new RITK pin passes 635 tests, including parser-budget
+  and native dataset-writer integration cases.
+- With RITK `0602cfe8`, 1,057 locked tests pass across
+  `kwavers-imaging`, `kwavers-analysis`, and `kwavers-diagnostics` with
+  all features. The split numerical module families peak at 398 lines.
+- The locked all-feature, all-target Cargo tree and lockfile both exclude
+  Chrono. `cargo-deny check advisories` passes without a Chrono exception.
 - The plotting-disabled build, clinical example, and Python validation
   harness compile on the reconciled tree. Live external k-Wave parity,
   hosted CI, and fresh-consumer resolution remain open.
-- The RITK comparison uses the verified `73f66b716` base. Its later
-  upstream geometry changes require an integration replay.
 - 103 other tracked Rust files still exceed the 500-line limit. The largest
   production module is the lithotripsy cavitation cloud. Split remaining
   modules by numerical operation and measure compile-time specialization,
   instruction size, and throughput on the same pinned graph.
-- Separate work remains for the complete RITK dataset and writer, Helios
-  migration, full-stack runtime and binary-size profiling, and the in-flight
-  inverse block and coefficient cache changes.
+- Separate work remains for full-stack runtime and binary-size profiling
+  and the in-flight inverse block changes.

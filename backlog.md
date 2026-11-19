@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-<a id="kw-provider-cutovers"></a>- [KW-PROVIDER-CUTOVERS](backlog/kw-provider-cutovers.md) — Use Horae, Iris, and native RITK paths, and verify the numerical module split [major] [minor] — in progress
+<a id="kw-provider-cutovers"></a>- [KW-PROVIDER-CUTOVERS](backlog/kw-provider-cutovers.md) — Use Horae, Iris, and native RITK paths, and verify the numerical module split [major] [minor] — done
 
 <a id="atlas-kwavers-hephaestus-vis-104"></a>- [ATLAS-KWAVERS-HEPHAESTUS-VIS-104](backlog/atlas-kwavers-hephaestus-vis-104.md) — Multi-field hand-off and fallback render entries have no value test [patch] — todo
 <a id="kw-arch-036"></a>- [KW-ARCH-036](backlog/kw-arch-036.md) — Clinical-imaging dependency boundary [major] — todo
@@ -67,4 +67,4 @@
 <a id="kw-py-hybrid-refused"></a>- [KW-PY-HYBRID-REFUSED](backlog/kw-py-hybrid-refused.md) — Python callers offer a Hybrid solver that `Simulation.run` refuses [patch] — todo
 <a id="kw-sim-sensor-mask-doc"></a>- [KW-SIM-SENSOR-MASK-DOC](backlog/kw-sim-sensor-mask-doc.md) — The Rustdoc of `SimulationRunRequest::sensor_mask` says no sensors are requested by `None`, which is false beside `transducer_ordered_indices` [patch] — todo
 <a id="kw-fdtd-ordered-indices-ignored"></a>- [KW-FDTD-ORDERED-INDICES-IGNORED](backlog/kw-fdtd-ordered-indices-ignored.md) — Preserve explicit sensor order and statistics in FDTD [minor] — verified locally
-<a id="kw-dep-chrono-advisory"></a>- [KW-DEP-CHRONO-ADVISORY](backlog/kw-dep-chrono-advisory.md) — Clear the chrono advisory from the audited graph [patch] — todo
+<a id="kw-dep-chrono-advisory"></a>- [KW-DEP-CHRONO-ADVISORY](backlog/kw-dep-chrono-advisory.md) — Clear the Chrono advisory from the audited graph [patch] — done

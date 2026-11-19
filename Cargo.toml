@@ -13,18 +13,18 @@ asclepius = { version = "0.3.0", git = "https://github.com/ryancinsight/asclepiu
 hyperion = { version = "0.1.0", git = "https://github.com/ryancinsight/hyperion" }
 proteus = { package = "proteus-mat", version = "0.1.0", git = "https://github.com/ryancinsight/proteus" }
 tyche-core = { version = "0.4.0", git = "https://github.com/ryancinsight/tyche" }
-horae = { version = "0.2.2", git = "https://github.com/ryancinsight/horae", package = "horae-time" }
+horae = { version = "0.2.2", git = "https://github.com/ryancinsight/horae", rev = "fd117ce2b2b92d11a4e8bc92322e7fb40aa61aae", package = "horae-time" }
 # External git submodules replaced by remote git dependencies (always-latest on the
 # default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
 # These repos carry their own [workspace], so Cargo resolves their internal
 # inheritance against THEIR roots â€” no path scaffolding needed here. SSOT: members
 # inherit via `{ workspace = true }`.
-ritk-core = { version = "0.11.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-io = { version = "0.6.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-image = { version = "0.5.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-spatial = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git" }
-ritk-registration = { version = "0.56.0", git = "https://github.com/ryancinsight/ritk.git" }
+ritk-core = { version = "0.11.0", git = "https://github.com/ryancinsight/ritk.git", rev = "0602cfe8b5cd94c14a0220cea2cd66daa389933f" }
+ritk-io = { version = "0.6.0", git = "https://github.com/ryancinsight/ritk.git", rev = "0602cfe8b5cd94c14a0220cea2cd66daa389933f" }
+ritk-image = { version = "0.5.0", git = "https://github.com/ryancinsight/ritk.git", rev = "0602cfe8b5cd94c14a0220cea2cd66daa389933f" }
+ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "0602cfe8b5cd94c14a0220cea2cd66daa389933f" }
+ritk-spatial = { version = "0.4.0", git = "https://github.com/ryancinsight/ritk.git", rev = "0602cfe8b5cd94c14a0220cea2cd66daa389933f" }
+ritk-registration = { version = "0.56.0", git = "https://github.com/ryancinsight/ritk.git", rev = "0602cfe8b5cd94c14a0220cea2cd66daa389933f" }
 coeus-core = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-tensor = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
 coeus-autograd = { version = "0.12.0", git = "https://github.com/ryancinsight/Coeus.git" }
@@ -64,7 +64,7 @@ eunomia = { version = ">=0.11.0, <0.13.0", git = "https://github.com/ryancinsigh
 numpy = "0.30"
 iris = { package = "iris-viz", version = "0.1.4", git = "https://github.com/ryancinsight/iris" }
 iris-plot-html = { version = "0.1.0", git = "https://github.com/ryancinsight/iris" }
-horae-civil-time = { version = "0.1.0", git = "https://github.com/ryancinsight/horae" }
+horae-civil-time = { version = "0.1.0", git = "https://github.com/ryancinsight/horae", rev = "fd117ce2b2b92d11a4e8bc92322e7fb40aa61aae" }
 
 anyhow = "1.0"
 thiserror = "2.0"
