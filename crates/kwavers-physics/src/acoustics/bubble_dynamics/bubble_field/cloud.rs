@@ -34,7 +34,7 @@ impl BubbleCloud {
 
     /// Generate bubble cloud with specified density
     pub fn generate(&mut self, bubble_density: f64, grid_spacing: (f64, f64, f64)) {
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
         let volume = grid_spacing.0
             * grid_spacing.1
@@ -89,7 +89,7 @@ impl BubbleCloud {
                 let center = centers.choose(rng).unwrap();
 
                 // Generate position within cluster
-                let uniform = Uniform::new(-*radius, *radius);
+                let uniform = Uniform::new(-*radius, *radius).unwrap();
                 let dx: f64 = rng.sample(uniform);
                 let dy: f64 = rng.sample(uniform);
                 let dz: f64 = rng.sample(uniform);

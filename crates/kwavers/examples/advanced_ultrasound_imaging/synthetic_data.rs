@@ -100,7 +100,7 @@ pub(crate) fn generate_noisy_received_signal(
 ) -> Array1<f64> {
     use rand::prelude::*;
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut signal = Array1::<f64>::zeros(code.len() * 4); // Longer to show compression
 
     // Add the code with some delay and noise

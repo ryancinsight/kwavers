@@ -33,7 +33,7 @@ mod plotting_impl {
         let mut plot = Plot::new();
         plot.add_trace(trace);
 
-        let layout = Layout::new().title(Title::new(title));
+        let layout = Layout::new().title(Title::with_text(title));
         plot.set_layout(layout);
 
         plot.write_html(filename);
@@ -65,14 +65,14 @@ mod plotting_impl {
             .collect();
 
         let trace =
-            HeatMap::new(x, y, z).color_bar(ColorBar::new().title(Title::new("Pressure (Pa)")));
+            HeatMap::new(x, y, z).color_bar(ColorBar::new().title(Title::with_text("Pressure (Pa)")));
         let mut plot = Plot::new();
         plot.add_trace(trace);
 
         let layout = Layout::new()
-            .title(Title::new(title))
-            .x_axis(plotly::layout::Axis::new().title(Title::new("X (m)")))
-            .y_axis(plotly::layout::Axis::new().title(Title::new("Y (m)")));
+            .title(Title::with_text(title))
+            .x_axis(plotly::layout::Axis::new().title(Title::with_text("X (m)")))
+            .y_axis(plotly::layout::Axis::new().title(Title::with_text("Y (m)")));
         plot.set_layout(layout);
 
         plot.write_html(filename);
@@ -110,12 +110,12 @@ mod plotting_impl {
         let trace = Scatter3D::new(x, y, z).mode(Mode::Markers).marker(
             plotly::common::Marker::new()
                 .size(3)
-                .color_bar(ColorBar::new().title(Title::new("Pressure (Pa)"))),
+                .color_bar(ColorBar::new().title(Title::with_text("Pressure (Pa)"))),
         );
         let mut plot = Plot::new();
         plot.add_trace(trace);
 
-        let layout = Layout::new().title(Title::new(title));
+        let layout = Layout::new().title(Title::with_text(title));
         plot.set_layout(layout);
 
         plot.write_html(filename);
@@ -138,9 +138,9 @@ mod plotting_impl {
         plot.add_trace(trace);
 
         let layout = Layout::new()
-            .title(Title::new(title))
-            .x_axis(plotly::layout::Axis::new().title(Title::new("Time (s)")))
-            .y_axis(plotly::layout::Axis::new().title(Title::new(y_label)));
+            .title(Title::with_text(title))
+            .x_axis(plotly::layout::Axis::new().title(Title::with_text("Time (s)")))
+            .y_axis(plotly::layout::Axis::new().title(Title::with_text(y_label)));
         plot.set_layout(layout);
 
         plot.write_html(filename);
@@ -184,14 +184,14 @@ mod plotting_impl {
             .collect();
 
         let trace =
-            HeatMap::new(x, y, z).color_bar(ColorBar::new().title(Title::new("Difference")));
+            HeatMap::new(x, y, z).color_bar(ColorBar::new().title(Title::with_text("Difference")));
         let mut plot = Plot::new();
         plot.add_trace(trace);
 
         let layout = Layout::new()
-            .title(Title::new(title))
-            .x_axis(plotly::layout::Axis::new().title(Title::new("X (m)")))
-            .y_axis(plotly::layout::Axis::new().title(Title::new("Y (m)")));
+            .title(Title::with_text(title))
+            .x_axis(plotly::layout::Axis::new().title(Title::with_text("X (m)")))
+            .y_axis(plotly::layout::Axis::new().title(Title::with_text("Y (m)")));
         plot.set_layout(layout);
 
         plot.write_html(filename);
@@ -225,9 +225,9 @@ mod plotting_impl {
         }
 
         let layout = Layout::new()
-            .title(Title::new("Recorded Pressure Evolution"))
-            .x_axis(plotly::layout::Axis::new().title(Title::new("Time (s)")))
-            .y_axis(plotly::layout::Axis::new().title(Title::new("Pressure (Pa)")));
+            .title(Title::with_text("Recorded Pressure Evolution"))
+            .x_axis(plotly::layout::Axis::new().title(Title::with_text("Time (s)")))
+            .y_axis(plotly::layout::Axis::new().title(Title::with_text("Pressure (Pa)")));
         plot.set_layout(layout);
 
         plot.write_html(filename);

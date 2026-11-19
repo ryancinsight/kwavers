@@ -49,7 +49,6 @@ pyo3 = { version = "0.30", features = ["abi3-py310", "multiple-pymethods"] }
 numpy = { workspace = true }  # PyO3 ↔ NumPy bridge (pyo3-numpy)
 
 # Error handling
-thiserror = "1.0"
 anyhow = "1.0"
 
 # Serialization for caching comparison results

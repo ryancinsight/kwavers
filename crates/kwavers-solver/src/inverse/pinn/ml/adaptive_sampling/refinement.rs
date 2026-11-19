@@ -91,7 +91,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
             let high_residual_regions = self.identify_high_residual_regions();
 
             for region in high_residual_regions.into_iter().take(deficit) {
-                let mut rng = rand::thread_rng();
+                let mut rng = rand::rng();
                 let x =
                     (region.center_x + (rng.gen::<f32>() - 0.5) * region.size_x).clamp(0.0, 1.0);
                 let y =

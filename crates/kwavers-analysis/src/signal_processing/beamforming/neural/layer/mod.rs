@@ -52,7 +52,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array2, Array3};
-use rand::distributions::{Distribution, Uniform};
+use rand::distr::{Distribution, Uniform};
 
 #[cfg(test)]
 mod tests;
@@ -121,9 +121,11 @@ impl NeuralLayer {
         // Xavier/Glorot uniform initialization
         // Ensures variance is maintained: Var(W) = 2/(n_in + n_out)
         let limit = (6.0 / (input_size as f64 + output_size as f64)).sqrt();
-        let dist = Uniform::new(-limit, limit);
+        // `limit` is positive (`input_size`/`output_size` are checked > 0 above),
+        // so construction cannot fail.
+        let dist = Uniform::new(-limit, limit).unwrap();
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut weights_data = Vec::with_capacity(input_size * output_size);
 
         for _ in 0..input_size * output_size {

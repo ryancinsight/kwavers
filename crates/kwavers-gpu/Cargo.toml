@@ -47,7 +47,7 @@ eunomia = { workspace = true, optional = true }
 aequitas = { workspace = true, optional = true }
 hephaestus-cuda = { workspace = true, optional = true }
 moirai-parallel = { workspace = true, optional = true }
-rand = { version = "0.8", optional = true }
+rand = { workspace = true, optional = true }
 once_cell = { version = "1.19", optional = true }
 flume = { version = "0.11", optional = true }
 

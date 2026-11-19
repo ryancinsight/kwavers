@@ -27,7 +27,7 @@ fn test_cross_product() {
 
 #[test]
 fn test_sample_isotropic_direction() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let dir = sample_isotropic_direction(&mut rng);
     let len = (dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]).sqrt();
     assert!((len - 1.0).abs() < 1e-6);
@@ -89,7 +89,7 @@ fn test_position_to_voxel() {
 
 #[test]
 fn test_scatter_photon_isotropic() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut photon = Photon {
         position: [0.0, 0.0, 0.0],
         direction: [0.0, 0.0, 1.0],
@@ -225,7 +225,7 @@ fn test_photon_step_to_boundary_negative_dir() {
 ///
 #[test]
 fn test_russian_roulette_energy_conservation() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let m = 0.1_f64; // survival probability matching SimulationConfig::default()
     let w_in = 5e-4_f64; // weight < russian_roulette_threshold (0.001)
     let n = 100_000_usize;

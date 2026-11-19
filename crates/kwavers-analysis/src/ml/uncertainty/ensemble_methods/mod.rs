@@ -125,7 +125,7 @@ impl EnsembleQuantifier {
         use rand::rngs::StdRng;
         use rand::{Rng, SeedableRng};
 
-        let mut rng = StdRng::from_entropy();
+        let mut rng = StdRng::from_os_rng();
         let mut indices = Vec::with_capacity(n_samples);
         for _ in 0..n_samples {
             indices.push(rng.gen_range(0..n_samples));

@@ -32,7 +32,7 @@ impl MonteCarloSolver {
         for_each_index_with::<Adaptive, _>(chunk_count, |chunk_idx| {
             let start = chunk_idx * chunk_size;
             let end = (start + chunk_size).min(num_photons);
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
 
             for _ in start..end {
                 let mut photon = source.launch_photon(&mut rng);

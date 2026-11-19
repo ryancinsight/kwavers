@@ -64,7 +64,7 @@ impl TissueClassifierModel {
     #[must_use]
     pub fn with_random_weights(features: usize, classes: usize) -> Self {
         use rand::Rng;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let weights = Array2::from_shape_fn((features, classes), |_| rng.gen_range(-0.05..0.05));
         let engine = InferenceEngine::from_weights(weights, None, 32, false);
 

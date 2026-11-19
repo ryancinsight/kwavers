@@ -50,7 +50,7 @@ where
     /// Actual nucleation sites are refined later by [`detect_nucleation_sites`].
     fn initialize_bubble_locations(domain_dims: &[f64], n_bubbles: usize) -> Vec<(f64, f64, f64)> {
         use rand::Rng;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let lx = domain_dims.first().copied().unwrap_or(0.01);
         let ly = domain_dims.get(1).copied().unwrap_or(0.01);
         let lz = domain_dims.get(2).copied().unwrap_or(0.01);

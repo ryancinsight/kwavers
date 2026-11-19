@@ -105,7 +105,7 @@ fn fill_rf_rx_slice(
     n_frames: usize,
     rx_slice: &mut [f32],
 ) {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let delay = (tx + rx) as f64 * 1e-7;
 
     for sample in 0..n_samples {

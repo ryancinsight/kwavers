@@ -375,7 +375,7 @@ pub fn add_noise(signal: &[f64], snr_db: f64, seed: Option<u64>) -> KwaversResul
     let normal = Normal::new(0.0, sigma).map_err(|e| KwaversError::Other(anyhow::anyhow!(e)))?;
     let mut rng = match seed {
         Some(s) => ChaCha8Rng::seed_from_u64(s),
-        None => ChaCha8Rng::from_entropy(),
+        None => ChaCha8Rng::from_os_rng(),
     };
 
     Ok(signal

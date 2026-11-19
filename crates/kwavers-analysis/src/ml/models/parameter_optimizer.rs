@@ -61,7 +61,7 @@ impl ParameterOptimizerModel {
     #[must_use]
     pub fn new(input_dim: usize, output_dim: usize) -> Self {
         use rand::Rng;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let weights = Array2::from_shape_fn((input_dim, output_dim), |_| rng.gen_range(-0.1..0.1));
 
         Self {

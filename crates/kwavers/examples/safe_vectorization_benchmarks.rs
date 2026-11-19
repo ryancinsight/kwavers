@@ -803,7 +803,7 @@ fn benchmark_memory_patterns(suite: &mut BenchmarkSuite, size: usize) -> Kwavers
     // Test: Random access (cache-unfriendly)
     {
         use rand::Rng;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let indices: Vec<(usize, usize, usize)> = (0..size * size * size)
             .map(|_| {
                 (

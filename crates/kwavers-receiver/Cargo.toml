@@ -22,7 +22,7 @@ log = "0.4"
 
 [dev-dependencies]
 eunomia = { workspace = true }
-criterion = "0.4"
+criterion = { workspace = true }
 
 [[bench]]
 name = "point_sensor_record"
