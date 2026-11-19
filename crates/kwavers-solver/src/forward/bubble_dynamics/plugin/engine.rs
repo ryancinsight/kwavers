@@ -38,7 +38,7 @@ pub(super) enum BubbleEngine {
     /// (`self.config.params`) and read from there when needed; carrying a copy
     /// in this variant would duplicate the SSOT held by the plugin.
     Gilmore {
-        solver: GilmoreSolver,
+        solver: Box<GilmoreSolver>,
         /// Per-voxel bubble states, keyed by grid index (i, j, k).
         states: HashMap<(usize, usize, usize), BubbleState>,
         /// Previous-step pressure, used to estimate dp/dt via backward difference.

@@ -7,8 +7,8 @@ use eunomia::assert_relative_eq;
 use kwavers_grid::Grid;
 use kwavers_physics::acoustics::bubble_dynamics::epstein_plesset::OscillationType;
 use kwavers_physics::acoustics::bubble_dynamics::{
-    acoustic_pressure::PressureAmplitude,
-    BubbleParameters, EpsteinPlessetStabilitySolver, KellerMiksisModel,
+    acoustic_pressure::PressureAmplitude, BubbleParameters, EpsteinPlessetStabilitySolver,
+    KellerMiksisModel,
 };
 use leto::{Array1, Array3};
 use std::f64::consts::PI;
@@ -252,8 +252,8 @@ mod bubble_dynamics_validation {
     #[test]
     fn test_keller_miksis_low_mach_limit() {
         let params = BubbleParameters {
-            r0: 50e-6,                         // 50 micron
-            driving_frequency: 20e3,           // 20 kHz
+            r0: 50e-6,                                                          // 50 micron
+            driving_frequency: 20e3,                                            // 20 kHz
             driving_amplitude: PressureAmplitude::from_pascals(1.5 * 101325.0), // 1.5 atm
             ..Default::default()
         };
@@ -381,7 +381,7 @@ mod edge_case_tests {
     fn test_extreme_pressure_ratios() {
         // Test bubble dynamics with extreme driving pressures
         let params = BubbleParameters {
-            r0: 5e-6,                            // 5 micron - small bubble
+            r0: 5e-6, // 5 micron - small bubble
             driving_amplitude: PressureAmplitude::from_pascals(100.0 * 101325.0), // 100 atm - extreme pressure
             ..Default::default()
         };

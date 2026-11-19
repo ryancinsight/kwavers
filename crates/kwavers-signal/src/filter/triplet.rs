@@ -46,22 +46,20 @@ impl TripletPulseFilter {
 
     /// High-pass filter each phase transmission's RF trace.
     ///
-    /// `traces` holds one trace per transmission (0°/120°/240°/180°),
-    /// all the same length; returns the filtered traces in the same
-    /// order. Delegates to [`FrequencyFilter::highpass`] (zero-phase
-    /// FFT brick-wall).
-    /// # Errors
-    /// Returns [`Err`] if filtering fails.
-    pub fn highpass_phases(
+    /// Iterates in transmission order (0°/120°/240°/180°). Each item
+    /// is the result of applying [`FrequencyFilter::highpass`] to one
+    /// trace. The caller can consume each filtered trace before requesting
+    /// the next one, which avoids retaining an allocation for every phase.
+    pub fn highpass_phases<'a, Trace: AsRef<[f64]> + 'a>(
         &self,
-        traces: &[Vec<f64>],
+        traces: &'a [Trace],
         dt: f64,
-    ) -> KwaversResult<Vec<Vec<f64>>> {
+    ) -> impl Iterator<Item = KwaversResult<Vec<f64>>> + use<'a, Trace> {
         let filter = FrequencyFilter::new();
+        let cutoff_hz = self.cutoff_hz;
         traces
             .iter()
-            .map(|t| filter.highpass(t, dt, self.cutoff_hz))
-            .collect()
+            .map(move |trace| filter.highpass(trace.as_ref(), dt, cutoff_hz))
     }
 }
 
@@ -119,15 +117,31 @@ mod tests {
         // DC offset + 5 MHz tone: the high-pass at 2 MHz must remove
         // the DC and keep the tone.
         let signal: Vec<f64> = (0..n)
-            .map(|i| {
-                1.0 + (2.0 * std::f64::consts::PI * 5.0e6 * i as f64 * dt).sin()
-            })
+            .map(|i| 1.0 + (2.0 * std::f64::consts::PI * 5.0e6 * i as f64 * dt).sin())
             .collect();
         let filter = TripletPulseFilter::new(2.0e6);
-        let out = filter.highpass_phases(&[signal], dt).unwrap();
-        let mean = out[0].iter().sum::<f64>() / n as f64;
+        let phases = [signal.as_slice()];
+        let mut outputs = filter.highpass_phases(&phases, dt);
+        let out = outputs.next().expect("one phase").expect("valid trace");
+        assert!(outputs.next().is_none());
+        let mean = out.iter().sum::<f64>() / n as f64;
         assert!(mean.abs() < 0.05, "DC leaked through: mean {mean}");
-        let peak = out[0].iter().fold(0.0_f64, |m, &v| m.max(v.abs()));
+        let peak = out.iter().fold(0.0_f64, |m, &v| m.max(v.abs()));
         assert!(peak > 0.5, "5 MHz tone attenuated: peak {peak}");
+    }
+
+    #[test]
+    fn highpass_preserves_phase_order_and_independent_trace_lengths() {
+        let filter = TripletPulseFilter::new(0.0);
+        let phases: [&[f64]; 3] = [&[2.0, -2.0], &[], &[-7.0]];
+        let mut output = filter.highpass_phases(&phases, 0.25);
+
+        for expected in phases {
+            assert_eq!(
+                output.next().expect("one result per phase").unwrap(),
+                expected
+            );
+        }
+        assert!(output.next().is_none());
     }
 }

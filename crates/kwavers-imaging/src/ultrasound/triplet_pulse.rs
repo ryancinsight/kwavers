@@ -168,11 +168,7 @@ pub fn combine_echoes(
     TripletPulseEchoes {
         one_pulse: phase_0.to_vec(),
         pulse_inversion: coherent_sum(&[phase_0.to_vec(), phase_180.to_vec()]),
-        triplet_pulse: coherent_sum(&[
-            phase_0.to_vec(),
-            phase_120.to_vec(),
-            phase_240.to_vec(),
-        ]),
+        triplet_pulse: coherent_sum(&[phase_0.to_vec(), phase_120.to_vec(), phase_240.to_vec()]),
     }
 }
 

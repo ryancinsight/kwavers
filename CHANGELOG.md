@@ -35,6 +35,10 @@
   statistics. Construct the recorder once, validate all coordinates against
   the grid, and treat an explicit empty list as an empty selection.
 
+- Use Consus 0.5 for HDF5, NPZ, and MATLAB Level-5 phantom input. Kwavers
+  retains the MRI-to-sound-speed transform. Consus reads the selected
+  MATLAB variable and normalizes its column-major numeric data.
+
 - Admit the Leto 0.50 line: the Leto and Leto-ops requirements widen to
   `>=0.47.1, <0.51.0`, and the lock moves Leto to 0.50.0 together with the six
   provider repositories whose requirements admit it (Apollo, Athena, Coeus,
