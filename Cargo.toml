@@ -88,11 +88,11 @@ tiff = "0.9"
 openjpeg-sys = "1.0"
 openjp2 = { version = "0.6.1", default-features = false, features = ["std"] }
 jpeg2k = { version = "0.10.1", default-features = false, features = ["openjp2"] }
-consus-hdf5 = { version = "0.4.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
-consus-core = { version = "0.4.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
-consus-compression = { version = "0.4.0", git = "https://github.com/ryancinsight/consus.git", features = ["std", "deflate"] }
-consus-io = { version = "0.4.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
-consus-npy = { version = "0.4.0", git = "https://github.com/ryancinsight/consus.git" }
+consus-hdf5 = { version = "0.5.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-core = { version = "0.5.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-io = { version = "0.5.0", git = "https://github.com/ryancinsight/consus.git", features = ["std"] }
+consus-npy = { version = "0.5.0", git = "https://github.com/ryancinsight/consus.git" }
+consus-mat = { version = "0.5.0", git = "https://github.com/ryancinsight/consus.git", default-features = false, features = ["compress"] }
 rand = "0.9"
 criterion = "0.5"
 
