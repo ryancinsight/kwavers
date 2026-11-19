@@ -108,6 +108,7 @@ impl EnergyBalanceCalculator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
     use crate::acoustics::bubble_dynamics::bubble_state::{
         BubbleParameters, BubbleState, GasSpecies, GasType,
     };
@@ -141,7 +142,7 @@ mod tests {
             gamma: HEAT_CAPACITY_RATIO_MONATOMIC,
             t0: kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K,
             driving_frequency: 26_500.0,
-            driving_amplitude: 1.5e5,
+            driving_amplitude: PressureAmplitude::from_pascals(1.5e5),
             use_compressibility: true,
             use_thermal_effects: true,
             use_mass_transfer: true,

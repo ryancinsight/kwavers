@@ -1,7 +1,11 @@
 //! Keller-Miksis wall-motion ODE regression tests.
 
-use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use crate::acoustics::bubble_dynamics::{
+    acoustic_pressure::InstantaneousPressure,
+    bubble_state::{BubbleParameters, BubbleState},
+};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::test_support::assert_rejects;
@@ -34,7 +38,12 @@ fn test_keller_miksis_equilibrium() {
     let mut state = BubbleState::at_equilibrium(&params);
 
     let accel = model
-        .calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
+        .calculate_acceleration(
+            &mut state,
+            InstantaneousPressure::ZERO,
+            PressureRate::from_base(0.0),
+            0.0,
+        )
         .expect("Equilibrium calculation should succeed");
 
     // At R=R₀, Ṙ=0, p_acou=0, t=0 with polytropic closure:
@@ -67,7 +76,12 @@ fn test_keller_miksis_compression() {
     state.wall_velocity = -10.0;
 
     let accel = model
-        .calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
+        .calculate_acceleration(
+            &mut state,
+            InstantaneousPressure::ZERO,
+            PressureRate::from_base(0.0),
+            0.0,
+        )
         .expect("Compression calculation should succeed");
     assert!(accel.is_finite(), "Acceleration should be finite");
 }
@@ -87,7 +101,12 @@ fn test_keller_miksis_expansion() {
     state.wall_velocity = 20.0;
 
     let accel = model
-        .calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
+        .calculate_acceleration(
+            &mut state,
+            InstantaneousPressure::ZERO,
+            PressureRate::from_base(0.0),
+            0.0,
+        )
         .expect("Expansion calculation should succeed");
     assert!(
         accel < 0.0,
@@ -110,7 +129,12 @@ fn test_keller_miksis_acoustic_forcing() {
     let t = 0.25e-6;
 
     let accel = model
-        .calculate_acceleration(&mut state, p_acoustic, 0.0, t)
+        .calculate_acceleration(
+            &mut state,
+            InstantaneousPressure::from_pascals(p_acoustic),
+            PressureRate::from_base(0.0),
+            t,
+        )
         .expect("Acoustic forcing calculation should succeed");
     assert!(accel > 0.0, "Negative pressure should cause expansion");
 }
@@ -123,7 +147,12 @@ fn test_keller_miksis_mach_limit() {
 
     state.wall_velocity = 0.96 * params.c_liquid;
 
-    let result = model.calculate_acceleration(&mut state, 0.0, 0.0, 0.0);
+    let result = model.calculate_acceleration(
+        &mut state,
+        InstantaneousPressure::ZERO,
+        PressureRate::from_base(0.0),
+        0.0,
+    );
 
     // The Keller-Miksis equation is singular as Ṙ → c; the guard fires at
     // mach > 0.95 and reports the offending ratio as the CFL limit.
@@ -140,7 +169,12 @@ fn test_radiation_damping_term() {
     let dp_dt = 1e8;
 
     let accel_with_damping = model
-        .calculate_acceleration(&mut state, p_acoustic, dp_dt, 0.0)
+        .calculate_acceleration(
+            &mut state,
+            InstantaneousPressure::from_pascals(p_acoustic),
+            PressureRate::from_base(dp_dt),
+            0.0,
+        )
         .expect("Calculation with dp/dt should succeed");
     assert!(accel_with_damping.is_finite());
 }
@@ -154,7 +188,12 @@ fn test_mach_number_tracking() {
     state.wall_velocity = 150.0;
 
     model
-        .calculate_acceleration(&mut state, 0.0, 0.0, 0.0)
+        .calculate_acceleration(
+            &mut state,
+            InstantaneousPressure::ZERO,
+            PressureRate::from_base(0.0),
+            0.0,
+        )
         .unwrap();
     let expected_mach = 150.0 / params.c_liquid;
     assert!(

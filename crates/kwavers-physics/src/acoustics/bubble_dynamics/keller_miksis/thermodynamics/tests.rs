@@ -1,4 +1,5 @@
 use super::*;
+use crate::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, STEFAN_BOLTZMANN};
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::constants::thermodynamic::{
@@ -114,7 +115,7 @@ fn test_bubble_collapse_temperature_reduced_by_latent_heat() {
         gamma: 1.4,
         t0: ROOM_TEMPERATURE_K,
         driving_frequency: 26_500.0,
-        driving_amplitude: 1.5e5,
+        driving_amplitude: PressureAmplitude::from_pascals(1.5e5),
         use_compressibility: true,
         use_thermal_effects: true,
         use_mass_transfer: true,

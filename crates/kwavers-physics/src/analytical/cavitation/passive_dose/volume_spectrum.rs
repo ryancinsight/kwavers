@@ -11,6 +11,7 @@ use super::{
     bubble_acoustic_emission_pressure, decompose_emission_spectrum, hann_windowed_power_spectrum,
     integrate_receiver_array_psd, CavitationBandEnergies,
 };
+use crate::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use crate::analytical::cavitation::keller_miksis_shelled_rk4;
 
 const MAX_EXACT_F64_INTEGER: usize = 1usize << 53;
@@ -136,7 +137,7 @@ pub fn volume_emission_spectrum(
         let (radius, wall_velocity) = keller_miksis_shelled_rk4(
             r0_m,
             0.0,
-            input.drive_pa,
+            PressureAmplitude::from_pascals(input.drive_pa),
             input.f0_hz,
             &time_s,
             input.medium.p0_pa,

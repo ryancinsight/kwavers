@@ -1,6 +1,7 @@
 //! Tests for the swept-frequency cavitation-control module.
 
 use super::*;
+use crate::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 
 const PI2: f64 = std::f64::consts::TAU;
 
@@ -50,7 +51,12 @@ fn chirp_pressure_bounded_by_amplitude() {
     let s = FrequencySweep::new(0.9e6, 1.1e6, 30e-6, SweepProfile::Triangular).unwrap();
     for i in 0..200 {
         let t = i as f64 * 1e-6;
-        assert!(s.pressure(t, 2.0e6).abs() <= 2.0e6 + 1.0);
+        assert!(
+            s.pressure(t, PressureAmplitude::from_pascals(2.0e6))
+                .as_pascals()
+                .abs()
+                <= 2.0e6 + 1.0
+        );
     }
 }
 
@@ -118,7 +124,18 @@ fn chirped_km_runs_finite_and_expands_with_amplitude() {
     let t: Vec<f64> = (0..=4000).map(|i| i as f64 * 1e-8).collect();
     let ratio = |amp: f64| {
         chirped_peak_expansion_ratio(
-            &s, amp, 3.3e-6, &t, m.p0_pa, m.rho, m.sigma, m.mu, m.kappa, m.p_v_pa, 0.0, m.c_liquid,
+            &s,
+            PressureAmplitude::from_pascals(amp),
+            3.3e-6,
+            &t,
+            m.p0_pa,
+            m.rho,
+            m.sigma,
+            m.mu,
+            m.kappa,
+            m.p_v_pa,
+            0.0,
+            m.c_liquid,
         )
     };
     let lo = ratio(0.2e6);
@@ -136,7 +153,14 @@ fn swept_engages_at_least_as_much_as_tone_for_long_pulse() {
     let m = CavitationMedium::soft_tissue();
     let s = FrequencySweep::new(0.6e6, 1.4e6, 40e-6, SweepProfile::Triangular).unwrap();
     let cfg = small_cfg();
-    let r = swept_vs_monochromatic_engagement(&d, &m, &s, 1.0e6, 1e-3, &cfg);
+    let r = swept_vs_monochromatic_engagement(
+        &d,
+        &m,
+        &s,
+        PressureAmplitude::from_pascals(1.0e6),
+        1e-3,
+        &cfg,
+    );
     assert!(r.swept_fraction >= r.mono_fraction - 1e-9, "{r:?}");
     assert!(r.swept_fraction > 0.0, "{r:?}");
     // Sweeping a broad band engages a wider size population than one tone.
@@ -152,7 +176,7 @@ fn swept_enhancement_larger_for_ms_than_us_pulse() {
     // Resonance-selective amplitude: only resonant, fully-rung-up bubbles reach
     // the inertial criterion (a far-supra-threshold drive collapses every size
     // regardless of resonance or pulse length, masking the effect).
-    let amp = 0.15e6;
+    let amp = PressureAmplitude::from_pascals(0.15e6);
     let ms = swept_vs_monochromatic_engagement(&d, &m, &s, amp, 1e-3, &cfg);
     let us = swept_vs_monochromatic_engagement(&d, &m, &s, amp, 2e-6, &cfg);
     eprintln!("ms={ms:?}\nus={us:?}");
@@ -210,11 +234,32 @@ fn staged_sweep_cavitation_peaks_mid_sonication() {
     let cfg = small_cfg();
     // Turn frequency = empirically cavitation-optimal frequency in the band;
     // the quiet endpoint is the high-threshold edge (least cavitation).
-    let (f_peak, _) = cavitation_optimal_frequency(&d, &m, 0.5e6, 1.6e6, 0.15e6, 5e-3, 9, &cfg);
+    let (f_peak, _) = cavitation_optimal_frequency(
+        &d,
+        &m,
+        0.5e6,
+        1.6e6,
+        PressureAmplitude::from_pascals(0.15e6),
+        5e-3,
+        9,
+        &cfg,
+    );
     let f_quiet = 1.6e6; // high-frequency, high-threshold "quiet" endpoint
     let params = tissue_gas_diffusion(0.7);
     let prof = staged_sonication_sweep(
-        &d, &m, f_quiet, f_peak, 0.15e6, 5e-3, 21, 10.0, 0.02, 6e-6, 8.0, params, &cfg,
+        &d,
+        &m,
+        f_quiet,
+        f_peak,
+        PressureAmplitude::from_pascals(0.15e6),
+        5e-3,
+        21,
+        10.0,
+        0.02,
+        6e-6,
+        8.0,
+        params,
+        &cfg,
     );
     assert_eq!(prof.stage.len(), 21);
     // Frequency is a single up-down triangle: ends at f_quiet, turns at f_peak.
@@ -242,10 +287,31 @@ fn staged_sweep_wind_down_clears_residual() {
     let d = NucleiSizeDistribution::new(3.3e-6, 1.7).unwrap();
     let m = CavitationMedium::soft_tissue();
     let cfg = small_cfg();
-    let (f_peak, _) = cavitation_optimal_frequency(&d, &m, 0.5e6, 1.6e6, 0.15e6, 5e-3, 9, &cfg);
+    let (f_peak, _) = cavitation_optimal_frequency(
+        &d,
+        &m,
+        0.5e6,
+        1.6e6,
+        PressureAmplitude::from_pascals(0.15e6),
+        5e-3,
+        9,
+        &cfg,
+    );
     let params = tissue_gas_diffusion(0.7);
     let prof = staged_sonication_sweep(
-        &d, &m, 1.6e6, f_peak, 0.15e6, 5e-3, 21, 10.0, 0.02, 6e-6, 8.0, params, &cfg,
+        &d,
+        &m,
+        1.6e6,
+        f_peak,
+        PressureAmplitude::from_pascals(0.15e6),
+        5e-3,
+        21,
+        10.0,
+        0.02,
+        6e-6,
+        8.0,
+        params,
+        &cfg,
     );
     // The wind-down half drives the residual below its peak: the field is left
     // cleaner for the next sonication than at the height of the build phase.

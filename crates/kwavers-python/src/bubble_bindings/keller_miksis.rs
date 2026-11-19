@@ -17,6 +17,7 @@
 //! - de Jong et al. (1994) Ultrasonics 32:447 (linear shell viscosity).
 
 use crate::array_utils::vec_to_pyarray1;
+use kwavers_physics::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use numpy::PyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -96,7 +97,8 @@ pub fn solve_keller_miksis(
         kwavers_physics::analytical::cavitation::keller_miksis_shelled_rk4(
             r0_m,
             rdot0_m_s,
-            p_ac_pa,
+            // FFI boundary: the Python float is the drive amplitude.
+            PressureAmplitude::from_pascals(p_ac_pa),
             frequency_hz,
             &time,
             p_inf_pa,

@@ -9,6 +9,7 @@
 pub mod ceus;
 pub mod elastography;
 pub mod hifu;
+pub mod triplet_pulse;
 
 /// Ultrasound imaging mode
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -21,6 +22,8 @@ pub enum UltrasoundMode {
     Elastography,
     /// Harmonic imaging
     Harmonic,
+    /// Triplet-pulse cavitation-bubble imaging (Iwasaki 2018; Kuji 2024)
+    TripletPulse,
 }
 
 /// Ultrasound imaging configuration

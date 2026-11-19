@@ -125,8 +125,8 @@ pub struct SimulationRunRequest<'a> {
     /// Leto PSTD rejects explicit ordering when external PML padding is active.
     ///
     /// FDTD also gives explicit indices precedence, including an empty list.
-    /// It validates every index against the grid and collects requested pressure
-    /// statistics using the same row order.
+    /// It validates every index against the grid. The pressure record keeps
+    /// this row order when whole-grid statistics are also requested.
     ///
     /// Hephaestus PSTD rejects any `Some` value with
     /// [`kwavers_core::error::KwaversError::FeatureNotAvailable`].

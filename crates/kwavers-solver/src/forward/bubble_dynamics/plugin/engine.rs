@@ -41,6 +41,14 @@ pub(super) enum BubbleEngine {
         solver: GilmoreSolver,
         /// Per-voxel bubble states, keyed by grid index (i, j, k).
         states: HashMap<(usize, usize, usize), BubbleState>,
+        /// Previous-step pressure, used to estimate dp/dt via backward difference.
+        ///
+        /// The [`GilmoreSolver::step_rk4`] signature requires `dp_dt` for the
+        /// `dH/dt` term. A first-order backward difference
+        /// `dp_dt[i,j,k] ≈ (p_n − p_{n-1}) / dt` is sufficient for the
+        /// O(Mach) accuracy level of the Gilmore equation — the same
+        /// estimate the `KmOrRp` variant uses for the KM radiation term.
+        prev_pressure: Array3<f64>,
     },
 }
 

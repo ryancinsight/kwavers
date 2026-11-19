@@ -11,6 +11,7 @@
 //! - Rayleigh (1917) Phil. Mag. 34:94; Plesset (1949) J. Appl. Mech. 16:277.
 
 use crate::array_utils::vec_to_pyarray1;
+use kwavers_physics::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use numpy::PyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -77,7 +78,8 @@ pub fn solve_rayleigh_plesset(
         kwavers_physics::analytical::cavitation::rayleigh_plesset_rk4(
             r0_m,
             rdot0_m_s,
-            p_ac_pa,
+            // FFI boundary: the Python float is the drive amplitude.
+            PressureAmplitude::from_pascals(p_ac_pa),
             frequency_hz,
             &time,
             p_inf_pa,

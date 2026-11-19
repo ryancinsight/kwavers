@@ -3,12 +3,14 @@ use std::collections::HashMap;
 use leto::{Array3, Array4};
 
 use crate::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::bubble_dynamics::{
-    bubble_field::BubbleField, bubble_state::BubbleState, gilmore::GilmoreSolver,
+    acoustic_pressure::InstantaneousPressure, bubble_field::BubbleField, bubble_state::BubbleState,
+    gilmore::GilmoreSolver,
 };
 use kwavers_physics::factory::models::BubbleModel;
 
@@ -182,11 +184,14 @@ impl Plugin for BubbleDynamicsPlugin {
                     .iter()
                     .map(|&pos| (pos, BubbleState::new(&self.config.params)))
                     .collect();
-                // prev_pressure is not needed for the Gilmore path: the
-                // instantaneous acoustic field value is read directly at each
-                // voxel position; no dp/dt estimate is required.
-                drop(prev_pressure);
-                BubbleEngine::Gilmore { solver, states }
+                // prev_pressure is kept for the Gilmore path too: step_rk4
+                // needs dp/dt for the dH/dt term, estimated by backward
+                // difference exactly as in the KmOrRp path.
+                BubbleEngine::Gilmore {
+                    solver,
+                    states,
+                    prev_pressure,
+                }
             }
         });
 
@@ -243,16 +248,27 @@ impl Plugin for BubbleDynamicsPlugin {
                 *prev_pressure = current_pressure;
             }
 
-            Some(BubbleEngine::Gilmore { solver, states }) => {
+            Some(BubbleEngine::Gilmore {
+                solver,
+                states,
+                prev_pressure,
+            }) => {
                 // Per-voxel classical RK4 via GilmoreSolver::step_rk4.
                 // The instantaneous acoustic field value at each voxel is passed
-                // directly; dp/dt is not required by the Gilmore ODE.
+                // directly, with dp/dt from the same backward difference the
+                // KmOrRp path uses (required by the Gilmore dH/dt term).
+                let dp_diff = &current_pressure - &*prev_pressure;
+                let dp_dt = &dp_diff / dt;
                 let updated: Vec<_> = states
                     .iter()
                     .map(|(&pos, state)| {
                         let (i, j, k) = pos;
-                        let p_acoustic = current_pressure[[i, j, k]];
-                        let next = solver.step_rk4(state, p_acoustic, t, dt);
+                        // Field arrays stay scalar storage (ADR 070);
+                        // each sampled value is wrapped at the model call.
+                        let p_acoustic =
+                            InstantaneousPressure::from_pascals(current_pressure[[i, j, k]]);
+                        let dp_dt = PressureRate::from_base(dp_dt[[i, j, k]]);
+                        let next = solver.step_rk4(state, p_acoustic, dp_dt, t, dt);
                         (pos, next)
                     })
                     .collect();
@@ -260,6 +276,8 @@ impl Plugin for BubbleDynamicsPlugin {
                 for (pos, next) in updated {
                     states.insert(pos, next);
                 }
+
+                *prev_pressure = current_pressure;
 
                 let state_iter = states
                     .iter()

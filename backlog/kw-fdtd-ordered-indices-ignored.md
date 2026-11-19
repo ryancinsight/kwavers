@@ -1,6 +1,6 @@
 <a id="kw-fdtd-ordered-indices-ignored"></a>
 
-## KW-FDTD-ORDERED-INDICES-IGNORED — The FDTD dispatch ignores `transducer_ordered_indices` once a recognised recording mode is set, and its Rustdoc is silent on FDTD [minor] — todo
+## KW-FDTD-ORDERED-INDICES-IGNORED — The FDTD dispatch ignores `transducer_ordered_indices` once a recognised recording mode is set, and its Rustdoc is silent on FDTD [minor] — verified locally
 
 priority: correctness; needs: none; basis: fd072d51936f9446ab1b62877772154aaf609d7a; scope: `crates/kwavers-simulation/src/dispatch/fdtd.rs`, `crates/kwavers-simulation/src/dispatch/fdtd/tests.rs`, `crates/kwavers-simulation/src/types.rs`, `crates/kwavers-receiver/src/recorder/simple/construction.rs`; milestone: M-solvers-core
 

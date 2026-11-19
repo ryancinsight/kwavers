@@ -11,6 +11,10 @@
 //! chirped Keller–Miksis forcing in [`super::chirped_dynamics`], which evaluates
 //! both at the retarded time.
 
+use crate::acoustics::bubble_dynamics::acoustic_pressure::{
+    InstantaneousPressure, PressureAmplitude,
+};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::numerical::TWO_PI;
 
 /// Shape of the frequency ramp within one sweep period.
@@ -150,8 +154,10 @@ impl FrequencySweep {
     /// Drive pressure `p(t) = A·sin φ(t)` `Pa`.
     #[must_use]
     #[inline]
-    pub fn pressure(&self, t_s: f64, amplitude_pa: f64) -> f64 {
-        amplitude_pa * self.phase(t_s).sin()
+    pub fn pressure(&self, t_s: f64, amplitude_pa: PressureAmplitude) -> InstantaneousPressure {
+        // The sweep phase is the integrated phase φ(t), not ωt + φ₀ —
+        // sample at the absolute phase, never at ωt.
+        amplitude_pa.instantaneous_at_phase(self.phase(t_s))
     }
 
     /// Bare drive-pressure time derivative `ṗ(t) = A·2π f(t)·cos φ(t)` [Pa/s]
@@ -159,15 +165,19 @@ impl FrequencySweep {
     /// integrator applies).
     #[must_use]
     #[inline]
-    pub fn pressure_derivative(&self, t_s: f64, amplitude_pa: f64) -> f64 {
-        amplitude_pa * TWO_PI * self.instantaneous_frequency(t_s) * self.phase(t_s).cos()
+    pub fn pressure_derivative(&self, t_s: f64, amplitude_pa: PressureAmplitude) -> PressureRate {
+        amplitude_pa.rate_at_phase(TWO_PI * self.instantaneous_frequency(t_s), self.phase(t_s))
     }
 
     /// The `(p_ac, ṗ_ac)` forcing pair at time `t` — the closure consumed by the
     /// chirped Keller–Miksis core.
     #[must_use]
     #[inline]
-    pub fn forcing(&self, t_s: f64, amplitude_pa: f64) -> (f64, f64) {
+    pub fn forcing(
+        &self,
+        t_s: f64,
+        amplitude_pa: PressureAmplitude,
+    ) -> (InstantaneousPressure, PressureRate) {
         (
             self.pressure(t_s, amplitude_pa),
             self.pressure_derivative(t_s, amplitude_pa),

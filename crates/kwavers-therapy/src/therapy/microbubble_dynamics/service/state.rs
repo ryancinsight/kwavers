@@ -12,6 +12,7 @@ use kwavers_core::constants::thermodynamic::{
     BODY_TEMPERATURE_K, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
 };
 use kwavers_core::error::KwaversResult;
+use kwavers_physics::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use kwavers_physics::acoustics::bubble_dynamics::bubble_state::{
     BubbleParameters, BubbleState, GasSpecies,
 };
@@ -65,7 +66,7 @@ impl MicrobubbleDynamicsService {
             gamma,
             t0,
             driving_frequency: MHZ_TO_HZ,
-            driving_amplitude: 0.0,
+            driving_amplitude: PressureAmplitude::from_pascals(0.0),
             use_compressibility: true,
             use_thermal_effects: false,
             use_mass_transfer: false,

@@ -1,5 +1,9 @@
 use super::solver::RayleighPlessetSolver;
-use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
+use crate::acoustics::bubble_dynamics::{
+    acoustic_pressure::InstantaneousPressure,
+    bubble_state::{BubbleParameters, BubbleState},
+};
+use aequitas::systems::si::quantities::PressureRate;
 use eunomia::assert_relative_eq;
 
 #[test]
@@ -31,7 +35,7 @@ fn test_rayleigh_plesset_equilibrium() {
     assert_relative_eq!(state.pressure_internal, expected_p_internal, epsilon = 1e-6);
 
     // At equilibrium, acceleration should be negligible
-    let accel = solver.calculate_acceleration(&state, 0.0, 0.0);
+    let accel = solver.calculate_acceleration(&state, InstantaneousPressure::ZERO, 0.0);
 
     // The theoretical equilibrium should have zero net force and acceleration
     // For Van der Waals gas equation (more accurate than simple polytropic),
@@ -70,7 +74,7 @@ fn test_rayleigh_plesset_equilibrium() {
     let mut test_state = state;
     let dt = 1e-6; // 1 microsecond
     for _ in 0..100 {
-        let accel = solver.calculate_acceleration(&test_state, 0.0, 0.0);
+        let accel = solver.calculate_acceleration(&test_state, InstantaneousPressure::ZERO, 0.0);
         test_state.wall_velocity += accel * dt;
         test_state.radius += test_state.wall_velocity * dt;
     }
@@ -94,7 +98,12 @@ fn test_keller_miksis_mach_number() {
     // Set high velocity
     state.wall_velocity = -300.0; // m/s
 
-    let _accel = solver.calculate_acceleration(&mut state, 0.0, 0.0, 0.0);
+    let _accel = solver.calculate_acceleration(
+        &mut state,
+        InstantaneousPressure::ZERO,
+        PressureRate::from_base(0.0),
+        0.0,
+    );
 
     assert!((state.mach_number - 300.0 / params.c_liquid).abs() < 1e-6);
 }

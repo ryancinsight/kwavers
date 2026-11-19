@@ -4,13 +4,18 @@
 
 ### Breaking
 
-- [major] Use Horae's `UtcTimestamp` for the clinical examination timestamp.
-  Callers can construct it from Unix parts or parse an RFC 3339 record.
-  Clinical validation report generation returns `KwaversResult<String>` so a
-  caller can handle a system-clock range error. New tooling reports use UTC.
+- [major] `ClinicalExaminationResult::timestamp` moves from Chrono to
+  `std::time::SystemTime`, matching clinical monitoring records. Consumers
+  that need RFC 3339 can convert the clock value with Horae's
+  `UtcTimestamp::try_from`.
+- [major] Clinical validation report generation returns
+  `KwaversResult<String>` so callers can handle a clock range error.
 
 ### Changed
 
+- [patch] Format UTC timestamps in clinical, tooling, and integration-test
+  reports with Horae. The remaining Chrono dependency is tracked in
+  KW-DEP-CHRONO-ADVISORY.
 - [minor] Route standalone HTML plotting through Iris. Borrow time axes from
   the recorder, keep pressure-slice order and values, and color spatial points
   by their sampled pressure. Plot files render offline.
