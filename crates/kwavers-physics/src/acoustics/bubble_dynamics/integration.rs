@@ -55,9 +55,11 @@
 
 use std::sync::Arc;
 
+use super::acoustic_pressure::InstantaneousPressure;
 use super::bubble_state::{BubbleParameters, BubbleState};
 use super::keller_miksis::KellerMiksisModel;
 use super::symplectic_integration::{BubbleSymplecticIntegrator, SymplecticConfig};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 
 /// Classical RK4 weighted combine `y₀ + (dt/6)·(k₁ + 2k₂ + 2k₃ + k₄)`.
@@ -138,7 +140,12 @@ pub fn integrate_bubble_dynamics_stable(
     // past time_span.1 by at most dt — acceptable for physics integration where
     // the exact end time is not critical.
     while t < time_span.1 {
-        match integrator.sv_step(&mut state, 0.0, 0.0, t) {
+        match integrator.sv_step(
+            &mut state,
+            InstantaneousPressure::ZERO,
+            PressureRate::from_base(0.0),
+            t,
+        ) {
             Ok(()) => {}
             Err(KwaversError::Physics(PhysicsError::NumericalInstability { .. })) => {
                 // Mach number exceeded — bubble has collapsed; return clamped state.

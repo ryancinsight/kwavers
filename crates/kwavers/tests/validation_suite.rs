@@ -7,6 +7,7 @@ use eunomia::assert_relative_eq;
 use kwavers_grid::Grid;
 use kwavers_physics::acoustics::bubble_dynamics::epstein_plesset::OscillationType;
 use kwavers_physics::acoustics::bubble_dynamics::{
+    acoustic_pressure::PressureAmplitude,
     BubbleParameters, EpsteinPlessetStabilitySolver, KellerMiksisModel,
 };
 use leto::{Array1, Array3};
@@ -253,7 +254,7 @@ mod bubble_dynamics_validation {
         let params = BubbleParameters {
             r0: 50e-6,                         // 50 micron
             driving_frequency: 20e3,           // 20 kHz
-            driving_amplitude: 1.5 * 101325.0, // 1.5 atm
+            driving_amplitude: PressureAmplitude::from_pascals(1.5 * 101325.0), // 1.5 atm
             ..Default::default()
         };
 
@@ -381,7 +382,7 @@ mod edge_case_tests {
         // Test bubble dynamics with extreme driving pressures
         let params = BubbleParameters {
             r0: 5e-6,                            // 5 micron - small bubble
-            driving_amplitude: 100.0 * 101325.0, // 100 atm - extreme pressure
+            driving_amplitude: PressureAmplitude::from_pascals(100.0 * 101325.0), // 100 atm - extreme pressure
             ..Default::default()
         };
 
@@ -390,7 +391,7 @@ mod edge_case_tests {
         // Model creation succeeds without panic
 
         // Check collapse intensity scaling
-        let intensity_ratio = params.driving_amplitude / params.p0;
+        let intensity_ratio = params.driving_amplitude.as_pascals() / params.p0;
         assert!(intensity_ratio > 10.0); // High intensity regime
     }
 

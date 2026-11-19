@@ -2,7 +2,9 @@
 
 use super::super::{BubbleSymplecticIntegrator, SymplecticConfig};
 use super::bubble_fixtures::{bubble_hamiltonian, make_model, make_params};
+use crate::acoustics::bubble_dynamics::acoustic_pressure::InstantaneousPressure;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::numerical::TWO_PI;
 use std::sync::Arc;
 
@@ -62,7 +64,12 @@ fn test_hamiltonian_no_drift() {
 
     for _ in 0..total_steps {
         integrator
-            .sv_step(&mut state, 0.0, 0.0, t)
+            .sv_step(
+                &mut state,
+                InstantaneousPressure::ZERO,
+                PressureRate::from_base(0.0),
+                t,
+            )
             .expect("SV step must not fail");
         t += dt;
         let h = bubble_hamiltonian(state.radius, state.wall_velocity, &params, 200);

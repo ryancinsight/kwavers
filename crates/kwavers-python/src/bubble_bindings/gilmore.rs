@@ -4,16 +4,22 @@
 //! Thin binding only: the Gilmore ODE physics lives in
 //! `kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver`
 //! (the single source of truth). Here we build the bubble parameters, run the
-//! solver's fixed-step RK4 loop, and return numpy arrays. The solver applies the
-//! sinusoidal drive `p_ac·sin(ω t)` internally (ω = `frequency_hz`), so the
-//! amplitude `p_ac_pa` is passed unmodified each step.
+//! solver's fixed-step RK4 loop, and return numpy arrays. The Python API stays
+//! amplitude-based — the caller supplies the drive amplitude `p_ac_pa` and
+//! frequency — and this binding synthesises the instantaneous pressure
+//! `p_ac·sin(ωt)` (and its derivative) per step, because the Gilmore model
+//! takes the instantaneous far-field pressure (see the drive contract on
+//! `GilmoreSolver::calculate_acceleration`).
 //!
 //! # Reference
 //! Gilmore, F. R. (1952), Caltech Hydrodynamics Lab Report 26-4.
 
 use crate::array_utils::vec_to_pyarray1;
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
-use kwavers_physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState};
+use kwavers_physics::acoustics::bubble_dynamics::{
+    acoustic_pressure::PressureAmplitude, BubbleParameters, BubbleState,
+};
 use numpy::PyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -88,7 +94,9 @@ pub fn solve_gilmore(
         pv: pv_pa,
         gamma,
         driving_frequency: frequency_hz,
-        driving_amplitude: p_ac_pa,
+        // FFI boundary: the Python float is the drive amplitude; it is
+        // typed here, at the edge of the Rust API.
+        driving_amplitude: PressureAmplitude::from_pascals(p_ac_pa),
         ..BubbleParameters::default()
     };
 
@@ -98,9 +106,12 @@ pub fn solve_gilmore(
     let solver = GilmoreSolver::new(params);
 
     // The fixed-step RK4 loop is a pure f64 compute; the solver and state own
-    // every value, so run the whole loop outside the GIL.
+    // every value, so run the whole loop outside the GIL. The tone is
+    // synthesised per step from the amplitude: the model takes the
+    // instantaneous pressure p(t) = p_ac·sin(ωt) and dp/dt = p_ac·ω·cos(ωt).
     let (time, radius, rdot) = py.detach(|| {
         let dt = t_end_s / n_steps as f64;
+        let omega = TWO_PI * frequency_hz;
         let mut time = Vec::with_capacity(n_steps + 1);
         let mut radius = Vec::with_capacity(n_steps + 1);
         let mut rdot = Vec::with_capacity(n_steps + 1);
@@ -110,7 +121,8 @@ pub fn solve_gilmore(
 
         for i in 0..n_steps {
             let t = i as f64 * dt;
-            state = solver.step_rk4(&state, p_ac_pa, t, dt);
+            let (p_inst, dp_dt) = PressureAmplitude::from_pascals(p_ac_pa).sample(omega, t, 0.0);
+            state = solver.step_rk4(&state, p_inst, dp_dt, t, dt);
             time.push((i + 1) as f64 * dt);
             radius.push(state.radius);
             rdot.push(state.wall_velocity);

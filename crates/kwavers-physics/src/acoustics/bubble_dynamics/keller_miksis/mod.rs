@@ -137,11 +137,13 @@ pub mod thermodynamics;
 #[cfg(test)]
 pub mod validation;
 
+use super::acoustic_pressure::InstantaneousPressure;
 use super::adaptive_integration::AdaptiveBubbleModel;
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::acoustics::bubble_dynamics::thermodynamics::{
     ThermodynamicsCalculator, VaporPressureModel,
 };
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::error::KwaversResult;
 use shape_instability::{advance_shape_modes, ShapeModeState};
 
@@ -252,15 +254,17 @@ impl KellerMiksisModel {
 
     /// Calculate bubble wall acceleration using Keller-Miksis equation
     ///
-    /// Delegates to equation module.
+    /// Delegates to equation module. `p_acoustic` is the INSTANTANEOUS
+    /// acoustic pressure `p_∞(t) − p0` and `dp_dt` its time derivative —
+    /// see the drive contract on `equation::calculate_acceleration`.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn calculate_acceleration(
         &self,
         state: &mut BubbleState,
-        p_acoustic: f64,
-        dp_dt: f64,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
         t: f64,
     ) -> KwaversResult<f64> {
         equation::calculate_acceleration(self, state, p_acoustic, dp_dt, t)
@@ -367,14 +371,17 @@ impl KellerHerringModel {
 
     /// Calculate delegated Keller-Miksis wall acceleration.
     ///
+    /// `p_acoustic` is the INSTANTANEOUS acoustic pressure `p_∞(t) − p0`
+    /// and `dp_dt` its time derivative — see the drive contract on
+    /// `equation::calculate_acceleration`.
     /// # Errors
     ///
     /// Propagates the equation failure from the inner model.
     pub fn calculate_acceleration(
         &self,
         state: &mut BubbleState,
-        p_acoustic: f64,
-        dp_dt: f64,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
         t: f64,
     ) -> KwaversResult<f64> {
         self.inner
@@ -392,8 +399,8 @@ impl AdaptiveBubbleModel for KellerMiksisModel {
     fn calculate_acceleration(
         &self,
         state: &mut BubbleState,
-        p_acoustic: f64,
-        dp_dt: f64,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
         t: f64,
     ) -> KwaversResult<f64> {
         self.calculate_acceleration(state, p_acoustic, dp_dt, t)

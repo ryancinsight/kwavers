@@ -1,4 +1,6 @@
 use super::*;
+use crate::acoustics::bubble_dynamics::acoustic_pressure::InstantaneousPressure;
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::ATMOSPHERIC_PRESSURE;
 
@@ -53,7 +55,13 @@ fn step_rk4_bubble_stable_at_equilibrium() {
     let r0 = state.radius;
 
     let dt = 1e-8; // 10 ns step
-    let out = solver.step_rk4(&state, 0.0, 0.0, dt);
+    let out = solver.step_rk4(
+        &state,
+        InstantaneousPressure::ZERO,
+        PressureRate::from_base(0.0),
+        0.0,
+        dt,
+    );
 
     assert!(
         out.radius > 0.0,
@@ -70,14 +78,15 @@ fn step_rk4_bubble_stable_at_equilibrium() {
     );
 }
 
-/// Theorem: under a compressive driving pressure (p_acoustic > 0, t = T/4
-/// so sin(ωt) = 1 → the instantaneous field value is already positive),
-/// a bubble initially at rest must contract (Ṙ < 0) after one step.
+/// Theorem: under a compressive driving pressure (p_acoustic > 0, so
+/// p_inf = p0 + p_acoustic > p0), a bubble initially at rest must
+/// contract (Ṙ < 0) after one step.
 ///
-/// Note: `step_rk4` receives the instantaneous acoustic field value
-/// directly; `calculate_acceleration` internally applies `p * sin(ωt)`.
-/// At t = 0, sin(0) = 0, so we must pass t = T/4 to get maximum
-/// compressive forcing.
+/// `p_acoustic` is the INSTANTANEOUS far-field acoustic pressure (see
+/// the contract on `GilmoreSolver::calculate_acceleration`); the
+/// evaluation time is arbitrary here because the pressure value itself
+/// is what compresses. `dp_dt = 0` is the tone's derivative at the
+/// quarter-period (cos(π/2) = 0).
 /// # Panics
 /// - Panics if assertion fails: `radius must remain positive; got {}`.
 /// - Panics if assertion fails: `compressive driving must yield non-positive wall velocity; got {:.4e}`.
@@ -88,25 +97,29 @@ fn step_rk4_compressive_forcing_contracts_bubble() {
     let solver = GilmoreSolver::new(params.clone());
     let state = BubbleState::new(&params);
 
-    let omega = TWO_PI * params.driving_frequency;
-    let t_quarter = 0.25 / params.driving_frequency; // t where sin(ωt) = 1
+    let t_quarter = 0.25 / params.driving_frequency;
     let p_acoustic = 200_000.0_f64; // 200 kPa — well above ambient
     let dt = 1e-8;
 
-    let out = solver.step_rk4(&state, p_acoustic, t_quarter, dt);
+    let out = solver.step_rk4(
+        &state,
+        InstantaneousPressure::from_pascals(p_acoustic),
+        PressureRate::from_base(0.0),
+        t_quarter,
+        dt,
+    );
     assert!(
         out.radius > 0.0,
         "radius must remain positive; got {}",
         out.radius
     );
-    // At t_quarter, sin(ωt) = 1 → p_inf = p₀ + p_a > p₀.
+    // p_inf = p₀ + p_acoustic > p₀.
     // The increased external pressure must compress the bubble: Ṙ < 0.
     assert!(
         out.wall_velocity <= 0.0,
         "compressive driving must yield non-positive wall velocity; got {:.4e}",
         out.wall_velocity
     );
-    let _ = omega; // used indirectly via t_quarter
 }
 
 /// Theorem: `estimate_enthalpy_derivative` must genuinely depend on state.
@@ -118,7 +131,10 @@ fn step_rk4_compressive_forcing_contracts_bubble() {
 /// Also verifies the analytical form at zero wall-velocity (U = 0):
 ///   dp_wall/dt = −4μR̈/R  (viscous term only; gas and surface terms vanish with U=0)
 ///   dH_wall/dt = −4μR̈ / (R · ρ_wall)
-///   dH_inf/dt  = p_a · ω · cos(ωt) / ρ_inf
+///   dH_inf/dt  = dp_dt / ρ_inf, with dp_dt the time derivative of the
+///                INSTANTANEOUS far-field pressure (now an explicit
+///                argument; the test passes the tone's derivative
+///                p_a·ω·cos(ωt), which is p_a·ω at t = 0)
 ///   dH/dt      = dH_wall_dt − dH_inf_dt
 /// # Panics
 /// - Panics if `acceleration A`.
@@ -136,18 +152,30 @@ fn enthalpy_derivative_uses_state_wall_acceleration() {
     let mut state_b = state_a;
     state_b.wall_acceleration = 1.0e6; // non-zero R̈ affects dp_wall/dt
 
-    let p_acoustic = 1.0e5; // 100 kPa driving
+    let p_acoustic = 1.0e5; // 100 kPa driving (instantaneous value at t = 0)
     let omega = TWO_PI * params.driving_frequency;
     let t = 0.0;
+    // The tone's derivative at t = 0: dp/dt = p_a·ω·cos(0) = p_a·ω.
+    let dp_dt = PressureRate::from_base(p_acoustic * omega);
 
     // Need access to the private method through calculate_acceleration indirectly.
     // Use calculate_acceleration which calls estimate_enthalpy_derivative internally.
     // Two states with different R̈ but identical (R, U, gas) must give different R̈_out.
     let r_ddot_a = solver
-        .calculate_acceleration(&state_a, p_acoustic, t)
+        .calculate_acceleration(
+            &state_a,
+            InstantaneousPressure::from_pascals(p_acoustic),
+            dp_dt,
+            t,
+        )
         .expect("acceleration A");
     let r_ddot_b = solver
-        .calculate_acceleration(&state_b, p_acoustic, t)
+        .calculate_acceleration(
+            &state_b,
+            InstantaneousPressure::from_pascals(p_acoustic),
+            dp_dt,
+            t,
+        )
         .expect("acceleration B");
 
     // The Gilmore RHS includes (1 − U/C)·R/C · dH/dt; with U = 0:
@@ -166,10 +194,12 @@ fn enthalpy_derivative_uses_state_wall_acceleration() {
     // dp_gas/dt    = 0  (U = 0)
     // dp_surface/dt = 0  (U = 0)
     // dp_viscous/dt = −4μ·R̈_a / R  = 0   (R̈_a = 0)
-    // dp_inf/dt    = p_a · ω
+    // dp_inf/dt    = dp_dt = p_a · ω (the tone's derivative at t = 0)
     // dH_inf/dt    = p_a · ω / ρ_inf
     // → dH/dt_a    = 0 − p_a · ω / ρ_inf
-    let p_inf = params.p0;
+    // p_inf is the far-field pressure at t = 0: p0 + p_acoustic (the
+    // instantaneous value passed), not p0 alone.
+    let p_inf = params.p0 + p_acoustic;
     let rho_inf = params.rho_liquid;
     let b = solver.tait_b;
     let n = solver.tait_n;

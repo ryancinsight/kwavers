@@ -10,9 +10,10 @@
 use leto::Array3;
 use moirai_parallel::{fold_reduce_with, map_collect_index_with, Adaptive};
 
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_physics::acoustics::analysis::calculate_mechanical_index;
 use kwavers_physics::acoustics::bubble_dynamics::{
-    BubbleParameters, BubbleState, RayleighPlessetSolver,
+    acoustic_pressure::PressureAmplitude, BubbleParameters, BubbleState, RayleighPlessetSolver,
 };
 
 #[cfg(test)]
@@ -80,12 +81,18 @@ fn cavitation_value(
     if calculate_mechanical_index(pressure_pa, config.frequency_hz) < config.inertial_mi_threshold {
         return 0.0;
     }
-    let response = rayleigh_plesset_subharmonic_response(pressure_pa, config);
+    // Field value wrapped at the model boundary; the MI check and the
+    // response scaling above stay in raw pascals (field storage).
+    let response =
+        rayleigh_plesset_subharmonic_response(PressureAmplitude::from_pascals(pressure_pa), config);
     response * (pressure_pa / max_pressure_pa).clamp(0.0, 1.0)
 }
 
-fn rayleigh_plesset_subharmonic_response(pressure_pa: f64, config: &Nonlinear3dConfig) -> f64 {
-    if pressure_pa <= 0.0 {
+fn rayleigh_plesset_subharmonic_response(
+    pressure_pa: PressureAmplitude,
+    config: &Nonlinear3dConfig,
+) -> f64 {
+    if pressure_pa.as_pascals() <= 0.0 {
         return 0.0;
     }
     let mut params = BubbleParameters {
@@ -103,6 +110,7 @@ fn rayleigh_plesset_subharmonic_response(pressure_pa: f64, config: &Nonlinear3dC
     let steps_per_period = config.bubble_time_steps_per_period;
     let total_steps = (config.cycles.ceil() as usize + 2) * steps_per_period;
     let dt = 1.0 / (config.frequency_hz * steps_per_period as f64);
+    let omega = TWO_PI * config.frequency_hz;
     let mut period_lag = PeriodLagRadiusBuffer::new(steps_per_period, state.radius);
     let mut max_subharmonic: f64 = 0.0;
     let mut max_compression: f64 = 1.0;
@@ -114,6 +122,7 @@ fn rayleigh_plesset_subharmonic_response(pressure_pa: f64, config: &Nonlinear3dC
             step as f64 * dt,
             dt,
             params.r0,
+            omega,
         );
         state.update_compression(params.r0);
         max_compression = max_compression.max(state.compression_ratio);
@@ -172,34 +181,44 @@ impl PeriodLagRadiusBuffer {
 fn rk4_step(
     solver: &RayleighPlessetSolver,
     state: &BubbleState,
-    pressure_pa: f64,
+    pressure_pa: PressureAmplitude,
     t: f64,
     dt: f64,
     r0: f64,
+    omega: f64,
 ) -> BubbleState {
-    let k1 = derivative(solver, state, pressure_pa, t);
+    let k1 = derivative(solver, state, pressure_pa, t, omega);
     let s2 = shifted_state(state, k1, 0.5 * dt, r0);
-    let k2 = derivative(solver, &s2, pressure_pa, t + 0.5 * dt);
+    let k2 = derivative(solver, &s2, pressure_pa, t + 0.5 * dt, omega);
     let s3 = shifted_state(state, k2, 0.5 * dt, r0);
-    let k3 = derivative(solver, &s3, pressure_pa, t + 0.5 * dt);
+    let k3 = derivative(solver, &s3, pressure_pa, t + 0.5 * dt, omega);
     let s4 = shifted_state(state, k3, dt, r0);
-    let k4 = derivative(solver, &s4, pressure_pa, t + dt);
+    let k4 = derivative(solver, &s4, pressure_pa, t + dt, omega);
     let mut out = *state;
     out.radius = (state.radius + dt * (k1.0 + 2.0 * k2.0 + 2.0 * k3.0 + k4.0) / 6.0).max(0.05 * r0);
     out.wall_velocity = state.wall_velocity + dt * (k1.1 + 2.0 * k2.1 + 2.0 * k3.1 + k4.1) / 6.0;
-    out.wall_acceleration = solver.calculate_acceleration(&out, pressure_pa, t + dt);
+    out.wall_acceleration = solver.calculate_acceleration(
+        &out,
+        pressure_pa.instantaneous_at(omega, t + dt, 0.0),
+        t + dt,
+    );
     out
 }
 
 fn derivative(
     solver: &RayleighPlessetSolver,
     state: &BubbleState,
-    pressure_pa: f64,
+    pressure_pa: PressureAmplitude,
     t: f64,
+    omega: f64,
 ) -> (f64, f64) {
+    // The Rayleigh–Plesset model takes the INSTANTANEOUS acoustic pressure,
+    // so the tone p(t) = pressure_pa·sin(ωt) is synthesised here from the
+    // drive amplitude (see the drive contract on
+    // `RayleighPlessetSolver::calculate_acceleration`).
     (
         state.wall_velocity,
-        solver.calculate_acceleration(state, pressure_pa, t),
+        solver.calculate_acceleration(state, pressure_pa.instantaneous_at(omega, t, 0.0), t),
     )
 }
 
@@ -237,7 +256,7 @@ mod tests {
         config.cycles = 2.0;
         config.frequency_hz = 500_000.0;
 
-        let pressure = 2.0 * MPA_TO_PA;
+        let pressure = PressureAmplitude::from_pascals(2.0 * MPA_TO_PA);
         let optimized = rayleigh_plesset_subharmonic_response(pressure, &config);
         let reference = reference_response_with_full_history(pressure, &config);
 
@@ -250,7 +269,8 @@ mod tests {
     #[test]
     fn rayleigh_plesset_zero_pressure_has_zero_subharmonic_response() {
         let config = Nonlinear3dConfig::new(AnatomyKind::Kidney);
-        let response = rayleigh_plesset_subharmonic_response(0.0, &config);
+        let response =
+            rayleigh_plesset_subharmonic_response(PressureAmplitude::from_pascals(0.0), &config);
         assert_eq!(response, 0.0);
     }
 
@@ -422,7 +442,10 @@ mod tests {
         }
     }
 
-    fn reference_response_with_full_history(pressure_pa: f64, config: &Nonlinear3dConfig) -> f64 {
+    fn reference_response_with_full_history(
+        pressure_pa: PressureAmplitude,
+        config: &Nonlinear3dConfig,
+    ) -> f64 {
         let mut params = BubbleParameters {
             r0: config.bubble_radius_m,
             driving_frequency: config.frequency_hz,
@@ -438,6 +461,7 @@ mod tests {
         let steps_per_period = config.bubble_time_steps_per_period;
         let total_steps = (config.cycles.ceil() as usize + 2) * steps_per_period;
         let dt = 1.0 / (config.frequency_hz * steps_per_period as f64);
+        let omega = TWO_PI * config.frequency_hz;
         let mut radii = Vec::with_capacity(total_steps + 1);
         radii.push(state.radius);
         let mut max_subharmonic: f64 = 0.0;
@@ -450,6 +474,7 @@ mod tests {
                 step as f64 * dt,
                 dt,
                 params.r0,
+                omega,
             );
             state.update_compression(params.r0);
             max_compression = max_compression.max(state.compression_ratio);

@@ -1,8 +1,11 @@
 //! Time-span integration wrapper using Störmer-Verlet steps.
 
 use super::{stormer_verlet_step, SymplecticConfig};
-use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
-use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use crate::acoustics::bubble_dynamics::{
+    acoustic_pressure::InstantaneousPressure, bubble_state::BubbleState,
+    keller_miksis::KellerMiksisModel,
+};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 
 /// Integrate bubble dynamics over a time span using Störmer-Verlet.
@@ -16,8 +19,10 @@ use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 /// * `model` — Keller-Miksis model
 /// * `time_span` — (t_start, t_end)
 /// * `dt` — time step (s)
-/// * `p_acoustic` — constant acoustic pressure amplitude (Pa)
-/// * `dp_dt` — constant pressure time-derivative [Pa/s]
+/// * `p_acoustic` — constant INSTANTANEOUS acoustic pressure `p_∞ − p0` (Pa),
+///   held over the span (a step input)
+/// * `dp_dt` — constant time derivative of the instantaneous acoustic
+///   pressure [Pa/s]
 /// # Errors
 /// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
 /// - Propagates any `KwaversError` returned by called functions.
@@ -27,8 +32,8 @@ pub fn integrate_bubble_dynamics_symplectic(
     model: &KellerMiksisModel,
     time_span: (f64, f64),
     dt: f64,
-    p_acoustic: f64,
-    dp_dt: f64,
+    p_acoustic: InstantaneousPressure,
+    dp_dt: PressureRate,
 ) -> KwaversResult<BubbleState> {
     if dt <= 0.0 {
         return Err(KwaversError::Physics(PhysicsError::InvalidParameter {

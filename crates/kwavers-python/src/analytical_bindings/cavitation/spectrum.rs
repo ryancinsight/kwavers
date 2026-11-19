@@ -1,5 +1,6 @@
 //! Passive cavitation spectrum and dose PyO3 wrappers.
 
+use kwavers_physics::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use kwavers_physics::analytical::cavitation;
 use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -106,7 +107,8 @@ pub fn keller_miksis_pcd_spectrum<'py>(
         },
         cavitation::KellerMiksisDrive {
             r0_m,
-            p_ac_pa,
+            // FFI boundary: the Python float is the drive amplitude.
+            p_ac_pa: kwavers_physics::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude::from_pascals(p_ac_pa),
             drive_frequency_hz,
             p0_pa,
         },
@@ -181,7 +183,8 @@ pub fn keller_miksis_pcd_controller_trace<'py>(
         r0_m,
         drive_frequency_hz,
         n_pulses,
-        initial_pressure_pa,
+        // FFI boundary: the Python floats are drive amplitudes.
+        PressureAmplitude::from_pascals(initial_pressure_pa),
         n_cycles_per_pulse,
         n_per_cycle,
         discard_cycles,
@@ -189,8 +192,8 @@ pub fn keller_miksis_pcd_controller_trace<'py>(
         inertial_limit,
         gamma_up,
         gamma_down,
-        p_min_pa,
-        p_max_pa,
+        PressureAmplitude::from_pascals(p_min_pa),
+        PressureAmplitude::from_pascals(p_max_pa),
         p0_pa,
         rho,
         sigma,

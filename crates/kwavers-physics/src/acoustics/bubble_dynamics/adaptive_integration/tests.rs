@@ -1,6 +1,9 @@
 use super::config::AdaptiveBubbleConfig;
 use super::integrator::AdaptiveBubbleIntegrator;
-use crate::acoustics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
+use crate::acoustics::bubble_dynamics::{
+    acoustic_pressure::InstantaneousPressure, BubbleParameters, BubbleState, KellerMiksisModel,
+};
+use aequitas::systems::si::quantities::PressureRate;
 
 /// Test adaptive time integration for bubble dynamics on the Keller–Miksis model.
 ///
@@ -29,8 +32,10 @@ fn test_adaptive_integration() {
 
     // Test integration with moderate acoustic forcing
     let result = integrator.integrate_adaptive(
-        &mut state, 1e4, // 0.1 bar acoustic pressure (more reasonable)
-        0.0, 1e-6, // 1 microsecond main time step
+        &mut state,
+        InstantaneousPressure::from_pascals(1e4), // 0.1 bar acoustic pressure (more reasonable)
+        PressureRate::from_base(0.0),
+        1e-6, // 1 microsecond main time step
         0.0,
     );
 

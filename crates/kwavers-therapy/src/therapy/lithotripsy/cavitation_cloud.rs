@@ -4,18 +4,22 @@
 //! relevant to shock wave lithotripsy, where cavitation plays a key role in
 //! stone erosion and tissue bioeffects.
 
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::cavitation::{
     SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
 };
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
-use kwavers_core::constants::numerical::MPA_TO_PA;
+use kwavers_core::constants::numerical::{MPA_TO_PA, TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::{solve_lsqr_matfree, LsqrConfig, MatFreeOperator};
 use kwavers_physics::acoustics::bubble_dynamics::adaptive_integration::integrate_bubble_dynamics_adaptive;
 use kwavers_physics::acoustics::bubble_dynamics::bubbly_medium::commander_prosperetti_attenuation;
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
-use kwavers_physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState};
+use kwavers_physics::acoustics::bubble_dynamics::{
+    acoustic_pressure::{InstantaneousPressure, PressureAmplitude},
+    BubbleParameters, BubbleState,
+};
 use leto::{Array1, Array2, Array3};
 use leto_ops::solve;
 use std::f64::consts::PI;
@@ -452,8 +456,8 @@ impl CavitationCloudDynamics {
         params: &BubbleParameters,
         r: f64,
         v: f64,
-        p_drive: f64,
-        dp_dt: f64,
+        p_drive: InstantaneousPressure,
+        dp_dt: PressureRate,
         time: f64,
     ) -> f64 {
         let mut state = BubbleState::new(params);
@@ -476,8 +480,8 @@ impl CavitationCloudDynamics {
         params: &BubbleParameters,
         r: f64,
         v: f64,
-        p_drive: f64,
-        dp_dt: f64,
+        p_drive: InstantaneousPressure,
+        dp_dt: PressureRate,
         time: f64,
     ) -> f64 {
         let accel = Self::raw_acceleration(solver, params, r, v, p_drive, dp_dt, time);
@@ -550,7 +554,15 @@ impl CavitationCloudDynamics {
                         } else {
                             0.0
                         };
-                        Self::source_strength(solver, params, r, v, p_src, rates[a], time)
+                        Self::source_strength(
+                            solver,
+                            params,
+                            r,
+                            v,
+                            InstantaneousPressure::from_pascals(p_src),
+                            PressureRate::from_base(rates[a]),
+                            time,
+                        )
                     })
                     .collect();
                 apply_g(&strengths)
@@ -609,8 +621,8 @@ impl CavitationCloudDynamics {
                         params,
                         r,
                         v,
-                        driving[idx] + p_couple[a],
-                        rates[a],
+                        InstantaneousPressure::from_pascals(driving[idx] + p_couple[a]),
+                        PressureRate::from_base(rates[a]),
                         time,
                     )
                 })
@@ -648,8 +660,24 @@ impl CavitationCloudDynamics {
         let mut c = vec![0.0_f64; cells.len()];
         let mut d = vec![0.0_f64; cells.len()];
         for (a, &(_, _, r, v)) in cells.iter().enumerate() {
-            let accel0 = Self::raw_acceleration(solver, params, r, v, 0.0, rates[a], time);
-            let accel_ref = Self::raw_acceleration(solver, params, r, v, p_ref, rates[a], time);
+            let accel0 = Self::raw_acceleration(
+                solver,
+                params,
+                r,
+                v,
+                InstantaneousPressure::ZERO,
+                PressureRate::from_base(rates[a]),
+                time,
+            );
+            let accel_ref = Self::raw_acceleration(
+                solver,
+                params,
+                r,
+                v,
+                InstantaneousPressure::from_pascals(p_ref),
+                PressureRate::from_base(rates[a]),
+                time,
+            );
             let b_coef = (accel_ref - accel0) / p_ref;
             c[a] = (r * r).mul_add(accel0, 2.0 * r * v * v); // R²·R̈(0,dp/dt) + 2RṘ²
             d[a] = r * r * b_coef; // R²·∂R̈/∂p
@@ -895,8 +923,15 @@ impl CavitationCloudDynamics {
                     let mut state = BubbleState::new(&params);
                     state.radius = r_before;
                     state.wall_velocity = self.velocity_field[idx];
+                    // Dense field arrays stay scalar storage (ADR 070);
+                    // each sampled value is wrapped at the model boundary.
                     let integration = integrate_bubble_dynamics_adaptive(
-                        &solver, &mut state, p_total, dp_dt, dt, time,
+                        &solver,
+                        &mut state,
+                        InstantaneousPressure::from_pascals(p_total),
+                        PressureRate::from_base(dp_dt),
+                        dt,
+                        time,
                     );
 
                     // A single bubble's adaptive non-convergence or non-finite state
@@ -938,7 +973,7 @@ impl CavitationCloudDynamics {
     /// phase is needed for `R_max`; integration stops if the violent collapse
     /// drives the state non-finite (R_max already captured).
     #[must_use]
-    pub fn representative_max_radius(&self, peak_pressure: f64) -> f64 {
+    pub fn representative_max_radius(&self, peak_pressure: PressureAmplitude) -> f64 {
         let params = BubbleParameters {
             r0: self.parameters.initial_bubble_radius.max(1e-12),
             p0: self.parameters.ambient_pressure.max(1.0),
@@ -952,10 +987,16 @@ impl CavitationCloudDynamics {
         let period = 1.0 / params.driving_frequency;
         let n_steps = 2000usize; // one acoustic period, fine enough for the smooth R_max
         let dt = period / n_steps as f64;
+        let omega = TWO_PI * params.driving_frequency;
         let mut r_max = state.radius;
         let mut t = 0.0;
         for _ in 0..n_steps {
-            state = solver.step_rk4(&state, peak_pressure, t, dt);
+            // The Gilmore model takes the INSTANTANEOUS far-field pressure,
+            // so the tone p(t) = peak·sin(ωt) (and its derivative) is
+            // synthesised here from the peak pressure (see the drive
+            // contract on `GilmoreSolver::calculate_acceleration`).
+            let (p_inst, dp_dt) = peak_pressure.sample(omega, t, 0.0);
+            state = solver.step_rk4(&state, p_inst, dp_dt, t, dt);
             if !state.radius.is_finite() || state.radius <= 0.0 {
                 break; // violent collapse beyond fixed-step RK4; R_max already captured
             }
@@ -968,7 +1009,7 @@ impl CavitationCloudDynamics {
     /// Inertial (Rayleigh) collapse energy `J` of a representative bubble that
     /// grew to `R_max` under the local rarefaction: `E = (4/3)π R_max³ (p₀ − p_v)`.
     #[must_use]
-    pub fn inertial_collapse_energy(&self, peak_pressure: f64) -> f64 {
+    pub fn inertial_collapse_energy(&self, peak_pressure: PressureAmplitude) -> f64 {
         let r_max = self.representative_max_radius(peak_pressure);
         let p0 = self.parameters.ambient_pressure.max(1.0);
         let driving_potential = (p0 - VAPOR_PRESSURE_WATER).max(0.0);
@@ -1046,7 +1087,15 @@ mod tests {
             let mut s = BubbleState::new(&bp);
             s.radius = ref_state.radius;
             s.wall_velocity = ref_state.wall_velocity;
-            integrate_bubble_dynamics_adaptive(&solver, &mut s, p, dp_dt, dt, t).unwrap();
+            integrate_bubble_dynamics_adaptive(
+                &solver,
+                &mut s,
+                InstantaneousPressure::from_pascals(p),
+                PressureRate::from_base(dp_dt),
+                dt,
+                t,
+            )
+            .unwrap();
             ref_state.radius = s.radius;
             ref_state.wall_velocity = s.wall_velocity;
             p_prev = Some(p);
@@ -1128,13 +1177,15 @@ mod tests {
         let params = CloudParameters::default();
         let cloud = CavitationCloudDynamics::new(params.clone(), (1, 1, 1));
         let r0 = params.initial_bubble_radius;
-        let r_max_strong = cloud.representative_max_radius(12.0 * MPA_TO_PA);
+        let r_max_strong =
+            cloud.representative_max_radius(PressureAmplitude::from_pascals(12.0 * MPA_TO_PA));
         assert!(
             r_max_strong > 3.0 * r0,
             "strong tension must grow R_max well beyond R0: {r_max_strong} vs R0={r0}"
         );
         // Monotone: stronger tension grows a larger bubble.
-        let r_max_weak = cloud.representative_max_radius(3.0 * MPA_TO_PA);
+        let r_max_weak =
+            cloud.representative_max_radius(PressureAmplitude::from_pascals(3.0 * MPA_TO_PA));
         assert!(
             r_max_strong > r_max_weak,
             "R_max must increase with drive amplitude"
@@ -1145,8 +1196,10 @@ mod tests {
     fn test_inertial_collapse_energy_scales_with_drive() {
         // E = (4/3)π R_max³ Δp grows with the rarefactional amplitude (via R_max).
         let cloud = CavitationCloudDynamics::new(CloudParameters::default(), (1, 1, 1));
-        let e_weak = cloud.inertial_collapse_energy(3.0 * MPA_TO_PA);
-        let e_strong = cloud.inertial_collapse_energy(12.0 * MPA_TO_PA);
+        let e_weak =
+            cloud.inertial_collapse_energy(PressureAmplitude::from_pascals(3.0 * MPA_TO_PA));
+        let e_strong =
+            cloud.inertial_collapse_energy(PressureAmplitude::from_pascals(12.0 * MPA_TO_PA));
         assert!(
             e_weak > 0.0 && e_strong > e_weak,
             "collapse energy must rise with drive"
@@ -1379,8 +1432,8 @@ mod tests {
                 &bp,
                 cloud.radius_field[idx],
                 cloud.velocity_field[idx],
-                p_in + field[idx],
-                0.0,
+                InstantaneousPressure::from_pascals(p_in + field[idx]),
+                PressureRate::from_base(0.0),
                 0.0,
             )
         };
@@ -1480,8 +1533,8 @@ mod tests {
                 &bp,
                 cloud.radius_field[idx],
                 cloud.velocity_field[idx],
-                p_in + field[idx],
-                0.0,
+                InstantaneousPressure::from_pascals(p_in + field[idx]),
+                PressureRate::from_base(0.0),
                 0.0,
             )
         };
@@ -1553,8 +1606,24 @@ mod tests {
         let bp = cloud.bubble_parameters();
         let solver = KellerMiksisModel::new(bp.clone());
         let (r, v, p) = (1.4e-6, 1.0, 0.5e6);
-        let s0 = CavitationCloudDynamics::source_strength(&solver, &bp, r, v, p, 0.0, 0.0);
-        let s_rate = CavitationCloudDynamics::source_strength(&solver, &bp, r, v, p, 1.0e12, 0.0);
+        let s0 = CavitationCloudDynamics::source_strength(
+            &solver,
+            &bp,
+            r,
+            v,
+            InstantaneousPressure::from_pascals(p),
+            PressureRate::from_base(0.0),
+            0.0,
+        );
+        let s_rate = CavitationCloudDynamics::source_strength(
+            &solver,
+            &bp,
+            r,
+            v,
+            InstantaneousPressure::from_pascals(p),
+            PressureRate::from_base(1.0e12),
+            0.0,
+        );
         assert!(s0.is_finite() && s_rate.is_finite());
         assert!(
             (s0 - s_rate).abs() > 1e-12 * s0.abs().max(1e-30),

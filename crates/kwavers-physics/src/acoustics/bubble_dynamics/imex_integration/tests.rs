@@ -1,7 +1,10 @@
 //! Tests for IMEX bubble integration
 
 use super::*;
-use crate::acoustics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
+use crate::acoustics::bubble_dynamics::{
+    acoustic_pressure::InstantaneousPressure, BubbleParameters, BubbleState, KellerMiksisModel,
+};
+use aequitas::systems::si::quantities::PressureRate;
 use std::sync::Arc;
 
 #[test]
@@ -13,7 +16,15 @@ fn test_imex_integration() {
     let config = BubbleIMEXConfig::default();
     let mut integrator = BubbleIMEXIntegrator::new(solver, config);
 
-    integrator.step(&mut state, 1e5, 0.0, 1e-9, 0.0).unwrap();
+    integrator
+        .step(
+            &mut state,
+            InstantaneousPressure::from_pascals(1e5),
+            PressureRate::from_base(0.0),
+            1e-9,
+            0.0,
+        )
+        .unwrap();
     assert!(state.radius > 0.0);
     assert!(state.temperature > 0.0);
 }
@@ -90,10 +101,22 @@ fn test_adaptive_epsilon() {
     let mut integrator = BubbleIMEXIntegrator::with_defaults(solver);
 
     integrator
-        .step(&mut small_state, 0.0, 0.0, 1e-12, 0.0)
+        .step(
+            &mut small_state,
+            InstantaneousPressure::ZERO,
+            PressureRate::from_base(0.0),
+            1e-12,
+            0.0,
+        )
         .unwrap();
 
     integrator
-        .step(&mut large_state, 0.0, 0.0, 1e-6, 0.0)
+        .step(
+            &mut large_state,
+            InstantaneousPressure::ZERO,
+            PressureRate::from_base(0.0),
+            1e-6,
+            0.0,
+        )
         .unwrap();
 }

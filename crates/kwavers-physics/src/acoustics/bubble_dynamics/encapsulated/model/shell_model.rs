@@ -19,10 +19,10 @@
 //! provides the Rayleigh-Plesset time-derivative once, as the single source of
 //! truth, so the individual models carry no duplicated RP arithmetic.
 
-use crate::acoustics::bubble_dynamics::bubble_state::{
-    young_laplace_pressure, BubbleParameters, BubbleState,
+use crate::acoustics::bubble_dynamics::{
+    acoustic_pressure::InstantaneousPressure,
+    bubble_state::{young_laplace_pressure, BubbleParameters, BubbleState},
 };
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 
 /// An encapsulated (shelled) microbubble dynamics model over the modified
@@ -49,19 +49,42 @@ pub trait EncapsulatedShellModel {
     ///
     /// Single source of truth for the RP time-derivative shared by every shell
     /// model. Updates `state.{wall_acceleration, pressure_internal, pressure_liquid}`.
-    /// The acoustic forcing is `p_∞ = p0 + p_acoustic·sin(ωt)`.
+    ///
+    /// # Acoustic-drive contract
+    ///
+    /// `p_acoustic` is the INSTANTANEOUS acoustic pressure `p_∞(t) − p0`
+    /// [Pa] at time `t`. The coated-bubble models are all written in terms
+    /// of a general time-dependent far-field pressure — Marmottant et al.
+    /// (2005, JASA 118(6):3499–3505), Church (1995, JASA 97(3):1510–1521),
+    /// de Jong et al. (1994, Ultrasonics 32:447–453) — and instantiate it
+    /// as an amplitude × sinusoid for continuous harmonic drive; the
+    /// sinusoid is a choice of `p(t)`, not a property of the model.
+    /// Callers that have an amplitude synthesise the tone themselves. An
+    /// earlier version of this method treated `p_acoustic` as an amplitude
+    /// and multiplied by `sin(ωt)` internally, which double-modulated
+    /// every caller that already passed an instantaneous pressure. The `t`
+    /// argument is retained for interface compatibility.
     ///
     /// # Errors
     /// Returns a model error if a sub-step fails; the base RP path is infallible.
-    fn acceleration(&self, state: &mut BubbleState, p_acoustic: f64, t: f64) -> KwaversResult<f64> {
+    fn acceleration(
+        &self,
+        state: &mut BubbleState,
+        p_acoustic: InstantaneousPressure,
+        t: f64,
+    ) -> KwaversResult<f64> {
         let p = self.params();
         let r = state.radius;
         let v = state.wall_velocity;
 
-        // Acoustic forcing (kept as p0 + amp·sin(ωt) — not fused — so refactored
-        // models are bit-identical to their original inline implementations).
-        let omega = TWO_PI * p.driving_frequency;
-        let p_inf = p.p0 + p_acoustic * (omega * t).sin();
+        // Formula boundary: the drive arrives typed; the balance below
+        // works in pascals.
+        let p_acoustic = p_acoustic.as_pascals();
+
+        // Far-field pressure p_∞(t) = p0 + p_acoustic(t); see the contract
+        // above. The `t` argument is unused by the RHS.
+        let _ = t;
+        let p_inf = p.p0 + p_acoustic;
 
         let gamma = state.gas_species.gamma();
         let p_gas = self.equilibrium_gas_pressure() * (p.r0 / r).powf(3.0 * gamma);

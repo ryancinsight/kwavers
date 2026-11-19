@@ -1,3 +1,4 @@
+use super::super::acoustic_pressure::PressureAmplitude;
 use super::gas_dynamics::{GasSpecies, GasType};
 use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use kwavers_core::constants::cavitation::{
@@ -63,7 +64,13 @@ pub struct BubbleParameters {
 
     // Acoustic forcing parameters
     pub driving_frequency: f64, // Driving frequency [Hz]
-    pub driving_amplitude: f64, // Pressure amplitude [Pa]
+    // Pressure amplitude of the intended drive. Record only: the ODE
+    // models do NOT read this field — they take the instantaneous acoustic
+    // pressure p_∞(t) − p0 (and its time derivative) as arguments, and
+    // callers that have an amplitude synthesise the tone themselves (see
+    // the contract on `AdaptiveBubbleModel::calculate_acceleration`).
+    // Typed so a raw instantaneous value can never be stored here.
+    pub driving_amplitude: PressureAmplitude,
 
     // Numerical parameters
     pub use_compressibility: bool, // Use Keller-Miksis
@@ -96,7 +103,7 @@ impl Default for BubbleParameters {
             initial_gas_pressure: ATMOSPHERIC_PRESSURE,
             gas_composition,
             driving_frequency: 26.5e3, // 26.5 kHz (typical medical ultrasound)
-            driving_amplitude: 1e5,    // 100 kPa acoustic pressure
+            driving_amplitude: PressureAmplitude::from_pascals(1e5), // 100 kPa acoustic pressure
             use_compressibility: true,
             use_thermal_effects: true,
             use_mass_transfer: true,

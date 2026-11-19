@@ -11,6 +11,7 @@ use super::{
     decompose_emission_spectrum, simulate_bubble_emission, simulate_coated_bubble_emission,
     BubbleDriveConfig, CavitationBandEnergies, ShellDriveConfig,
 };
+use crate::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use rand::{RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use rand_distr::{Distribution, LogNormal};
@@ -180,7 +181,7 @@ pub fn simulate_population_emission(input: PopulationEmissionInput) -> Option<Po
                 mu: input.medium.mu,
                 gamma: input.medium.gamma,
                 drive_freq_hz: input.f0_hz,
-                drive_amp_pa: input.drive_pa,
+                drive_amp_pa: PressureAmplitude::from_pascals(input.drive_pa),
                 n_cycles: input.n_cycles,
                 steps_per_cycle: input.shell.steps_per_cycle,
                 n_out: input.n_out,
@@ -201,7 +202,7 @@ pub fn simulate_population_emission(input: PopulationEmissionInput) -> Option<Po
                 pv: input.medium.pv,
                 gamma: input.medium.gamma,
                 drive_freq_hz: input.f0_hz,
-                drive_amp_pa: input.drive_pa,
+                drive_amp_pa: PressureAmplitude::from_pascals(input.drive_pa),
                 n_cycles: input.n_cycles,
                 n_out: input.n_out,
                 r_obs_m: input.r_obs_m,

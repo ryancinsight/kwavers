@@ -2,7 +2,9 @@
 
 use super::super::{BubbleSymplecticIntegrator, SymplecticConfig};
 use super::bubble_fixtures::{make_model, make_params};
+use crate::acoustics::bubble_dynamics::acoustic_pressure::InstantaneousPressure;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::numerical::TWO_PI;
 use std::sync::Arc;
 
@@ -66,7 +68,12 @@ fn test_minnaert_period() {
     for _ in 0..total_steps {
         let v_before = state.wall_velocity;
         integrator
-            .sv_step(&mut state, 0.0, 0.0, t)
+            .sv_step(
+                &mut state,
+                InstantaneousPressure::ZERO,
+                PressureRate::from_base(0.0),
+                t,
+            )
             .expect("SV step must not fail");
         let v_after = state.wall_velocity;
         t += dt;

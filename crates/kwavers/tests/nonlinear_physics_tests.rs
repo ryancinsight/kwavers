@@ -29,10 +29,12 @@
 //! - Westervelt (1963). J. Acoust. Soc. Am. 35(4), 535–537.
 //! - Hamilton & Blackstock (1998). Nonlinear Acoustics. Academic Press.
 
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::bubble_dynamics::{
+    acoustic_pressure::PressureAmplitude,
     BubbleParameters, BubbleState, KellerMiksisModel,
 };
 use kwavers_signal::SineWave;
@@ -209,12 +211,17 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
     // To drive collapse, apply a compressive acoustic pulse >> p0.
     // With p_acoustic = 3e5 Pa, p_inf = p0 + p_acoustic ≈ 4 atm >> p_gas ≈ 1 atm.
     //
-    // The K-M equation uses p_acoustic_inst = p_acoustic * sin(omega * t).
-    // At t = T/4 (quarter period of the driving frequency), sin = 1, so the full
+    // The K-M model takes the INSTANTANEOUS far-field pressure (see the
+    // drive contract on `AdaptiveBubbleModel::calculate_acceleration`):
+    // p(t) = amplitude·sin(ωt), dp/dt = amplitude·ω·cos(ωt). At t = T/4
+    // (quarter period of the driving frequency), sin = 1, so the full
     // compressive amplitude is applied. We set driving_frequency = 1 MHz so T/4 = 0.25 μs.
-    let p_acoustic_amplitude: f64 = 3e5; // compressive pulse amplitude [Pa]
+    let p_acoustic_amplitude = PressureAmplitude::from_pascals(3e5); // compressive pulse amplitude
     let driving_freq: f64 = 1e6; // 1 MHz driving frequency
     let t_quarter: f64 = 1.0 / (4.0 * driving_freq); // t where sin(omega*t) = 1
+    let omega = TWO_PI * driving_freq;
+    // Instantaneous drive per RK4 stage: (p(t), dp/dt).
+    let drive = |t: f64| p_acoustic_amplitude.sample(omega, t, 0.0);
 
     let params = BubbleParameters {
         r0,
@@ -238,10 +245,14 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
     state.wall_velocity = 0.0;
 
     // Verify: at t = T/4 with strong compression, K-M gives finite inward (negative) acceleration.
-    // At T/4: p_acoustic_inst = p_acoustic_amplitude * sin(pi/2) = p_acoustic_amplitude.
+    // At T/4: drive(t) = (p_acoustic_amplitude, 0) since sin(pi/2) = 1, cos(pi/2) = 0.
     // So p_inf = p0 + p_acoustic_amplitude >> p_gas = p0 → inward acceleration.
-    let accel_quarter =
-        model.calculate_acceleration(&mut state, p_acoustic_amplitude, 0.0, t_quarter);
+    let accel_quarter = model.calculate_acceleration(
+        &mut state,
+        drive(t_quarter).0,
+        drive(t_quarter).1,
+        t_quarter,
+    );
     assert!(
         accel_quarter.is_ok(),
         "K-M calculate_acceleration failed at t=T/4: {:?}",
@@ -274,7 +285,7 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
         let rdot = state.wall_velocity;
 
         let mut s1 = state;
-        let rddot1 = match model.calculate_acceleration(&mut s1, p_acoustic_amplitude, 0.0, t) {
+        let rddot1 = match model.calculate_acceleration(&mut s1, drive(t).0, drive(t).1, t) {
             Ok(a) => a,
             Err(_) => {
                 break 'integration;
@@ -287,13 +298,17 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
         if s2.radius <= 0.0 {
             break 'integration;
         }
-        let rddot2 =
-            match model.calculate_acceleration(&mut s2, p_acoustic_amplitude, 0.0, t + 0.5 * dt) {
-                Ok(a) => a,
-                Err(_) => {
-                    break 'integration;
-                }
-            };
+        let rddot2 = match model.calculate_acceleration(
+            &mut s2,
+            drive(t + 0.5 * dt).0,
+            drive(t + 0.5 * dt).1,
+            t + 0.5 * dt,
+        ) {
+            Ok(a) => a,
+            Err(_) => {
+                break 'integration;
+            }
+        };
 
         let mut s3 = state;
         s3.radius = r + 0.5 * dt * s2.wall_velocity;
@@ -301,13 +316,17 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
         if s3.radius <= 0.0 {
             break 'integration;
         }
-        let rddot3 =
-            match model.calculate_acceleration(&mut s3, p_acoustic_amplitude, 0.0, t + 0.5 * dt) {
-                Ok(a) => a,
-                Err(_) => {
-                    break 'integration;
-                }
-            };
+        let rddot3 = match model.calculate_acceleration(
+            &mut s3,
+            drive(t + 0.5 * dt).0,
+            drive(t + 0.5 * dt).1,
+            t + 0.5 * dt,
+        ) {
+            Ok(a) => a,
+            Err(_) => {
+                break 'integration;
+            }
+        };
 
         let mut s4 = state;
         s4.radius = r + dt * s3.wall_velocity;
@@ -315,13 +334,13 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
         if s4.radius <= 0.0 {
             break 'integration;
         }
-        let rddot4 = match model.calculate_acceleration(&mut s4, p_acoustic_amplitude, 0.0, t + dt)
-        {
-            Ok(a) => a,
-            Err(_) => {
-                break 'integration;
-            }
-        };
+        let rddot4 =
+            match model.calculate_acceleration(&mut s4, drive(t + dt).0, drive(t + dt).1, t + dt) {
+                Ok(a) => a,
+                Err(_) => {
+                    break 'integration;
+                }
+            };
 
         state.radius = r
             + (dt / 6.0)

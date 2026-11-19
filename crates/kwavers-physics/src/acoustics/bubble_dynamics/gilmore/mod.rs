@@ -8,8 +8,8 @@
 //! in a viscous compressible liquid". Hydrodynamics Laboratory Report 26-4,
 //! California Institute of Technology.
 
-use super::{BubbleParameters, BubbleState};
-use kwavers_core::constants::numerical::TWO_PI;
+use super::{acoustic_pressure::InstantaneousPressure, BubbleParameters, BubbleState};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::{ATMOSPHERIC_PRESSURE, WATER_TAIT_B, WATER_TAIT_N};
 use kwavers_core::error::KwaversResult;
 
@@ -76,22 +76,43 @@ impl GilmoreSolver {
     /// - u = dR/dt is the bubble wall velocity
     /// - C is the sound speed in liquid at the bubble wall
     /// - H is the enthalpy difference between bubble wall and infinity
+    ///
+    /// # Acoustic-drive contract
+    ///
+    /// `p_acoustic` is the INSTANTANEOUS acoustic pressure `p_∞(t) − p0`
+    /// [Pa] at time `t`, and `dp_dt` is its time derivative `dp_∞/dt`
+    /// [Pa/s]. Gilmore's equation is written in terms of a general
+    /// far-field pressure `P_∞(t)` entering through the enthalpy `H`
+    /// (Gilmore 1952, Caltech Hydro. Lab. Report 26-4, §4); the harmonic
+    /// form `P_∞(t) = p0 + P_A·sin(ωt)` is the standard specialisation,
+    /// not part of the equation. Callers that have an amplitude
+    /// synthesise the tone themselves. An earlier version of this
+    /// function treated `p_acoustic` as an amplitude and multiplied by
+    /// `sin(ωt)` internally, which double-modulated every caller that
+    /// already passed an instantaneous field value.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn calculate_acceleration(
         &self,
         state: &BubbleState,
-        p_acoustic: f64,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
         t: f64,
     ) -> KwaversResult<f64> {
         let r = state.radius;
         let u = state.wall_velocity;
 
-        // Acoustic forcing
-        let omega = TWO_PI * self.params.driving_frequency;
-        let p_acoustic_inst = p_acoustic * (omega * t).sin();
-        let p_inf = self.params.p0 + p_acoustic_inst;
+        // Formula boundary: the drive arrives typed; the equation below
+        // works in pascals. `dp_dt` stays typed — the enthalpy-derivative
+        // helper extracts it.
+        let p_acoustic = p_acoustic.as_pascals();
+
+        // Far-field pressure p_∞(t) = p0 + p_acoustic(t); see the contract
+        // above. The `t` argument is retained for interface compatibility;
+        // the drive is fully specified by (`p_acoustic`, `dp_dt`).
+        let _ = t;
+        let p_inf = self.params.p0 + p_acoustic;
 
         // Internal bubble pressure: polytropic gas EOS with Young-Laplace equilibrium
         // and vapor pressure separation (Brennen 1995 §2.4):
@@ -123,7 +144,7 @@ impl GilmoreSolver {
         // dH/dt = (1/ρ_wall)·dp_wall/dt − (1/ρ_inf)·dp_inf/dt per Gilmore (1952) §4 Eq. 16.
         // Implementation in `estimate_enthalpy_derivative` consumes state.{wall_velocity,
         // wall_acceleration, gas_species.gamma()} for dp_wall/dt — no quasi-static reduction.
-        let dh_dt = self.estimate_enthalpy_derivative(state, p_wall, p_acoustic, omega, t);
+        let dh_dt = self.estimate_enthalpy_derivative(state, p_wall, dp_dt);
 
         // Gilmore equation solved for R_ddot
         let u_c = u / c_wall;
@@ -179,7 +200,11 @@ impl GilmoreSolver {
     ///
     /// ### `dp_inf/dt` — far-field acoustic pressure rate
     /// ```text
-    /// dp_inf/dt = p_acoustic · ω · cos(ωt)
+    /// dp_inf/dt = dp_dt, supplied by the caller (the time derivative of
+    /// the INSTANTANEOUS far-field acoustic pressure; see the contract on
+    /// `calculate_acceleration`). An earlier version of this function
+    /// computed `p_acoustic · ω · cos(ωt)` internally, which assumed the
+    /// caller had passed an amplitude.
     /// ```
     ///
     /// ### Tait densities
@@ -187,6 +212,11 @@ impl GilmoreSolver {
     /// ρ_wall = ρ₀ · [(p_wall + B)/(p₀ + B)]^(1/n)
     /// ρ_inf  = ρ₀                           (p_inf = p₀ at ambient)
     /// ```
+    /// `ρ_inf` is the ambient density, not the density at `p_inf`: the
+    /// Tait correction `p_acoustic/B` is ≲ 0.3% for the sub-MPa drives
+    /// this model is used with (`B ≈ 304.7 MPa` for water), well below
+    /// the O(Mach) accuracy of the Gilmore equation, so the ambient
+    /// density is used and the enthalpy test is written against it.
     ///
     /// ## References
     /// - Gilmore F. R. (1952) Caltech Hydro. Lab. Report 26-4, §4, Eq. 16.
@@ -195,10 +225,11 @@ impl GilmoreSolver {
         &self,
         state: &BubbleState,
         p_wall: f64,
-        p_acoustic: f64,
-        omega: f64,
-        t: f64,
+        dp_dt: PressureRate,
     ) -> f64 {
+        // Formula boundary: the rate arrives typed; the derivative below
+        // works in Pa/s.
+        let dp_dt = *dp_dt.as_base();
         let r = state.radius;
         let u = state.wall_velocity;
         let r_ddot = state.wall_acceleration; // lagged R̈ from previous step
@@ -222,7 +253,9 @@ impl GilmoreSolver {
         let dp_wall_dt = dp_gas_dt + dp_surface_dt + dp_viscous_dt;
 
         // ── dp_inf/dt from acoustic driving ──────────────────────────────────
-        let dp_inf_dt = p_acoustic * omega * (omega * t).cos();
+        // The derivative of the instantaneous far-field pressure, supplied
+        // by the caller (see the contract on `calculate_acceleration`).
+        let dp_inf_dt = dp_dt;
 
         // ── Tait densities (SSOT: `calculate_density`) ──────────────────────
         // ρ_wall (can differ significantly from ρ_inf near collapse)
@@ -248,7 +281,7 @@ impl GilmoreSolver {
     /// ```text
     /// c = [0, ½, ½, 1],   b = [⅙, ⅓, ⅓, ⅙]
     /// k_i^R   = Ṙ evaluated at stage i
-    /// k_i^Ṙ  = R̈ = calculate_acceleration(state_i, p, t_i)
+    /// k_i^Ṙ  = R̈ = calculate_acceleration(state_i, p, dp_dt, t_i)
     /// R_{n+1}  = R_n  + dt/6 · (k₁ᴿ  + 2k₂ᴿ  + 2k₃ᴿ  + k₄ᴿ )
     /// Ṙ_{n+1}  = Ṙ_n  + dt/6 · (k₁^Ṙ + 2k₂^Ṙ + 2k₃^Ṙ + k₄^Ṙ)
     /// ```
@@ -269,10 +302,11 @@ impl GilmoreSolver {
     /// ## Parameters
     ///
     /// * `state`       — bubble state at time `t` (not mutated; stages clone)
-    /// * `p_acoustic`  — instantaneous far-field acoustic driving pressure (Pa);
-    ///   the wave-solver field value already sampled at this voxel, **not**
-    ///   re-multiplied by sin(ωt) — that modulation is already encoded in
-    ///   the PSTD pressure field
+    /// * `p_acoustic`  — INSTANTANEOUS far-field acoustic driving pressure
+    ///   `p_∞(t) − p0` (Pa); the wave-solver field value already sampled
+    ///   at this voxel — see the contract on `calculate_acceleration`
+    /// * `dp_dt`       — time derivative of the instantaneous far-field
+    ///   acoustic pressure [Pa/s]
     /// * `t`           — current simulation time (s)
     /// * `dt`          — integration step size (s)
     ///
@@ -281,10 +315,17 @@ impl GilmoreSolver {
     /// - Gilmore (1952) Caltech Hydro. Lab. Report 26-4, §4.
     /// - Hairer, Nørsett & Wanner (1993) *Solving ODEs I*, §II.1.
     #[must_use]
-    pub fn step_rk4(&self, state: &BubbleState, p_acoustic: f64, t: f64, dt: f64) -> BubbleState {
+    pub fn step_rk4(
+        &self,
+        state: &BubbleState,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
+        t: f64,
+        dt: f64,
+    ) -> BubbleState {
         // ── k₁ : evaluated at (t, y_n) ─────────────────────────────────────
         let k1_r = state.wall_velocity;
-        let k1_v = self.stage_acceleration(state, p_acoustic, t);
+        let k1_v = self.stage_acceleration(state, p_acoustic, dp_dt, t);
 
         // ── k₂ : evaluated at (t + dt/2, y_n + dt/2·k₁) ───────────────────
         let mut s2 = *state;
@@ -293,7 +334,7 @@ impl GilmoreSolver {
             .max(f64::MIN_POSITIVE);
         s2.wall_velocity = (0.5 * dt).mul_add(k1_v, state.wall_velocity);
         let k2_r = s2.wall_velocity;
-        let k2_v = self.stage_acceleration(&s2, p_acoustic, 0.5f64.mul_add(dt, t));
+        let k2_v = self.stage_acceleration(&s2, p_acoustic, dp_dt, 0.5f64.mul_add(dt, t));
 
         // ── k₃ : evaluated at (t + dt/2, y_n + dt/2·k₂) ───────────────────
         let mut s3 = *state;
@@ -302,14 +343,14 @@ impl GilmoreSolver {
             .max(f64::MIN_POSITIVE);
         s3.wall_velocity = (0.5 * dt).mul_add(k2_v, state.wall_velocity);
         let k3_r = s3.wall_velocity;
-        let k3_v = self.stage_acceleration(&s3, p_acoustic, 0.5f64.mul_add(dt, t));
+        let k3_v = self.stage_acceleration(&s3, p_acoustic, dp_dt, 0.5f64.mul_add(dt, t));
 
         // ── k₄ : evaluated at (t + dt, y_n + dt·k₃) ───────────────────────
         let mut s4 = *state;
         s4.radius = dt.mul_add(k3_r, state.radius).max(f64::MIN_POSITIVE);
         s4.wall_velocity = dt.mul_add(k3_v, state.wall_velocity);
         let k4_r = s4.wall_velocity;
-        let k4_v = self.stage_acceleration(&s4, p_acoustic, t + dt);
+        let k4_v = self.stage_acceleration(&s4, p_acoustic, dp_dt, t + dt);
 
         // ── Combine via standard Butcher weights (shared RK4 SSOT) ──────────
         use crate::acoustics::bubble_dynamics::integration::rk4_weighted_sum;
@@ -332,8 +373,14 @@ impl GilmoreSolver {
     /// condition, the stage acceleration is clamped to `0` and the event is
     /// logged at `trace` level so a run that repeatedly grazes the boundary is
     /// observable instead of quietly producing a frozen-wall artifact.
-    fn stage_acceleration(&self, state: &BubbleState, p_acoustic: f64, t: f64) -> f64 {
-        match self.calculate_acceleration(state, p_acoustic, t) {
+    fn stage_acceleration(
+        &self,
+        state: &BubbleState,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
+        t: f64,
+    ) -> f64 {
+        match self.calculate_acceleration(state, p_acoustic, dp_dt, t) {
             Ok(a) => a,
             Err(_) => {
                 log::trace!(

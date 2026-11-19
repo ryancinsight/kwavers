@@ -1,4 +1,5 @@
 use super::*;
+use crate::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use kwavers_core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
 };
@@ -130,7 +131,7 @@ fn rp_rk4_initial_condition() {
     let (r, _) = rayleigh_plesset_rk4(
         10e-6,
         0.0,
-        0.0,
+        PressureAmplitude::from_pascals(0.0),
         MPA_TO_PA,
         &t,
         ATMOSPHERIC_PRESSURE,
@@ -150,7 +151,7 @@ fn km_rk4_length_matches() {
     let (r, v) = keller_miksis_rk4(
         10e-6,
         0.0,
-        0.0,
+        PressureAmplitude::from_pascals(0.0),
         MPA_TO_PA,
         &t,
         ATMOSPHERIC_PRESSURE,
@@ -173,7 +174,7 @@ fn km_shelled_zero_xi_matches_bare_bitexact() {
     let bare = keller_miksis_rk4(
         2e-6,
         0.0,
-        0.5 * MPA_TO_PA,
+        PressureAmplitude::from_pascals(0.5 * MPA_TO_PA),
         MHZ_TO_HZ,
         &t,
         ATMOSPHERIC_PRESSURE,
@@ -187,7 +188,7 @@ fn km_shelled_zero_xi_matches_bare_bitexact() {
     let shelled0 = keller_miksis_shelled_rk4(
         2e-6,
         0.0,
-        0.5 * MPA_TO_PA,
+        PressureAmplitude::from_pascals(0.5 * MPA_TO_PA),
         MHZ_TO_HZ,
         &t,
         ATMOSPHERIC_PRESSURE,
@@ -221,7 +222,7 @@ fn km_shelled_damps_radial_excursion() {
     let (r_bare, _) = keller_miksis_shelled_rk4(
         2e-6,
         0.0,
-        amp,
+        PressureAmplitude::from_pascals(amp),
         MHZ_TO_HZ,
         &t,
         ATMOSPHERIC_PRESSURE,
@@ -236,7 +237,7 @@ fn km_shelled_damps_radial_excursion() {
     let (r_shell, _) = keller_miksis_shelled_rk4(
         2e-6,
         0.0,
-        amp,
+        PressureAmplitude::from_pascals(amp),
         MHZ_TO_HZ,
         &t,
         ATMOSPHERIC_PRESSURE,
@@ -287,7 +288,7 @@ fn km_shelled_inertial_collapse_stays_finite() {
     let (r, v) = keller_miksis_shelled_rk4(
         2e-6,
         0.0,
-        350e3,
+        PressureAmplitude::from_pascals(350e3),
         MHZ_TO_HZ,
         &t,
         ATMOSPHERIC_PRESSURE,
@@ -342,7 +343,7 @@ fn icd_zero_driving_gives_zero() {
     let (r, rdot) = rayleigh_plesset_rk4(
         10e-6,
         0.0,
-        0.0,
+        PressureAmplitude::from_pascals(0.0),
         MPA_TO_PA,
         &t,
         ATMOSPHERIC_PRESSURE,
@@ -366,7 +367,7 @@ fn icd_strong_driving_nonzero() {
     let (r, rdot) = rayleigh_plesset_rk4(
         r0,
         0.0,
-        5e6,
+        PressureAmplitude::from_pascals(5e6),
         f0,
         &t,
         ATMOSPHERIC_PRESSURE,

@@ -25,6 +25,7 @@ use crate::acoustics::bubble_dynamics::dissolution::GasDiffusionParams;
 use super::clearance::inter_pulse_residual_clearance;
 use super::engagement::{monochromatic_engaged_fraction, CavitationMedium, EngagementConfig};
 use super::nuclei::NucleiSizeDistribution;
+use crate::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 
 /// Triangular stage envelope `tri(s)` peaking at `s = ½`: `0 → 1 → 0`.
 #[inline]
@@ -85,7 +86,7 @@ pub fn staged_sonication_sweep(
     medium: &CavitationMedium,
     f_quiet_hz: f64,
     f_peak_hz: f64,
-    amplitude_pa: f64,
+    amplitude_pa: PressureAmplitude,
     pulse_duration_s: f64,
     n_pulses: usize,
     prf_hz: f64,
