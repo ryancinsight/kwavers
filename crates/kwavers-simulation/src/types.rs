@@ -124,6 +124,10 @@ pub struct SimulationRunRequest<'a> {
     /// index, in the supplied order. An empty list selects zero points.
     /// Leto PSTD rejects explicit ordering when external PML padding is active.
     ///
+    /// FDTD also gives explicit indices precedence, including an empty list.
+    /// It validates every index against the grid and collects requested pressure
+    /// statistics using the same row order.
+    ///
     /// Hephaestus PSTD rejects any `Some` value with
     /// [`kwavers_core::error::KwaversError::FeatureNotAvailable`].
     pub transducer_ordered_indices: Option<Vec<(usize, usize, usize)>>,

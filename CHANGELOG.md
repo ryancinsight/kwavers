@@ -4,6 +4,10 @@
 
 ### Changed
 
+- [minor] Honor explicit sensor order in FDTD pressure recordings with optional
+  statistics. Construct the recorder once, validate all coordinates against
+  the grid, and treat an explicit empty list as an empty selection.
+
 - Admit the Leto 0.50 line: the Leto and Leto-ops requirements widen to
   `>=0.47.1, <0.51.0`, and the lock moves Leto to 0.50.0 together with the six
   provider repositories whose requirements admit it (Apollo, Athena, Coeus,

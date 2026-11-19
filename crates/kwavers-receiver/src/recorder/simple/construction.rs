@@ -1,7 +1,7 @@
 //! SensorRecorder constructor methods.
 //!
-//! All constructors share the invariant that `sensor_indices` is ordered
-//! x-fastest (Fortran order) matching k-Wave's `sensor.mask` convention.
+//! Mask-based constructors order indices x-fastest (Fortran order) to match
+//! k-Wave's `sensor.mask` convention. Explicit selections keep caller order.
 
 use crate::recorder::config::RecordingMode;
 use crate::recorder::fields::{SensorRecordField, SensorRecordSpec};
@@ -62,14 +62,54 @@ impl SensorRecorder {
     where
         M: SensorMask3,
     {
-        let sensor_indices = Self::build_sensor_indices(sensor_mask, shape)?;
+        let indices = Self::build_sensor_indices(sensor_mask, shape)?;
+        Ok(Self::pressure_with_modes(
+            indices,
+            shape,
+            expected_steps,
+            modes,
+        ))
+    }
 
-        let pressure = if sensor_indices.is_empty() {
-            None
-        } else {
-            Some(Array2::zeros([sensor_indices.len(), expected_steps]))
-        };
+    /// Record pressure at explicit grid indices, with optional spatial statistics.
+    ///
+    /// Each supplied index contributes one row in the original order. An empty
+    /// selection still collects full-grid statistics when the mode requests them.
+    ///
+    /// # Errors
+    ///
+    /// Returns a validation error when an index lies outside the grid shape.
+    pub fn with_ordered_modes(
+        indices: &[(usize, usize, usize)],
+        shape: (usize, usize, usize),
+        expected_steps: usize,
+        modes: &[RecordingMode],
+    ) -> KwaversResult<Self> {
+        if let Some(index) = indices
+            .iter()
+            .find(|&&(x, y, z)| x >= shape.0 || y >= shape.1 || z >= shape.2)
+        {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!("Sensor index {index:?} is outside grid shape {shape:?}"),
+                },
+            ));
+        }
 
+        Ok(Self::pressure_with_modes(
+            indices.to_vec(),
+            shape,
+            expected_steps,
+            modes,
+        ))
+    }
+
+    fn pressure_with_modes(
+        indices: Vec<(usize, usize, usize)>,
+        shape: (usize, usize, usize),
+        expected_steps: usize,
+        modes: &[RecordingMode],
+    ) -> Self {
         let needs_stats = modes.iter().any(|m| {
             matches!(
                 m,
@@ -84,13 +124,18 @@ impl SensorRecorder {
             )
         });
 
-        let stats = if needs_stats {
-            Some(PressureFieldStatistics::new(shape.0, shape.1, shape.2))
-        } else {
-            None
-        };
+        let stats = needs_stats.then(|| PressureFieldStatistics::new(shape.0, shape.1, shape.2));
+        Self::pressure_only(indices, expected_steps, stats)
+    }
 
-        Ok(Self {
+    fn pressure_only(
+        sensor_indices: Vec<(usize, usize, usize)>,
+        expected_steps: usize,
+        stats: Option<PressureFieldStatistics>,
+    ) -> Self {
+        let pressure = (!sensor_indices.is_empty())
+            .then(|| Array2::zeros([sensor_indices.len(), expected_steps]));
+        Self {
             sensor_indices,
             pressure,
             expected_steps,
@@ -109,7 +154,7 @@ impl SensorRecorder {
             ux_stats: None,
             uy_stats: None,
             uz_stats: None,
-        })
+        }
     }
 
     /// Create a recorder driven by a [`SensorRecordSpec`] (full k-Wave parity).
@@ -201,31 +246,7 @@ impl SensorRecorder {
         indices: Vec<(usize, usize, usize)>,
         expected_steps: usize,
     ) -> KwaversResult<Self> {
-        let pressure = if indices.is_empty() {
-            None
-        } else {
-            Some(Array2::zeros([indices.len(), expected_steps]))
-        };
-        Ok(Self {
-            sensor_indices: indices,
-            pressure,
-            expected_steps,
-            next_step: 0,
-            stats: None,
-            record_spec: SensorRecordSpec::pressure_only(),
-            ux_data: None,
-            uy_data: None,
-            uz_data: None,
-            ix_data: None,
-            iy_data: None,
-            iz_data: None,
-            ix_sum: None,
-            iy_sum: None,
-            iz_sum: None,
-            ux_stats: None,
-            uy_stats: None,
-            uz_stats: None,
-        })
+        Ok(Self::pressure_only(indices, expected_steps, None))
     }
 
     // ── Internal helper ──────────────────────────────────────────────────────

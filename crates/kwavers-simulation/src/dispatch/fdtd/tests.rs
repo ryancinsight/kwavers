@@ -64,3 +64,5 @@ fn a_request_with_one_sensor_keeps_its_row() {
 
     assert_eq!(result.sensor_data.shape(), [1, 3]);
 }
+
+mod ordered_recording;

@@ -17,6 +17,7 @@ use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use kwavers_math::numerics::operators::differential::summation_by_parts::SummationByPartsOperator;
 use kwavers_medium::{material_fields::MaterialFields, Medium};
+use kwavers_receiver::recorder::config::RecordingMode;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::grid_source::GridSource;
 use leto_ops::StaggeredLeapfrog3D;
@@ -113,6 +114,27 @@ impl GenericFdtdSolver<Array3<f64>> {
         medium: &dyn Medium,
         source: GridSource,
     ) -> KwaversResult<Self> {
+        Self::new_with_recording(config, grid, medium, source, None, &[])
+    }
+
+    /// Create an FDTD solver with the requested pressure recording.
+    ///
+    /// Explicit indices select the sensor rows in caller order. Otherwise
+    /// the configuration mask selects the rows. Pressure statistics are
+    /// controlled by the recording modes in either case.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for invalid solver inputs, invalid recorder selection,
+    /// or a time-step count that cannot include the initial pressure sample.
+    pub fn new_with_recording(
+        config: FdtdConfig,
+        grid: &Grid,
+        medium: &dyn Medium,
+        source: GridSource,
+        ordered_indices: Option<&[(usize, usize, usize)]>,
+        recording_modes: &[RecordingMode],
+    ) -> KwaversResult<Self> {
         info!("Initializing FDTD solver with config: {:?}", config);
 
         let spatial_order = config.spatial_order;
@@ -128,14 +150,30 @@ impl GenericFdtdSolver<Array3<f64>> {
         )?;
 
         let source_handler = SourceHandler::new(source, grid)?;
-        let sensor_recorder = SensorRecorder::new(
-            config.sensor_mask.as_ref(),
-            (grid.nx, grid.ny, grid.nz),
-            config.nt + 1,
-        )?;
+        let shape = (grid.nx, grid.ny, grid.nz);
+        let expected_samples = config.nt.checked_add(1).ok_or_else(|| {
+            KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "nt".to_owned(),
+                value: config.nt.to_string(),
+                constraint: "nt plus the initial sample must fit a usize".to_owned(),
+            })
+        })?;
+        let sensor_recorder = match ordered_indices {
+            Some(indices) => SensorRecorder::with_ordered_modes(
+                indices,
+                shape,
+                expected_samples,
+                recording_modes,
+            )?,
+            None => SensorRecorder::with_modes(
+                config.sensor_mask.as_ref(),
+                shape,
+                expected_samples,
+                recording_modes,
+            )?,
+        };
 
         // Initialize fields
-        let shape = (grid.nx, grid.ny, grid.nz);
         let mut fields = WaveFields::new(shape);
 
         // Sample the medium's full acoustic property set once: density, sound
