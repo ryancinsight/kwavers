@@ -2793,7 +2793,6 @@ dependencies = [
  "aequitas",
  "anyhow",
  "apollo-fft",
- "chrono",
  "egui",
  "eunomia",
  "flume",
@@ -2815,6 +2814,7 @@ dependencies = [
  "rand 0.8.8",
  "ritk-spatial",
  "serde",
+ "time",
  "tracing",
  "tyche-core",
 ]
@@ -2863,7 +2863,6 @@ version = "3.0.0"
 dependencies = [
  "aequitas",
  "anyhow",
- "chrono",
  "consus-core",
  "consus-hdf5",
  "consus-io",
@@ -6870,10 +6869,10 @@ name = "xtask"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "chrono",
  "clap 4.6.7",
  "mnemosyne-memory",
  "regex",
+ "time",
  "wait-timeout",
  "walkdir",
 ]
