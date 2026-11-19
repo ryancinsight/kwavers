@@ -42,7 +42,10 @@
 //!   (Keller-Miksis equation and thermodynamic coupling)
 
 use super::config::BubbleIMEXConfig;
-use crate::acoustics::bubble_dynamics::{BubbleState, KellerMiksisModel};
+use crate::acoustics::bubble_dynamics::{
+    acoustic_pressure::InstantaneousPressure, BubbleState, KellerMiksisModel,
+};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::error::{KwaversResult, PhysicsError};
 use leto::Array1;
 use std::sync::Arc;
@@ -98,8 +101,8 @@ impl BubbleIMEXIntegrator {
     pub fn step(
         &mut self,
         state: &mut BubbleState,
-        p_acoustic: f64,
-        dp_dt: f64,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
         dt: f64,
         t: f64,
     ) -> KwaversResult<f64> {

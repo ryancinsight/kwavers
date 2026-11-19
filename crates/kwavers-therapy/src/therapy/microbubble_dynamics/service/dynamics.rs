@@ -1,7 +1,10 @@
 use crate::therapy::microbubble_dynamics::DrugPayload;
 use aequitas::systems::si::quantities::{Length, Mass, Pressure, PressureRate, Time, Velocity};
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
-use kwavers_physics::acoustics::bubble_dynamics::adaptive_integration::integrate_bubble_dynamics_adaptive;
+use kwavers_physics::acoustics::bubble_dynamics::{
+    acoustic_pressure::InstantaneousPressure,
+    adaptive_integration::integrate_bubble_dynamics_adaptive,
+};
 use kwavers_physics::therapy::microbubble::{
     calculate_primary_bjerknes_force, MarmottantShellProperties, MicrobubbleState,
     PressureGradient3D,
@@ -63,12 +66,16 @@ impl MicrobubbleDynamicsService {
         // 2. Convert domain → KM state
         let mut km_state = Self::domain_to_km_state(bubble, shell)?;
 
-        // 3. Solve Keller-Miksis ODE
+        // 3. Solve Keller-Miksis ODE. The service already receives a
+        // typed Aequitas pressure; the newtype marks it as the
+        // INSTANTANEOUS drive the integrator requires (the service's
+        // caller supplies the field pressure at this instant, not an
+        // amplitude). The rate arrives typed already.
         integrate_bubble_dynamics_adaptive(
             &self.keller_miksis,
             &mut km_state,
-            acoustic_pressure.into_base(),
-            pressure_time_derivative.into_base(),
+            InstantaneousPressure::from_pressure(acoustic_pressure),
+            pressure_time_derivative,
             dt_value,
             time.into_base(),
         )?;

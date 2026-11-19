@@ -32,9 +32,31 @@
 //!   by an acoustic beam". JASA, 83(6), 2210–2216.
 
 use kwavers_core::constants::numerical::FOUR_PI;
+use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
+
+/// Maximum acoustic-to-ambient pressure ratio for which the Eller–Flynn
+/// rectified-diffusion law is in its domain of validity.
+///
+/// The law assumes small-amplitude oscillation (ε = ΔR/R₀ << 1), a
+/// quasi-steady gas field, and an infinite reservoir. Keller–Miksis puts
+/// ε = 1 at P_ac/P₀ ≈ 3–4 (R₀ = 2 µm); above that the bubble collapses
+/// inertially every cycle and the law's flux is meaningless. Stage 6 of the
+/// triplet-pulse prototype applied the law at P_ac/P₀ = 66–146 and produced
+/// 986/1904 µm growth artifacts; the Stage 6 audit (Nov 17, 2026) retired
+/// those numbers. Use [`rectified_diffusion_rate_checked`] to enforce this
+/// bound at the call site.
+pub const RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO: f64 = 3.0;
+
 /// Rectified diffusion model for bubble growth (Eller & Flynn 1965)
 ///
 /// Returns the molar gas flux rate [mol/s] into the bubble.
+///
+/// # Validity
+/// The linearized law is valid only for P_ac/P₀ ≲ 3
+/// ([`RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO`]). Outside that regime the
+/// returned flux is an extrapolation artifact, not a prediction — see the
+/// Stage 6 audit. Prefer [`rectified_diffusion_rate_checked`], which
+/// rejects out-of-regime inputs instead of silently returning a flux.
 #[must_use]
 pub fn rectified_diffusion_rate(
     radius: f64,            // [m]
@@ -49,6 +71,52 @@ pub fn rectified_diffusion_rate(
 
     // Growth rate ∝ R * D * C * (P_ac/P_0) * √Pe
     FOUR_PI * radius * diffusivity * concentration * pressure_ratio * peclet.sqrt()
+}
+
+/// Checked form of [`rectified_diffusion_rate`]: same molar gas flux rate
+/// [mol/s], but rejects inputs outside the law's domain of validity instead
+/// of silently returning an extrapolation artifact.
+///
+/// # Errors
+/// - Returns [`KwaversError::Physics`] when `ambient_pressure <= 0` (the
+///   pressure ratio is undefined) or when `acoustic_pressure /
+///   ambient_pressure` exceeds [`RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO`]
+///   (small-amplitude regime violated; the bubble is in inertial collapse
+///   and the flux has no meaning).
+pub fn rectified_diffusion_rate_checked(
+    radius: f64,            // [m]
+    ambient_pressure: f64,  // [Pa]
+    acoustic_pressure: f64, // [Pa]
+    frequency: f64,         // [Hz]
+    diffusivity: f64,       // [m²/s]
+    concentration: f64,     // [mol/m³]
+) -> KwaversResult<f64> {
+    if ambient_pressure <= 0.0 {
+        return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
+            parameter: "ambient_pressure".to_owned(),
+            value: ambient_pressure,
+            reason: "Ambient pressure must be positive for the pressure ratio to be defined"
+                .to_owned(),
+        }));
+    }
+    let pressure_ratio = acoustic_pressure / ambient_pressure;
+    if pressure_ratio > RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO {
+        return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
+            parameter: "acoustic_pressure / ambient_pressure".to_owned(),
+            value: pressure_ratio,
+            reason: format!(
+                "Eller-Flynn rectified-diffusion law is valid only for P_ac/P0 <= {RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO} (small-amplitude oscillation); got {pressure_ratio:.1}"
+            ),
+        }));
+    }
+    Ok(rectified_diffusion_rate(
+        radius,
+        ambient_pressure,
+        acoustic_pressure,
+        frequency,
+        diffusivity,
+        concentration,
+    ))
 }
 
 #[cfg(test)]
@@ -121,6 +189,49 @@ mod tests {
         assert!(
             flux == 0.0 || flux.is_nan(),
             "Zero diffusivity must yield zero or NaN flux, got {flux}"
+        );
+    }
+
+    #[test]
+    fn test_rectified_diffusion_checked_accepts_in_regime() {
+        // P_AC = 120 kPa is P_ac/P0 = 1.18, inside the small-amplitude regime.
+        let flux = rectified_diffusion_rate_checked(R0, P0, P_AC, FREQ, D_AIR, C_SAT)
+            .expect("in-regime input must be accepted");
+        assert_relative_eq!(
+            flux,
+            rectified_diffusion_rate(R0, P0, P_AC, FREQ, D_AIR, C_SAT),
+            epsilon = 1e-12
+        );
+    }
+
+    #[test]
+    fn test_rectified_diffusion_checked_rejects_burst_pressures() {
+        // Stage 6 audit: the law was applied at P_ac/P0 = 66 (Iwasaki burst,
+        // 6.7 MPa) and 146 (Kuji burst, 14.7 MPa), producing 986/1904 µm
+        // growth artifacts. The checked form must refuse those inputs.
+        for p_ac in [6.7e6, 14.7e6] {
+            let err = rectified_diffusion_rate_checked(R0, P0, p_ac, FREQ, D_AIR, C_SAT)
+                .expect_err("burst pressure must be rejected");
+            assert!(
+                matches!(
+                    err,
+                    KwaversError::Physics(PhysicsError::InvalidParameter { .. })
+                ),
+                "expected InvalidParameter, got {err:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_rectified_diffusion_checked_rejects_nonpositive_ambient() {
+        let err = rectified_diffusion_rate_checked(R0, 0.0, P_AC, FREQ, D_AIR, C_SAT)
+            .expect_err("zero ambient pressure must be rejected");
+        assert!(
+            matches!(
+                err,
+                KwaversError::Physics(PhysicsError::InvalidParameter { .. })
+            ),
+            "expected InvalidParameter, got {err:?}"
         );
     }
 }

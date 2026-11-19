@@ -45,8 +45,10 @@
 //! ```
 
 pub mod frequency_filter;
+pub mod triplet;
 
 pub use frequency_filter::FrequencyFilter;
+pub use triplet::{ratio_mask, TripletPulseFilter};
 
 use crate::SignalPrimitive;
 use kwavers_core::error::KwaversResult;

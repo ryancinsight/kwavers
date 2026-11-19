@@ -13,8 +13,8 @@
 //! emergent property of the simulated dynamics rather than an imposed shape.
 
 use crate::acoustics::bubble_dynamics::{
-    AdaptiveBubbleConfig, AdaptiveBubbleIntegrator, BubbleParameters, BubbleState,
-    KellerMiksisModel, MarmottantModel, ShellProperties,
+    acoustic_pressure::PressureAmplitude, AdaptiveBubbleConfig, AdaptiveBubbleIntegrator,
+    BubbleParameters, BubbleState, KellerMiksisModel, MarmottantModel, ShellProperties,
 };
 use kwavers_core::constants::numerical::TWO_PI;
 
@@ -39,8 +39,8 @@ pub struct BubbleDriveConfig {
     pub gamma: f64,
     /// Drive frequency `Hz`.
     pub drive_freq_hz: f64,
-    /// Peak acoustic drive pressure `Pa`.
-    pub drive_amp_pa: f64,
+    /// Peak acoustic drive pressure.
+    pub drive_amp_pa: PressureAmplitude,
     /// Number of drive cycles to simulate.
     pub n_cycles: f64,
     /// Output samples (uniform grid over the simulated window).
@@ -138,12 +138,9 @@ pub fn simulate_bubble_emission(cfg: &BubbleDriveConfig) -> BubbleEmissionTrace 
     let t_end = cfg.n_cycles * period;
     let dt_main = t_end / (n_out as f64 - 1.0);
 
-    let drive = |t: f64| -> (f64, f64) {
-        (
-            cfg.drive_amp_pa * (omega * t).sin(),
-            cfg.drive_amp_pa * omega * (omega * t).cos(),
-        )
-    };
+    // The tone is synthesised from the typed amplitude at this
+    // boundary; the integrator takes the instantaneous pair.
+    let drive = |t: f64| cfg.drive_amp_pa.sample(omega, t, 0.0);
 
     // Record the initial (equilibrium) sample.
     let push_sample = |trace: &mut BubbleEmissionTrace, t: f64, st: &BubbleState, rddot: f64| {
@@ -206,8 +203,8 @@ pub struct ShellDriveConfig {
     pub gamma: f64,
     /// Drive frequency `Hz`.
     pub drive_freq_hz: f64,
-    /// Peak acoustic drive pressure `Pa`.
-    pub drive_amp_pa: f64,
+    /// Peak acoustic drive pressure.
+    pub drive_amp_pa: PressureAmplitude,
     /// Number of drive cycles to simulate.
     pub n_cycles: f64,
     /// RK4 sub-steps per drive cycle.
@@ -284,13 +281,18 @@ pub fn simulate_coated_bubble_emission(cfg: &ShellDriveConfig) -> BubbleEmission
     // Output stride: record ~n_out evenly-spaced samples of the fine grid.
     let stride = (n_total / n_out).max(1);
 
-    // R̈ as a function of (R, Ṙ, t) on a scratch state (Marmottant takes the
-    // drive amplitude and computes the sinusoid internally).
+    // R̈ as a function of (R, Ṙ, t) on a scratch state. The shell model
+    // takes the INSTANTANEOUS acoustic pressure, so the tone
+    // p(t) = amp·sin(ωt) is synthesised here from the drive amplitude
+    // (see the drive contract on `EncapsulatedShellModel::acceleration`).
     let amp = cfg.drive_amp_pa;
+    let omega = TWO_PI * cfg.drive_freq_hz;
     let accel_at = |r: f64, v: f64, t: f64, scratch: &mut BubbleState| -> f64 {
         scratch.radius = r.max(1e-12);
         scratch.wall_velocity = v;
-        model.calculate_acceleration(scratch, amp, t).unwrap_or(0.0)
+        model
+            .calculate_acceleration(scratch, amp.instantaneous_at(omega, t, 0.0), t)
+            .unwrap_or(0.0)
     };
 
     let mut scratch = init;

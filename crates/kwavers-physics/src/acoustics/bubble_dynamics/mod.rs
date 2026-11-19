@@ -23,6 +23,7 @@
 //! 3. Physics layer keeps only the equation structs implementing `BubbleOde`
 //! 4. Update all callers to the new solver-layer path
 
+pub mod acoustic_pressure; // Typed drive pressures: instantaneous vs amplitude
 pub mod adaptive_integration; // NEW: Adaptive time-stepping for stiff ODEs
 pub mod bjerknes_forces; // NEW: Bjerknes forces for bubble-bubble interactions
 pub mod bubble_field;
@@ -45,6 +46,7 @@ pub mod rayleigh_plesset;
 pub mod symplectic_integration; // Störmer-Verlet / Yoshida symplectic ODE (relocated from solver)
 pub mod thermodynamics;
 
+pub use acoustic_pressure::{InstantaneousPressure, PressureAmplitude};
 pub use adaptive_integration::{
     integrate_bubble_dynamics_adaptive, AdaptiveBubbleConfig, AdaptiveBubbleIntegrator,
     IntegrationStatistics,

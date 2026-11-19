@@ -17,7 +17,8 @@ mod tests;
 pub use config::BubbleIMEXConfig;
 pub use integrator::BubbleIMEXIntegrator;
 
-use super::{BubbleState, KellerMiksisModel};
+use super::{acoustic_pressure::InstantaneousPressure, BubbleState, KellerMiksisModel};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::error::KwaversResult;
 use std::sync::Arc;
 
@@ -28,8 +29,8 @@ use std::sync::Arc;
 pub fn integrate_bubble_dynamics_imex(
     solver: Arc<KellerMiksisModel>,
     state: &mut BubbleState,
-    p_acoustic: f64,
-    dp_dt: f64,
+    p_acoustic: InstantaneousPressure,
+    dp_dt: PressureRate,
     dt: f64,
     t: f64,
 ) -> KwaversResult<()> {

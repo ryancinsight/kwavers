@@ -1,5 +1,6 @@
 //! Bubble and population emission simulation PyO3 wrappers.
 
+use kwavers_physics::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use kwavers_physics::analytical::cavitation;
 use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
@@ -69,7 +70,7 @@ pub fn simulate_bubble_emission(
         pv,
         gamma,
         drive_freq_hz,
-        drive_amp_pa,
+        drive_amp_pa: PressureAmplitude::from_pascals(drive_amp_pa),
         n_cycles,
         n_out,
         r_obs_m,
@@ -152,7 +153,7 @@ pub fn simulate_coated_bubble_emission(
         mu,
         gamma,
         drive_freq_hz,
-        drive_amp_pa,
+        drive_amp_pa: PressureAmplitude::from_pascals(drive_amp_pa),
         n_cycles,
         steps_per_cycle,
         n_out,

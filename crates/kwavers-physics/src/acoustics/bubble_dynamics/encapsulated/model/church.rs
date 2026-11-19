@@ -1,5 +1,6 @@
 use super::super::shell::ShellProperties;
 use super::shell_model::EncapsulatedShellModel;
+use crate::acoustics::bubble_dynamics::acoustic_pressure::InstantaneousPressure;
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use kwavers_core::error::KwaversResult;
 
@@ -33,7 +34,7 @@ impl ChurchModel {
     pub fn calculate_acceleration(
         &self,
         state: &mut BubbleState,
-        p_acoustic: f64,
+        p_acoustic: InstantaneousPressure,
         t: f64,
     ) -> KwaversResult<f64> {
         EncapsulatedShellModel::acceleration(self, state, p_acoustic, t)

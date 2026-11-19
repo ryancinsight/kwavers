@@ -1,8 +1,8 @@
 //! Rayleigh-Plesset equation solver for bubble dynamics
 
+use super::super::acoustic_pressure::InstantaneousPressure;
 use super::super::bubble_state::{BubbleParameters, BubbleState};
 use kwavers_core::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
 
 /// Rayleigh-Plesset equation solver (incompressible)
@@ -19,15 +19,38 @@ impl RayleighPlessetSolver {
 
     /// Calculate bubble wall acceleration using Rayleigh-Plesset equation
     /// Standard form: ρ(RR̈ + 3/2Ṙ²) = pg - p∞ - 2σ/R - 4μṘ/R
+    ///
+    /// # Acoustic-drive contract
+    ///
+    /// `p_acoustic` is the INSTANTANEOUS acoustic pressure `p_∞(t) − p0`
+    /// [Pa] at time `t`. The Rayleigh–Plesset equation is written in
+    /// terms of a general far-field pressure `p_∞(t)` (Brennen 1995,
+    /// "Cavitation and Bubble Dynamics"); the sinusoidal form
+    /// `p_∞(t) = p0 ± P_A·sin(ωt + φ)` is the standard specialisation
+    /// for continuous harmonic drive, not part of the equation. Callers
+    /// that have an amplitude synthesise the tone themselves. An earlier
+    /// version of this function treated `p_acoustic` as an amplitude and
+    /// multiplied by `sin(ωt)` internally, which double-modulated every
+    /// caller that already passed an instantaneous pressure. The `t`
+    /// argument is retained for interface compatibility.
     #[must_use]
-    pub fn calculate_acceleration(&self, state: &BubbleState, p_acoustic: f64, t: f64) -> f64 {
+    pub fn calculate_acceleration(
+        &self,
+        state: &BubbleState,
+        p_acoustic: InstantaneousPressure,
+        t: f64,
+    ) -> f64 {
         let r = state.radius;
         let v = state.wall_velocity;
 
-        // Time-dependent acoustic forcing with proper phase tracking
-        let acoustic_phase = TWO_PI * self.params.driving_frequency * t;
-        let p_acoustic_instantaneous = p_acoustic * acoustic_phase.sin();
-        let p_liquid_far = self.params.p0 + p_acoustic_instantaneous;
+        // Formula boundary: the drive arrives typed; the equation below
+        // works in pascals.
+        let p_acoustic = p_acoustic.as_pascals();
+
+        // Far-field pressure p_∞(t) = p0 + p_acoustic(t); see the contract
+        // above. The `t` argument is unused by the RHS.
+        let _ = t;
+        let p_liquid_far = self.params.p0 + p_acoustic;
 
         // Direct physics-based pressure calculation.
         // Reference: Rayleigh-Plesset equation, Brennen (1995), "Cavitation and Bubble Dynamics"

@@ -7,6 +7,7 @@
 //! inter-line floor reflects genuine inharmonic emission. This is the standard
 //! estimator used for passive-cavitation spectroscopy (Gyöngy & Coussios 2010).
 
+use crate::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use crate::analytical::cavitation::keller_miksis_rk4;
 use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -170,8 +171,8 @@ pub struct KellerMiksisMedium {
 pub struct KellerMiksisDrive {
     /// Equilibrium bubble radius (`m`).
     pub r0_m: f64,
-    /// Acoustic drive amplitude (`Pa`).
-    pub p_ac_pa: f64,
+    /// Acoustic drive amplitude.
+    pub p_ac_pa: PressureAmplitude,
     /// Drive frequency (`Hz`).
     pub drive_frequency_hz: f64,
     /// Initial pressure amplitude (`Pa`).
@@ -280,7 +281,7 @@ pub fn keller_miksis_pcd_controller_trace(
     r0_m: f64,
     drive_frequency_hz: f64,
     n_pulses: usize,
-    initial_pressure_pa: f64,
+    initial_pressure_pa: PressureAmplitude,
     n_cycles_per_pulse: usize,
     n_per_cycle: usize,
     discard_cycles: usize,
@@ -288,8 +289,8 @@ pub fn keller_miksis_pcd_controller_trace(
     inertial_limit: f64,
     gamma_up: f64,
     gamma_down: f64,
-    p_min_pa: f64,
-    p_max_pa: f64,
+    p_min_pa: PressureAmplitude,
+    p_max_pa: PressureAmplitude,
     p0_pa: f64,
     rho: f64,
     sigma: f64,
@@ -309,7 +310,13 @@ pub fn keller_miksis_pcd_controller_trace(
         p_max_pa,
     )?;
 
-    let mut pressure_pa = initial_pressure_pa.clamp(p_min_pa, p_max_pa);
+    // Controller arithmetic stays in pascals at this boundary; the
+    // drive passed to the spectrum is typed.
+    let mut pressure_pa = PressureAmplitude::from_pascals(
+        initial_pressure_pa
+            .as_pascals()
+            .clamp(p_min_pa.as_pascals(), p_max_pa.as_pascals()),
+    );
     let mut pulse_index = Vec::with_capacity(n_pulses);
     let mut pressure_kpa = Vec::with_capacity(n_pulses);
     let mut stable_signal = Vec::with_capacity(n_pulses);
@@ -339,19 +346,21 @@ pub fn keller_miksis_pcd_controller_trace(
         )?;
 
         pulse_index.push((pulse + 1) as f64);
-        pressure_kpa.push(pressure_pa / 1.0e3);
+        pressure_kpa.push(pressure_pa.as_pascals() / 1.0e3);
         stable_signal.push(spectrum.stable_signal);
         inertial_signal.push(spectrum.inertial_signal);
 
         if pulse + 1 < n_pulses {
-            pressure_pa = if spectrum.inertial_signal > inertial_limit {
-                pressure_pa * gamma_down
-            } else if spectrum.stable_signal < stable_target {
-                pressure_pa * gamma_up
-            } else {
-                pressure_pa
-            }
-            .clamp(p_min_pa, p_max_pa);
+            pressure_pa = PressureAmplitude::from_pascals(
+                (if spectrum.inertial_signal > inertial_limit {
+                    pressure_pa.as_pascals() * gamma_down
+                } else if spectrum.stable_signal < stable_target {
+                    pressure_pa.as_pascals() * gamma_up
+                } else {
+                    pressure_pa.as_pascals()
+                })
+                .clamp(p_min_pa.as_pascals(), p_max_pa.as_pascals()),
+            );
         }
     }
 
@@ -556,7 +565,7 @@ fn validate_keller_miksis_inputs(
 
     let scalars = [
         r0_m,
-        p_ac_pa,
+        p_ac_pa.as_pascals(),
         drive_frequency_hz,
         p0_pa,
         rho,
@@ -587,22 +596,22 @@ fn validate_keller_miksis_inputs(
 #[allow(clippy::too_many_arguments)]
 fn validate_controller_inputs(
     n_pulses: usize,
-    initial_pressure_pa: f64,
+    initial_pressure_pa: PressureAmplitude,
     stable_target: f64,
     inertial_limit: f64,
     gamma_up: f64,
     gamma_down: f64,
-    p_min_pa: f64,
-    p_max_pa: f64,
+    p_min_pa: PressureAmplitude,
+    p_max_pa: PressureAmplitude,
 ) -> Result<(), String> {
     let scalars = [
-        initial_pressure_pa,
+        initial_pressure_pa.as_pascals(),
         stable_target,
         inertial_limit,
         gamma_up,
         gamma_down,
-        p_min_pa,
-        p_max_pa,
+        p_min_pa.as_pascals(),
+        p_max_pa.as_pascals(),
     ];
     if !scalars.iter().all(|value| value.is_finite()) {
         return Err("PCD controller inputs must be finite".to_owned());
@@ -616,7 +625,7 @@ fn validate_controller_inputs(
     if gamma_up < 1.0 || !(0.0..=1.0).contains(&gamma_down) {
         return Err("gamma_up must be >= 1 and gamma_down must be in [0, 1]".to_owned());
     }
-    if p_min_pa <= 0.0 || p_max_pa < p_min_pa {
+    if p_min_pa.as_pascals() <= 0.0 || p_max_pa.as_pascals() < p_min_pa.as_pascals() {
         return Err("pressure bounds must be positive with p_max_pa >= p_min_pa".to_owned());
     }
     Ok(())

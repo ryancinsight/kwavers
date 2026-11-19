@@ -1,6 +1,10 @@
+use crate::acoustics::bubble_dynamics::acoustic_pressure::{
+    InstantaneousPressure, PressureAmplitude,
+};
 use crate::acoustics::bubble_dynamics::bubble_state::{
     viscous_bubble_wall_stress, young_laplace_pressure,
 };
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::acoustic_parameters::RAYLEIGH_COLLAPSE_COEFFICIENT;
 use kwavers_core::constants::numerical::TWO_PI;
 
@@ -227,7 +231,7 @@ pub fn rayleigh_collapse_time_s(rmax_m: f64, p_inf_pa: f64, rho: f64) -> f64 {
 pub fn rayleigh_plesset_rk4(
     r0_m: f64,
     rdot0: f64,
-    p_ac_pa: f64,
+    p_ac_pa: PressureAmplitude,
     freq_hz: f64,
     t_arr: &[f64],
     p0_pa: f64,
@@ -255,7 +259,7 @@ pub fn rayleigh_plesset_rk4(
     let rhs = |r: f64, rdot: f64, t: f64| -> (f64, f64) {
         let r_clamped = r.max(1e-15);
         let p_gas = p_eq * (r0_m / r_clamped).powf(3.0 * kappa) + p_v_pa;
-        let p_ac = p_ac_pa * (omega * t).sin();
+        let p_ac = p_ac_pa.instantaneous_at(omega, t, 0.0).as_pascals();
         let rddot = (p_gas
             - p0_pa
             - p_ac
@@ -350,7 +354,7 @@ where
 pub fn keller_miksis_rk4(
     r0_m: f64,
     rdot0: f64,
-    p_ac_pa: f64,
+    p_ac_pa: PressureAmplitude,
     freq_hz: f64,
     t_arr: &[f64],
     p0_pa: f64,
@@ -396,7 +400,7 @@ pub fn keller_miksis_rk4(
 pub fn keller_miksis_shelled_rk4(
     r0_m: f64,
     rdot0: f64,
-    p_ac_pa: f64,
+    p_ac_pa: PressureAmplitude,
     freq_hz: f64,
     t_arr: &[f64],
     p0_pa: f64,
@@ -425,10 +429,9 @@ pub fn keller_miksis_shelled_rk4(
         c_liquid,
     };
     keller_miksis_forced_rk4(params, rdot0, t_arr, move |t_ret| {
-        (
-            p_ac_pa * (omega * t_ret).sin(),
-            p_ac_pa * omega * (omega * t_ret).cos(),
-        )
+        // Monochromatic tone synthesised from the amplitude at the call
+        // site: the forced core takes instantaneous (p, dp/dt).
+        p_ac_pa.sample(omega, t_ret, 0.0)
     })
 }
 
@@ -462,12 +465,14 @@ pub(crate) struct KmShellParams {
 /// Integrate the shell-damped Keller–Miksis equation under an *arbitrary*
 /// acoustic forcing, the SSOT core for every drive waveform.
 ///
-/// `force(t_ret) → (p_ac, dp_ac/dt)` returns the acoustic pressure and its bare
-/// time derivative (without the `(1 + Ṙ/c)` compressibility factor, which the
-/// radiation-damping term applies) evaluated at the retarded time `t_ret = t +
-/// R/c`. The monochromatic [`keller_miksis_shelled_rk4`] passes a single
-/// sinusoid; the swept-frequency module passes a chirp. Both therefore share one
-/// audited wall-pressure balance and one RK4 loop — no duplicated dynamics.
+/// `force(t_ret) → (p_ac, dp_ac/dt)` returns the instantaneous acoustic
+/// pressure and its bare time derivative (without the `(1 + Ṙ/c)`
+/// compressibility factor, which the radiation-damping term applies)
+/// evaluated at the retarded time `t_ret = t + R/c`, typed as
+/// [`InstantaneousPressure`] and [`PressureRate`]. The monochromatic
+/// [`keller_miksis_shelled_rk4`] passes a single sinusoid; the
+/// swept-frequency module passes a chirp. Both therefore share one audited
+/// wall-pressure balance and one RK4 loop — no duplicated dynamics.
 ///
 /// # Reference
 /// Keller & Miksis (1980), *J. Acoust. Soc. Am.* 68, 628 (canonical form,
@@ -479,7 +484,7 @@ pub(crate) fn keller_miksis_forced_rk4<Force>(
     force: Force,
 ) -> (Vec<f64>, Vec<f64>)
 where
-    Force: Fn(f64) -> (f64, f64),
+    Force: Fn(f64) -> (InstantaneousPressure, PressureRate),
 {
     let KmShellParams {
         r0_m,
@@ -530,7 +535,7 @@ where
             - young_laplace_pressure(sigma, r_c)
             - viscous_bubble_wall_stress(mu, rdot, r_c)
             - p_shell;
-        let p_inf = p0_pa + p_ac_ret;
+        let p_inf = p0_pa + p_ac_ret.as_pascals();
 
         // Time derivatives at the wall.  Polytropic non-condensable gas:
         //   dp_nc/dt = -3 kappa p_nc * Rdot / R   (p_v is constant in time)
@@ -553,7 +558,7 @@ where
         // a radiation-damping source. xi_s = 0 leaves dp_wall_dt unchanged, so
         // the bare Keller–Miksis solution is recovered bit-for-bit.
         let dp_wall_dt = dp_nc_dt + dp_surface_dt + dp_viscous_dt;
-        let dp_inf_dt = dp_ac_dt * (1.0 + rdot / c_liquid);
+        let dp_inf_dt = *dp_ac_dt.as_base() * (1.0 + rdot / c_liquid);
 
         let rdot_cl = rdot / c_liquid;
         let lhs_coeff = (1.0 - rdot_cl) * r_c;
