@@ -34,8 +34,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::bubble_dynamics::{
-    acoustic_pressure::PressureAmplitude,
-    BubbleParameters, BubbleState, KellerMiksisModel,
+    acoustic_pressure::PressureAmplitude, BubbleParameters, BubbleState, KellerMiksisModel,
 };
 use kwavers_signal::SineWave;
 use kwavers_solver::forward::nonlinear::westervelt::{WesterveltFdtd, WesterveltFdtdConfig};

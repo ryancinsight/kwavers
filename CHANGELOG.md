@@ -4,6 +4,10 @@
 
 ### Changed
 
+- Use Consus 0.5 for HDF5, NPZ, and MATLAB Level-5 phantom input. Kwavers
+  retains the MRI-to-sound-speed transform. Consus reads the selected
+  MATLAB variable and normalizes its column-major numeric data.
+
 - **Breaking:** Three of Kwavers' four direct `chrono` edges leave the
   workspace. `RUSTSEC-2026-0543` marks `chrono` unmaintained, and every
   version is affected: `kwavers-diagnostics`'s
