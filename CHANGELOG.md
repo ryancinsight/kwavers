@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 3.0.0 Rust registry cohort
+
+The first registry cohort has 22 public packages. It includes
+`kwavers-analysis` and `kwavers-diagnostics` 4.0.0 for the clinical API
+changes, `kwavers-medium` 4.0.0, `kwavers-transducer` 4.1.0,
+`kwavers-gpu` 5.0.0, and `kwavers-driver` 0.3.13. The application and
+the other public layers use 3.0.0. See
+[ADR 139](docs/adr/139-native-provider-registry-cutover.md).
 
 ### Breaking
 
@@ -13,6 +20,8 @@
 
 ### Changed
 
+- [patch] Use the Aequitas 0.4 registry cohort for material properties,
+  photon transport, time stepping, and sampling.
 - [patch] Format UTC timestamps in clinical, tooling, and integration-test
   reports with Horae. Use the native RITK dataset and writer to clear the
   last Chrono dependency, then retire its advisory hold.

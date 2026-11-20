@@ -20,7 +20,7 @@ kwavers-source = { path = "../kwavers-source", version = "3.0.0" }
 kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
 kwavers-physics = { path = "../kwavers-physics", version = "3.0.0" }
 kwavers-solver = { path = "../kwavers-solver", version = "3.0.0" }
-kwavers-analysis = { path = "../kwavers-analysis", version = "3.0.0" }
+kwavers-analysis = { path = "../kwavers-analysis", version = "4.0.0" }
 kwavers-simulation = { path = "../kwavers-simulation", version = "3.0.0" }
 moirai-parallel = { workspace = true }
 leto = { workspace = true }

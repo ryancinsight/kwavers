@@ -1,11 +1,14 @@
 <a id="kw-release-crates-01"></a>
 
-## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — blocked
+## KW-RELEASE-CRATES-01 — Publish the Rust package closure [patch] — in progress
 
 priority: feature; needs: none; scope: root `Cargo.toml` workspace members; `.github/workflows/rust-release.yml`
 
-- **Blocker:** release authority. Publication is the release delivery state and needs the user's explicit authorization; no agent grant covers it.
-- **Re-open trigger:** the user authorizes publishing the Rust closure.
-- **Preparation verified 2026-09-08:** the workspace holds exactly 23 publishable packages with `kwavers-python` the sole `publish = false` member, and no publishable crate depends on it, so the publishable set is dependency-closed.
-- **Not yet true:** crates.io indexes none of them (`kwavers`, `kwavers-core`, `kwavers-solver`, `kwavers-physics` return no published version), so "every version is indexed" stays outstanding until the release runs.
+- The approved registry closure contains 22 Rust packages. The former
+  allocation probe is supplied by Mnemosyne. The Python binding and
+  workspace tooling are private Cargo packages.
+- [ADR 139](../docs/adr/139-native-provider-registry-cutover.md) defines the
+  package boundaries and [the checklist](../CHECKLIST.md) records verification.
+- Close when every archive is indexed with the merged revision, and a
+  consumer with no lockfile resolves the published graph.
 - **Version class to carry.** #1059 adds a defaulted method to the public trait `PstdStateBuilder` of `kwavers-gpu` under the commit type `fix`; by contract it is [minor], so a release tool that reads commit types alone assigns too small a bump (its first verdict, comment 6814685775, finding 3).

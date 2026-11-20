@@ -38,6 +38,7 @@ allow = ["CDLA-Permissive-2.0"]
 crate = "webpki-root-certs@1.0.11"
 
 [bans]
+deny = [{ crate = "chrono" }]
 multiple-versions = "warn"
 wildcards = "warn"
 highlight = "all"

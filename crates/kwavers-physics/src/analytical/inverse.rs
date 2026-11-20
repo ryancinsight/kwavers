@@ -143,7 +143,7 @@ pub fn tikhonov_lcurve(
             mat[i * k + i] += lam;
         }
         // Solve
-        let x = gaussian_elim_flat(&mat, &atb, k);
+        let x = super::linear_solve::solve_flat(&mat, &atb, k);
         // Compute ‖Ax − b‖
         let mut res = vec![0.0_f64; nrows];
         for r in 0..nrows {
@@ -319,7 +319,7 @@ pub fn born_inversion_regularized(
         big_rhs[i] = ghy_re[i];
         big_rhs[i + k] = ghy_im[i];
     }
-    let x = gaussian_elim_flat(&big_mat, &big_rhs, n2);
+    let x = super::linear_solve::solve_flat(&big_mat, &big_rhs, n2);
     let x_re = x[..k].to_vec();
     let x_im = x[k..].to_vec();
     (x_re, x_im)
@@ -382,54 +382,13 @@ pub fn exponential_convergence_curve(
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-/// Gaussian elimination with partial pivoting for flat square system.
-#[allow(clippy::needless_range_loop)]
-fn gaussian_elim_flat(mat_flat: &[f64], rhs: &[f64], n: usize) -> Vec<f64> {
-    let mut aug: Vec<Vec<f64>> = (0..n)
-        .map(|i| {
-            let mut row: Vec<f64> = mat_flat[i * n..(i + 1) * n].to_vec();
-            row.push(rhs[i]);
-            row
-        })
-        .collect();
-
-    for col in 0..n {
-        // Partial pivot
-        let pivot = (col..n)
-            .max_by(|&i, &j| aug[i][col].abs().total_cmp(&aug[j][col].abs()))
-            .unwrap();
-        aug.swap(col, pivot);
-        let diag = aug[col][col];
-        if diag.abs() < 1e-300 {
-            return vec![0.0; n];
-        }
-        for row in (col + 1)..n {
-            let f = aug[row][col] / diag;
-            for k in col..=n {
-                let v = aug[col][k] * f;
-                aug[row][k] -= v;
-            }
-        }
-    }
-    let mut x = vec![0.0_f64; n];
-    for i in (0..n).rev() {
-        x[i] = aug[i][n];
-        for j in (i + 1)..n {
-            x[i] -= aug[i][j] * x[j];
-        }
-        x[i] /= aug[i][i];
-    }
-    x
-}
-
 /// Compute eigenvalues of a symmetric matrix via Jacobi iteration.
 /// Returns unsorted eigenvalues.
 #[allow(clippy::needless_range_loop)]
 fn symmetric_eigenvalues(mat_flat: &[f64], n: usize) -> Vec<f64> {
-    // Copy to working array
-    let mut a: Vec<Vec<f64>> = (0..n)
-        .map(|i| mat_flat[i * n..(i + 1) * n].to_vec())
-        .collect();
+    // One row-major block with stride `n`, for the same reason as the
+    // elimination above: the rotation updates every row and column in turn.
+    let mut a: Vec<f64> = mat_flat[..n * n].to_vec();
 
     let max_iter = 100 * n * n;
     for _ in 0..max_iter {
@@ -439,8 +398,8 @@ fn symmetric_eigenvalues(mat_flat: &[f64], n: usize) -> Vec<f64> {
         let mut q = 1;
         for i in 0..n {
             for j in (i + 1)..n {
-                if a[i][j].abs() > max_val {
-                    max_val = a[i][j].abs();
+                if a[i * n + j].abs() > max_val {
+                    max_val = a[i * n + j].abs();
                     p = i;
                     q = j;
                 }
@@ -450,32 +409,32 @@ fn symmetric_eigenvalues(mat_flat: &[f64], n: usize) -> Vec<f64> {
             break;
         }
         // Compute Jacobi rotation angle
-        let theta = if (a[p][p] - a[q][q]).abs() < 1e-15 {
+        let theta = if (a[p * n + p] - a[q * n + q]).abs() < 1e-15 {
             std::f64::consts::PI / 4.0
         } else {
-            0.5 * ((2.0 * a[p][q]) / (a[p][p] - a[q][q])).atan()
+            0.5 * ((2.0 * a[p * n + q]) / (a[p * n + p] - a[q * n + q])).atan()
         };
         let c = theta.cos();
         let s = theta.sin();
         // Apply rotation
-        let app = c * c * a[p][p] + 2.0 * s * c * a[p][q] + s * s * a[q][q];
-        let aqq = s * s * a[p][p] - 2.0 * s * c * a[p][q] + c * c * a[q][q];
-        a[p][q] = 0.0;
-        a[q][p] = 0.0;
-        a[p][p] = app;
-        a[q][q] = aqq;
+        let app = c * c * a[p * n + p] + 2.0 * s * c * a[p * n + q] + s * s * a[q * n + q];
+        let aqq = s * s * a[p * n + p] - 2.0 * s * c * a[p * n + q] + c * c * a[q * n + q];
+        a[p * n + q] = 0.0;
+        a[q * n + p] = 0.0;
+        a[p * n + p] = app;
+        a[q * n + q] = aqq;
         for r in 0..n {
             if r != p && r != q {
-                let arp = c * a[r][p] + s * a[r][q];
-                let arq = -s * a[r][p] + c * a[r][q];
-                a[r][p] = arp;
-                a[p][r] = arp;
-                a[r][q] = arq;
-                a[q][r] = arq;
+                let arp = c * a[r * n + p] + s * a[r * n + q];
+                let arq = -s * a[r * n + p] + c * a[r * n + q];
+                a[r * n + p] = arp;
+                a[p * n + r] = arp;
+                a[r * n + q] = arq;
+                a[q * n + r] = arq;
             }
         }
     }
-    (0..n).map(|i| a[i][i]).collect()
+    (0..n).map(|i| a[i * n + i]).collect()
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -580,6 +539,62 @@ mod tests {
         assert!(exponential_convergence_curve(&[0.0], 1.0, 0.0, 0.0).is_err());
         assert!(exponential_convergence_curve(&[0.0], 1.0, 1.0, f64::NAN).is_err());
         assert!(exponential_convergence_curve(&[f64::NAN], 1.0, 1.0, 0.0).is_err());
+    }
+
+    #[test]
+    fn flat_solve_keeps_the_pre_flattening_bits() {
+        // The elimination path is IEEE arithmetic only - products, sums,
+        // divisions and a correctly rounded square root - so it yields the
+        // same bit pattern on every platform, and the bits measured from the
+        // pre-flattening kernels still hold.
+        let (res, sol) = tikhonov_lcurve(
+            &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            &[1.0, 0.0, 1.0],
+            3,
+            2,
+            &[0.5],
+        );
+        assert_eq!(
+            res.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+            vec![4_606_057_906_291_383_473],
+            "residual norm changed: {res:?}"
+        );
+        assert_eq!(
+            sol.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+            vec![4_599_832_342_985_058_334],
+            "solution norm changed: {sol:?}"
+        );
+    }
+
+    #[test]
+    fn flat_jacobi_matches_the_analytic_singular_values() {
+        // The Jacobi rotation evaluates `cos` and `sin` of its rotation
+        // angle, so this path cannot be pinned to a bit pattern: the
+        // constant-folded release path and each platform's libm land within
+        // one ulp of the exact angle, and the last bit of the eigenvalue
+        // moves with it. The oracle is the analytic singular value instead.
+        //
+        // A = [[2, 1], [1, 2]] gives AᵀA = [[5, 4], [4, 5]], whose
+        // eigenvalues are 9 and 1, so the singular values are 3 and 1
+        // exactly. With c = cos θ and s = sin θ each within one ulp of
+        // 1/√2, the products c², s² and 2sc carry at most two ulp of
+        // absolute error, so the rotation's `app` and `aqq` carry at most
+        // 5·2·ulp(0.5) + 4·2·ulp(1) + 3·½·ulp(9) ≈ 5.6e-15, and the
+        // square root halves the relative error: 9.3e-16 on σ0 and 2.8e-15
+        // on σ1. The bounds below are four ulp of 3.0 (1.78e-15) and
+        // sixteen ulp of 1.0 (3.55e-15), each with margin over that
+        // derivation.
+        let sv = matrix_singular_values(&[2.0, 1.0, 1.0, 2.0], 2, 2);
+        let sigma0_tolerance = 8.0 * f64::EPSILON;
+        let sigma1_tolerance = 16.0 * f64::EPSILON;
+        assert!(
+            (sv[0] - 3.0).abs() <= sigma0_tolerance,
+            "singular value changed: {sv:?}"
+        );
+        assert!(
+            (sv[1] - 1.0).abs() <= sigma1_tolerance,
+            "singular value changed: {sv:?}"
+        );
     }
 
     #[test]

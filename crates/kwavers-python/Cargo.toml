@@ -32,9 +32,9 @@ kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
 kwavers-signal = { path = "../kwavers-signal", version = "3.0.0" }
 kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"], version = "3.0.0" }
 kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"], version = "3.0.0" }
-kwavers-analysis = { path = "../kwavers-analysis", version = "3.0.0" }
+kwavers-analysis = { path = "../kwavers-analysis", version = "4.0.0" }
 kwavers-simulation = { path = "../kwavers-simulation", version = "3.0.0" }
-kwavers-diagnostics = { path = "../kwavers-diagnostics", version = "3.0.0" }
+kwavers-diagnostics = { path = "../kwavers-diagnostics", version = "4.0.0" }
 kwavers-therapy = { path = "../kwavers-therapy", version = "3.0.0" }
 kwavers-gpu = { path = "../kwavers-gpu", version = "5.0.0" }
 coeus-core = { workspace = true }

@@ -37,7 +37,7 @@
 <a id="kw-mat-043"></a>- [KW-MAT-043](backlog/kw-mat-043.md) — Direct FWI L-BFGS provider ownership [patch] [arch] — todo
 <a id="kw-py-uvlock-stale-2026-09-21"></a>- [KW-PY-UVLOCK-STALE-2026-09-21](backlog/kw-py-uvlock-stale-2026-09-21.md) — The Python dev lockfile is stale against its own pyproject [patch] — todo
 <a id="kw-ray-040"></a>- [KW-RAY-040](backlog/kw-ray-040.md) — Layered focus-path contract [minor] — todo
-<a id="kw-release-crates-01"></a>- [KW-RELEASE-CRATES-01](backlog/kw-release-crates-01.md) — Publish the Rust package closure [patch] — blocked
+<a id="kw-release-crates-01"></a>- [KW-RELEASE-CRATES-01](backlog/kw-release-crates-01.md) — Publish the Rust package closure [patch] — in progress
 <a id="kw-sim-test-compile-graph"></a>- [KW-SIM-TEST-COMPILE-GRAPH](backlog/kw-sim-test-compile-graph.md) — Reduce simulation test build latency [patch] [perf] — todo
 <a id="kw-vis-105"></a>- [KW-VIS-105](backlog/kw-vis-105.md) — Visualization renderer ignores the field type, and engine tests leave four behaviours unpinned [patch] — todo
 <a id="kwavers-aeq-met-66"></a>- [KWAVERS-AEQ-MET-66](backlog/kwavers-aeq-met-66.md) — Type thermal-diffusion quantities [major] [arch] — blocked
@@ -56,6 +56,7 @@
 <a id="kw-gpu-fft-plan-capacity"></a>- [KW-GPU-FFT-PLAN-CAPACITY](backlog/kw-gpu-fft-plan-capacity.md) — Check FFT capacity before GPU PSTD builds solver state [patch] — verified locally
 <a id="kw-gpu-pstd-buffer-request"></a>- [KW-GPU-PSTD-BUFFER-REQUEST](backlog/kw-gpu-pstd-buffer-request.md) — GPU PSTD requests a 128 MiB buffer limit whatever the adapter supports [minor] — todo
 <a id="kwavers-aeq-met-70"></a>- [KWAVERS-AEQ-MET-70](backlog/kwavers-aeq-met-70.md) — Inventory raw public metrics in the remaining transducer families [arch] — todo
+<a id="kwavers-aeq-met-71"></a>- [KWAVERS-AEQ-MET-71](backlog/kwavers-aeq-met-71.md) — Type instantaneous pressure vs pressure amplitude across all bubble-dynamics algorithms [arch] — done
 <a id="kw-ci-ubuntu-latest-unpinned"></a>- [KW-CI-UBUNTU-LATEST-UNPINNED](backlog/kw-ci-ubuntu-latest-unpinned.md) — 23 workflow jobs and one wheel-smoke matrix cell run on the moving `ubuntu-latest` image [patch] [ci] — todo
 <a id="kw-fdtd-avx512-doc"></a>- [KW-FDTD-AVX512-DOC](backlog/kw-fdtd-avx512-doc.md) — The FDTD solver doc and a standing fact advertise AVX-512 kernels that were deleted [patch] — todo
 <a id="kw-fdtd-sigma-test-slow"></a>- [KW-FDTD-SIGMA-TEST-SLOW](backlog/kw-fdtd-sigma-test-slow.md) — The FDTD sigma-factor test runs at two thirds of its 60 s bound in a parallel run [patch] [perf] — todo

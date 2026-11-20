@@ -1,7 +1,9 @@
 //! Water phase-change property laws used by Keller-Miksis thermodynamics.
 
 use kwavers_core::constants::numerical::MMHG_TO_PA;
-use kwavers_core::constants::thermodynamic::{WATER_ANTOINE_A, WATER_ANTOINE_B, WATER_ANTOINE_C};
+use kwavers_core::constants::thermodynamic::{
+    KELVIN_OFFSET_C, T_CRITICAL_WATER, WATER_ANTOINE_A, WATER_ANTOINE_B, WATER_ANTOINE_C,
+};
 
 /// Saturation vapor pressure of water at `t_celsius` using the Antoine equation.
 ///
@@ -14,14 +16,29 @@ pub fn p_sat_water_pa(t_celsius: f64) -> f64 {
 
 /// Temperature-dependent latent heat of vaporization for water.
 ///
-/// Linear Watson/NIST fit:
+/// Linear Watson/NIST fit, valid ~0–100 °C:
 ///
 /// ```text
 /// L_v(T) = 2.501e6 - 2369 T_C  [J/kg]
 /// ```
+///
+/// KW-PHYS-003: the fit is clamped so `L_v ≥ 0` everywhere and
+/// `L_v = 0` at and above the critical temperature (`T_c = 647.096 K`,
+/// i.e. 373.946 °C), per Watson's rule (`L_v → 0` at `T_c`) and
+/// Kreider et al. 2011, JASA 130:3511, Eq. 15 (the Hertz–Knudsen flux
+/// is set to zero above `T_c`). The unclamped fit crosses zero at
+/// 1055.7 °C and is −4.43 MJ/kg at a 3200 K collapse temperature, which
+/// flipped the sign of the latent term in `latent_temperature_rate`
+/// (condensation cooled the gas, evaporation heated it). Callers must
+/// evaluate `L_v` at the interface/liquid temperature (as `p_sat`
+/// already is, post-KW-PHYS-002), never at the bulk gas temperature;
+/// the clamp is a guard, not a licence to evaluate it at `T_gas`.
 #[must_use]
 pub fn latent_heat_water_j_per_kg(t_celsius: f64) -> f64 {
-    2369.0f64.mul_add(-t_celsius, 2.501e6)
+    if t_celsius >= T_CRITICAL_WATER - KELVIN_OFFSET_C {
+        return 0.0;
+    }
+    (2.501e6 - 2369.0 * t_celsius).max(0.0)
 }
 
 #[cfg(test)]
@@ -114,6 +131,46 @@ mod tests {
         assert!(
             (slope - (-2369.0)).abs() < 1e-9,
             "slope must be -2369 J/(kg·°C) (got {slope:.3})"
+        );
+    }
+
+    /// KW-PHYS-003: `L_v ≥ 0` for every temperature, including the
+    /// ~3200 K bulk gas temperature reached during violent collapse.
+    ///
+    /// The unclamped linear fit goes negative above 1055.7 °C
+    /// (−4.43 MJ/kg at 3200 K), which flipped the sign of the latent
+    /// term. The clamp holds at and below the critical point.
+    #[test]
+    fn latent_heat_never_negative() {
+        for t_c in [
+            -50.0, 0.0, 100.0, 373.0, 373.946, 500.0, 1055.7, 2926.85, 5000.0,
+        ] {
+            let lv = latent_heat_water_j_per_kg(t_c);
+            assert!(
+                lv >= 0.0,
+                "L_v({t_c} °C) = {lv:.3e} J/kg, expected ≥ 0 (KW-PHYS-003)"
+            );
+        }
+    }
+
+    /// KW-PHYS-003: `L_v = 0` at and above the critical temperature
+    /// (Watson's rule: `L_v → 0` at `T_c = 647.096 K = 373.946 °C`),
+    /// and strictly positive just below it.
+    #[test]
+    fn latent_heat_zero_above_critical_temperature() {
+        assert_eq!(
+            latent_heat_water_j_per_kg(373.946),
+            0.0,
+            "L_v(T_c) must be 0"
+        );
+        assert_eq!(
+            latent_heat_water_j_per_kg(1000.0),
+            0.0,
+            "L_v above T_c must be 0"
+        );
+        assert!(
+            latent_heat_water_j_per_kg(373.0) > 0.0,
+            "L_v just below T_c must still be positive"
         );
     }
 }
