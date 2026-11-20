@@ -60,7 +60,6 @@ fn kwavers_to_py(err: kwavers_core::error::KwaversError) -> PyErr {
     r0_um, pnp_mpa, frequency_hz = 1.74e6, steps_per_cycle = 500,
     thermal = false, accommodation_coeff = 0.04,
 ))]
-#[allow(clippy::too_many_arguments)]
 pub fn triplet_pulse_ratio(
     py: Python<'_>,
     r0_um: f64,
@@ -182,7 +181,6 @@ fn build_cloud(frequency_hz: f64, pnp_mpa: f64, thermal: bool) -> TripletPulseCl
     bubble_positions_m, r0_um, pnp_mpa, receiver_m,
     frequency_hz = 1.74e6, steps_per_cycle = 500, thermal = false,
 ))]
-#[allow(clippy::too_many_arguments)]
 pub fn triplet_cloud_phase_traces(
     py: Python<'_>,
     bubble_positions_m: PyReadonlyArray2<f64>,
@@ -378,7 +376,6 @@ pub fn triplet_filter_rf(
     rf, dt_s, xs_m, ys_m, aperture_m = 10.0e-3, domain_width_m = 38.4e-3,
     element_depth_m = 2.0e-3, sound_speed_m_s = 1540.0,
 ))]
-#[allow(clippy::too_many_arguments)]
 pub fn triplet_das_image(
     py: Python<'_>,
     rf: PyReadonlyArray2<f64>,
@@ -434,7 +431,6 @@ pub fn triplet_das_image(
     tissue_x_lo_m = 28.0e-3, tissue_x_hi_m = 33.0e-3,
     tissue_cy_m = 20.0e-3, tissue_half_depth_m = 2.0e-3,
 ))]
-#[allow(clippy::too_many_arguments)]
 pub fn triplet_contrast(
     image: PyReadonlyArray2<f64>,
     baseline_image: PyReadonlyArray2<f64>,

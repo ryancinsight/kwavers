@@ -1,5 +1,9 @@
 mod transcranial_slice_inversion;
 mod transcranial_volume_inversion;
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the triplet-pulse bindings preserve Python positional and keyword signatures"
+)]
 mod triplet_pulse;
 
 use pyo3::exceptions::PyRuntimeError;

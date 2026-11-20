@@ -39,6 +39,6 @@ audited 2026-06-03.
 |------|---------|
 | [`../README.md`](../README.md) | Project overview, install, status. |
 | [`../backlog.md`](../backlog.md) | Strategy / prioritized work. |
-| [`../CHECKLIST.md`](../CHECKLIST.md) | Tactical task tracking. |
+| [Registry cutover checklist](migrations/registry-cutover.md) | Tactical task tracking. |
 | [`../gap_audit.md`](../gap_audit.md) | Physics/numerics gap audit. |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | Version history. |
