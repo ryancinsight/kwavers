@@ -4,6 +4,11 @@
 
 ### Changed
 
+- Use crates.io Aequitas 0.5.0 and Eunomia 0.12.1 throughout the
+  Kwavers workspace. Kwavers and RITK share the published Coeus and Leto
+  identities for imaging tensors and registration arrays.
+- Declare the existing `time` provider for the clinical report's UTC header.
+
 - Use Consus 0.5 for HDF5, NPZ, and MATLAB Level-5 phantom input. Kwavers
   retains the MRI-to-sound-speed transform. Consus reads the selected
   MATLAB variable and normalizes its column-major numeric data.
