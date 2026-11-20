@@ -8,19 +8,19 @@ aequitas = { version = "0.5.0", default-features = false, features = ["std", "se
 # reader and `Dimensioned<D>`, so the extraction lives once upstream rather
 # than being reimplemented here. Unpublished by design: the wheel is its
 # deliverable, and this crate consumes it as a library.
-aequitas_python = { package = "aequitas-python", version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", tag = "crate-aequitas-v0.5.0" }
+aequitas_python = { package = "aequitas-python", version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "7625b7b99925f271cdf30f52b8351fc46fcaa871" }
 asclepius = { version = "0.5.0", default-features = false, features = ["std"] }
 hyperion = { package = "hyperion-transport", version = "0.3.0" }
 proteus = { package = "proteus-mat", version = "0.3.0" }
 tyche-core = "0.5.0"
-# Use the merged RITK workspace while the registry packages require Aequitas 0.4.
-# The exact revision gives all RITK types a shared package identity.
-ritk-core = { version = "0.11.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
-ritk-io = { version = "0.6.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
-ritk-image = { version = "0.5.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
-ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
-ritk-spatial = { version = "0.5.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
-ritk-registration = { version = "0.56.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
+# Public Atlas providers resolve through crates.io. The private Python member
+# uses the pinned quantity protocol provider above.
+ritk-core = "0.12.0"
+ritk-io = "0.7.0"
+ritk-image = "0.6.0"
+ritk-block-matching = "0.2.0"
+ritk-spatial = "0.6.0"
+ritk-registration = "0.57.0"
 coeus-core = "0.14.0"
 coeus-tensor = "0.14.0"
 coeus-autograd = "0.14.0"
@@ -254,7 +254,3 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true  # Strip symbols for smaller Python wheels
-
-# The Git-hosted binding shares the published Rust quantity identity.
-[patch."https://github.com/ryancinsight/aequitas"]
-aequitas = { version = "0.5.0" }

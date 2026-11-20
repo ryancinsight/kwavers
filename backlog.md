@@ -1,5 +1,11 @@
 # Backlog / Strategy
 
+## Aequitas and Leto provider update [major]
+
+- Target the 4.0.0 source cohort and migrate all affected callers.
+- Verify one typed provider set and the existing device-level physics cases.
+  See [ADR 140](docs/adr/140-published-typed-provider-cutover.md).
+
 <a id="kw-provider-cutovers"></a>- [KW-PROVIDER-CUTOVERS](backlog/kw-provider-cutovers.md) — Use Horae, Iris, and native RITK paths, and verify the numerical module split [major] [minor] — done
 
 <a id="atlas-kwavers-hephaestus-vis-104"></a>- [ATLAS-KWAVERS-HEPHAESTUS-VIS-104](backlog/atlas-kwavers-hephaestus-vis-104.md) — Multi-field hand-off and fallback render entries have no value test [patch] — todo

@@ -72,3 +72,5 @@ jobs:
       id-token: write # OIDC trusted publishing; no stored registry token.
     with:
       rust-toolchain: "1.97.0"
+      # This source migration has a separate, future registry release.
+      cohort-json: "{}"

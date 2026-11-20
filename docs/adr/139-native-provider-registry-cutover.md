@@ -40,8 +40,8 @@ and check archive checksums against the registry index.
 
 ## Aequitas 0.5 workspace migration
 
-The workspace uses the Aequitas 0.5 and Leto 0.52 registry cohort.
-Hephaestus 0.32 supplies the typed GPU FFT capacity check for that
-cohort. Kwavers pins the merged RITK revision while the current RITK
-packages still select Aequitas 0.4. The next Kwavers registry release
-requires compatible RITK packages and a new consumer check.
+Kwavers #1121 introduces Aequitas 0.5, Leto 0.52, and the typed GPU
+FFT capacity check from Hephaestus 0.32. It pins the merged RITK
+revision while the earlier registry packages still select Aequitas 0.4.
+[ADR 140](140-published-typed-provider-cutover.md) records the move to
+published RITK and the separate version cohort.

@@ -1,18 +1,19 @@
 # Changelog
 
-## Unreleased
+## 4.0.0 source cohort
 
-### Changed
+### Breaking
 
-- Use crates.io Aequitas 0.5.0 and Eunomia 0.12.1. Share Coeus and Leto
-  crate identities with RITK at the imaging and registration boundaries.
-- Preserve the typed GPU FFT capacity preflight on Hephaestus 0.32.0.
+- [major] Use Aequitas 0.5 quantities and Leto 0.52 arrays throughout the
+  published-provider graph. Update typed dependencies together.
+  The driver requires Rust 1.97 for its supported features. See
+  [ADR 140](docs/adr/140-published-typed-provider-cutover.md).
 
 ### Fixed
 
-- Pack the PSTD absorption symbols and material coefficients into pairs so
-  absorbing Metal dispatches fit an adapter with 29 buffer bindings. The
-  solver preserves coefficient values, numerical operations, and size checks.
+- [patch] Pack the two spectral symbols and two material coefficients
+  into paired buffers. The absorbing PSTD pipelines use 29 storage
+  bindings and retain the fractional-Laplacian formulas.
 
 ## 3.0.0 Rust registry cohort
 

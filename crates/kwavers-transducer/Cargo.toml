@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-transducer"
-version = "4.1.0"
+version = "5.0.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -10,15 +10,15 @@ repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 aequitas = { workspace = true }
-kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
-kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
+kwavers-core = { path = "../kwavers-core", version = "4.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "4.0.0" }
 eunomia = { workspace = true }
-kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
-kwavers-signal = { path = "../kwavers-signal", version = "3.0.0" }
-kwavers-field = { path = "../kwavers-field", version = "3.0.0" }
-kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
-kwavers-source = { path = "../kwavers-source", version = "3.0.0" }
-kwavers-receiver = { path = "../kwavers-receiver", version = "3.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "4.0.0" }
+kwavers-signal = { path = "../kwavers-signal", version = "4.0.0" }
+kwavers-field = { path = "../kwavers-field", version = "4.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "5.0.0" }
+kwavers-source = { path = "../kwavers-source", version = "4.0.0" }
+kwavers-receiver = { path = "../kwavers-receiver", version = "4.0.0" }
 leto = { workspace = true }
 leto-ops = { workspace = true }
 moirai-parallel = { workspace = true }
