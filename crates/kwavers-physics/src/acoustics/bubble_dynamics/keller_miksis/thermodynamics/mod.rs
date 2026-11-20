@@ -16,5 +16,7 @@ mod tests;
 
 pub(crate) use eos::calculate_vdw_pressure;
 pub use phase::{latent_heat_water_j_per_kg, p_sat_water_pa};
+#[cfg(test)]
+pub(crate) use temperature::latent_temperature_rate;
 pub(crate) use temperature::update_temperature;
 pub(crate) use transfer::update_mass_transfer;
