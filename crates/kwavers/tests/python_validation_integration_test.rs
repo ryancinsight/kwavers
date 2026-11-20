@@ -72,7 +72,9 @@ impl ComprehensiveValidationReport {
             source_results: Vec::new(),
             sensor_results: Vec::new(),
             solver_results: Vec::new(),
-            timestamp: chrono::Local::now().to_rfc3339(),
+            timestamp: time::OffsetDateTime::now_utc()
+                .format(&time::format_description::well_known::Rfc3339)
+                .expect("system clock yields a formattable UTC timestamp"),
         }
     }
 

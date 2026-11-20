@@ -77,7 +77,9 @@ rand_distr = "0.5"
 rand_chacha = "0.9"
 # NOTE: medical-image I/O (DICOM, NIfTI, …) is owned by ritk-io and bridged in
 # `domain::imaging::medical::ritk_bridge`; kwavers has no direct format-crate deps.
-chrono = { version = "0.4", features = ["serde"] }
+# NOTE: wall-clock timestamps in tests use the `time` dev-dependency (UTC RFC 3339).
+# chrono is intentionally absent: RUSTSEC-2026-0543 flags every chrono 0.4.x
+# release as unmaintained, and the only direct use was a test report timestamp.
 
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"], optional = true }
 
@@ -154,6 +156,8 @@ consus-npy = { workspace = true }
 
 # Concurrency testing (Sprint 138 - Persona Requirements)
 loom = "0.7"
+# UTC RFC 3339 timestamps for test validation reports (replaces chrono::Local).
+time = { version = "0.3", default-features = false, features = ["std", "formatting"] }
 
 [features]
 default = ["minimal"]  # PRODUCTION DEFAULT
