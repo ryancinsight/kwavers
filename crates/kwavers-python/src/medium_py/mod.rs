@@ -9,7 +9,7 @@ use kwavers_medium::heterogeneous::{HeterogeneousFactory, HeterogeneousMedium};
 use kwavers_medium::traits::Medium as MediumTrait;
 use kwavers_medium::HomogeneousMedium;
 
-use crate::array_utils::ndarray::into_leto;
+use crate::array_utils::owned::into_leto;
 use crate::grid_py::Grid;
 
 #[derive(Clone, Debug)]

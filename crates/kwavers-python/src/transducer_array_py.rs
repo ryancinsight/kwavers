@@ -7,7 +7,7 @@ use pyo3::prelude::*;
 
 use crate::quantity_args::{PyDegrees, PyFocusDistance, PyFrequency, PyLength, PyVelocity};
 
-use crate::array_utils::ndarray::into_leto;
+use crate::array_utils::owned::into_leto;
 
 use kwavers_transducer::array_2d::{
     ArrayCurvature, TransducerArray2D as KwaversTransducerArray2D, TransducerArray2DConfig,

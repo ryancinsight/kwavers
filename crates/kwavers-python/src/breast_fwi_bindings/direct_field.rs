@@ -2,7 +2,7 @@
 
 use super::py_convert::kwavers_to_py;
 use super::{PyBreastFwiPstdDatasetConfig, PyMultiRowRingArray};
-use crate::array_utils::ndarray::into_leto;
+use crate::array_utils::owned::into_leto;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     diagnose_breast_ust_homogeneous_direct_field, BreastUstDirectFieldDiagnostics,
     BreastUstHomogeneousDirectFieldDiagnostics,

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod simulation_contract_tests {
     use super::super::Simulation;
-    use crate::array_utils::ndarray::{into_leto, into_ndarray};
+    use crate::array_utils::owned::{into_leto, into_ndarray};
     use crate::grid_py::Grid;
     use crate::medium_py::MediumInner;
     use crate::misc_bindings::time_reversal_reconstruction_impl;

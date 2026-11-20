@@ -10,7 +10,7 @@ use numpy::ndarray::Axis;
 use numpy::{PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 
-use crate::array_utils::ndarray::into_leto;
+use crate::array_utils::owned::into_leto;
 use pyo3::prelude::*;
 
 /// Acoustic source for wave excitation.
