@@ -14,7 +14,8 @@ two versions as distinct even when their dimensions and representations agree.
 
 Use Horae for civil-time conversion, Iris for standalone plotting, and RITK
 for DICOM data and codecs. Use the Aequitas 0.4 cohort on crates.io for
-materials, transport, time stepping, and sampling. The Python extension
+materials, transport, time stepping, and sampling. Hephaestus 0.31
+provides the typed FFT capacity preflight on this cohort. The Python extension
 retains an exact source revision for its private quantity protocol binding.
 
 Release the 22 public packages in dependency order. Advance

@@ -1,5 +1,6 @@
 mod transcranial_slice_inversion;
 mod transcranial_volume_inversion;
+mod triplet_pulse;
 
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
@@ -20,5 +21,6 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m
     )?)?;
     m.add_function(wrap_pyfunction!(crate::ritk_image::load_ct_nifti, m)?)?;
+    triplet_pulse::register_triplet(m)?;
     Ok(())
 }

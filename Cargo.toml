@@ -33,9 +33,9 @@ apollo = { package = "apollo-fft", version = "0.30.0" }
 # athena-core = backend-neutral contracts, athena-leto = Leto CPU backend.
 athena-core = "0.4.0"
 athena-leto = "0.4.0"
-hephaestus-core = { version = "0.29.0", default-features = false }
-hephaestus-wgpu = { version = "0.29.0", default-features = false, features = ["decomposition"] }
-hephaestus-cuda = { version = "0.29.0", default-features = false }
+hephaestus-core = { version = "0.31.0", default-features = false }
+hephaestus-wgpu = { version = "0.31.0", default-features = false, features = ["decomposition"] }
+hephaestus-cuda = { version = "0.31.0", default-features = false }
 hermes-simd = { version = "0.10.0", default-features = false, features = ["std"] }
 themis = { package = "themis-topology", version = "0.11.5", default-features = false, features = ["std"] }
 moirai-parallel = { version = "0.12.0", default-features = false, features = ["parallel"] }

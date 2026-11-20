@@ -184,6 +184,9 @@ pub mod clutter_filter;
 // Image-quality metrics: CR / CNR / gCNR / FWHM (Chapter 9 §9.8)
 pub mod image_quality;
 
+// Triplet-pulse envelope DAS + image contrast (Rust port step 4, KW-IMG-046).
+pub mod triplet_pulse;
+
 // SWE-based clinical tissue staging (METAVIR liver fibrosis, Algorithm 11.5)
 pub mod tissue_staging;
 

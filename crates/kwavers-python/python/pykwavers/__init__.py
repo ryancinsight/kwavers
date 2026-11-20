@@ -566,6 +566,13 @@ from ._pykwavers import (
     cem43_at_temperatures,
     compute_arrhenius_damage,
     solve_hodgkin_huxley_like,
+    # ── Triplet-pulse imaging (Iwasaki 2018 / Kuji 2024) ────────────────────
+    triplet_pulse_ratio,
+    triplet_cloud_phase_traces,
+    triplet_combine_methods,
+    triplet_filter_rf,
+    triplet_das_image,
+    triplet_contrast,
     # ── Thermal: Beer-Lambert depth profiles + 3-D heat-source density ──────────
     adiabatic_temperature_rise_kelvin,
     gaussian_power_deposition_2d,
@@ -1020,6 +1027,13 @@ __all__ = [
     "cem43_at_temperatures",
     "compute_arrhenius_damage",
     "solve_hodgkin_huxley_like",
+    # ── Triplet-pulse imaging (Iwasaki 2018 / Kuji 2024) ────────────────────
+    "triplet_pulse_ratio",
+    "triplet_cloud_phase_traces",
+    "triplet_combine_methods",
+    "triplet_filter_rf",
+    "triplet_das_image",
+    "triplet_contrast",
     # ── Thermal: Beer-Lambert depth profiles + 3-D heat-source density ──────────
     "adiabatic_temperature_rise_kelvin",
     "gaussian_power_deposition_2d",

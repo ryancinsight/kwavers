@@ -1542,9 +1542,9 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hephaestus-core"
-version = "0.29.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15c5521927bf6b2d979f6e4434937cdd958f6447356c846a3e6704b33213e69c"
+checksum = "68a0146d16abd27b24eaafaac3188ca47c994d9dfdccd2e2ecd76215c19a9c0a"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -1555,9 +1555,9 @@ dependencies = [
 
 [[package]]
 name = "hephaestus-cuda"
-version = "0.29.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13c9bce134622dce0e17761957d69fab08322e02d16e0395b62b2ca6ca14aa04"
+checksum = "327e095eeb89b513f1b015b92d77a7493f513517d969db468dab60a27489a4fe"
 dependencies = [
  "eunomia",
  "hephaestus-core",
@@ -1572,9 +1572,9 @@ dependencies = [
 
 [[package]]
 name = "hephaestus-wgpu"
-version = "0.29.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb1ac2c7376d24bc2bd836f0d523a0290f170bda74094781dd0feaf7668281dd"
+checksum = "929159b2471c6c6d685331b9b9fbd6dda855705cfb3febbfdf3250d6aa8c50b0"
 dependencies = [
  "eunomia",
  "futures",
@@ -2349,6 +2349,7 @@ dependencies = [
  "aequitas",
  "anyhow",
  "apollo-fft",
+ "consus-npy",
  "egui",
  "eunomia",
  "flume",
@@ -2656,6 +2657,7 @@ dependencies = [
  "kwavers-diagnostics",
  "kwavers-gpu",
  "kwavers-grid",
+ "kwavers-imaging",
  "kwavers-math",
  "kwavers-medium",
  "kwavers-physics",
