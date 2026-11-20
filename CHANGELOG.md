@@ -8,6 +8,12 @@
   crate identities with RITK at the imaging and registration boundaries.
 - Preserve the typed GPU FFT capacity preflight on Hephaestus 0.32.0.
 
+### Fixed
+
+- Pack the PSTD absorption symbols and material coefficients into pairs so
+  absorbing Metal dispatches fit an adapter with 29 buffer bindings. The
+  solver preserves coefficient values, numerical operations, and size checks.
+
 ## 3.0.0 Rust registry cohort
 
 The first registry cohort has 22 public packages. It includes

@@ -184,19 +184,30 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
             source_kappa: buf_source_kappa,
         };
 
-        let buf_absorb_nabla1 = mk_ro(absorb_nabla1, "absorb_nabla1");
-        let buf_absorb_nabla2 = mk_ro(absorb_nabla2, "absorb_nabla2");
-        let buf_absorb_tau = mk_ro(absorb_tau, "absorb_tau");
-        let buf_absorb_eta = mk_ro(absorb_eta, "absorb_eta");
+        // WGSL array<vec2<f32>> has an eight-byte stride, the same as
+        // [f32; 2]. Packing each pair removes two resource bindings without
+        // changing values or transfer size. Symbols stay resident; only the
+        // material pair changes when a caller updates the medium.
+        let symbols: Vec<_> = absorb_nabla1
+            .iter()
+            .zip(absorb_nabla2)
+            .map(|(&low, &high)| [low, high])
+            .collect();
+        let coefficients: Vec<_> = absorb_tau
+            .iter()
+            .zip(absorb_eta)
+            .map(|(&tau, &eta)| [tau, eta])
+            .collect();
+        let buf_absorb_symbols = buffers.read_only_storage(&symbols, "absorb_symbols");
+        let buf_absorb_coefficients =
+            buffers.read_only_storage(&coefficients, "absorb_coefficients");
         let buf_absorb_scratch_kre = mk_rw(total, "absorb_kre");
         let buf_absorb_scratch_kim = mk_rw(total, "absorb_kim");
         let buf_absorb_scratch_l1 = mk_rw(total, "absorb_l1");
         let buf_absorb_scratch_l2 = mk_rw(total, "absorb_l2");
         let absorption_buffers = WgpuPstdAbsorptionBuffers {
-            nabla1: buf_absorb_nabla1,
-            nabla2: buf_absorb_nabla2,
-            tau: buf_absorb_tau,
-            eta: buf_absorb_eta,
+            symbols: buf_absorb_symbols,
+            coefficients: buf_absorb_coefficients,
             scratch_kre: buf_absorb_scratch_kre,
             scratch_kim: buf_absorb_scratch_kim,
             scratch_l1: buf_absorb_scratch_l1,
@@ -336,10 +347,8 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
                 &bind_groups,
                 bgl_absorb,
                 &AbsorbBuffers {
-                    nabla1: &absorption_buffers.nabla1,
-                    nabla2: &absorption_buffers.nabla2,
-                    tau: &absorption_buffers.tau,
-                    eta: &absorption_buffers.eta,
+                    symbols: &absorption_buffers.symbols,
+                    coefficients: &absorption_buffers.coefficients,
                     scratch_kre: &absorption_buffers.scratch_kre,
                     scratch_kim: &absorption_buffers.scratch_kim,
                     scratch_l1: &absorption_buffers.scratch_l1,
@@ -368,6 +377,7 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
             scratch_c0_sq: vec![0.0f32; total],
             scratch_rho0_inv: vec![0.0f32; total],
             scratch_rho0_flat: vec![0.0f32; total],
+            scratch_absorption: coefficients,
             scratch_source_kappa_ones: vec![1.0f32; total],
             scratch_source_data: Vec::new(),
             scratch_vel_x_data: Vec::new(),

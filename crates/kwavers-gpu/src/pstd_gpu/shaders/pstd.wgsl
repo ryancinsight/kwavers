@@ -555,39 +555,28 @@ fn add_kspace_to_density(@builtin(global_invocation_id) gid: vec3<u32>) {
 // 3-group layout and never access these bindings.
 //
 // Layout:
-//   binding 0: absorb_nabla1    — |k|^(y−2) in FFT order (read-only)
-//   binding 1: absorb_nabla2    — |k|^(y−1) in FFT order (read-only)
-//   binding 2: absorb_tau       — −2α₀c₀^(y−1) per voxel (read-only)
-//   binding 3: absorb_eta       — 2α₀c₀^y·tan(πy/2) per voxel (read-only)
-//   binding 4: absorb_scratch_kre — temp complex re save (read_write)
-//   binding 5: absorb_scratch_kim — temp complex im save (read_write)
-//   binding 6: absorb_scratch_l1  — L1 = IFFT(nabla1·FFT(div_u)) (read_write)
-//   binding 7: absorb_scratch_l2  — L2 = IFFT(nabla2·FFT(div_u)) (read_write)
+//   binding 0: absorb_symbols — [|k|^(y−2), |k|^(y−1)] in FFT order
+//   binding 1: absorb_coefficients — [tau, eta] per voxel
+//   bindings 2–5: complex k-space scratch and real L1/L2 scratch
 //
 // References: Treeby & Cox (2010) Eqs. 9–10, 19–21.
 
 @group(3) @binding(0)
-var<storage, read> absorb_nabla1: array<f32>;
+var<storage, read> absorb_symbols: array<vec2<f32>>;
 
 @group(3) @binding(1)
-var<storage, read> absorb_nabla2: array<f32>;
+var<storage, read> absorb_coefficients: array<vec2<f32>>;
 
 @group(3) @binding(2)
-var<storage, read> absorb_tau: array<f32>;
-
-@group(3) @binding(3)
-var<storage, read> absorb_eta: array<f32>;
-
-@group(3) @binding(4)
 var<storage, read_write> absorb_scratch_kre: array<f32>;
 
-@group(3) @binding(5)
+@group(3) @binding(3)
 var<storage, read_write> absorb_scratch_kim: array<f32>;
 
-@group(3) @binding(6)
+@group(3) @binding(4)
 var<storage, read_write> absorb_scratch_l1: array<f32>;
 
-@group(3) @binding(7)
+@group(3) @binding(5)
 var<storage, read_write> absorb_scratch_l2: array<f32>;
 
 // ─── Entry point: absorb_save_kspace ─────────────────────────────────────────
@@ -614,9 +603,9 @@ fn absorb_mul_nabla(@builtin(global_invocation_id) gid: vec3<u32>) {
     if idx >= params.nx * params.ny * params.nz { return; }
     var n: f32;
     if params.axis == 0u {
-        n = absorb_nabla1[idx];
+        n = absorb_symbols[idx].x;
     } else {
-        n = absorb_nabla2[idx];
+        n = absorb_symbols[idx].y;
     }
     kspace_re[idx] *= n;
     kspace_im[idx] *= n;
@@ -728,8 +717,8 @@ fn absorb_pressure_correction(@builtin(global_invocation_id) gid: vec3<u32>) {
     let idx = gid.x;
     if idx >= params.nx * params.ny * params.nz { return; }
     let c2 = precomp_c0_sq[idx];
-    field_p[idx] += c2 * (absorb_tau[idx] * absorb_scratch_l1[idx]
-                        - absorb_eta[idx] * absorb_scratch_l2[idx]);
+    field_p[idx] += c2 * (absorb_coefficients[idx].x * absorb_scratch_l1[idx]
+                        - absorb_coefficients[idx].y * absorb_scratch_l2[idx]);
 }
 
 // ─── Helper: copy real field to kspace (real part), zero imaginary ────────────
