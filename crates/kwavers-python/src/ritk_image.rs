@@ -22,7 +22,7 @@ use std::path::Path;
 pub fn load_ct_nifti(py: Python<'_>, path: &str) -> PyResult<(Py<PyArray3<f64>>, (f64, f64, f64))> {
     let (volume, spacing) = load_ritk_nifti(Path::new(path))?;
     Ok((
-        crate::array_utils::ndarray::into_ndarray(volume)
+        crate::array_utils::owned::into_ndarray(volume)
             .to_pyarray(py)
             .unbind(),
         (spacing[0], spacing[1], spacing[2]),

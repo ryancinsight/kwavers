@@ -98,7 +98,7 @@ impl Sensor {
         Ok(Sensor {
             sensor_type: "mask".to_string(),
             position: None,
-            mask: Some(crate::array_utils::ndarray::into_leto(mask_arr)),
+            mask: Some(crate::array_utils::owned::into_leto(mask_arr)),
             record_modes: Vec::new(),
             record_start_index: 1,
         })

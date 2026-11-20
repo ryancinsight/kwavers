@@ -5,7 +5,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::Source;
-use crate::array_utils::ndarray::into_leto;
+use crate::array_utils::owned::into_leto;
 
 #[pymethods]
 impl Source {

@@ -1,6 +1,6 @@
 //! PyO3 binding for the skull-adaptive transcranial benchmark.
 
-use crate::array_utils::ndarray::into_ndarray;
+use crate::array_utils::owned::into_ndarray;
 use kwavers_diagnostics::reconstruction::transcranial_ust::{
     resample_head_volume, select_head_slice,
 };

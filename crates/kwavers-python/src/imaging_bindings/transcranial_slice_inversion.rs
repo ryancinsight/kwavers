@@ -1,4 +1,4 @@
-use crate::array_utils::ndarray::into_ndarray;
+use crate::array_utils::owned::into_ndarray;
 use kwavers_diagnostics::reconstruction::transcranial_ust::{
     reconstruct_brain_slice, resample_head_slice, select_head_slice, AcousticSlice,
     TranscranialUstBornInversionConfig,

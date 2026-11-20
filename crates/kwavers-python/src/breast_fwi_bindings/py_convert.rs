@@ -1,7 +1,7 @@
 //! Internal helpers: operator parsing, boundary parsing, array conversion,
 //! observation stack construction, and error conversion for breast FWI bindings.
 
-use crate::array_utils::ndarray::into_leto;
+use crate::array_utils::owned::into_leto;
 use aequitas::systems::si::units::Meter;
 use eunomia::Complex64;
 use kwavers_solver::inverse::fwi::frequency_domain::{

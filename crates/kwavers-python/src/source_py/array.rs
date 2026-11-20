@@ -4,7 +4,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::Source;
-use crate::array_utils::ndarray::{into_leto, into_ndarray};
+use crate::array_utils::owned::{into_leto, into_ndarray};
 use crate::kwave_array_py::KWaveArray;
 
 #[pymethods]

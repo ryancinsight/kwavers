@@ -72,7 +72,7 @@ impl GpuPstdSession {
 
         #[cfg(feature = "gpu")]
         {
-            use crate::array_utils::ndarray::into_ndarray;
+            use crate::array_utils::owned::into_ndarray;
             use kwavers_gpu::pstd_gpu::{PstdOutputRequest, PstdRunInputs};
 
             let total_t0 = std::time::Instant::now();

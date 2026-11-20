@@ -1,6 +1,6 @@
 //! PyO3 wrapper for Ali 2025 forward-operator equivalence diagnostics.
 
-use crate::array_utils::ndarray::into_leto;
+use crate::array_utils::owned::into_leto;
 use eunomia::Complex64;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     forward_operator_equivalence_diagnostics_with_receiver_policy as breast_ust_forward_operator_equivalence_diagnostics_with_receiver_policy,

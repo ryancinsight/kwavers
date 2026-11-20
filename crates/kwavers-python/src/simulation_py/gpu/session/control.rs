@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
 
 use super::GpuPstdSession;
-use crate::array_utils::ndarray::into_leto;
+use crate::array_utils::owned::into_leto;
 
 #[pymethods]
 impl GpuPstdSession {

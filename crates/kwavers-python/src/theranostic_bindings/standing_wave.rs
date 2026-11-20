@@ -1,6 +1,6 @@
 //! `run_standing_wave_suppression` pyfunction and result serialisation.
 
-use crate::array_utils::ndarray::into_ndarray;
+use crate::array_utils::owned::into_ndarray;
 use kwavers_therapy::therapy::theranostic_guidance::{
     run_standing_wave_suppression, StandingWaveOptConfig,
 };
