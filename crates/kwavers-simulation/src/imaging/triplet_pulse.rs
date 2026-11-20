@@ -37,6 +37,17 @@
 //!    papers give no bubble size. Prototype sweep: R0 ∈ {2, 3, 5} µm.
 //! 5. All experimental values are chicken-breast research values, not
 //!    Suizenji clinical settings.
+//! 6. The cloud trace is on the receiver's clock and EXTENDED to cover
+//!    the travel time: the full 12-cycle history is radiated and the
+//!    steady-state window is taken afterwards, so each bubble's window
+//!    occupies `[start + delay, end + delay)` and samples before the
+//!    first arrival are exactly zero. Windowing before the delay
+//!    returns all-zero traces for any receiver beyond ~3.4 mm (D1).
+//! 7. The cloud path is thermal-off by default, for parity with the
+//!    prototype's adiabatic KM solve; thermal-on is available via
+//!    `TripletPulseCloud::with_thermal` and its ratios are recorded
+//!    as observed values, never as parity targets (see "Thermal model"
+//!    below).
 //!
 //! # Monopole radiation
 //!
@@ -47,9 +58,77 @@
 //! delay are both tested. Secondary Bjerknes (bubble–bubble)
 //! coupling is out of scope here; the prototype's clouds are dilute
 //! and the bubbles are driven independently.
+//!
+//! # Thermal model
+//!
+//! Binding default: thermal-OFF — matching the prototype's adiabatic
+//! KM solve; the parity tests run thermal-off. Thermal-on is available
+//! via `TripletPulseCloud::with_thermal(true)` and via the `thermal`
+//! flag of the ratio helper, and its ratios are recorded below as
+//! OBSERVED values, never as parity targets: the literature is silent
+//! on thermal effects on the 1.5th fractional harmonic specifically
+//! (but see the Sojahrood benchmark scoping below, which gives a
+//! mechanism-level check the port has not yet run).
+//!
+//! Observed thermal-on 3P/1P ratios (0.26 MPa, flat-top drive, cycles
+//! 6–10), re-measured Nov 19, 2026 after the KW-PHYS-003 latent-heat
+//! fix: at 1.5f0, **0.248 / 0.302 / 0.143** for R0 = 2 / 3 / 5 µm
+//! (thermal-off: 0.351 / 0.362 / 0.219); at f0, 0.136 / 0.034 / 0.001.
+//! With the KW-PHYS-003 bug present the 1.5f0 values were 0.376 /
+//! 0.358 / 0.142 — the fix moved R0 = 2 and 3 µm toward thermal-off
+//! and left R0 = 5 µm unchanged, because the wrong-signed latent term
+//! had added energy during collapse, inflating the fractional harmonic
+//! where the collapse is most violent (near-resonant R0 = 2–3 µm);
+//! the remaining gap to thermal-off is the genuine thermal-damping
+//! effect, strongest at resonance.
+//!
+//! Accommodation sensitivity (D12(i)) — thermal-on 3P/1P at 1.5f0,
+//! α = 0.04 (the default, the 1935 Alty value) vs α = 0.35 (the
+//! mainstream value: Yasui, Storey & Szeri, Kreider, Hegedüs):
+//!
+//! | R0 | α = 0.04 | α = 0.35 |
+//! |----|----------|----------|
+//! | 2 µm | 0.248 | 0.640 |
+//! | 3 µm | 0.302 | 0.300 |
+//! | 5 µm | 0.143 | 0.167 |
+//!
+//! At f0 (R0 = 2 µm): 0.136 → 0.135. The near-resonant R0 = 2 µm
+//! ratio is strongly α-dependent (0.248 → 0.640): how fast vapour
+//! equilibrates decides how much fractional-harmonic content a
+//! resonant bubble radiates. α = 0.04 stays the default (unchanged by
+//! this work — a parameter choice, not a demonstrable error), and any
+//! thermal-on use must state its α alongside its ratios.
+//!
+//! Sojahrood et al. 2021 benchmark — SCOPING ONLY, not run (D12(iii)).
+//! Sojahrood, Haghi, Shirazi, Karshafian & Kolios, "On the threshold
+//! of 1/2 order subharmonic emissions in the oscillations of
+//! ultrasonically excited bubbles", Ultrasonics 112, 106363 (2021):
+//! with full thermal damping, the pressure threshold for 1/2-order
+//! subharmonic (period-doubling, P2) emissions has its minimum at
+//! 0.5–0.6·f_r rather than the conventional 2·f_r, via 5/2-order
+//! ultraharmonic resonance, and only bubbles with R0 ≥ 0.5 µm (≥1 µm
+//! diameter) sustain stable SH emission there. The test the port
+//! would need: for an air bubble in water, R0 ∈ {0.5, 1, 2, 5, 10} µm,
+//! map the P2 threshold pressure vs f/f_r over 0.3–2.0, thermal-on vs
+//! thermal-off — P2 detected by a Poincaré section (radius sampled
+//! once per drive period; P2 = alternating values) with the 1/2-order
+//! subharmonic confirmed in the radiated spectrum — and check (a) the
+//! threshold minimum moves from ~2·f_r (thermal-off) toward
+//! 0.5–0.6·f_r (thermal-on), and (b) R0 < 0.5 µm shows no stable SH
+//! emission at 0.5–0.6·f_r. That map is out of reach in this session:
+//! each threshold point needs a pressure sweep of multi-cycle KM
+//! solves to steady state (hundreds of solves across radii ×
+//! frequencies × thermal settings), plus a P2 detector that does not
+//! exist in the port. Until it is run, thermal-on 1.5f0 ratios are
+//! unvalidated against any benchmark and must not be quoted as
+//! predictions of the experiment; thermal-off ratios are
+//! code-consistency checks against the adiabatic prototype only. Note
+//! the port's operating point sits where Sojahrood says thermal
+//! damping matters most: at 1.74 MHz, R0 = 2 µm is near resonance
+//! (Minnaert f_r ≈ 1.6 MHz, f/f_r ≈ 1.1).
 
 use aequitas::systems::si::quantities::PressureRate;
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_imaging::ultrasound::triplet_pulse::{
     combine_echoes, TripletPulseConfig, TripletPulseEchoes,
 };
@@ -270,6 +349,13 @@ pub fn monopole_source(samples: &[RadiusSample]) -> Vec<f64> {
 /// `p = ρ / (4πd) · source(t − d/c)`, with the retarded time
 /// applied as an integer-plus-fractional sample delay (linear
 /// interpolation). Samples before the first arrival are zero.
+/// The output has `out_len` samples: pass `source.len()` for the
+/// source's own clock, or a longer length when the arrival window
+/// extends past the source — the cloud path (`simulate_phase`) passes
+/// an extended length because the ≥12 µs travel time exceeds the
+/// 2.3 µs steady-state window (D1/C1: with `out_len == source.len()`
+/// the whole windowed signal fell past the end of the trace and every
+/// receiver beyond ~3.4 mm heard silence).
 #[must_use]
 pub fn radiate(
     source: &[f64],
@@ -277,25 +363,30 @@ pub fn radiate(
     density: f64,
     sound_speed: f64,
     dt: f64,
+    out_len: usize,
 ) -> Vec<f64> {
     let delay_s = distance_m / sound_speed;
     let delay_samples = delay_s / dt;
     let whole = delay_samples.floor() as usize;
     let frac = delay_samples - whole as f64;
     let scale = density / (4.0 * std::f64::consts::PI * distance_m);
-    (0..source.len())
+    (0..out_len)
         .map(|i| {
             if i < whole {
                 0.0
             } else {
                 let j = i - whole;
-                let s0 = source[j];
-                let s1 = if j + 1 < source.len() {
-                    source[j + 1]
-                } else {
+                if j >= source.len() {
                     0.0
-                };
-                scale * (s0 * (1.0 - frac) + s1 * frac)
+                } else {
+                    let s0 = source[j];
+                    let s1 = if j + 1 < source.len() {
+                        source[j + 1]
+                    } else {
+                        0.0
+                    };
+                    scale * (s0 * (1.0 - frac) + s1 * frac)
+                }
             }
         })
         .collect()
@@ -318,10 +409,21 @@ pub struct TripletPulseCloud {
     pub sound_speed: f64,
     /// Bubbles: (position [m; 3], equilibrium radius [m]).
     pub bubbles: Vec<([f64; 3], f64)>,
+    /// Thermal/mass-transfer path for the cloud bubbles: `false`
+    /// (default) runs thermal-off, matching the prototype's adiabatic
+    /// KM solve and the parity tests; `true` runs the native
+    /// thermal-on path (see the module docs — thermal-on ratios are
+    /// observed values, not parity targets). Set with
+    /// [`TripletPulseCloud::with_thermal`].
+    pub thermal: bool,
 }
 
 impl TripletPulseCloud {
     /// New empty cloud for the Iwasaki 2018 configuration.
+    ///
+    /// Thermal-off by default, for parity with the prototype's
+    /// adiabatic KM solve; use [`TripletPulseCloud::with_thermal`] for
+    /// the native thermal-on path.
     #[must_use]
     pub fn iwasaki_2018(amplitude_pa: PressureAmplitude) -> Self {
         let config = TripletPulseConfig::iwasaki_2018();
@@ -332,7 +434,17 @@ impl TripletPulseCloud {
             density: 998.0,
             sound_speed: 1481.0,
             bubbles: Vec::new(),
+            thermal: false,
         }
+    }
+
+    /// Run the cloud bubbles with the native thermal/mass-transfer
+    /// path (`true`) or thermal-off (`false`, the default — parity
+    /// with the prototype's adiabatic KM).
+    #[must_use]
+    pub fn with_thermal(mut self, thermal: bool) -> Self {
+        self.thermal = thermal;
+        self
     }
 
     /// Add a bubble at `position_m` with equilibrium radius `r0_m`.
@@ -342,19 +454,39 @@ impl TripletPulseCloud {
 
     /// Water 20 °C parameters for one bubble (matches the prototype's
     /// KM constants: rho 998, sigma 0.0725, gamma 1.4, mu 1e-3,
-    /// pv 2.34e3, c_l 1481, P0 1.013e5).
+    /// pv 2.34e3, c_l 1481, P0 1.013e5). Thermal/mass transfer follow
+    /// `self.thermal` (off by default, for parity with the prototype's
+    /// adiabatic KM — the old code left the `BubbleParameters`
+    /// defaults on, a second silent inconsistency in this path).
     #[must_use]
     pub fn bubble_params(&self, r0_m: f64) -> BubbleParameters {
         let mut params = BubbleParameters::default();
         params.r0 = r0_m;
         params.driving_frequency = self.config.frequency_hz;
         params.driving_amplitude = self.drive.amplitude_pa;
+        params.use_thermal_effects = self.thermal;
+        params.use_mass_transfer = self.thermal;
         params
     }
 
     /// Trace at one receiver for one transmit phase: the summed
-    /// monopole re-radiation of every bubble, over the steady-state
-    /// window only (invariant 2).
+    /// monopole re-radiation of every bubble's steady-state window.
+    ///
+    /// The trace is on the receiver's clock (index `i` ↔ time `i·dt`)
+    /// and is EXTENDED to cover the travel time: the steady-state
+    /// window (cycles 6–10, ~2.3 µs) arrives `d/c` after it is
+    /// radiated, and at the prototype geometry (`d` ≥ 18 mm) that
+    /// delay (≥12.15 µs) is five times the window. The old code
+    /// windowed the source BEFORE applying the delay, so the whole
+    /// signal fell past the end of the 2000-sample trace and every
+    /// receiver beyond ~3.4 mm heard silence (D1/C1). The fix
+    /// radiates the FULL 12-cycle history into an extended trace and
+    /// windows afterwards: each bubble's window occupies
+    /// `[start + delay, end + delay)` on the receiver's clock, and
+    /// samples before the first arrival are exactly zero (causality).
+    /// All four phases return the same length (set by the latest
+    /// window-end arrival over the cloud), so `combine_echoes` still
+    /// applies.
     ///
     /// # Errors
     ///
@@ -367,18 +499,42 @@ impl TripletPulseCloud {
     ) -> KwaversResult<Vec<f64>> {
         let dt = 1.0 / (self.config.frequency_hz * steps_per_cycle as f64);
         let (start, end) = steady_state_range(&self.drive, steps_per_cycle);
-        let n_out = end - start;
-        let mut trace = vec![0.0; n_out];
-        for (position, r0) in &self.bubbles {
-            let params = self.bubble_params(*r0);
-            let history = solve_radius_waveform(&params, &self.drive, phase_deg, steps_per_cycle)?;
-            let source = monopole_source(&history[start..end]);
+        let distance_to = |position: &[f64; 3]| {
             let dx = receiver_m[0] - position[0];
             let dy = receiver_m[1] - position[1];
             let dz = receiver_m[2] - position[2];
-            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
-            let radiated = radiate(&source, distance, self.density, self.sound_speed, dt);
-            for (acc, val) in trace.iter_mut().zip(radiated.iter()) {
+            (dx * dx + dy * dy + dz * dz).sqrt()
+        };
+        // Extended output: long enough for the latest window-end
+        // arrival over all bubbles.
+        let max_delay_samples = self
+            .bubbles
+            .iter()
+            .map(|(position, _)| distance_to(position) / self.sound_speed / dt)
+            .fold(0.0_f64, f64::max);
+        let n_total = end + max_delay_samples.ceil() as usize + 1;
+        let mut trace = vec![0.0; n_total];
+        for (position, r0) in &self.bubbles {
+            let params = self.bubble_params(*r0);
+            let history = solve_radius_waveform(&params, &self.drive, phase_deg, steps_per_cycle)?;
+            let source = monopole_source(&history);
+            let distance = distance_to(position);
+            let radiated = radiate(
+                &source,
+                distance,
+                self.density,
+                self.sound_speed,
+                dt,
+                n_total,
+            );
+            // Window afterwards: keep only the steady-state window's
+            // arrival, [start + delay, end + delay). The two `ceil`s
+            // differ by exactly `end - start` samples (the window
+            // length), since `end - start` is an integer.
+            let delay_samples = distance / self.sound_speed / dt;
+            let lo = (start as f64 + delay_samples).ceil() as usize;
+            let hi = (end as f64 + delay_samples).ceil() as usize;
+            for (acc, val) in trace[lo..hi].iter_mut().zip(radiated[lo..hi].iter()) {
                 *acc += val;
             }
         }
@@ -403,6 +559,117 @@ impl TripletPulseCloud {
         let phase_180 = self.simulate_phase(receiver_m, ph.phase_180_deg, steps_per_cycle)?;
         Ok(combine_echoes(&phase_0, &phase_120, &phase_240, &phase_180))
     }
+}
+
+/// Goertzel magnitude of `signal` at `freq_hz`, sampled at `dt`.
+/// Single-frequency DFT — O(n) per frequency, no FFT dependency.
+fn goertzel_magnitude(signal: &[f64], freq_hz: f64, dt: f64) -> f64 {
+    let omega = 2.0 * std::f64::consts::PI * freq_hz * dt;
+    let coeff = 2.0 * omega.cos();
+    let (mut s1, mut s2) = (0.0, 0.0);
+    for &x in signal {
+        let s0 = x + coeff * s1 - s2;
+        s2 = s1;
+        s1 = s0;
+    }
+    let re = s1 - s2 * omega.cos();
+    let im = s2 * omega.sin();
+    (re * re + im * im).sqrt()
+}
+
+/// 3P/1P magnitude ratio at `analysis_freq_hz` between the coherent 3P sum
+/// and the 1P trace, for one bubble's monopole source.
+///
+/// The bubble is driven by a 12-cycle flat-top tone burst at
+/// `drive_frequency_hz` and amplitude `amplitude_pa`; the ratio is measured
+/// on the steady-state window (cycles 6–10) of the monopole source
+/// `ρ/(4πr) · d²V/dt²` at r = 1 mm. `thermal` selects the native model's
+/// thermal/mass-transfer path: `false` turns both off, matching the
+/// prototype's simple adiabatic KM solve; `true` leaves the defaults on.
+/// `accommodation_coeff` is the Hertz–Knudsen accommodation coefficient α
+/// (default 0.04; the mainstream value is 0.35 — see the
+/// accommodation-sensitivity test, D12(i)).
+///
+/// Parity targets (thermal-off, 0.26 MPa, 1.74 MHz drive, 500 steps/cycle):
+/// at 1.5f0 (2.61 MHz) **0.35 / 0.36 / 0.22** for R0 = 2 / 3 / 5 µm
+/// (tolerance ±0.05); at f0 the ratio is < 0.05 (prototype: 0.011 at
+/// R0 = 5 µm). Thermal-on ratios are OBSERVED, not targets: 1.5f0 =
+/// 0.248 / 0.302 / 0.143, f0 = 0.136 / 0.034 / 0.001 (re-measured Nov 19,
+/// 2026 after the KW-PHYS-003 latent-heat fix).
+///
+/// # Errors
+/// Returns [`KwaversError::InvalidInput`] when the radius, either
+/// frequency, or the steps-per-cycle count is not positive, or the
+/// amplitude is not finite; propagates KM integration failures.
+pub fn three_p_over_one_p_ratio(
+    r0_m: f64,
+    amplitude_pa: PressureAmplitude,
+    drive_frequency_hz: f64,
+    analysis_freq_hz: f64,
+    steps_per_cycle: usize,
+    thermal: bool,
+    accommodation_coeff: f64,
+) -> KwaversResult<f64> {
+    if !r0_m.is_finite() || r0_m <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "triplet_pulse: r0_m must be finite and > 0; got {r0_m}"
+        )));
+    }
+    if !drive_frequency_hz.is_finite() || drive_frequency_hz <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "triplet_pulse: drive_frequency_hz must be finite and > 0; got {drive_frequency_hz}"
+        )));
+    }
+    if !analysis_freq_hz.is_finite() || analysis_freq_hz <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "triplet_pulse: analysis_freq_hz must be finite and > 0; got {analysis_freq_hz}"
+        )));
+    }
+    if steps_per_cycle == 0 {
+        return Err(KwaversError::InvalidInput(
+            "triplet_pulse: steps_per_cycle must be > 0".to_owned(),
+        ));
+    }
+    if !amplitude_pa.as_pascals().is_finite() || amplitude_pa.as_pascals() < 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "triplet_pulse: amplitude must be finite and >= 0; got {}",
+            amplitude_pa.as_pascals()
+        )));
+    }
+    let drive = TripletPulseDrive {
+        frequency_hz: drive_frequency_hz,
+        amplitude_pa,
+        solve_cycles: 12,
+        steady_start_cycle: 6,
+        steady_end_cycle: 10,
+        segment_cycles: 6,
+    };
+    let mut params = BubbleParameters::default();
+    params.r0 = r0_m;
+    params.driving_frequency = drive_frequency_hz;
+    params.driving_amplitude = amplitude_pa;
+    params.use_thermal_effects = thermal;
+    params.use_mass_transfer = thermal;
+    params.accommodation_coeff = accommodation_coeff;
+    let (start, end) = steady_state_range(&drive, steps_per_cycle);
+    let dt = 1.0 / (drive.frequency_hz * steps_per_cycle as f64);
+    let mut phases = Vec::new();
+    for phase_deg in [0.0, 120.0, 240.0] {
+        let history = solve_radius_waveform(&params, &drive, phase_deg, steps_per_cycle)?;
+        phases.push(monopole_source(&history[start..end]));
+    }
+    let one_p = goertzel_magnitude(&phases[0], analysis_freq_hz, dt);
+    let three_p = goertzel_magnitude(
+        &{
+            let n = phases[0].len();
+            (0..n)
+                .map(|i| (phases[0][i] + phases[1][i] + phases[2][i]) / 3.0)
+                .collect::<Vec<f64>>()
+        },
+        analysis_freq_hz,
+        dt,
+    );
+    Ok(three_p / one_p)
 }
 
 #[cfg(test)]

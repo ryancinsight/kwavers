@@ -32,7 +32,7 @@ rand = "0.8"
 log = "0.4"
 anyhow = "1.0"
 tracing = { version = "0.1", features = ["attributes"] }
-time = { version = "0.3" }
+chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 # Optional GPU visualization dependencies. The domain crate owns only the
 # provider-neutral transfer contract; concrete WGPU ownership lives in
@@ -64,6 +64,12 @@ pinn = ["kwavers-solver/pinn"]
 # Rejection assertions shared across the workspace's test modules.
 kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 pollster = { version = "0.4" }
+# Triplet-pulse Stage 2 parity test (tests/triplet_pulse_parity.rs): reads the
+# Python prototype's saved .npy RF, filters with kwavers-signal, and checks
+# the Rust DAS + contrast against the prototype's numbers.
+consus-npy = { workspace = true }
+kwavers-signal = { path = "../kwavers-signal", version = "3.0.0" }
+leto = { workspace = true }
 
 [lints]
 workspace = true

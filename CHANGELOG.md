@@ -470,6 +470,39 @@
 
 ### Added
 
+- **[minor] Triplet-pulse cavitation imaging (KW-IMG-046, port steps 1–6).**
+  The Python prototype's triplet-pulse imaging capability is now native
+  Rust plus Python bindings: single-bubble 3P/1P ratios
+  (`kwavers-simulation::imaging::triplet_pulse::three_p_over_one_p_ratio`,
+  drive and analysis frequencies separated), forced-cloud phase traces and
+  receiver simulation, envelope delay-and-sum beamforming with the
+  matched contrast metric
+  (`kwavers-analysis::signal_processing::triplet_pulse`), and six
+  `pykwavers` bindings (`triplet_pulse_ratio`,
+  `triplet_cloud_phase_traces`, `triplet_combine_methods`,
+  `triplet_filter_rf`, `triplet_das_image`, `triplet_contrast`). Parity
+  targets are the prototype's own measured numbers, not the papers'
+  claims. Single-bubble thermal-off 3P/1P at 1.5f0, 0.26 MPa, 1.74 MHz:
+  0.351 / 0.365 / 0.219 for R0 = 2 / 3 / 5 µm against targets
+  0.35 / 0.36 / 0.22 (±0.05); f0 ratios below 0.05. Cloud phase-trace
+  peaks match the prototype's bubble-only RF peaks within ±3 dB. The
+  full pipeline (combine, filter, DAS, contrast) reproduces all 24
+  prototype Stage 2 contrast cells within 0.05 dB — e.g. a2b2 full-band
+  3P mean 26.57 dB against 26.6, 1.5f0-band 3P mean 59.57 dB against
+  59.6 — with the 1P < PI < 3P ordering holding in the 1.5f0 band at
+  every radius. Scope limits, stated explicitly: the cloud is forced,
+  not nucleated — no nucleation model, and whether the trigger makes a
+  ~1.5–2 µm-dominated cloud (Stage 8) is still open; the 2.45 MHz peak
+  reproduction is proxy-only (Kuji's own per-pixel metric shows no
+  peak), so no Kuji-metric parity is claimed; thermal-on ratios are
+  observed, not targets (1.5f0 = 0.248 / 0.302 / 0.143 at α = 0.04);
+  contrast uses the matched statistic (max bubble brightness vs mean
+  tissue), the papers' statistic, with mean-based values reported
+  alongside but not claimed as paper parity; and the DAS keeps the
+  prototype's point-source-transmit assumption against a plane-wave
+  transmit (measured +0.7 dB), documented rather than silently fixed.
+  Steps 1–3 merged earlier as PR #1112.
+
 - **[minor] Viscoacoustic sensor traces support fallible preallocation.**
   `ViscoacousticMemorySolver::reserve_sensor_samples` reserves the known
   remaining sample count for every registered pressure sensor before
