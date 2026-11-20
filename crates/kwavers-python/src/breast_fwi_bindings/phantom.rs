@@ -1,7 +1,7 @@
 //! PyO3 wrapper for Rust-owned Ali 2025 breast phantom HDF5 ingest.
 
-use super::complex_compat::leto3_to_nd3;
 use super::py_convert::kwavers_to_py;
+use crate::array_utils::ndarray::into_ndarray;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     load_ali_2025_breast_phantom_with_config, BreastUstAliPhantomFileFormat,
     BreastUstAliPhantomHdf5Config, BreastUstAliPhantomLoadConfig, BreastUstAliPhantomMat5Config,
@@ -70,7 +70,7 @@ pub fn load_ali_2025_breast_fwi_phantom<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "sound_speed_m_s",
-        leto3_to_nd3(phantom.sound_speed_m_s).to_pyarray(py),
+        into_ndarray(phantom.sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item("spacing_m", phantom.spacing_m)?;
     out.set_item("dataset_path", phantom.dataset_path)?;

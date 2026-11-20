@@ -6,5 +6,6 @@
 mod entry;
 mod kspace;
 
+pub(in crate::pstd_gpu) use entry::CheckedPlan;
 pub(super) use entry::ConstructionError;
 mod solver;

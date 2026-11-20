@@ -1,6 +1,6 @@
 <a id="kw-fdtd-ordered-indices-ignored"></a>
 
-## KW-FDTD-ORDERED-INDICES-IGNORED — The FDTD dispatch ignores `transducer_ordered_indices` once a recognised recording mode is set, and its Rustdoc is silent on FDTD [patch] — todo
+## KW-FDTD-ORDERED-INDICES-IGNORED — The FDTD dispatch ignores `transducer_ordered_indices` once a recognised recording mode is set, and its Rustdoc is silent on FDTD [minor] — verified locally
 
 priority: correctness; needs: none; basis: fd072d51936f9446ab1b62877772154aaf609d7a; scope: `crates/kwavers-simulation/src/dispatch/fdtd.rs`, `crates/kwavers-simulation/src/dispatch/fdtd/tests.rs`, `crates/kwavers-simulation/src/types.rs`, `crates/kwavers-receiver/src/recorder/simple/construction.rs`; milestone: M-solvers-core
 
@@ -9,3 +9,10 @@ priority: correctness; needs: none; basis: fd072d51936f9446ab1b62877772154aaf609
 - **Outcome:** FDTD either honors the indices (one pressure row per index in the supplied order, with `SensorRecorder` gaining a constructor that pairs ordered indices with a recording spec so the modes' statistics are kept) or refuses a `Some` value with `KwaversError::FeatureNotAvailable`; it never ignores them. The `types.rs` Rustdoc states which.
 - **Acceptance:** a test in `dispatch/fdtd/tests.rs` runs FDTD with `transducer_ordered_indices: Some(vec![(5, 1, 1), (1, 1, 1)])`, `sensor_mask: None`, and `record_modes: vec!["p_max".to_owned()]`, and asserts either `sensor_data.shape() == [2, steps]` with row 0 equal to the single-index run at `(5, 1, 1)`, or `FeatureNotAvailable`. It fails at the basis (`shape() == [0, steps]`, `Ok`). A second case with no mode pins the ordered record that `fdtd.rs:64-66` already returns.
 - **Next step:** read `SensorRecorder::with_spec` and `from_ordered_indices` (`construction.rs:123,200`); choose honor unless the statistics cannot be kept, then add the test first. `KW-SIM-SENSOR-MASK-DOC` also edits `types.rs:111-129`; sequence the Rustdoc after it.
+- **Candidate evidence.** On main 45db5f1d0 the three regression cases fail for missing ordered rows, an ignored empty selection, and an accepted out-of-grid coordinate. The candidate passes all three against single-point mask recordings and retains full-grid statistics. It constructs one recorder and skips cloning an overridden mask.
+- **Package gates.** The combined receiver and simulation library suites pass
+  163/163 tests with zero skips. The removed pressure buffer for a collection of
+  S sensors and N samples occupied 8 × S × N bytes, plus its allocation overhead.
+  Allocation profiling of representative jobs remains open.
+- **Next step:** coordinate the shared request documentation with PR #1104 and
+  rerun the exact integrated head before closure.

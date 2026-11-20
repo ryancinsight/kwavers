@@ -9,17 +9,10 @@ dependency to a local working tree. Cargo discovers that config by walking up
 from the *current directory*, so any `cargo` command run from inside the stack
 picks it up -- including anything that rewrites the lock.
 
-A lock written with the overlay active has every `source = "git+..."` line
-**stripped**, because those dependencies resolved to local paths rather than to
-git. Committing it replaces all 87 git sources with nothing. CI has no overlay,
-so it re-resolves, and every `--locked` job fails with
-
-    error: cannot update the lock file ... because --locked was passed
-
-which names neither the cause nor the fix. That message is also what a merely
-*stale* lock produces -- one pinning first-party revisions whose versions no
-longer satisfy the manifests -- so the two failures are indistinguishable from
-the log alone (KW-CI-087).
+A lock written with the overlay active records those dependencies as
+source-less local packages. In a standalone workspace, only the
+declared workspace members may appear without a registry or Git source.
+This invariant also holds when the whole external graph uses crates.io.
 
 This is not limited to deliberate regeneration. *Any* cargo invocation that
 updates the lock while the overlay is active flattens it -- an ordinary
@@ -34,7 +27,7 @@ discovery.
 
 # Usage
 
-    scripts/lockfile.py --check         # verify the committed lock, offline
+    scripts/lockfile.py --check         # verify the committed lock
     scripts/lockfile.py --check-staged  # fast index-only check, for pre-commit
     scripts/lockfile.py --regenerate    # rewrite it correctly (needs network)
 """
@@ -42,19 +35,52 @@ discovery.
 from __future__ import annotations
 
 import argparse
-import re
 import subprocess
 import sys
 import tempfile
+import tomllib
+from collections.abc import Callable
 from pathlib import Path
 
 REPOSITORY = Path(__file__).resolve().parent.parent
 LOCKFILE = REPOSITORY / "Cargo.lock"
 MANIFEST = REPOSITORY / "Cargo.toml"
 
-# Any first-party dependency resolves through one of these. A lock with none of
-# them has been flattened by the overlay.
-FIRST_PARTY_SOURCE = re.compile(r'^source = "git\+https://github\.com/ryancinsight/', re.M)
+
+def external_local_packages(
+    lock_text: str, read_manifest: Callable[[str], str]
+) -> list[str]:
+    """Return source-less packages outside the declared workspace members."""
+    workspace = tomllib.loads(read_manifest("Cargo.toml"))["workspace"]
+    members = set()
+    for member in workspace["members"]:
+        package = tomllib.loads(read_manifest(f"{member}/Cargo.toml"))["package"]
+        version = package["version"]
+        if version == {"workspace": True}:
+            version = workspace["package"]["version"]
+        members.add((package["name"], version))
+
+    packages = tomllib.loads(lock_text)["package"]
+    return sorted(
+        f"{package['name']} v{package['version']}"
+        for package in packages
+        if "source" not in package and (package["name"], package["version"]) not in members
+    )
+
+
+def check_package_sources(
+    lock_text: str, read_manifest: Callable[[str], str]
+) -> int:
+    external = external_local_packages(lock_text, read_manifest)
+    if not external:
+        return 0
+    print(
+        "error: Cargo.lock contains local packages outside this workspace: "
+        + ", ".join(external)
+        + "\nRegenerate it outside the Atlas overlay with scripts/lockfile.py --regenerate.",
+        file=sys.stderr,
+    )
+    return 1
 
 
 def run_outside_the_overlay(arguments: list[str]) -> subprocess.CompletedProcess[str]:
@@ -86,18 +112,10 @@ def check() -> int:
         print(f"error: {LOCKFILE} does not exist", file=sys.stderr)
         return 1
 
-    sources = len(FIRST_PARTY_SOURCE.findall(LOCKFILE.read_text(encoding="utf-8")))
-    if sources == 0:
-        print(
-            "error: Cargo.lock contains no first-party git sources.\n"
-            "\n"
-            "It was regenerated with the Atlas stack overlay active, which\n"
-            "resolves those dependencies to local paths and drops their git\n"
-            "sources. CI has no overlay and will fail every --locked job.\n"
-            "\n"
-            "Fix: scripts/lockfile.py --regenerate",
-            file=sys.stderr,
-        )
+    if check_package_sources(
+        LOCKFILE.read_text(encoding="utf-8"),
+        lambda name: (REPOSITORY / name).read_text(encoding="utf-8"),
+    ):
         return 1
 
     completed = run_outside_the_overlay(
@@ -105,74 +123,33 @@ def check() -> int:
     )
     if completed.returncode != 0:
         print(
-            f"error: the committed Cargo.lock does not resolve under --locked "
-            f"({sources} first-party git sources present, so it is stale rather "
-            f"than flattened).\n"
-            f"\n"
-            f"The pinned first-party revisions no longer satisfy the manifests'\n"
-            f"version requirements, so cargo must re-resolve and --locked\n"
-            f"refuses. This is what blocks the benchmark baseline alignment.\n"
-            f"\n"
-            f"Fix: scripts/lockfile.py --regenerate\n"
-            f"\n"
-            f"cargo said:\n{completed.stderr.strip()}",
+            "error: Cargo.lock does not resolve under --locked "
+            "outside the Atlas overlay.\n"
+            "Regenerate it with scripts/lockfile.py --regenerate.\n"
+            f"Cargo said:\n{completed.stderr.strip()}",
             file=sys.stderr,
         )
         return 1
 
-    print(f"Cargo.lock resolves under --locked; {sources} first-party git sources.")
+    print("Cargo.lock resolves under --locked outside the Atlas overlay.")
     return 0
 
 
 def check_staged() -> int:
-    """Structural check of the *staged* `Cargo.lock`, for use from `pre-commit`.
+    """Check staged lock and manifest blobs without running Cargo."""
+    def index_file(path: str) -> str:
+        return subprocess.check_output(
+            ["git", "show", f":{path}"], cwd=REPOSITORY, encoding="utf-8"
+        )
 
-    Deliberately does not run cargo. A pre-commit hook has to be fast enough that
-    nobody reaches for `--no-verify`, and the flattened lock has an unmistakable
-    signature -- zero first-party git sources -- that a text scan settles
-    instantly. Staleness, the other failure `--check` detects, needs real
-    resolution and stays a pre-push concern.
-
-    Checking the *staged blob* rather than the working file is the point: the
-    working copy may already have been repaired while the poisoned version sits
-    in the index, and it is the index that becomes the commit.
-    """
-    staged = subprocess.run(
+    staged = subprocess.check_output(
         ["git", "diff", "--cached", "--name-only", "--", "Cargo.lock"],
-        capture_output=True,
+        cwd=REPOSITORY,
         encoding="utf-8",
-        errors="replace",
-        check=False,
     )
-    if staged.returncode != 0 or not staged.stdout.strip():
+    if not staged.strip():
         return 0
-
-    blob = subprocess.run(
-        ["git", "show", ":Cargo.lock"],
-        capture_output=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-    )
-    if blob.returncode != 0:
-        return 0
-
-    if len(FIRST_PARTY_SOURCE.findall(blob.stdout)) > 0:
-        return 0
-
-    print(
-        "error: the staged Cargo.lock contains no first-party git sources.\n"
-        "\n"
-        "A cargo command run against a tree under the Atlas stack root rewrote\n"
-        "it with the overlay active, which resolves those dependencies to local\n"
-        "paths and drops their git sources. Committing it now is what turns a\n"
-        "working branch into one that can never be pushed.\n"
-        "\n"
-        "Fix: scripts/lockfile.py --regenerate, then stage the result.\n"
-        "To commit anyway: SKIP_LOCKFILE_CHECK=1 git commit",
-        file=sys.stderr,
-    )
-    return 1
+    return check_package_sources(index_file("Cargo.lock"), index_file)
 
 
 def regenerate() -> int:
@@ -195,11 +172,15 @@ def main() -> int:
         help="fast structural check of the staged lock, for pre-commit",
     )
     arguments = parser.parse_args()
-    if arguments.regenerate:
-        return regenerate()
-    if arguments.check_staged:
-        return check_staged()
-    return check()
+    try:
+        if arguments.regenerate:
+            return regenerate()
+        if arguments.check_staged:
+            return check_staged()
+        return check()
+    except (OSError, KeyError, ValueError, subprocess.CalledProcessError) as error:
+        print(f"error: unable to verify the lockfile inputs: {error}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

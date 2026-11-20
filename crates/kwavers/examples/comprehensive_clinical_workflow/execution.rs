@@ -103,7 +103,7 @@ impl LiverAssessmentWorkflow {
             Some(&bmode_validation),
             None,
             Some(&safety_validation),
-        );
+        )?;
 
         let processing_time = start_time.elapsed();
         let _ = writeln!(std::io::stdout().lock(), "\n=== Assessment Complete ===");

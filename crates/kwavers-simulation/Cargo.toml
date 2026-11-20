@@ -40,6 +40,8 @@ gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-solver/gpu"]
 
 [dev-dependencies]
 eunomia = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [lints]
 workspace = true

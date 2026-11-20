@@ -14,7 +14,7 @@ use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
+use crate::array_utils::ndarray::{into_leto, into_ndarray};
 
 /// 3-D residual cavitation-gas (lacuna) void-fraction field `β(x)` [-].
 ///
@@ -53,7 +53,7 @@ impl PyResidualGasField {
                 self.shape
             )));
         }
-        let a_leto = nd_to_leto3(a.to_owned());
+        let a_leto = into_leto(a.to_owned());
         self.inner.deposit(a_leto.view());
         Ok(())
     }
@@ -69,7 +69,7 @@ impl PyResidualGasField {
 
     /// Current void-fraction field `β(x)` as an (nx, ny, nz) array.
     fn void_fraction(&self, py: Python<'_>) -> Py<PyArray3<f64>> {
-        leto3_to_nd3(self.inner.void_fraction().to_contiguous())
+        into_ndarray(self.inner.void_fraction().to_contiguous())
             .to_pyarray(py)
             .into()
     }
@@ -84,7 +84,7 @@ impl PyResidualGasField {
         c_gas: f64,
         rho_gas: f64,
     ) -> Py<PyArray3<f64>> {
-        leto3_to_nd3(
+        into_ndarray(
             self.inner
                 .sound_speed_field(c_liquid, rho_liquid, c_gas, rho_gas),
         )
@@ -105,7 +105,7 @@ impl PyResidualGasField {
         p0_pa: f64,
         polytropic: f64,
     ) -> Py<PyArray3<f64>> {
-        leto3_to_nd3(
+        into_ndarray(
             self.inner
                 .attenuation_field(freq_hz, c_liquid, rho_liquid, mu_liquid, p0_pa, polytropic),
         )

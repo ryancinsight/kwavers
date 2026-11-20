@@ -7,7 +7,6 @@ use crate::types::extract_full_grid_stats;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_boundary::cpml::CPMLConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_solver::forward::fdtd::config::FdtdConfig;
 use kwavers_solver::forward::fdtd::solver::FdtdSolver;
 use kwavers_solver::geometry::SolverGeometry;
@@ -45,26 +44,24 @@ pub fn run(
         enable_gpu_acceleration: false,
         enable_nonlinear: req.nonlinear.is_some_and(|n| n.enabled),
         kspace_correction: req.kspace_correction.clone(),
-        sensor_mask: req.sensor_mask.clone(),
+        sensor_mask: if req.transducer_ordered_indices.is_some() {
+            None
+        } else {
+            req.sensor_mask.clone()
+        },
         geometry,
         ..Default::default()
     };
 
-    let mut solver = FdtdSolver::new(config, req.grid, req.medium, req.grid_source.clone())?;
-
     let modes = recording_modes_from_strings(&req.record_modes);
-    if !modes.is_empty() {
-        let shape = (req.grid.nx, req.grid.ny, req.grid.nz);
-        solver.sensor_recorder = SensorRecorder::with_modes(
-            req.sensor_mask.as_ref(),
-            shape,
-            req.time_steps + 1,
-            &modes,
-        )?;
-    } else if let Some(ref ordered) = req.transducer_ordered_indices {
-        solver.sensor_recorder =
-            SensorRecorder::from_ordered_indices(ordered.clone(), req.time_steps + 1)?;
-    }
+    let mut solver = FdtdSolver::new_with_recording(
+        config,
+        req.grid,
+        req.medium,
+        req.grid_source.clone(),
+        req.transducer_ordered_indices.as_deref(),
+        &modes,
+    )?;
 
     let pml = req.pml.cloned().unwrap_or_default();
     let (default_thickness, max_allowed) =

@@ -39,9 +39,9 @@ kwavers-field = { path = "../kwavers-field", version = "3.0.0" }
 kwavers-signal = { path = "../kwavers-signal", version = "3.0.0" }
 kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"], version = "3.0.0" }
 kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"], version = "3.0.0" }
-kwavers-analysis = { path = "../kwavers-analysis", version = "3.0.0" }
+kwavers-analysis = { path = "../kwavers-analysis", version = "4.0.0" }
 kwavers-simulation = { path = "../kwavers-simulation", version = "3.0.0" }
-kwavers-diagnostics = { path = "../kwavers-diagnostics", version = "3.0.0" }
+kwavers-diagnostics = { path = "../kwavers-diagnostics", version = "4.0.0" }
 kwavers-therapy = { path = "../kwavers-therapy", version = "3.0.0" }
 # Consolidated GPU backend. Regular dep (tiny without the `gpu` feature - just
 # allocation profiling); concrete provider paths activate via `kwavers-gpu`
@@ -78,7 +78,6 @@ rand_distr = "0.4"
 rand_chacha = "0.3"
 # NOTE: medical-image I/O (DICOM, NIfTI, …) is owned by ritk-io and bridged in
 # `domain::imaging::medical::ritk_bridge`; kwavers has no direct format-crate deps.
-chrono = { version = "0.4", features = ["serde"] }
 
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"], optional = true }
 
@@ -98,7 +97,6 @@ flume = "0.11"
 # concrete WGPU/CUDA execution remains behind `kwavers-gpu` provider traits.
 
 # Visualization (optional)
-plotly = { version = "0.8", optional = true }
 egui = { version = "0.25", optional = true }
 
 
@@ -117,6 +115,7 @@ consus-io = { workspace = true }
 flate2 = { workspace = true }
 
 [dev-dependencies]
+horae-civil-time = { workspace = true }
 # Minimal dev dependencies for testing only
 hyperion = { workspace = true }
 # Enable kwavers-solver's `test-util` feature so cross-crate test helpers
@@ -162,7 +161,7 @@ minimal = []           # Core functionality only
 gpu = ["kwavers-gpu/gpu", "kwavers-solver/gpu", "kwavers-analysis/gpu", "kwavers-simulation/gpu", "kwavers-diagnostics/gpu"]
 cuda-provider = ["gpu", "kwavers-gpu/cuda-provider"]
 cuda-runtime = ["cuda-provider", "kwavers-gpu/cuda-runtime"]
-plotting = ["dep:plotly", "kwavers-analysis/plotting"]
+plotting = ["kwavers-analysis/plotting"]
 
 nightly = []           # Nightly Rust features
 simd = []              # SIMD acceleration support

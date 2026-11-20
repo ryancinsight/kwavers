@@ -10,7 +10,7 @@ use numpy::ndarray::Axis;
 use numpy::{PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 
-use crate::breast_fwi_bindings::complex_compat::nd_to_leto3;
+use crate::array_utils::ndarray::into_leto;
 use pyo3::prelude::*;
 
 /// Acoustic source for wave excitation.
@@ -232,7 +232,7 @@ impl Source {
             frequency,
             amplitude,
             position: None,
-            mask: Some(nd_to_leto3(mask_arr)),
+            mask: Some(into_leto(mask_arr)),
             signal: Some(signal_arr),
             source_mode,
             initial_pressure: None,
@@ -257,9 +257,9 @@ impl Source {
     #[staticmethod]
     fn from_initial_pressure(p0: &Bound<'_, PyAny>) -> PyResult<Self> {
         let p0_arr: Array3<f64> = if let Ok(p0_3d) = p0.extract::<PyReadonlyArray3<f64>>() {
-            nd_to_leto3(p0_3d.as_array().to_owned())
+            into_leto(p0_3d.as_array().to_owned())
         } else if let Ok(p0_2d) = p0.extract::<PyReadonlyArray2<f64>>() {
-            nd_to_leto3(p0_2d.as_array().insert_axis(Axis(2)).to_owned())
+            into_leto(p0_2d.as_array().insert_axis(Axis(2)).to_owned())
         } else {
             return Err(PyValueError::new_err(
                 "Initial pressure must be a 2D or 3D ndarray of float64 values",

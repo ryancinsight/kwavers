@@ -106,3 +106,4 @@
 | [136](136-rectangle-planar-consolidation.md) | One rectangle element in the k-Wave array | Accepted |
 | [137](137-pstd-dispersion-is-run-configuration.md) | Power-law dispersion is part of every PSTD run's configuration | Accepted |
 | [138](138-release-scope-4-0.md) | Kwavers release scope for 4.0 | Accepted |
+| [139](139-native-provider-registry-cutover.md) | Native providers and the Kwavers registry graph | Accepted |

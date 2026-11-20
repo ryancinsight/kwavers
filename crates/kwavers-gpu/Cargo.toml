@@ -25,7 +25,7 @@ kwavers-signal = { path = "../kwavers-signal", version = "3.0.0" }
 kwavers-physics = { path = "../kwavers-physics", version = "3.0.0" }
 kwavers-solver = { path = "../kwavers-solver", version = "3.0.0" }
 kwavers-field = { path = "../kwavers-field", version = "3.0.0" }
-kwavers-analysis = { path = "../kwavers-analysis", features = ["gpu"], optional = true, version = "3.0.0" }
+kwavers-analysis = { path = "../kwavers-analysis", features = ["gpu"], optional = true, version = "4.0.0" }
 
 leto = { workspace = true }
 tracing = { workspace = true }
@@ -85,4 +85,5 @@ cuda-runtime = ["cuda-provider", "hephaestus-cuda/cuda"]
 [dev-dependencies]
 eunomia = { workspace = true }
 mnemosyne = { workspace = true }
+tracing-subscriber = { workspace = true }
 kwavers-solver = { path = "../kwavers-solver", features = ["test-util"], version = "3.0.0" }

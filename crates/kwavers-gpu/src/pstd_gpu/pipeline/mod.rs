@@ -11,7 +11,7 @@ mod bgl;
 mod bind_groups;
 mod buffers;
 pub(in crate::pstd_gpu) mod capacity;
-mod construction;
+pub(in crate::pstd_gpu) mod construction;
 mod pipelines;
 
 /// Medium acoustic property arrays (input slices for `GpuPstdSolver::new`).

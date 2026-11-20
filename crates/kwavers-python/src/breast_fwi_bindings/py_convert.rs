@@ -1,7 +1,7 @@
 //! Internal helpers: operator parsing, boundary parsing, array conversion,
 //! observation stack construction, and error conversion for breast FWI bindings.
 
-use super::complex_compat::nd_to_leto2;
+use crate::array_utils::ndarray::into_leto;
 use aequitas::systems::si::units::Meter;
 use eunomia::Complex64;
 use kwavers_solver::inverse::fwi::frequency_domain::{
@@ -137,7 +137,7 @@ pub(super) fn observations_from_stack(
         .map(|(index, &frequency_hz)| {
             FrequencyObservation::new(
                 frequency_hz,
-                nd_to_leto2(observed_pressure.slice(s![index, .., ..]).to_owned()),
+                into_leto(observed_pressure.slice(s![index, .., ..]).to_owned()),
             )
         })
         .collect())
