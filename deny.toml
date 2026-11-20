@@ -7,19 +7,6 @@ all-features = true
 [advisories]
 unmaintained = "workspace"
 yanked = "warn"
-ignore = [
-    # RUSTSEC-2026-0543 marks chrono unmaintained; every version is affected.
-    # Kwavers holds no direct chrono edge: the direct uses moved to
-    # std::time::SystemTime and time::OffsetDateTime. Two third-party paths
-    # still carry chrono in the audited graph: dicom-core's DICOM date values
-    # (reached through ritk-io) and serde_with's optional chrono feature
-    # (reached through plotly under this all-features graph). Neither path is
-    # Kwavers code. Re-open: delete this entry when the audited graph drops
-    # chrono, i.e. when the audited dicom-core release no longer depends on
-    # chrono (or Kwavers stops reaching it) and serde_with's chrono feature
-    # leaves the audited graph. Tracked by KW-DEP-CHRONO-ADVISORY.
-    "RUSTSEC-2026-0543",
-]
 
 [licenses]
 allow = [
@@ -48,9 +35,10 @@ crate = "epaint@0.25.0"
 
 [[licenses.exceptions]]
 allow = ["CDLA-Permissive-2.0"]
-crate = "webpki-root-certs@1.0.11"
+crate = "webpki-root-certs@1.0.12"
 
 [bans]
+deny = [{ crate = "chrono" }]
 multiple-versions = "warn"
 wildcards = "warn"
 highlight = "all"

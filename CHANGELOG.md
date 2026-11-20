@@ -4,31 +4,59 @@
 
 ### Changed
 
-- Use crates.io Aequitas 0.5.0 and Eunomia 0.12.1 throughout the
-  Kwavers workspace. Kwavers and RITK share the published Coeus and Leto
-  identities for imaging tensors and registration arrays.
-- Declare the existing `time` provider for the clinical report's UTC header.
+- Use crates.io Aequitas 0.5.0 and Eunomia 0.12.1. Share Coeus and Leto
+  crate identities with RITK at the imaging and registration boundaries.
+- Preserve the typed GPU FFT capacity preflight on Hephaestus 0.32.0.
+
+## 3.0.0 Rust registry cohort
+
+The first registry cohort has 22 public packages. It includes
+`kwavers-analysis` and `kwavers-diagnostics` 4.0.0 for the clinical API
+changes, `kwavers-medium` 4.0.0, `kwavers-transducer` 4.1.0,
+`kwavers-gpu` 5.0.0, and `kwavers-driver` 0.3.13. The application and
+the other public layers use 3.0.0. See
+[ADR 139](docs/adr/139-native-provider-registry-cutover.md).
+
+### Breaking
+
+- [major] `ClinicalExaminationResult::timestamp` moves from Chrono to
+  `std::time::SystemTime`, matching clinical monitoring records. Consumers
+  that need RFC 3339 can convert the clock value with Horae's
+  `UtcTimestamp::try_from`.
+- [major] Clinical validation report generation returns
+  `KwaversResult<String>` so callers can handle a clock range error.
+
+### Changed
+
+- [patch] Apply the Rust burst defaults to custom triplet-pulse frequencies
+  in Python and regenerate the typed facade for the six registered functions.
+- [patch] Use the Aequitas 0.4 registry cohort for material properties,
+  photon transport, time stepping, and sampling.
+- [patch] Format UTC timestamps in clinical, tooling, and integration-test
+  reports with Horae. Use the native RITK dataset and writer to clear the
+  last Chrono dependency, then retire its advisory hold.
+- [minor] Route standalone HTML plotting through Iris. Borrow time axes from
+  the recorder, keep pressure-slice order and values, and color spatial points
+  by their sampled pressure. Plot files render offline.
+- [patch] Refuse a GPU PSTD configuration that exceeds the FFT workspace or
+  dispatch limit before staging the boundary and absorption fields. The typed
+  Hephaestus 0.31 query shares the planner's strategy. Six neutral PML fields
+  borrow a single host allocation.
+- [patch] Move analytical imaging, FDTD test families, and viscoacoustic
+  solver operations into domain modules. Correct the highest positive Fourier
+  mode on odd grids using the shared frequency convention. Keep even Nyquist
+  derivatives and inactive axes exactly zero.
+- [patch] Own the NumPy conversion at the Python boundary. Two const-generic
+  operations replace six rank-specific converters. Standard owned arrays move
+  their storage and strided owners retain logical C order.
+
+- [minor] Honor explicit sensor order in FDTD pressure recordings with optional
+  statistics. Construct the recorder once, validate all coordinates against
+  the grid, and treat an explicit empty list as an empty selection.
 
 - Use Consus 0.5 for HDF5, NPZ, and MATLAB Level-5 phantom input. Kwavers
   retains the MRI-to-sound-speed transform. Consus reads the selected
   MATLAB variable and normalizes its column-major numeric data.
-
-- **Breaking:** Three of Kwavers' four direct `chrono` edges leave the
-  workspace. `RUSTSEC-2026-0543` marks `chrono` unmaintained, and every
-  version is affected: `kwavers-diagnostics`'s
-  `ClinicalExaminationResult::timestamp` changes from
-  `chrono::DateTime<chrono::Utc>` to `std::time::SystemTime`, the same type
-  the module's clinical-monitoring records already carry, and the report
-  headers in `kwavers-analysis` and `xtask` render UTC timestamps with
-  `time::OffsetDateTime`. Consumers that read the examination timestamp as a
-  UTC calendar value read the `SystemTime` offset from `UNIX_EPOCH`;
-  consumers that render it format that offset with `time`. `time` 0.3 was
-  already in the lock, so no new supply chain enters the graph. The fourth
-  edge, the `kwavers` package's integration-test dev-dependency, and the two
-  third-party paths that still carry `chrono` (`dicom-core`'s DICOM date
-  values through `ritk-io`, and `serde_with`'s optional `chrono` feature
-  through `plotly` under the audited all-features graph) are held under
-  `KW-DEP-CHRONO-ADVISORY` with their removal trigger.
 
 - Admit the Leto 0.50 line: the Leto and Leto-ops requirements widen to
   `>=0.47.1, <0.51.0`, and the lock moves Leto to 0.50.0 together with the six

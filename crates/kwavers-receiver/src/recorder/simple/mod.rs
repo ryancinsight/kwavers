@@ -32,7 +32,8 @@ mod tests;
 ///
 /// # Invariants
 ///
-/// * `sensor_indices` is ordered x-fastest (Fortran order) matching k-Wave.
+/// * Explicit indices retain their supplied order. Mask-derived indices use
+///   the x-fastest ordering (Fortran order) matching k-Wave.
 /// * `pressure`, `ux_data`, `uy_data`, `uz_data` have shape
 ///   `(n_sensors, expected_steps)` when allocated.
 /// * `ix_sum`, `iy_sum`, `iz_sum` have length `n_sensors` when allocated.

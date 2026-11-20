@@ -40,8 +40,8 @@ impl StorageBufferLimits {
 /// `pml_xyz` packs the three PML arrays, three values per grid point; every
 /// field, medium, k-space and absorption buffer holds one value per point.
 /// `shifts_all` holds four values per axis sample and exceeds `pml_xyz` on
-/// some grids, every `N`x1x1 grid among them. Not planned here: the workspace
-/// of the FFT plan, which Hephaestus sizes, and the buffers a run sizes.
+/// some grids, every `N`x1x1 grid among them. The construction boundary
+/// checks FFT resources through Hephaestus. Run storage is checked separately.
 fn checked_buffers(shape: [usize; 3]) -> [(&'static str, Option<usize>); 2] {
     let [nx, ny, nz] = shape;
     let points = nx.checked_mul(ny).and_then(|xy| xy.checked_mul(nz));

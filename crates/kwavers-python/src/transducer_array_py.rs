@@ -7,7 +7,7 @@ use pyo3::prelude::*;
 
 use crate::quantity_args::{PyDegrees, PyFocusDistance, PyFrequency, PyLength, PyVelocity};
 
-use crate::breast_fwi_bindings::complex_compat::nd_to_leto1;
+use crate::array_utils::ndarray::into_leto;
 
 use kwavers_transducer::array_2d::{
     ArrayCurvature, TransducerArray2D as KwaversTransducerArray2D, TransducerArray2DConfig,
@@ -248,7 +248,7 @@ impl TransducerArray2D {
         if signal_arr.is_empty() {
             return Err(PyValueError::new_err("Signal must not be empty"));
         }
-        self.input_signal = Some(nd_to_leto1(signal_arr));
+        self.input_signal = Some(into_leto(signal_arr));
         Ok(())
     }
 

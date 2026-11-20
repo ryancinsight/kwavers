@@ -4,7 +4,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::Source;
-use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto2};
+use crate::array_utils::ndarray::{into_leto, into_ndarray};
 use crate::kwave_array_py::KWaveArray;
 
 #[pymethods]
@@ -38,7 +38,7 @@ impl Source {
     fn initial_pressure<'py>(&self, py: Python<'py>) -> Option<Py<PyArray3<f64>>> {
         self.initial_pressure
             .as_ref()
-            .map(|arr| PyArray3::from_owned_array(py, leto3_to_nd3(arr.clone())).into())
+            .map(|arr| PyArray3::from_owned_array(py, into_ndarray(arr.clone())).into())
     }
 
     /// Create a source from a KWaveArray with a driving signal.
@@ -57,7 +57,7 @@ impl Source {
         if signal_arr.is_empty() {
             return Err(PyValueError::new_err("Signal must not be empty"));
         }
-        let signal_matrix = nd_to_leto2(signal_arr.clone().insert_axis(Axis(0)).to_owned());
+        let signal_matrix = into_leto(signal_arr.clone().insert_axis(Axis(0)).to_owned());
         let source_mode = match mode {
             Some("additive_no_correction") => "additive_no_correction".to_string(),
             Some("dirichlet") => "dirichlet".to_string(),
@@ -120,7 +120,7 @@ impl Source {
             amplitude,
             position: None,
             mask: None,
-            signal: Some(nd_to_leto2(signal_matrix)),
+            signal: Some(into_leto(signal_matrix)),
             source_mode,
             initial_pressure: None,
             velocity_signal: None,

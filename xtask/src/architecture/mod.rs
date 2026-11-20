@@ -118,20 +118,12 @@ impl ArchitectureReport {
     }
 
     /// Generate markdown report
-    pub fn to_markdown(&self) -> String {
+    pub fn to_markdown(&self) -> anyhow::Result<String> {
+        let generated = horae_civil_time::UtcTimestamp::now()?;
         let mut md = String::new();
 
         md.push_str("# Architecture Validation Report\n\n");
-        let generated = time::OffsetDateTime::now_utc();
-        md.push_str(&format!(
-            "**Generated**: {:04}-{:02}-{:02} {:02}:{:02}:{:02}\n\n",
-            generated.year(),
-            u8::from(generated.month()),
-            generated.day(),
-            generated.hour(),
-            generated.minute(),
-            generated.second(),
-        ));
+        md.push_str(&format!("**Generated**: {generated:#}\n\n"));
 
         // Summary
         md.push_str("## Summary\n\n");
@@ -192,7 +184,7 @@ impl ArchitectureReport {
             }
         }
 
-        md
+        Ok(md)
     }
 
     /// Exit code based on severity

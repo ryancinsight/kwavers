@@ -17,7 +17,7 @@ budget, an uncertainty interval, a performance profile, or a figure.
 | `validation` | Convergence studies, analytical and benchmark comparisons |
 | `ml` | Learned surrogates and uncertainty quantification |
 | `performance` | Timing, throughput, and roofline-style measurement harnesses |
-| `plotting` | Deterministic figure generation from result data |
+| `plotting` | Offline Iris HTML plots for pressure slices, point clouds, and time series |
 | `testing` | Shared harness utilities for value-semantic result assertions |
 
 Figures are generated from the data by committed plotting code, so a chapter figure or a

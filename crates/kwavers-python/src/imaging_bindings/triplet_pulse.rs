@@ -18,7 +18,7 @@ use crate::array_utils::{leto2_to_pyarray2, pyarray2_to_leto2, vec_to_pyarray1};
 use kwavers_analysis::signal_processing::triplet_pulse::{
     combine_methods, envelope_das, triplet_pulse_contrast, ImageRoi, TripletPulseGeometry,
 };
-use kwavers_imaging::ultrasound::triplet_pulse::{TripletPulseConfig, TripletPulsePhases};
+use kwavers_imaging::ultrasound::triplet_pulse::TripletPulseConfig;
 use kwavers_physics::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use kwavers_signal::FrequencyFilter;
 use kwavers_simulation::imaging::triplet_pulse::{
@@ -27,6 +27,9 @@ use kwavers_simulation::imaging::triplet_pulse::{
 use numpy::{PyArray1, PyArray2, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
+
+#[cfg(test)]
+mod tests;
 
 fn kwavers_to_py(err: kwavers_core::error::KwaversError) -> PyErr {
     PyRuntimeError::new_err(format!("triplet-pulse failed: {err}"))
@@ -125,7 +128,7 @@ fn build_cloud(frequency_hz: f64, pnp_mpa: f64, thermal: bool) -> TripletPulseCl
         } else {
             TripletPulseConfig {
                 frequency_hz,
-                phases: TripletPulsePhases::default(),
+                ..TripletPulseConfig::kuji_2024()
             }
         };
         TripletPulseCloud {

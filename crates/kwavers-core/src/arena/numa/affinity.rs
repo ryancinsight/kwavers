@@ -1,7 +1,10 @@
-use themis::{CpuTopology, NumaNodeId};
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+use themis::CpuTopology;
+use themis::NumaNodeId;
 
-use crate::arena::numa::detect_topology;
-use crate::error::{KwaversError, KwaversResult};
+use crate::error::KwaversResult;
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+use crate::{arena::numa::detect_topology, error::KwaversError};
 
 /// Thread affinity configuration.
 #[derive(Debug, Clone)]
@@ -44,6 +47,7 @@ impl ThreadAffinity {
 /// Logical processors assigned to a NUMA node, from the themis topology table.
 ///
 /// Returns an empty set when the node is not present in the snapshot.
+#[cfg(any(target_os = "linux", target_os = "windows"))]
 fn node_processors(topology: &CpuTopology, node: NumaNodeId) -> Vec<u32> {
     topology
         .node_index(node)

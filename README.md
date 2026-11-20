@@ -77,8 +77,10 @@ independent provider algorithms, while model-residual adaptive refinement
 remains solver-owned. See
 [ADR 043](docs/ADR/043-tyche-uncertainty-provider.md).
 
-Layer crates are at `3.0.0`; the completed split targets `4.0.0` (see
-[RELEASE_v4.0.0 notes in CHANGELOG](CHANGELOG.md)). `kwavers-python` is `0.1.0`.
+The application and most layer crates use the `3.0.0` release line.
+The registry cohort lists independently versioned layers in the
+[changelog](CHANGELOG.md). The stable application `4.0.0` milestone is
+tracked in [ADR 138](docs/adr/138-release-scope-4-0.md).
 
 Validation status: the k-space pseudospectral solver matches the k-Wave
 reference solver on the homogeneous-water IVP benchmark at Pearson
@@ -97,7 +99,7 @@ through OIDC Trusted Publishing.
 
 ### Rust Crate Releases
 
-The 23 reusable Rust packages publish to crates.io in local dependency order.
+The 22 public Rust packages publish to crates.io in local dependency order.
 The `Crates.io Release` workflow validates a named workspace package on manual
 dispatch. After its required first release is bootstrapped and its crates.io
 Trusted Publisher is registered, a GitHub Release tagged

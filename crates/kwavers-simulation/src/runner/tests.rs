@@ -11,6 +11,9 @@ use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
 use kwavers_solver::forward::pstd::config::CompatibilityMode;
 use kwavers_source::{GridSource, SourceMode};
 
+#[cfg(feature = "gpu")]
+mod fft_capacity;
+
 const HYBRID_REFUSAL: &str = "Feature not available: SolverType::Hybrid is not supported by \
      SimulationRunner: HybridSolver builds its inner solvers with an empty grid source and \
      keeps them private, so the request's grid source and sensor recording cannot reach \

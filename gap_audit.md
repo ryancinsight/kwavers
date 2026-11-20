@@ -1,3 +1,23 @@
+## Aequitas 0.5 workspace migration
+
+The workspace uses crates.io Aequitas 0.5.0 and Eunomia 0.12.1. Kwavers
+and the pinned RITK source share the published Coeus and Leto types. The
+GPU PSTD provider retains typed FFT resource failures through Hephaestus
+0.32.0. The normalized registry package graph requires compatible RITK
+releases before the next Kwavers publication.
+
+## 2026-11-19 — Provider and numerical module candidates
+
+See [KW-PROVIDER-CUTOVERS](backlog/kw-provider-cutovers.md) for the
+pinned providers, value-level results, and outstanding source and
+integration gates. Kwavers owns the Python ndarray conversion at its
+consuming boundary in accordance with Leto ADR 0017.
+The native provider and Chrono graph gates pass with the cutover lock.
+[Registry verification](backlog/kw-release-crates-01.md) remains open for
+the Aequitas 0.4 candidate. The manifest uses the registry cohort. The
+lock guard recognizes workspace-owned packages by name and version, and
+the supply-chain policy rejects Chrono in the audited graph.
+
 ## Capability surveys by keyword produce false positives on name collisions
 
 Recorded 2026-08-12 from the Fullwave 2.5 parity comparison.

@@ -14,10 +14,11 @@
 //! Returns `leto::Array2<f64>` of shape `(num_sensors, time_steps)` with the
 //! pressure recorded at each sensor index per step.
 
+use crate::pstd_gpu::pipeline::construction::CheckedPlan;
 use crate::pstd_gpu::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdAutoDeviceProvider,
-    PstdMediumSnapshot, PstdOutputRequest, PstdRunInputs, PstdRunResult, PstdRunScalars,
-    PstdRunState, SolverParams, WgpuPstdStateProvider,
+    AbsorptionArrays, MediumArrays, PstdAutoDeviceProvider, PstdMediumSnapshot, PstdOutputRequest,
+    PstdRunInputs, PstdRunResult, PstdRunScalars, PstdRunState, SolverParams,
+    WgpuPstdStateProvider,
 };
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -276,42 +277,9 @@ where
         CPMLConfig::with_thickness(default_thickness)
     });
 
-    let mut pml_sgx_3d = vec![1.0f32; total];
-    let mut pml_sgy_3d = vec![1.0f32; total];
-    let mut pml_sgz_3d = vec![1.0f32; total];
-    let mut pml_x_3d = vec![1.0f32; total];
-    let mut pml_y_3d = vec![1.0f32; total];
-    let mut pml_z_3d = vec![1.0f32; total];
-
-    if pml_inside {
-        let profiles = CPMLProfiles::new(&cpml_config, grid, medium.c_ref, dt)?;
-        let exp_half = |sigma: &leto::Array1<f64>| -> Vec<f32> {
-            sigma
-                .iter()
-                .map(|&s| (-s * dt * 0.5).exp() as f32)
-                .collect()
-        };
-        let pml_sgx_1d = exp_half(&profiles.sigma_x_sgx);
-        let pml_sgy_1d = exp_half(&profiles.sigma_y_sgy);
-        let pml_sgz_1d = exp_half(&profiles.sigma_z_sgz);
-        let pml_x_1d = exp_half(&profiles.sigma_x);
-        let pml_y_1d = exp_half(&profiles.sigma_y);
-        let pml_z_1d = exp_half(&profiles.sigma_z);
-
-        for ix in 0..nx {
-            for iy in 0..ny {
-                for iz in 0..nz {
-                    let flat = ix * ny * nz + iy * nz + iz;
-                    pml_sgx_3d[flat] = pml_sgx_1d[ix];
-                    pml_sgy_3d[flat] = pml_sgy_1d[iy];
-                    pml_sgz_3d[flat] = pml_sgz_1d[iz];
-                    pml_x_3d[flat] = pml_x_1d[ix];
-                    pml_y_3d[flat] = pml_y_1d[iy];
-                    pml_z_3d[flat] = pml_z_1d[iz];
-                }
-            }
-        }
-    }
+    let profiles = pml_inside
+        .then(|| CPMLProfiles::new(&cpml_config, grid, medium.c_ref, dt))
+        .transpose()?;
 
     let pressure_source =
         super::prepare_pstd_pressure_source(grid, source, &medium.c0_flat, dt, time_steps)?;
@@ -328,14 +296,8 @@ where
     let has_absorption = medium.absorption.is_some();
     let has_nonlinear = nonlinear && has_nonlinear_coefficient(&medium.bon_a_flat);
 
-    let absorption = absorption::absorption_operators(grid, medium)?;
-
-    let mut solver = GpuPstdSolver::<P>::with_auto_device(
+    let plan = CheckedPlan::<P>::for_auto_device(
         grid,
-        MediumArrays {
-            c0_flat: &medium.c0_flat,
-            rho0_flat: &medium.rho0_flat,
-        },
         SolverParams {
             dt,
             nt: time_steps,
@@ -343,14 +305,16 @@ where
             nonlinear: has_nonlinear,
             absorbing: has_absorption,
         },
-        PmlArrays {
-            x: &pml_x_3d,
-            y: &pml_y_3d,
-            z: &pml_z_3d,
-            sgx: &pml_sgx_3d,
-            sgy: &pml_sgy_3d,
-            sgz: &pml_sgz_3d,
+        MediumArrays {
+            c0_flat: &medium.c0_flat,
+            rho0_flat: &medium.rho0_flat,
         },
+    )?;
+
+    let pml = boundary::stage([nx, ny, nz], total, dt, profiles.as_ref());
+    let absorption = absorption::absorption_operators(grid, medium)?;
+    let mut solver = plan.build(
+        pml.as_arrays(),
         AbsorptionArrays {
             bon_a_flat: &medium.bon_a_flat,
             nabla1: &absorption.nabla1,
@@ -442,6 +406,7 @@ pub fn cpml_thickness_limits(nx: usize, ny: usize, nz: usize) -> (usize, usize) 
 }
 
 mod absorption;
+mod boundary;
 
 pub use absorption::{power_law_operators, PowerLawOperators};
 #[cfg(test)]

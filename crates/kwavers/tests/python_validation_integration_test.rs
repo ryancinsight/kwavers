@@ -58,22 +58,16 @@ pub struct ComprehensiveValidationReport {
     pub timestamp: String,
 }
 
-impl Default for ComprehensiveValidationReport {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl ComprehensiveValidationReport {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Result<Self, horae_civil_time::CivilTimeError> {
+        Ok(Self {
             grid_results: Vec::new(),
             signal_results: Vec::new(),
             source_results: Vec::new(),
             sensor_results: Vec::new(),
             solver_results: Vec::new(),
-            timestamp: chrono::Local::now().to_rfc3339(),
-        }
+            timestamp: horae_civil_time::UtcTimestamp::now()?.to_string(),
+        })
     }
 
     pub fn total_tests(&self) -> usize {
@@ -410,7 +404,7 @@ fn test_full_validation_suite() {
     eprintln!("Running Full Validation Suite");
     eprintln!("========================================\\n");
 
-    let mut report = ComprehensiveValidationReport::new();
+    let mut report = ComprehensiveValidationReport::new().expect("valid UTC system clock");
 
     // Run all validation modules
     report.grid_results = generate_grid_validation_report();
@@ -648,7 +642,7 @@ fn test_generate_ci_report() {
         eprintln!("Skipping CI report (set KWAVERS_RUN_PYTHON=1 with a built pykwavers)");
         return;
     }
-    let mut report = ComprehensiveValidationReport::new();
+    let mut report = ComprehensiveValidationReport::new().expect("valid UTC system clock");
 
     report.grid_results = generate_grid_validation_report();
     report.signal_results = generate_signal_validation_report();

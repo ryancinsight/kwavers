@@ -1,6 +1,6 @@
 //! `run_standing_wave_suppression` pyfunction and result serialisation.
 
-use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3};
+use crate::array_utils::ndarray::into_ndarray;
 use kwavers_therapy::therapy::theranostic_guidance::{
     run_standing_wave_suppression, StandingWaveOptConfig,
 };
@@ -132,7 +132,7 @@ pub fn run_standing_wave_suppression_py<'py>(
     // Medium
     dict.set_item(
         "sound_speed_map",
-        leto2_to_nd2(result.sound_speed_map).to_pyarray(py),
+        into_ndarray(result.sound_speed_map).to_pyarray(py),
     )?;
 
     // Element positions
@@ -166,29 +166,29 @@ pub fn run_standing_wave_suppression_py<'py>(
     dict.set_item("snapshot_iterations", PyArray1::from_vec(py, snap_iters))?;
     dict.set_item(
         "snapshot_fields_re",
-        leto3_to_nd3(result.snapshot_fields_re).to_pyarray(py),
+        into_ndarray(result.snapshot_fields_re).to_pyarray(py),
     )?;
     dict.set_item(
         "snapshot_fields_im",
-        leto3_to_nd3(result.snapshot_fields_im).to_pyarray(py),
+        into_ndarray(result.snapshot_fields_im).to_pyarray(py),
     )?;
 
     // Initial and final fields
     dict.set_item(
         "initial_field_re",
-        leto2_to_nd2(result.initial_field_re).to_pyarray(py),
+        into_ndarray(result.initial_field_re).to_pyarray(py),
     )?;
     dict.set_item(
         "initial_field_im",
-        leto2_to_nd2(result.initial_field_im).to_pyarray(py),
+        into_ndarray(result.initial_field_im).to_pyarray(py),
     )?;
     dict.set_item(
         "final_field_re",
-        leto2_to_nd2(result.final_field_re).to_pyarray(py),
+        into_ndarray(result.final_field_re).to_pyarray(py),
     )?;
     dict.set_item(
         "final_field_im",
-        leto2_to_nd2(result.final_field_im).to_pyarray(py),
+        into_ndarray(result.final_field_im).to_pyarray(py),
     )?;
 
     // Diagnostics

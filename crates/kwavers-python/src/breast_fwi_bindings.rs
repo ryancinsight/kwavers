@@ -13,7 +13,6 @@
 //!   `operator_equivalence`, `phantom`, `reduction` — domain submodules
 
 mod array_config;
-pub mod complex_compat;
 mod dataset;
 mod diagnostics;
 mod direct_field;

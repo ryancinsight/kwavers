@@ -16,9 +16,11 @@ use crate::pstd_gpu::state::{
     WgpuPstdPipelines, WgpuPstdPmlShiftBuffers, WgpuPstdRunCache, WgpuPstdState,
     WgpuPstdStateProvider, ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE,
 };
-use hephaestus_core::{ComputeDevice, FftDirection, FftOperands, FftOps, StridedView};
+use hephaestus_core::{
+    ComputeDevice, FftDirection, FftOperands, FftOps, HephaestusError, StridedView,
+};
 use hephaestus_wgpu::{WgpuDevice, WgpuFftOps};
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use leto::Layout;
 
@@ -26,10 +28,19 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
     type Context = GpuProviderContext<WgpuDevice>;
 
     fn check_plan_capacity(context: &Self::Context, grid: &Grid) -> KwaversResult<()> {
-        check_plan_capacity(
-            [grid.nx, grid.ny, grid.nz],
-            StorageBufferLimits::enabled_on(context.device()),
-        )
+        let shape = [grid.nx, grid.ny, grid.nz];
+        check_plan_capacity(shape, StorageBufferLimits::enabled_on(context.device()))?;
+        WgpuFftOps
+            .requirements::<f32, 3>(context.hephaestus_device(), shape, &[0, 1, 2])
+            .map_err(|error| match error {
+                HephaestusError::FftCapacityExceeded { .. } => {
+                    KwaversError::ResourceLimitExceeded {
+                        message: error.to_string(),
+                    }
+                }
+                other => KwaversError::InvalidInput(format!("GPU PSTD FFT plan: {other}")),
+            })?;
+        Ok(())
     }
 
     fn build_state(

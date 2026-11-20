@@ -609,7 +609,7 @@ fn check_architecture(markdown: bool, strict: bool) -> Result<()> {
 
     if markdown {
         // Generate markdown report
-        let md = report.to_markdown();
+        let md = report.to_markdown()?;
         let output_path = workspace_root().join("ARCHITECTURE_VALIDATION_REPORT.md");
         fs::write(&output_path, md).context("Failed to write markdown report")?;
         println!("📄 Markdown report written to: {}", output_path.display());

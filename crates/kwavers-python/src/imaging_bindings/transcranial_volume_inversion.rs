@@ -1,4 +1,4 @@
-use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
+use crate::array_utils::ndarray::into_ndarray;
 use kwavers_diagnostics::reconstruction::transcranial_ust::{
     reconstruct_brain_volume, resample_head_volume, select_head_slice, AcousticVolume,
     TranscranialUstBornInversionConfig,
@@ -153,29 +153,29 @@ pub fn run_transcranial_ust_volume_inversion_from_ritk_ct<'py>(
         let s = result.ct_hu.shape();
         (s[0], s[1], s[2])
     };
-    out.set_item("ct_hu", leto3_to_nd3(result.ct_hu).to_pyarray(py))?;
+    out.set_item("ct_hu", into_ndarray(result.ct_hu).to_pyarray(py))?;
     out.set_item(
         "target_sound_speed_m_s",
-        leto3_to_nd3(result.target_sound_speed_m_s).to_pyarray(py),
+        into_ndarray(result.target_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "initial_sound_speed_m_s",
-        leto3_to_nd3(result.initial_sound_speed_m_s).to_pyarray(py),
+        into_ndarray(result.initial_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "migration_sound_speed_m_s",
-        leto3_to_nd3(result.migration_sound_speed_m_s).to_pyarray(py),
+        into_ndarray(result.migration_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "reconstruction_sound_speed_m_s",
-        leto3_to_nd3(result.reconstruction_sound_speed_m_s).to_pyarray(py),
+        into_ndarray(result.reconstruction_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "enhanced_reconstruction_sound_speed_m_s",
-        leto3_to_nd3(result.enhanced_reconstruction_sound_speed_m_s).to_pyarray(py),
+        into_ndarray(result.enhanced_reconstruction_sound_speed_m_s).to_pyarray(py),
     )?;
-    out.set_item("brain_mask", leto3_to_nd3(result.brain_mask).to_pyarray(py))?;
-    out.set_item("skull_mask", leto3_to_nd3(result.skull_mask).to_pyarray(py))?;
+    out.set_item("brain_mask", into_ndarray(result.brain_mask).to_pyarray(py))?;
+    out.set_item("skull_mask", into_ndarray(result.skull_mask).to_pyarray(py))?;
     out.set_item(
         "synthetic_data",
         Array1::from(result.synthetic_data).to_pyarray(py),

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod simulation_contract_tests {
     use super::super::Simulation;
-    use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, nd_to_leto2};
+    use crate::array_utils::ndarray::{into_leto, into_ndarray};
     use crate::grid_py::Grid;
     use crate::medium_py::MediumInner;
     use crate::misc_bindings::time_reversal_reconstruction_impl;
@@ -20,7 +20,7 @@ mod simulation_contract_tests {
         // column (post-final-step value), aligning with k-Wave's Nt-sample
         // window indexed by physical times [0, dt, …, (Nt−1)·dt].
         let nt_plus_one = array![[0.0, 1.0, 2.0, 3.0], [10.0, 11.0, 12.0, 13.0]];
-        let trimmed = Simulation::trim_initial_recorder_sample(nd_to_leto2(nt_plus_one), 3, 1);
+        let trimmed = Simulation::trim_initial_recorder_sample(into_leto(nt_plus_one), 3, 1);
         assert_eq!(trimmed.shape(), [2, 3]);
         assert_eq!(trimmed[[0, 0]], 0.0); // p(0) preserved
         assert_eq!(trimmed[[0, 1]], 1.0);
@@ -31,13 +31,12 @@ mod simulation_contract_tests {
         // Buffer already Nt cols (e.g. velocity buffers populated only inside
         // step_forward): pass through unchanged at start=1.
         let exact_nt = array![[1.0, 2.0, 3.0], [11.0, 12.0, 13.0]];
-        let untouched =
-            Simulation::trim_initial_recorder_sample(nd_to_leto2(exact_nt.clone()), 3, 1);
-        assert_eq!(leto2_to_nd2(untouched), exact_nt);
+        let untouched = Simulation::trim_initial_recorder_sample(into_leto(exact_nt.clone()), 3, 1);
+        assert_eq!(into_ndarray(untouched), exact_nt);
 
         // record_start_index=2: skip col 0, keep cols [1..Nt) → Nt-1 cols.
         let nt_plus_one2 = array![[0.0, 1.0, 2.0, 3.0], [10.0, 11.0, 12.0, 13.0]];
-        let trimmed2 = Simulation::trim_initial_recorder_sample(nd_to_leto2(nt_plus_one2), 3, 2);
+        let trimmed2 = Simulation::trim_initial_recorder_sample(into_leto(nt_plus_one2), 3, 2);
         assert_eq!(trimmed2.shape(), [2, 2]);
         assert_eq!(trimmed2[[0, 0]], 1.0);
         assert_eq!(trimmed2[[0, 1]], 2.0);
@@ -47,7 +46,7 @@ mod simulation_contract_tests {
     #[test]
     fn trim_initial_recorder_view_aligns_with_kwave_time_axis() {
         let nt_plus_one = array![[0.0, 1.0, 2.0, 3.0], [10.0, 11.0, 12.0, 13.0]];
-        let leto_in = nd_to_leto2(nt_plus_one);
+        let leto_in = into_leto(nt_plus_one);
         let trimmed = Simulation::trim_initial_recorder_view(leto_in.view(), 3, 1);
         assert_eq!(trimmed.shape(), [2, 3]);
         assert_eq!(trimmed[[0, 0]], 0.0);
@@ -55,9 +54,9 @@ mod simulation_contract_tests {
         assert_eq!(trimmed[[1, 2]], 12.0);
 
         let exact_nt = array![[1.0, 2.0, 3.0], [11.0, 12.0, 13.0]];
-        let leto_exact = nd_to_leto2(exact_nt.clone());
+        let leto_exact = into_leto(exact_nt.clone());
         let untouched = Simulation::trim_initial_recorder_view(leto_exact.view(), 3, 1);
-        assert_eq!(leto2_to_nd2(untouched), exact_nt);
+        assert_eq!(into_ndarray(untouched), exact_nt);
     }
 
     #[test]
@@ -77,8 +76,8 @@ mod simulation_contract_tests {
     #[test]
     fn time_reversal_reconstruction_impl_preserves_zero_field_with_pml_crop() {
         let grid = Grid::new(6, 6, 1, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
-        let sensor_data = nd_to_leto2(Array2::zeros((3, 8)));
-        let sensor_positions = nd_to_leto2(array![
+        let sensor_data = into_leto(Array2::zeros((3, 8)));
+        let sensor_positions = into_leto(array![
             [0.0, 0.0, 0.0],
             [0.0, 0.1e-3, 0.0],
             [0.0, 0.2e-3, 0.0]

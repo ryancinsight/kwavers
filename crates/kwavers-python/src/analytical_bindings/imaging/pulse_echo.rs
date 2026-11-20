@@ -1,8 +1,6 @@
 //! PyO3 wrappers for pulse-echo RF and B-mode helpers.
 
-use crate::breast_fwi_bindings::complex_compat::{
-    leto1_to_nd1, leto2_to_nd2, nd_to_leto1, nd_to_leto2,
-};
+use crate::array_utils::ndarray::{into_leto, into_ndarray};
 use kwavers_analysis::signal_processing::b_mode::envelope as core_bmode_envelope;
 use kwavers_physics::analytical::pulse_echo::{
     bmode_db_fixed_reference as core_bmode_db_fixed_reference,
@@ -58,9 +56,9 @@ pub fn simulate_receive_rf<'py>(
             "scat_pos rows must match scat_amp length",
         ));
     }
-    let sp_leto = nd_to_leto2(sp.to_owned());
-    let sa_leto = nd_to_leto1(sa.to_owned());
-    let ep_leto = nd_to_leto2(ep.to_owned());
+    let sp_leto = into_leto(sp.to_owned());
+    let sa_leto = into_leto(sa.to_owned());
+    let ep_leto = into_leto(ep.to_owned());
     let rf = core_simulate_receive_rf(SimulateReceiveRfInput {
         scat_pos: sp_leto.view(),
         scat_amp: sa_leto.view(),
@@ -71,7 +69,7 @@ pub fn simulate_receive_rf<'py>(
         frac_bw,
         n_samples,
     });
-    Ok(leto2_to_nd2(rf).to_pyarray(py).unbind())
+    Ok(into_ndarray(rf).to_pyarray(py).unbind())
 }
 
 /// B-mode envelope detection: the analytic-signal magnitude `|z(t)|`, where
@@ -86,9 +84,9 @@ pub fn simulate_receive_rf<'py>(
 #[pyfunction]
 #[pyo3(signature = (rf,))]
 pub fn bmode_envelope(py: Python<'_>, rf: PyReadonlyArray1<f64>) -> PyResult<Py<PyArray1<f64>>> {
-    let rf_arr = nd_to_leto1(rf.as_array().to_owned());
+    let rf_arr = into_leto(rf.as_array().to_owned());
     let env = py.detach(|| core_bmode_envelope(&rf_arr));
-    let env = leto1_to_nd1(env);
+    let env = into_ndarray(env);
     Ok(env.to_pyarray(py).unbind())
 }
 
