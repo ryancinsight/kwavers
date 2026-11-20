@@ -37,3 +37,11 @@ Verify the candidate and published consumer using all features, all targets,
 and all dependency kinds. Reject Chrono in the supply-chain gate. Verify the
 native dataset, plotting, and clinical reports with their existing value tests
 and check archive checksums against the registry index.
+
+## Aequitas 0.5 workspace migration
+
+The workspace uses the Aequitas 0.5 and Leto 0.52 registry cohort.
+Hephaestus 0.32 supplies the typed GPU FFT capacity check for that
+cohort. Kwavers pins the merged RITK revision while the current RITK
+packages still select Aequitas 0.4. The next Kwavers registry release
+requires compatible RITK packages and a new consumer check.

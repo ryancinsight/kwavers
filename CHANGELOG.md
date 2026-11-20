@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Use crates.io Aequitas 0.5.0 and Eunomia 0.12.1. Share Coeus and Leto
+  crate identities with RITK at the imaging and registration boundaries.
+- Preserve the typed GPU FFT capacity preflight on Hephaestus 0.32.0.
+
 ## 3.0.0 Rust registry cohort
 
 The first registry cohort has 22 public packages. It includes

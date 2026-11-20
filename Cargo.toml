@@ -3,44 +3,44 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
-aequitas = { version = "0.4.0", default-features = false, features = ["std", "serde"] }
+aequitas = { version = "0.5.0", default-features = false, features = ["std", "serde"] }
 # The binding-side half of the same repository. It owns the quantity protocol
 # reader and `Dimensioned<D>`, so the extraction lives once upstream rather
 # than being reimplemented here. Unpublished by design: the wheel is its
 # deliverable, and this crate consumes it as a library.
-aequitas_python = { package = "aequitas-python", version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "beb233826e09392b1e9087c726837932d2578728" }
-asclepius = { version = "0.4.0", default-features = false, features = ["std"] }
-hyperion = { package = "hyperion-transport", version = "0.2.0" }
-proteus = { package = "proteus-mat", version = "0.2.0" }
+aequitas_python = { package = "aequitas-python", version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", tag = "crate-aequitas-v0.5.0" }
+asclepius = { version = "0.5.0", default-features = false, features = ["std"] }
+hyperion = { package = "hyperion-transport", version = "0.3.0" }
+proteus = { package = "proteus-mat", version = "0.3.0" }
 tyche-core = "0.5.0"
-# Public Atlas providers resolve through crates.io. The private Python member
-# uses the pinned quantity protocol provider above.
-ritk-core = "0.11.0"
-ritk-io = "0.6.0"
-ritk-image = "0.5.0"
-ritk-block-matching = "0.1.0"
-ritk-spatial = "0.5.0"
-ritk-registration = "0.56.0"
-coeus-core = "0.13.0"
-coeus-tensor = "0.13.0"
-coeus-autograd = "0.13.0"
-coeus-nn = "0.13.0"
-coeus-optim = "0.13.0"
-coeus-ops = "0.13.0"
-apollo = { package = "apollo-fft", version = "0.30.0" }
+# Use the merged RITK workspace while the registry packages require Aequitas 0.4.
+# The exact revision gives all RITK types a shared package identity.
+ritk-core = { version = "0.11.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
+ritk-io = { version = "0.6.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
+ritk-image = { version = "0.5.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
+ritk-block-matching = { version = "0.1.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
+ritk-spatial = { version = "0.5.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
+ritk-registration = { version = "0.56.0", git = "https://github.com/ryancinsight/ritk.git", rev = "07b37e7d45a252d32dbded895c55c62c7b42ca86" }
+coeus-core = "0.14.0"
+coeus-tensor = "0.14.0"
+coeus-autograd = "0.14.0"
+coeus-nn = "0.14.0"
+coeus-optim = "0.14.0"
+coeus-ops = "0.14.0"
+apollo = { package = "apollo-fft", version = "0.31.0" }
 # athena: Atlas SSOT for Krylov recurrences, the linear-operator and
 # preconditioner seams, and convergence policy (Atlas ADR 0033).
 # athena-core = backend-neutral contracts, athena-leto = Leto CPU backend.
 athena-core = "0.4.0"
-athena-leto = "0.4.0"
-hephaestus-core = { version = "0.31.0", default-features = false }
-hephaestus-wgpu = { version = "0.31.0", default-features = false, features = ["decomposition"] }
-hephaestus-cuda = { version = "0.31.0", default-features = false }
+athena-leto = "0.5.0"
+hephaestus-core = { version = "0.32.0", default-features = false }
+hephaestus-wgpu = { version = "0.32.0", default-features = false, features = ["decomposition"] }
+hephaestus-cuda = { version = "0.32.0", default-features = false }
 hermes-simd = { version = "0.10.0", default-features = false, features = ["std"] }
 themis = { package = "themis-topology", version = "0.11.5", default-features = false, features = ["std"] }
 moirai-parallel = { version = "0.12.0", default-features = false, features = ["parallel"] }
-leto = { version = "0.51.0", default-features = false, features = ["std"] }
-leto-ops = { version = "0.51.0", default-features = false, features = ["std"] }
+leto = { version = "0.52.0", default-features = false, features = ["std"] }
+leto-ops = { version = "0.52.0", default-features = false, features = ["std"] }
 # Mnemosyne: Allocation / arenas / staging memory (Atlas first-party).
 # `kwavers-core` consumes the arena, backend, and memory-core seam directly
 # (`crates/kwavers-core/src/arena/**`) â€” see ADR 0006 Â§Failure modes for the
@@ -69,7 +69,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 bytemuck = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-gaia = { package = "gaia-mesh", version = "0.7.0", default-features = false }
+gaia = { package = "gaia-mesh", version = "0.8.0", default-features = false }
 tempfile = "3.10"
 proptest = "1.0"
 walkdir = "2.4"
@@ -254,3 +254,7 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true  # Strip symbols for smaller Python wheels
+
+# The Git-hosted binding shares the published Rust quantity identity.
+[patch."https://github.com/ryancinsight/aequitas"]
+aequitas = { version = "0.5.0" }

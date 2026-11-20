@@ -1,5 +1,12 @@
 # Kwavers release checklist
 
+## Aequitas 0.5 workspace migration
+
+- [ ] [patch] Verify a clean build and installed Python wheel with one
+      crates.io Aequitas 0.5.0 and Eunomia 0.12.1 and no Chrono.
+- [ ] [patch] Adopt compatible RITK registry packages and verify
+      the normalized package graph before the next registry release.
+
 ## Target 3.0.0 Rust registry cohort
 
 - [ ] [major] Verify the native provider and clinical API cutover defined in
