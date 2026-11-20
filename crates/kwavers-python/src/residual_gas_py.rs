@@ -14,7 +14,7 @@ use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use crate::array_utils::ndarray::{into_leto, into_ndarray};
+use crate::array_utils::owned::{into_leto, into_ndarray};
 
 /// 3-D residual cavitation-gas (lacuna) void-fraction field `β(x)` [-].
 ///

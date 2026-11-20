@@ -2,7 +2,7 @@ use leto::Array2;
 use numpy::ndarray::Axis;
 use numpy::{PyReadonlyArray1, PyReadonlyArray2};
 
-use crate::array_utils::ndarray::into_leto;
+use crate::array_utils::owned::into_leto;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 

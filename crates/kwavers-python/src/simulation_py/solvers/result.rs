@@ -2,7 +2,7 @@ use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 
-use crate::array_utils::ndarray::into_ndarray;
+use crate::array_utils::owned::into_ndarray;
 use crate::simulation_result_py::{SimulationResult, SimulationRunResult};
 
 use super::super::Simulation;

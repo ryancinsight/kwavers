@@ -1,6 +1,6 @@
 //! PyO3 wrappers for pulse-echo RF and B-mode helpers.
 
-use crate::array_utils::ndarray::{into_leto, into_ndarray};
+use crate::array_utils::owned::{into_leto, into_ndarray};
 use kwavers_analysis::signal_processing::b_mode::envelope as core_bmode_envelope;
 use kwavers_physics::analytical::pulse_echo::{
     bmode_db_fixed_reference as core_bmode_db_fixed_reference,

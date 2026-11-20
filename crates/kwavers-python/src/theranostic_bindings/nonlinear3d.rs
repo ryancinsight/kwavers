@@ -10,7 +10,7 @@ use pyo3::types::{PyDict, PyList};
 use std::path::Path;
 
 use super::py_convert::{kwavers_to_py, labels_from_volume, metric3d_dict, points3_to_array};
-use crate::array_utils::ndarray::into_ndarray;
+use crate::array_utils::owned::into_ndarray;
 use crate::ritk_image::load_ritk_nifti;
 
 #[pyfunction]

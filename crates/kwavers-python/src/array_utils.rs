@@ -4,7 +4,7 @@
 //! NumPy arrays and the internal Leto / Rust `Vec` representation without
 //! exposing the backing array-provider type.
 
-pub(crate) mod ndarray;
+pub(crate) mod owned;
 
 use numpy::ndarray::{ArrayView, Dimension};
 use numpy::{

@@ -4,7 +4,7 @@
 //! read-only ndarray views and the authoritative validation/beamforming contract
 //! lives in `kwavers_analysis::signal_processing::pam`.
 
-use crate::array_utils::ndarray::{into_leto, into_ndarray};
+use crate::array_utils::owned::{into_leto, into_ndarray};
 use aequitas::systems::si::quantities::Length;
 use aequitas::systems::si::units::Meter;
 use kwavers_analysis::signal_processing::beamforming::adaptive::subspace::MUSIC;
