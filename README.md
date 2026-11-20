@@ -110,7 +110,7 @@ The PyO3 and `xtask` packages are explicitly non-publishable; all Rust library
 releases use their package names.
 
 Detailed history lives in [`CHANGELOG.md`](CHANGELOG.md); current work and gaps
-are tracked in [`backlog.md`](backlog.md), [`CHECKLIST.md`](CHECKLIST.md), and
+are tracked in [`backlog.md`](backlog.md), [registry cutover checklist](docs/migrations/registry-cutover.md), and
 [`gap_audit.md`](gap_audit.md).
 
 ### Architecture Overview
@@ -305,7 +305,7 @@ This is an active research project under development. Contributions are welcome!
 
 ### 🚀 Getting Started
 
-1. **Check Status**: Review [`CHECKLIST.md`](CHECKLIST.md) for current task status
+1. **Check Status**: Review [registry cutover checklist](docs/migrations/registry-cutover.md) for current task status
 2. **Review Plans**: See [`backlog.md`](backlog.md) for planned work and [`gap_audit.md`](gap_audit.md) for known gaps
 3. **Build a crate**: `cargo check -p kwavers-core` (per-crate checks are fast post-split)
 4. **Run Tests**: `cargo nextest run -p <crate>`; use
@@ -328,7 +328,7 @@ This is an active research project under development. Contributions are welcome!
 
 **Artifact-driven sprints** (see [`CLAUDE.md`](CLAUDE.md) governance):
 - `backlog.md` — strategy and prioritized work
-- `CHECKLIST.md` — tactical tasks with change-class tags
+- [Registry cutover checklist](docs/migrations/registry-cutover.md) — release checks with change-class tags
 - `gap_audit.md` — physics/numerics gap findings
 - `CHANGELOG.md` — version history
 

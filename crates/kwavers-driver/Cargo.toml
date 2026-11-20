@@ -4,10 +4,10 @@
 
 [package]
 name = "kwavers-driver"
-version = "0.3.13"
+version = "0.4.0"
 publish = true
 edition = "2021"
-rust-version = "1.80"
+rust-version = "1.97"
 description = "Physics-guided, manufacturing-aware driver electronics design for kwavers"
 license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
@@ -17,7 +17,7 @@ authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
 aequitas = { workspace = true }
 eunomia = { workspace = true }
 thiserror = "1"
-kwavers-transducer = { path = "../kwavers-transducer", optional = true, version = "4.1.0" }
+kwavers-transducer = { path = "../kwavers-transducer", optional = true, version = "5.0.0" }
 
 [features]
 default = ["io"]

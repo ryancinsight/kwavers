@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-therapy"
-version = "3.0.0"
+version = "4.0.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -11,17 +11,17 @@ repository = "https://github.com/ryancinsight/kwavers"
 [dependencies]
 aequitas = { workspace = true }
 asclepius = { workspace = true }
-kwavers-core = { path = "../kwavers-core", version = "3.0.0" }
-kwavers-math = { path = "../kwavers-math", version = "3.0.0" }
-kwavers-grid = { path = "../kwavers-grid", version = "3.0.0" }
-kwavers-imaging = { path = "../kwavers-imaging", version = "3.0.0" }
-kwavers-transducer = { path = "../kwavers-transducer", version = "4.1.0" }
-kwavers-source = { path = "../kwavers-source", version = "3.0.0" }
-kwavers-medium = { path = "../kwavers-medium", version = "4.0.0" }
-kwavers-physics = { path = "../kwavers-physics", version = "3.0.0" }
-kwavers-solver = { path = "../kwavers-solver", version = "3.0.0" }
-kwavers-analysis = { path = "../kwavers-analysis", version = "4.0.0" }
-kwavers-simulation = { path = "../kwavers-simulation", version = "3.0.0" }
+kwavers-core = { path = "../kwavers-core", version = "4.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "4.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "4.0.0" }
+kwavers-imaging = { path = "../kwavers-imaging", version = "4.0.0" }
+kwavers-transducer = { path = "../kwavers-transducer", version = "5.0.0" }
+kwavers-source = { path = "../kwavers-source", version = "4.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "5.0.0" }
+kwavers-physics = { path = "../kwavers-physics", version = "4.0.0" }
+kwavers-solver = { path = "../kwavers-solver", version = "4.0.0" }
+kwavers-analysis = { path = "../kwavers-analysis", version = "5.0.0" }
+kwavers-simulation = { path = "../kwavers-simulation", version = "4.0.0" }
 moirai-parallel = { workspace = true }
 leto = { workspace = true }
 leto-ops = { workspace = true }
