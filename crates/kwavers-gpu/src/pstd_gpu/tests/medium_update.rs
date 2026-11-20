@@ -73,3 +73,47 @@ fn test_medium_variable_update_preserves_static_buffers_and_disables_source_corr
         .iter()
         .all(|&v| (v - unity_expected).abs() < tol));
 }
+
+#[test]
+#[ignore = "requires a GPU device for packed resource readback"]
+fn absorption_update_uploads_each_tau_eta_pair_bit_for_bit() {
+    let _trace = tracing::subscriber::set_default(
+        tracing_subscriber::fmt()
+            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
+            .with_test_writer()
+            .finish(),
+    );
+    let (mut solver, tau, eta) = tracing::info_span!("arrange").in_scope(|| {
+        let solver = make_small_test_solver().expect("PSTD device for absorption update");
+        let count = solver.nx * solver.ny * solver.nz;
+        let tau: Vec<_> = (0..count).map(|i| -0.125 * (i as f32 + 1.0)).collect();
+        let eta: Vec<_> = (0..count).map(|i| 0.5 - 0.03125 * i as f32).collect();
+        (solver, tau, eta)
+    });
+    let packed: Vec<[f32; 2]> = tracing::info_span!("act").in_scope(|| {
+        let count = tau.len();
+        solver.update_medium(
+            &vec![1_490.0_f32; count],
+            &vec![1_023.0_f32; count],
+            &vec![0.375_f32; count],
+            &tau,
+            &eta,
+        );
+        read_buffer(
+            solver.state.device(),
+            solver.state.queue(),
+            &solver.state.absorption_buffers.coefficients,
+            count,
+        )
+    });
+    let _assert = tracing::info_span!("assert").entered();
+    let expected: Vec<_> = tau
+        .iter()
+        .zip(&eta)
+        .map(|(&tau, &eta)| [tau, eta])
+        .collect();
+    assert_eq!(
+        bytemuck::cast_slice::<_, u32>(&packed),
+        bytemuck::cast_slice::<_, u32>(&expected)
+    );
+}
