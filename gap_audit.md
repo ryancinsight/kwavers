@@ -1,3 +1,11 @@
+## Aequitas 0.5 workspace migration
+
+The workspace uses crates.io Aequitas 0.5.0 and Eunomia 0.12.1. Kwavers
+and the pinned RITK source share the published Coeus and Leto types. The
+GPU PSTD provider retains typed FFT resource failures through Hephaestus
+0.32.0. The normalized registry package graph requires compatible RITK
+releases before the next Kwavers publication.
+
 ## 2026-11-19 — Provider and numerical module candidates
 
 See [KW-PROVIDER-CUTOVERS](backlog/kw-provider-cutovers.md) for the
