@@ -20,6 +20,8 @@ the other public layers use 3.0.0. See
 
 ### Changed
 
+- [patch] Apply the Rust burst defaults to custom triplet-pulse frequencies
+  in Python and regenerate the typed facade for the six registered functions.
 - [patch] Use the Aequitas 0.4 registry cohort for material properties,
   photon transport, time stepping, and sampling.
 - [patch] Format UTC timestamps in clinical, tooling, and integration-test

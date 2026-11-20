@@ -30,7 +30,9 @@
 <a id="kw-gpu-teardown"></a>- [KW-GPU-TEARDOWN](backlog/kw-gpu-teardown.md) — Dissolve the remaining internal `kwavers/src` into the layered crates [arch] — todo
 <a id="kw-img-045"></a>- [KW-IMG-045](backlog/kw-img-045.md) — Frame-resolved physical I/Q ensemble [minor] — todo
 <a id="kw-img-046"></a>- [KW-IMG-046](backlog/kw-img-046.md) — Triplet-pulse cavitation-bubble imaging [minor] — todo
-<a id="kw-phys-001"></a>- [KW-PHYS-001](backlog/kw-phys-001.md) — Rectified-diffusion rate is not the Eller–Flynn rate (missing oscillation-amplitude factor) [patch] — todo
+<a id="kw-phys-001"></a>- [KW-PHYS-001](backlog/kw-phys-001.md) — Rectified-diffusion rate is not the Eller–Flynn rate (missing oscillation-amplitude factor) [patch] — done
+<a id="kw-phys-002"></a>- [KW-PHYS-002](backlog/kw-phys-002.md) — Thermal + mass-transfer coupling runs away under rarefaction (vapor accumulation, ~+16 R0 per cycle) [patch] — done
+<a id="kw-phys-003"></a>- [KW-PHYS-003](backlog/kw-phys-003.md) — Latent-heat term is unphysical: L_v goes negative above ~1056 °C, and a phantom latent flux is applied when mass transfer is off [patch] — done
 <a id="kw-integration-test-binaries"></a>- [KW-INTEGRATION-TEST-BINARIES](backlog/kw-integration-test-binaries.md) — kwavers integration tests link one binary per file: 89 targets, 81 on the push gate [patch] [perf] — todo
 <a id="kw-lint-1"></a>- [KW-LINT-1](backlog/kw-lint-1.md) — Burn down the clippy debt baseline [patch] — todo
 <a id="kw-manifest-implementation-2026-09-09"></a>- [KW-MANIFEST-IMPLEMENTATION-2026-09-09](backlog/kw-manifest-implementation-2026-09-09.md) — Reduce the implementation-bearing manifests [patch] [arch] — todo
