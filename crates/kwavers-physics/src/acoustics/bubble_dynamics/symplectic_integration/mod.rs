@@ -112,6 +112,9 @@ mod yoshida;
 mod tests;
 
 pub use integrate::integrate_bubble_dynamics_symplectic;
+
+use crate::acoustics::bubble_dynamics::acoustic_pressure::InstantaneousPressure;
+use aequitas::systems::si::quantities::PressureRate;
 pub use stormer_verlet::stormer_verlet_step;
 pub use yoshida::yoshida4_step;
 
@@ -182,8 +185,8 @@ impl BubbleSymplecticIntegrator {
     pub fn sv_step(
         &self,
         state: &mut BubbleState,
-        p_acoustic: f64,
-        dp_dt: f64,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
         t: f64,
     ) -> KwaversResult<()> {
         stormer_verlet_step(
@@ -205,8 +208,8 @@ impl BubbleSymplecticIntegrator {
     pub fn yoshida4_step(
         &self,
         state: &mut BubbleState,
-        p_acoustic: f64,
-        dp_dt: f64,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
         t: f64,
     ) -> KwaversResult<()> {
         yoshida4_step(

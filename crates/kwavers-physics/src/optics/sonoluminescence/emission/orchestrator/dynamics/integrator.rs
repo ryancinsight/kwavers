@@ -1,3 +1,4 @@
+use crate::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use crate::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::bubble_dynamics::integration::rk4_weighted_sum;
 use crate::bubble_dynamics::keller_miksis::KellerMiksisModel;
@@ -24,7 +25,12 @@ use kwavers_core::constants::numerical::TWO_PI;
 pub struct IntegratedSonoluminescence {
     /// Emission calculator
     pub emission: SonoluminescenceEmission,
-    /// Acoustic pressure field driving bubble oscillations (Pa)
+    /// Acoustic pressure AMPLITUDE field driving bubble oscillations (Pa).
+    /// Each voxel holds the local drive amplitude; the tone
+    /// `p(t) = amplitude·sin(ωt)` (and its derivative) is synthesised per
+    /// step in [`simulate_step`] — the Keller–Miksis model takes the
+    /// instantaneous pressure, not an amplitude (see the drive contract on
+    /// `AdaptiveBubbleModel::calculate_acceleration`).
     pub acoustic_pressure: Array3<f64>,
     /// Temperature field from bubble dynamics (K)
     pub temperature_field: Array3<f64>,
@@ -106,7 +112,9 @@ impl IntegratedSonoluminescence {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    let p_amp = self.acoustic_pressure[[i, j, k]];
+                    // Dense amplitude field stays scalar storage (ADR 070);
+                    // the amplitude is wrapped here, then sampled per stage.
+                    let p_amp = PressureAmplitude::from_pascals(self.acoustic_pressure[[i, j, k]]);
 
                     let mut state = BubbleState::new(bubble_params);
                     state.radius = self.radius_field[[i, j, k]];
@@ -115,54 +123,48 @@ impl IntegratedSonoluminescence {
                     state.pressure_internal = self.pressure_field[[i, j, k]];
 
                     // RK4 integration: dY/dt = F(Y, t), Y = [R, V]
+                    //
+                    // `acoustic_pressure` holds the local drive AMPLITUDE;
+                    // the Keller–Miksis model takes the INSTANTANEOUS
+                    // pressure, so the tone p(t) = amp·sin(ωt) (and its
+                    // analytic derivative) is synthesised per stage here.
                     // k1
-                    let dp_dt_k1 = p_amp * omega * (omega * time).cos();
+                    let (p_k1, dp_dt_k1) = p_amp.sample(omega, time, 0.0);
                     let k1_v =
-                        bubble_model.calculate_acceleration(&mut state, p_amp, dp_dt_k1, time)?;
+                        bubble_model.calculate_acceleration(&mut state, p_k1, dp_dt_k1, time)?;
                     let k1_r = state.wall_velocity;
 
                     // k2
                     let t_k2 = 0.5f64.mul_add(dt, time);
-                    let dp_dt_k2 = p_amp * omega * (omega * t_k2).cos();
+                    let (p_k2, dp_dt_k2) = p_amp.sample(omega, t_k2, 0.0);
                     let mut state_k2 = state;
                     state_k2.radius += 0.5 * dt * k1_r;
                     state_k2.wall_velocity += 0.5 * dt * k1_v;
                     update_thermodynamics(&mut state_k2, bubble_params);
-                    let k2_v = bubble_model.calculate_acceleration(
-                        &mut state_k2,
-                        p_amp,
-                        dp_dt_k2,
-                        t_k2,
-                    )?;
+                    let k2_v =
+                        bubble_model.calculate_acceleration(&mut state_k2, p_k2, dp_dt_k2, t_k2)?;
                     let k2_r = state_k2.wall_velocity;
 
                     // k3
                     let dp_dt_k3 = dp_dt_k2;
+                    let p_k3 = p_k2;
                     let mut state_k3 = state;
                     state_k3.radius += 0.5 * dt * k2_r;
                     state_k3.wall_velocity += 0.5 * dt * k2_v;
                     update_thermodynamics(&mut state_k3, bubble_params);
-                    let k3_v = bubble_model.calculate_acceleration(
-                        &mut state_k3,
-                        p_amp,
-                        dp_dt_k3,
-                        t_k2,
-                    )?;
+                    let k3_v =
+                        bubble_model.calculate_acceleration(&mut state_k3, p_k3, dp_dt_k3, t_k2)?;
                     let k3_r = state_k3.wall_velocity;
 
                     // k4
                     let t_k4 = time + dt;
-                    let dp_dt_k4 = p_amp * omega * (omega * t_k4).cos();
+                    let (p_k4, dp_dt_k4) = p_amp.sample(omega, t_k4, 0.0);
                     let mut state_k4 = state;
                     state_k4.radius += dt * k3_r;
                     state_k4.wall_velocity += dt * k3_v;
                     update_thermodynamics(&mut state_k4, bubble_params);
-                    let k4_v = bubble_model.calculate_acceleration(
-                        &mut state_k4,
-                        p_amp,
-                        dp_dt_k4,
-                        t_k4,
-                    )?;
+                    let k4_v =
+                        bubble_model.calculate_acceleration(&mut state_k4, p_k4, dp_dt_k4, t_k4)?;
                     let k4_r = state_k4.wall_velocity;
 
                     // Final RK4 update (shared Butcher-weight SSOT).

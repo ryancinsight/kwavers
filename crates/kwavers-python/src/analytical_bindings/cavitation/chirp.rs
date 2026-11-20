@@ -1,5 +1,6 @@
 //! Frequency-swept cavitation and shielding-control PyO3 wrappers.
 
+use kwavers_physics::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use kwavers_physics::analytical::cavitation;
 use numpy::{PyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
@@ -98,7 +99,7 @@ pub fn swept_vs_monochromatic_engagement(
         &dist,
         &medium,
         &sweep,
-        amplitude_pa,
+        PressureAmplitude::from_pascals(amplitude_pa),
         pulse_duration_s,
         &cfg,
     );
@@ -155,7 +156,7 @@ pub fn chirped_peak_expansion_ratio(
     let t_arr: Vec<f64> = (0..=n).map(|i| i as f64 * dt).collect();
     Ok(cavitation::chirped_peak_expansion_ratio(
         &sweep,
-        amplitude_pa,
+        PressureAmplitude::from_pascals(amplitude_pa),
         r0_m,
         &t_arr,
         p0_pa,
@@ -264,7 +265,7 @@ pub fn cavitation_optimal_frequency(
         &medium,
         f_lo_hz,
         f_hi_hz,
-        amplitude_pa,
+        PressureAmplitude::from_pascals(amplitude_pa),
         pulse_duration_s,
         n_scan,
         &cfg,
@@ -336,7 +337,7 @@ pub fn staged_sonication_sweep(
         &medium,
         f_quiet_hz,
         f_peak_hz,
-        amplitude_pa,
+        PressureAmplitude::from_pascals(amplitude_pa),
         pulse_duration_s,
         n_pulses,
         prf_hz,

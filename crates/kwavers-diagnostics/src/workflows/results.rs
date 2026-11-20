@@ -3,7 +3,7 @@ use kwavers_imaging::fusion::FusedImageResult;
 use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use leto::Array3;
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 /// Clinical examination result
 #[derive(Debug)]
@@ -11,7 +11,7 @@ pub struct ClinicalExaminationResult {
     /// Patient identifier
     pub patient_id: String,
     /// Examination timestamp
-    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub timestamp: SystemTime,
     /// Fused multi-modal image
     pub fused_image: FusedImageResult,
     /// Tissue classification map

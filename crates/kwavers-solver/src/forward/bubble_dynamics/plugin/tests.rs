@@ -6,6 +6,7 @@ use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
+use kwavers_physics::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 use kwavers_physics::acoustics::bubble_dynamics::BubbleParameters;
 use kwavers_physics::factory::models::BubbleModel;
 use leto::Array4;
@@ -132,7 +133,7 @@ fn kh_plugin_initialises_and_advances() {
 #[test]
 fn rp_plugin_initialises_and_advances() {
     let params = BubbleParameters {
-        driving_amplitude: 30_000.0,
+        driving_amplitude: PressureAmplitude::from_pascals(30_000.0),
         ..BubbleParameters::default()
     };
     let config = BubbleDynamicsConfig {

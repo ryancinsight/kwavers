@@ -12,6 +12,7 @@ files remain recoverable from git history.
 | [`book/`](book/) | The Kwavers book — chapters, figures, validation narratives. |
 | [`ADR/`](ADR/) | Architecture Decision Records (the architecture SSOT). |
 | [`gpu/pstd_shader_abi.md`](gpu/pstd_shader_abi.md) | WGSL storage-buffer ABI for `pstd.wgsl` (referenced by the shader). |
+| [Mass transfer](ref/kw-phys-002-closeout.md), [latent heat](ref/kw-phys-003-closeout.md), and [pressure typing](ref/kwavers-aeq-met-71-closeout.md) | Completed bubble-model verification. |
 
 ## Architecture Decision Records
 

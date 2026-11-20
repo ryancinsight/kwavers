@@ -25,7 +25,7 @@ use kwavers_imaging::fusion::{FusedImageResult, FusionConfig};
 use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use kwavers_physics::acoustics::imaging::fusion::MultiModalFusion;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 /// Real-time clinical workflow orchestrator.
 #[derive(Debug)]
@@ -222,7 +222,7 @@ impl ClinicalWorkflowOrchestrator {
 
         Ok(ClinicalExaminationResult {
             patient_id: patient_id.to_owned(),
-            timestamp: chrono::Utc::now(),
+            timestamp: SystemTime::now(),
             fused_image: fused_result,
             tissue_classification: analysis.tissue_properties,
             diagnostic_recommendations: analysis.recommendations,

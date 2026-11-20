@@ -122,9 +122,15 @@ impl ArchitectureReport {
         let mut md = String::new();
 
         md.push_str("# Architecture Validation Report\n\n");
+        let generated = time::OffsetDateTime::now_utc();
         md.push_str(&format!(
-            "**Generated**: {}\n\n",
-            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+            "**Generated**: {:04}-{:02}-{:02} {:02}:{:02}:{:02}\n\n",
+            generated.year(),
+            u8::from(generated.month()),
+            generated.day(),
+            generated.hour(),
+            generated.minute(),
+            generated.second(),
         ));
 
         // Summary

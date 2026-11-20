@@ -2,8 +2,11 @@ use super::church::ChurchModel;
 use super::hoff::HoffModel;
 use super::marmottant::MarmottantModel;
 use super::sarkar::SarkarModel;
-use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 use crate::acoustics::bubble_dynamics::encapsulated::shell::ShellProperties;
+use crate::acoustics::bubble_dynamics::{
+    acoustic_pressure::InstantaneousPressure,
+    bubble_state::{BubbleParameters, BubbleState},
+};
 
 #[test]
 fn test_church_model_creation() {
@@ -21,7 +24,7 @@ fn test_church_acceleration_finite() {
     let model = ChurchModel::new(params.clone(), shell);
 
     let mut state = BubbleState::at_equilibrium(&params);
-    let result = model.calculate_acceleration(&mut state, 0.0, 0.0);
+    let result = model.calculate_acceleration(&mut state, InstantaneousPressure::ZERO, 0.0);
 
     let accel = result.unwrap();
     // Analytical theorem: at static equilibrium (R = R0, v = 0, P_ac = 0),
@@ -85,7 +88,7 @@ fn test_marmottant_acceleration_finite() {
     let model = MarmottantModel::new(params.clone(), shell, chi);
 
     let mut state = BubbleState::at_equilibrium(&params);
-    let result = model.calculate_acceleration(&mut state, 0.0, 0.0);
+    let result = model.calculate_acceleration(&mut state, InstantaneousPressure::ZERO, 0.0);
 
     let accel = result.unwrap();
     // The Marmottant model computes p_gas = (p0 + 2σ_initial/R0)(R0/R)^3γ
@@ -115,10 +118,10 @@ fn test_church_vs_marmottant_equilibrium() {
     let mut state_marmottant = BubbleState::at_equilibrium(&params);
 
     let accel_church = church
-        .calculate_acceleration(&mut state_church, 0.0, 0.0)
+        .calculate_acceleration(&mut state_church, InstantaneousPressure::ZERO, 0.0)
         .unwrap();
     let accel_marmottant = marmottant
-        .calculate_acceleration(&mut state_marmottant, 0.0, 0.0)
+        .calculate_acceleration(&mut state_marmottant, InstantaneousPressure::ZERO, 0.0)
         .unwrap();
 
     // Both should analytically report exactly zero acceleration due to balanced equilibrium stress.
@@ -140,7 +143,9 @@ fn test_shell_elastic_restoring_force() {
     state.radius = 0.8 * params.r0;
     state.wall_velocity = -10.0; // Inward velocity
 
-    let accel_compressed = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
+    let accel_compressed = model
+        .calculate_acceleration(&mut state, InstantaneousPressure::ZERO, 0.0)
+        .unwrap();
 
     // Shell elasticity strictly resists compression. We know a compressed state
     // with inward velocity (v < 0) has a massive inward dynamic term (-1.5 * v^2 / R)
@@ -177,7 +182,9 @@ fn test_hoff_equilibrium_acceleration_is_zero() {
     let params = BubbleParameters::default();
     let model = HoffModel::new(params.clone(), ShellProperties::lipid_shell());
     let mut state = BubbleState::at_equilibrium(&params);
-    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
+    let accel = model
+        .calculate_acceleration(&mut state, InstantaneousPressure::ZERO, 0.0)
+        .unwrap();
     assert!(
         accel.abs() < 1e-9,
         "Hoff equilibrium acceleration must be ~0, got {accel}"
@@ -191,7 +198,9 @@ fn test_hoff_compressed_bubble_restores_outward() {
     let mut state = BubbleState::new(&params);
     state.radius = 0.8 * params.r0;
     state.wall_velocity = 0.0;
-    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
+    let accel = model
+        .calculate_acceleration(&mut state, InstantaneousPressure::ZERO, 0.0)
+        .unwrap();
     assert!(
         accel > 0.0,
         "Compressed Hoff bubble must restore outward, got {accel}"
@@ -205,7 +214,9 @@ fn test_hoff_shell_viscosity_resists_expansion() {
     let model = HoffModel::new(params.clone(), ShellProperties::lipid_shell());
     let mut state = BubbleState::at_equilibrium(&params);
     state.wall_velocity = 1.0;
-    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
+    let accel = model
+        .calculate_acceleration(&mut state, InstantaneousPressure::ZERO, 0.0)
+        .unwrap();
     assert!(
         accel < 0.0,
         "Outward velocity must be damped (accel<0), got {accel}"
@@ -229,9 +240,15 @@ fn test_hoff_reduces_to_church_when_shear_modulus_zero() {
     let mut s_hoff = s_church;
 
     let a_church = church
-        .calculate_acceleration(&mut s_church, 5e4, 1e-6)
+        .calculate_acceleration(
+            &mut s_church,
+            InstantaneousPressure::from_pascals(5e4),
+            1e-6,
+        )
         .unwrap();
-    let a_hoff = hoff.calculate_acceleration(&mut s_hoff, 5e4, 1e-6).unwrap();
+    let a_hoff = hoff
+        .calculate_acceleration(&mut s_hoff, InstantaneousPressure::from_pascals(5e4), 1e-6)
+        .unwrap();
     assert!(
         (a_church - a_hoff).abs() < 1e-9 * a_church.abs().max(1.0),
         "G_s=0 ⇒ Hoff must equal Church: church={a_church}, hoff={a_hoff}"
@@ -261,7 +278,9 @@ fn test_sarkar_equilibrium_acceleration_is_zero() {
     let params = BubbleParameters::default();
     let model = SarkarModel::new(params.clone(), 0.04, 1.0, 1e-8);
     let mut state = BubbleState::at_equilibrium(&params);
-    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
+    let accel = model
+        .calculate_acceleration(&mut state, InstantaneousPressure::ZERO, 0.0)
+        .unwrap();
     assert!(
         accel.abs() < 1e-9,
         "Sarkar equilibrium acceleration must be ~0, got {accel}"
@@ -276,7 +295,9 @@ fn test_sarkar_surface_viscosity_resists_expansion() {
     let model = SarkarModel::new(params.clone(), 0.04, 1.0, 1e-8);
     let mut state = BubbleState::at_equilibrium(&params);
     state.wall_velocity = 1.0;
-    let accel = model.calculate_acceleration(&mut state, 0.0, 0.0).unwrap();
+    let accel = model
+        .calculate_acceleration(&mut state, InstantaneousPressure::ZERO, 0.0)
+        .unwrap();
     assert!(
         accel < 0.0,
         "Surface viscosity must damp expansion (accel<0), got {accel}"
@@ -295,8 +316,12 @@ fn test_sarkar_higher_elasticity_increases_restoring_stiffness() {
     let mut s1 = BubbleState::new(&params);
     s1.radius = 1.2 * params.r0;
     let mut s2 = s1;
-    let a_soft = soft.calculate_acceleration(&mut s1, 0.0, 0.0).unwrap();
-    let a_stiff = stiff.calculate_acceleration(&mut s2, 0.0, 0.0).unwrap();
+    let a_soft = soft
+        .calculate_acceleration(&mut s1, InstantaneousPressure::ZERO, 0.0)
+        .unwrap();
+    let a_stiff = stiff
+        .calculate_acceleration(&mut s2, InstantaneousPressure::ZERO, 0.0)
+        .unwrap();
     // Stiffer shell pulls the expanded bubble back harder ⇒ more negative accel.
     assert!(
         a_stiff < a_soft,

@@ -1,6 +1,8 @@
 use super::KellerMiksisModel;
-use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
-use kwavers_core::constants::numerical::TWO_PI;
+use crate::acoustics::bubble_dynamics::{
+    acoustic_pressure::InstantaneousPressure, bubble_state::BubbleState,
+};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::error::KwaversResult;
 
 /// Calculate bubble wall acceleration using Keller-Miksis equation.
@@ -9,19 +11,44 @@ use kwavers_core::error::KwaversResult;
 /// evolution is coupled externally via
 /// [`KellerMiksisModel::update_shape_stability`], which must be called
 /// once per integration timestep after this function.
+///
+/// # Acoustic-drive contract
+///
+/// `p_acoustic` is the INSTANTANEOUS acoustic pressure `p_∞(t) − p0` [Pa]
+/// at time `t`, and `dp_dt` is its time derivative `dp_∞/dt` [Pa/s]. The
+/// Keller–Miksis equation is written in terms of a general far-field
+/// pressure `p_∞(t)` (Keller & Miksis 1980, JASA 68(2):628–633, Eq. 3.4;
+/// Prosperetti & Lezzi 1986, JFM 168:457–478); the sinusoidal form
+/// `p_∞(t) = p0 ± P_A·sin(ωt + φ)` is the standard specialisation for
+/// continuous harmonic drive, not part of the equation. Callers that have
+/// an amplitude synthesise the tone themselves — cf. the analytical kernel
+/// `keller_miksis_forced_rk4`, which takes a forcing closure returning
+/// `(p, dp/dt)`. An earlier version of this function treated `p_acoustic`
+/// as an amplitude and multiplied by `sin(ωt)` internally; that
+/// double-modulated every caller that already passed an instantaneous
+/// pressure (wave-coupled fields, the triplet-pulse port, the
+/// passive-dose simulator), driving the bubble with a phase offset plus a
+/// `2f0` term and no `f0` at all. The `t` argument is retained for
+/// interface compatibility; the drive is fully specified by
+/// (`p_acoustic`, `dp_dt`).
 /// # Errors
 /// - Propagates any `KwaversError` returned by called functions.
 ///
 pub(crate) fn calculate_acceleration(
     model: &KellerMiksisModel,
     state: &mut BubbleState,
-    p_acoustic: f64,
-    dp_dt: f64,
+    p_acoustic: InstantaneousPressure,
+    dp_dt: PressureRate,
     t: f64,
 ) -> KwaversResult<f64> {
     let r = state.radius;
     let v = state.wall_velocity;
     let c = model.params.c_liquid;
+
+    // Formula boundary: the drive arrives typed; the equation below
+    // works in pascals. `dp_dt` stays typed — the wall-pressure
+    // derivative helper extracts it.
+    let p_acoustic = p_acoustic.as_pascals();
 
     // Update Mach number based on wall velocity
     // Reference: Keller & Miksis (1980), Eq. 2.5
@@ -38,10 +65,11 @@ pub(crate) fn calculate_acceleration(
         .into());
     }
 
-    // Acoustic forcing with proper phase
-    let omega = TWO_PI * model.params.driving_frequency;
-    let p_acoustic_inst = p_acoustic * (omega * t).sin();
-    let p_inf = model.params.p0 + p_acoustic_inst;
+    // Far-field pressure p_∞(t) = p0 + p_acoustic(t); see the contract on
+    // this function. The `t` argument is unused by the RHS: the drive is
+    // fully specified by (`p_acoustic`, `dp_dt`).
+    let _ = t;
+    let p_inf = model.params.p0 + p_acoustic;
 
     // Internal gas pressure using polytropic relation or Van der Waals EOS.
     //
@@ -69,8 +97,7 @@ pub(crate) fn calculate_acceleration(
 
     // Time derivative of wall pressure for radiation damping term
     // This accounts for compressibility through the R/ρc × dp_B/dt term
-    let dp_wall_dt =
-        estimate_wall_pressure_derivative(model, state, p_gas, r, v, gamma, dp_dt, omega, t)?;
+    let dp_wall_dt = estimate_wall_pressure_derivative(model, state, p_gas, r, v, gamma, dp_dt)?;
 
     // Keller-Miksis equation components
     let v_c = v / c;
@@ -118,7 +145,10 @@ pub(crate) fn calculate_acceleration(
 /// dp_gas/dt   = −3γ · p_gas · Ṙ / R   (polytropic)
 /// d/dt[2σ/R]  = −2σ · Ṙ / R²
 /// d/dt[4μṘ/R] ≈ −4μ · Ṙ² / R²         (neglect R̈ term; first-order)
-/// dp_acoustic/dt supplied externally as `dp_acoustic_dt`
+/// dp_acoustic/dt supplied externally as a [`PressureRate`] — the time
+/// derivative of the INSTANTANEOUS far-field acoustic pressure (see the
+/// contract on [`calculate_acceleration`]); it is used as-is, never
+/// re-derived from an amplitude.
 /// ```
 ///
 /// # Reference
@@ -136,10 +166,11 @@ fn estimate_wall_pressure_derivative(
     r: f64,
     v: f64,
     gamma: f64,
-    dp_acoustic_dt: f64,
-    _omega: f64,
-    _t: f64,
+    dp_acoustic_dt: PressureRate,
 ) -> KwaversResult<f64> {
+    // Formula boundary: the rate arrives typed; the derivative below
+    // works in Pa/s.
+    let dp_acoustic_dt = *dp_acoustic_dt.as_base();
     // Rate of change of internal gas pressure: dp_gas/dt = −3γ p_gas Ṙ/R
     let dp_gas_dt = -3.0 * gamma * p_gas * v / r;
 

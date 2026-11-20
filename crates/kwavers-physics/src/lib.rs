@@ -49,8 +49,10 @@ pub use acoustics::{
 pub use acoustics::bubble_dynamics::{
     BubbleParameters,      // Bubble physical parameters
     BubbleState,           // Bubble state representation
+    InstantaneousPressure, // Instantaneous far-field acoustic pressure p∞(t) − p0
     KellerHerringModel,    // Keller-Herring equation model wrapper
     KellerMiksisModel,     // Keller-Miksis equation solver
+    PressureAmplitude,     // Harmonic-drive pressure amplitude P_A
     RayleighPlessetSolver, // Rayleigh-Plesset equation solver
 };
 

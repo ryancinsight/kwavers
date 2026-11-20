@@ -2,7 +2,7 @@
 //!
 //! The published release asset `BreastPhantomFromMRI.mat` is not HDF5. It is a
 //! MATLAB 5.0 file containing a compressed `breast_mri` volume. This module is
-//! the clinical anti-corruption layer that decodes that file and applies the
+//! the clinical adapter that reads through Consus and applies the
 //! paper's MRI-to-sound-speed mapping on a requested uniform grid.
 
 mod convert;
@@ -109,7 +109,7 @@ pub fn load_ali_2025_breast_phantom_from_mat5_with_config<P: AsRef<Path>>(
 ) -> KwaversResult<BreastUstAliPhantom> {
     validate_config(&config)?;
     let path_ref = path.as_ref();
-    let Mat5NumericVolume { dims, values, name } =
+    let Mat5NumericVolume { dims, values } =
         read_mat5_numeric_volume(path_ref, &config.mri_variable_name)?;
     let sound_speed_m_s = mri_to_sound_speed(
         dims,
@@ -125,7 +125,7 @@ pub fn load_ali_2025_breast_phantom_from_mat5_with_config<P: AsRef<Path>>(
     Ok(BreastUstAliPhantom {
         sound_speed_m_s,
         spacing_m: config.grid_spacing_m,
-        dataset_path: name,
+        dataset_path: config.mri_variable_name,
         source_path: path_ref.to_path_buf(),
         storage_order: BreastUstPhantomStorageOrder::FortranContiguous,
         model_family: BREAST_UST_ALI_2025_MAT5_PHANTOM_MODEL,

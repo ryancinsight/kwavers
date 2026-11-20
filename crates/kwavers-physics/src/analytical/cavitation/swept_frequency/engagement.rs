@@ -26,6 +26,7 @@ use super::super::dynamics::keller_miksis_shelled_rk4;
 use super::chirp::FrequencySweep;
 use super::chirped_dynamics::chirped_keller_miksis_rk4;
 use super::nuclei::NucleiSizeDistribution;
+use crate::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 
 /// Liquid/medium parameters shared by every bubble in the population.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -131,11 +132,15 @@ pub fn monochromatic_engaged_fraction(
     dist: &NucleiSizeDistribution,
     medium: &CavitationMedium,
     freq_hz: f64,
-    amplitude_pa: f64,
+    amplitude_pa: PressureAmplitude,
     pulse_duration_s: f64,
     cfg: &EngagementConfig,
 ) -> f64 {
-    if !(freq_hz.is_finite() && freq_hz > 0.0 && amplitude_pa.is_finite() && amplitude_pa > 0.0) {
+    if !(freq_hz.is_finite()
+        && freq_hz > 0.0
+        && amplitude_pa.as_pascals().is_finite()
+        && amplitude_pa.as_pascals() > 0.0)
+    {
         return 0.0;
     }
     let window = pulse_duration_s.min(cfg.mono_cycles / freq_hz).max(0.0);
@@ -182,11 +187,11 @@ pub fn swept_engaged_fraction(
     dist: &NucleiSizeDistribution,
     medium: &CavitationMedium,
     sweep: &FrequencySweep,
-    amplitude_pa: f64,
+    amplitude_pa: PressureAmplitude,
     pulse_duration_s: f64,
     cfg: &EngagementConfig,
 ) -> f64 {
-    if !(amplitude_pa.is_finite() && amplitude_pa > 0.0) {
+    if !(amplitude_pa.as_pascals().is_finite() && amplitude_pa.as_pascals() > 0.0) {
         return 0.0;
     }
     // Cap the integration at a few sweep periods (beyond that the sweep merely
@@ -251,7 +256,7 @@ pub fn cavitation_optimal_frequency(
     medium: &CavitationMedium,
     f_lo_hz: f64,
     f_hi_hz: f64,
-    amplitude_pa: f64,
+    amplitude_pa: PressureAmplitude,
     pulse_duration_s: f64,
     n_scan: usize,
     cfg: &EngagementConfig,
@@ -279,7 +284,7 @@ pub fn swept_vs_monochromatic_engagement(
     dist: &NucleiSizeDistribution,
     medium: &CavitationMedium,
     sweep: &FrequencySweep,
-    amplitude_pa: f64,
+    amplitude_pa: PressureAmplitude,
     pulse_duration_s: f64,
     cfg: &EngagementConfig,
 ) -> EngagementResult {

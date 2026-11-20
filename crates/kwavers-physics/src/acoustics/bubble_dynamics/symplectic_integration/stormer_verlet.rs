@@ -1,7 +1,10 @@
 //! Single Störmer-Verlet step (2nd-order symplectic) for bubble wall mechanics.
 
-use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
-use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+use crate::acoustics::bubble_dynamics::{
+    acoustic_pressure::InstantaneousPressure, bubble_state::BubbleState,
+    keller_miksis::KellerMiksisModel,
+};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 
 /// Single Störmer-Verlet step for bubble wall mechanics.
@@ -23,8 +26,8 @@ use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 ///
 /// * `state` — bubble state mutated in-place
 /// * `model` — Keller-Miksis equation model (provides f = R̈)
-/// * `p_acoustic` — acoustic pressure amplitude (Pa)
-/// * `dp_dt` — time derivative of acoustic pressure [Pa/s]
+/// * `p_acoustic` — INSTANTANEOUS acoustic pressure `p_∞(t) − p0` (Pa)
+/// * `dp_dt` — time derivative of the instantaneous acoustic pressure [Pa/s]
 /// * `dt` — time step (s) (may be negative for Yoshida composition)
 /// * `t` — current time (s)
 /// * `max_mach` — Mach number limit (error if exceeded after first half-kick)
@@ -37,8 +40,8 @@ use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 pub fn stormer_verlet_step(
     state: &mut BubbleState,
     model: &KellerMiksisModel,
-    p_acoustic: f64,
-    dp_dt: f64,
+    p_acoustic: InstantaneousPressure,
+    dp_dt: PressureRate,
     dt: f64,
     t: f64,
     max_mach: f64,

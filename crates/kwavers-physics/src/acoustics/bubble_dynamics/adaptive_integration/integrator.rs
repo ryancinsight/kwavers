@@ -1,7 +1,8 @@
 use super::config::AdaptiveBubbleConfig;
 use super::statistics::IntegrationStatistics;
 use super::AdaptiveBubbleModel;
-use crate::acoustics::bubble_dynamics::BubbleState;
+use crate::acoustics::bubble_dynamics::{acoustic_pressure::InstantaneousPressure, BubbleState};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::cavitation::{MAX_RADIUS, MIN_RADIUS};
 use kwavers_core::constants::numerical::{
     ERROR_CONTROL_EXPONENT, HALF_STEP_FACTOR, INITIAL_TIME_STEP_FRACTION, MAX_RADIUS_SAFETY_FACTOR,
@@ -48,6 +49,12 @@ where
     /// This method takes multiple smaller time steps internally to resolve
     /// the stiff dynamics while advancing by the main simulation dt.
     ///
+    /// The drive (`p_acoustic`, `dp_dt`) is held constant across the whole
+    /// main step — a zero-order hold; only `t` advances across sub-steps
+    /// (see the contract on
+    /// [`AdaptiveBubbleModel::calculate_acceleration`]). Callers must
+    /// therefore keep `dt_main` small against the acoustic period.
+    ///
     /// # Convergence Guard
     ///
     /// `max_substeps` limits the number of *accepted* steps. A second limit
@@ -61,8 +68,8 @@ where
     pub fn integrate_adaptive(
         &mut self,
         state: &mut BubbleState,
-        p_acoustic: f64,
-        dp_dt: f64,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
         dt_main: f64,
         t_start: f64,
     ) -> KwaversResult<()> {
@@ -143,8 +150,8 @@ where
     fn try_step(
         &self,
         state: &mut BubbleState,
-        p_acoustic: f64,
-        dp_dt: f64,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
         dt: f64,
         t: f64,
     ) -> KwaversResult<(bool, f64)> {
@@ -220,8 +227,8 @@ where
     fn step_rk4(
         &self,
         state: &mut BubbleState,
-        p_acoustic: f64,
-        dp_dt: f64,
+        p_acoustic: InstantaneousPressure,
+        dp_dt: PressureRate,
         dt: f64,
         t: f64,
     ) -> KwaversResult<()> {

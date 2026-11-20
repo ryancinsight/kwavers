@@ -9,6 +9,7 @@
 
 use super::super::dynamics::{keller_miksis_forced_rk4, KmShellParams};
 use super::chirp::FrequencySweep;
+use crate::acoustics::bubble_dynamics::acoustic_pressure::PressureAmplitude;
 
 /// Integrate the shell-damped Keller–Miksis equation under a chirped drive.
 ///
@@ -32,7 +33,7 @@ use super::chirp::FrequencySweep;
 #[allow(clippy::too_many_arguments)]
 pub fn chirped_keller_miksis_rk4(
     sweep: &FrequencySweep,
-    amplitude_pa: f64,
+    amplitude_pa: PressureAmplitude,
     r0_m: f64,
     rdot0: f64,
     t_arr: &[f64],
@@ -69,7 +70,7 @@ pub fn chirped_keller_miksis_rk4(
 #[allow(clippy::too_many_arguments)]
 pub fn chirped_peak_expansion_ratio(
     sweep: &FrequencySweep,
-    amplitude_pa: f64,
+    amplitude_pa: PressureAmplitude,
     r0_m: f64,
     t_arr: &[f64],
     p0_pa: f64,
