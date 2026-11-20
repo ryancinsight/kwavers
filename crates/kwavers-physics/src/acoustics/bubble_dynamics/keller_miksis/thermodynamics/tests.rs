@@ -138,3 +138,124 @@ fn test_bubble_collapse_temperature_reduced_by_latent_heat() {
         peak_temp_with_latent
     );
 }
+
+/// KW-PHYS-003 defect (B): the latent term is identically zero when
+/// mass transfer is off — latent energy without mass transfer violates
+/// the interface energy balance (Kreider et al. 2011, Eq. 20). The
+/// state is set to the maximum vapour deficit (`n_vapor = 0`, so the
+/// Hertz–Knudsen flux would be at its largest) to make the test
+/// decisive: any phantom flux would show up here.
+#[test]
+fn latent_term_zero_when_mass_transfer_off() {
+    use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
+    use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+    use kwavers_core::constants::AVOGADRO;
+
+    let mut params = BubbleParameters::default();
+    params.r0 = 3.0e-6;
+    params.use_thermal_effects = true;
+    params.use_mass_transfer = false;
+    let model = KellerMiksisModel::new(params.clone());
+    let mut state = BubbleState::new(&params);
+    state.n_vapor = 0.0;
+    let n_moles = state.n_gas / AVOGADRO;
+    let c_v = model.molar_heat_capacity_cv(&state);
+    let rate = latent_temperature_rate(&model, &state, n_moles, c_v, 1e-8);
+    assert_eq!(
+        rate, 0.0,
+        "latent term must be identically zero with mass transfer off (KW-PHYS-003)"
+    );
+}
+
+/// KW-PHYS-003 defect (A): with mass transfer on, evaporation cools
+/// the gas even when the bulk gas temperature is at a violent-collapse
+/// value (~3200 K). Before the fix `L_v` was evaluated at `t_bubble`
+/// and was −4.43 MJ/kg there, flipping the sign so evaporation heated
+/// the gas. `L_v` is now evaluated at the interface temperature, so
+/// the sign is correct at any gas temperature.
+#[test]
+fn latent_term_cools_on_evaporation_at_collapse_temperature() {
+    use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
+    use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+    use kwavers_core::constants::AVOGADRO;
+
+    let mut params = BubbleParameters::default();
+    params.r0 = 3.0e-6;
+    params.use_thermal_effects = true;
+    params.use_mass_transfer = true;
+    let model = KellerMiksisModel::new(params.clone());
+    let mut state = BubbleState::new(&params);
+    state.temperature = 3200.0;
+    state.n_vapor = 0.0;
+    let n_moles = state.n_gas / AVOGADRO;
+    let c_v = model.molar_heat_capacity_cv(&state);
+    let rate = latent_temperature_rate(&model, &state, n_moles, c_v, 1e-8);
+    assert!(
+        rate.is_finite() && rate < 0.0,
+        "evaporation must cool the gas (rate < 0), got {rate:.3e} K/s at T_gas = 3200 K (KW-PHYS-003)"
+    );
+}
+
+/// KW-PHYS-003 dn/dt coupling: the latent term tracks the APPLIED
+/// dn/dt — the vapour change `update_mass_transfer` actually applies,
+/// after its equilibrium clamp — not the raw Hertz–Knudsen flux. The
+/// state is set to violent condensation at a long step (internal
+/// pressure 100 MPa, vapour-rich, dt = 1 µs), so the raw flux would
+/// drive n_vapor far below zero while the mass update clamps the step
+/// at the saturation equilibrium n_eq. Before the coupling fix the
+/// latent term used the raw flux and implied a mass rate ~10⁴× the
+/// applied one; now the two agree to float precision. The clamp is
+/// verified to have bound by checking n_vapor lands on n_eq
+/// (computed independently from the equilibrium definition).
+#[test]
+fn latent_term_tracks_applied_dn_dt_when_clamp_binds() {
+    use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
+    use crate::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
+    use kwavers_core::constants::fundamental::GAS_CONSTANT as R_GAS;
+    use kwavers_core::constants::thermodynamic::{KELVIN_OFFSET_C, M_WATER};
+    use kwavers_core::constants::AVOGADRO;
+
+    let mut params = BubbleParameters::default();
+    params.r0 = 3.0e-6;
+    params.use_thermal_effects = true;
+    params.use_mass_transfer = true;
+    params.accommodation_coeff = 0.35;
+    let model = KellerMiksisModel::new(params.clone());
+    let mut state = BubbleState::new(&params);
+    state.pressure_internal = 1.0e8;
+    state.n_vapor = 1.0e10;
+    let dt = 1e-6;
+    let n_moles = (state.n_gas + state.n_vapor) / AVOGADRO;
+    let c_v = model.molar_heat_capacity_cv(&state);
+    let l_v = latent_heat_water_j_per_kg(ROOM_TEMPERATURE_K - KELVIN_OFFSET_C);
+    // Equilibrium vapour content at the current volume and gas
+    // temperature (ideal gas, saturation set by the wall temperature).
+    let p_sat = model.thermo_calc.vapor_pressure(ROOM_TEMPERATURE_K);
+    let n_eq = p_sat * state.volume() * AVOGADRO / (R_GAS * state.temperature);
+
+    let rate = latent_temperature_rate(&model, &state, n_moles, c_v, dt);
+    let n_vapor_before = state.n_vapor;
+    model
+        .update_mass_transfer(&mut state, dt)
+        .expect("mass transfer must succeed");
+
+    // The equilibrium clamp bound: the step lands on n_eq, not on the
+    // raw-flux proposal (which would be far below zero here).
+    assert!(
+        (state.n_vapor - n_eq).abs() <= 1e-9 * n_eq,
+        "clamp must bind: n_vapor = {:.3e}, expected n_eq = {:.3e} (KW-PHYS-003)",
+        state.n_vapor,
+        n_eq
+    );
+    // The latent term's implied mass rate equals the applied dn/dt.
+    let dn_applied = state.n_vapor - n_vapor_before;
+    let m_dot_applied = dn_applied * M_WATER / (AVOGADRO * dt);
+    let m_dot_implied = -rate * n_moles * c_v / l_v;
+    let tol = 1e-9 * m_dot_applied.abs();
+    assert!(
+        (m_dot_implied - m_dot_applied).abs() <= tol,
+        "latent term must track the applied dn/dt: implied ṁ = {:.3e} kg/s, applied ṁ = {:.3e} kg/s (KW-PHYS-003)",
+        m_dot_implied,
+        m_dot_applied
+    );
+}

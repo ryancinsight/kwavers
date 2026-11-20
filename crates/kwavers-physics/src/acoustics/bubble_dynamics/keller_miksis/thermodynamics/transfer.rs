@@ -39,11 +39,15 @@
 //! liquid temperature used by the temperature update (`update_temperature`
 //! in `temperature.rs`, which already evaluated its latent-heat saturation
 //! pressure at the liquid temperature — the mass and energy bookkeeping are
-//! now consistent). A varying wall temperature (Yasui 1996) and the
-//! critical-temperature switch-off (`ṅ_v = 0` for `T > T_c`, Kreider et
-//! al. 2011; Akhatov et al.) are documented refinements, not implemented
-//! here: with `p_sat(T_w)` the flux is already bounded and periodic (see
-//! the KW-PHYS-002 backlog entry).
+//! now consistent). A varying wall temperature (Yasui 1996) is a documented
+//! refinement, not implemented here. The critical-temperature switch-off
+//! (`ṅ_v = 0` for `T > T_c`, Kreider et al. 2011) IS implemented on the
+//! latent-heat side (`temperature.rs::latent_temperature_rate`, KW-PHYS-003:
+//! the flux is zeroed when the interface temperature exceeds `T_c`, and
+//! `L_v` is clamped to `≥ 0` with `L_v = 0` above `T_c`); it is not repeated
+//! here because this flux is already evaluated at the constant room-temperature
+//! `T_w`, where the condition is vacuous. With `p_sat(T_w)` the flux is
+//! already bounded and periodic (see the KW-PHYS-002 backlog entry).
 
 use super::super::KellerMiksisModel;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
@@ -52,15 +56,35 @@ use kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K;
 use kwavers_core::constants::{AVOGADRO, GAS_CONSTANT as R_GAS, M_WATER};
 use kwavers_core::error::{KwaversResult, PhysicsError};
 
-/// Update vapor content through evaporation or condensation.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
+/// Post-step vapour content [molecules] for one sub-step: the raw
+/// Hertz–Knudsen step, clamped at the saturation equilibrium and
+/// floored at zero.
 ///
-pub(crate) fn update_mass_transfer(
-    model: &KellerMiksisModel,
-    state: &mut BubbleState,
-    dt: f64,
-) -> KwaversResult<()> {
+/// This is the vapour change the mass update ACTUALLY applies, and it
+/// is shared with the latent-heat term (`latent_temperature_rate` in
+/// `temperature.rs`) so the temperature and mass equations can never
+/// disagree about the flux (Kreider et al. 2011, JASA 130:3511,
+/// Eq. 20: the interface energy balance couples latent heat to the
+/// actual mass flux, not to the unclamped kinetic flux). Sharing the
+/// helper also unifies the saturation pressure: the latent term used
+/// to evaluate `p_sat` with the Antoine correlation
+/// (`p_sat_water_pa`) while the mass update uses the Wagner equation
+/// (`thermo_calc.vapor_pressure`), which differ by ~0.5% at 20 °C;
+/// both now use Wagner.
+///
+/// One residual approximation: the two updates evaluate this helper
+/// from the same state except for the gas temperature in the
+/// equilibrium clamp — the operator split runs temperature before
+/// mass in the same sub-step, so the latent term sees the
+/// pre-temperature-update `T_gas` and the mass update the
+/// post-update one. The two `n_eq` values differ by O(ΔT/T) per
+/// sub-step, and only in sub-steps where the clamp binds. In
+/// production runs the clamp binds only near ambient temperature
+/// (measured Nov 19, 2026: all observed binds at T ≈ 293 K, none
+/// above 400 K in the four-way split), where ΔT per sub-step is
+/// negligible, so the residual disagreement is far below the
+/// integrator's own splitting error.
+pub(crate) fn applied_n_vapor(model: &KellerMiksisModel, state: &BubbleState, dt: f64) -> f64 {
     // Saturation pressure at the LIQUID temperature at the bubble wall T_w
     // (Kreider et al. 2011, Eq. 15) — see the module docs. The bulk gas
     // temperature must NOT be used here: above the critical temperature the
@@ -104,7 +128,19 @@ pub(crate) fn update_mass_transfer(
     };
     let proposed = state.n_vapor + dn_vapor;
     let overshoots = (state.n_vapor - n_vapor_eq) * (proposed - n_vapor_eq) < 0.0;
-    state.n_vapor = if overshoots { n_vapor_eq } else { proposed }.max(0.0);
+    if overshoots { n_vapor_eq } else { proposed }.max(0.0)
+}
+
+/// Update vapor content through evaporation or condensation.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+pub(crate) fn update_mass_transfer(
+    model: &KellerMiksisModel,
+    state: &mut BubbleState,
+    dt: f64,
+) -> KwaversResult<()> {
+    state.n_vapor = applied_n_vapor(model, state, dt);
 
     let n_total_new = state.n_gas + state.n_vapor;
     if n_total_new < 0.0 || n_total_new.is_nan() || n_total_new.is_infinite() {
