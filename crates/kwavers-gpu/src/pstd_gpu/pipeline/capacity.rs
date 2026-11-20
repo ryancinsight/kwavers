@@ -38,7 +38,9 @@ impl StorageBufferLimits {
 /// Element counts of `pml_xyz` and `shifts_all`, with `None` for a count beyond `usize`.
 ///
 /// `pml_xyz` packs the three PML arrays, three values per grid point; every
-/// field, medium, k-space and absorption buffer holds one value per point.
+/// field, medium, and k-space buffer holds one value per point. The two
+/// packed absorption buffers hold two values per point and fit whenever
+/// the three-value PML buffer fits.
 /// `shifts_all` holds four values per axis sample and exceeds `pml_xyz` on
 /// some grids, every `N`x1x1 grid among them. The construction boundary
 /// checks FFT resources through Hephaestus. Run storage is checked separately.

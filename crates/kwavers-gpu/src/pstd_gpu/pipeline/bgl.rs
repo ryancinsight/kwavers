@@ -92,9 +92,6 @@ impl PstdBindGroupLayoutProvider for WgpuPstdBindGroupLayoutFactory<'_> {
     fn absorb_layout(&self) -> Self::BindGroupLayout {
         let ro = |binding| Self::storage_entry(binding, true);
         let rw = |binding| Self::storage_entry(binding, false);
-        self.layout(
-            "bgl_absorb",
-            &[ro(0), ro(1), ro(2), ro(3), rw(4), rw(5), rw(6), rw(7)],
-        )
+        self.layout("bgl_absorb", &[ro(0), ro(1), rw(2), rw(3), rw(4), rw(5)])
     }
 }

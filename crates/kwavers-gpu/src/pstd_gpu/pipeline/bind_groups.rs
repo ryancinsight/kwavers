@@ -28,12 +28,10 @@ pub(super) struct KspaceBuffers<'a> {
     pub bon_a: &'a wgpu::Buffer,
 }
 
-/// Group(2) absorption operator + scratch buffers, in binding-slot order.
+/// Group(3) absorption operator + scratch buffers, in binding-slot order.
 pub(super) struct AbsorbBuffers<'a> {
-    pub nabla1: &'a wgpu::Buffer,
-    pub nabla2: &'a wgpu::Buffer,
-    pub tau: &'a wgpu::Buffer,
-    pub eta: &'a wgpu::Buffer,
+    pub symbols: &'a wgpu::Buffer,
+    pub coefficients: &'a wgpu::Buffer,
     pub scratch_kre: &'a wgpu::Buffer,
     pub scratch_kim: &'a wgpu::Buffer,
     pub scratch_l1: &'a wgpu::Buffer,
@@ -150,8 +148,8 @@ pub(super) fn build_bg_kspace(
     )
 }
 
-/// Build group(2): absorption operators + scratch (nabla1, nabla2, tau, eta,
-/// scratch_kre, scratch_kim, scratch_l1, scratch_l2).
+/// Build group(3): absorption symbols and coefficients, followed by
+/// scratch_kre, scratch_kim, scratch_l1, and scratch_l2.
 pub(super) fn build_bg_absorb(
     provider: &impl PstdBindGroupProvider<
         Buffer = wgpu::Buffer,
@@ -165,10 +163,8 @@ pub(super) fn build_bg_absorb(
         "bg_absorb",
         layout,
         [
-            a.nabla1,
-            a.nabla2,
-            a.tau,
-            a.eta,
+            a.symbols,
+            a.coefficients,
             a.scratch_kre,
             a.scratch_kim,
             a.scratch_l1,

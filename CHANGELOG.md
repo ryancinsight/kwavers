@@ -18,6 +18,13 @@ the other public layers use 3.0.0. See
 - [major] Clinical validation report generation returns
   `KwaversResult<String>` so callers can handle a clock range error.
 
+### Fixed
+
+- [patch] Pack the absorption symbols and material coefficients into pairs
+  so the PSTD pipeline uses 29 buffer bindings on Metal. The two-value
+  arrays fit under the three-value PML allocation bound. Medium updates
+  reuse their host staging buffer and preserve coefficient bits.
+
 ### Changed
 
 - [patch] Apply the Rust burst defaults to custom triplet-pulse frequencies

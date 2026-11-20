@@ -47,11 +47,24 @@ impl PstdMediumUpdateState for WgpuPstdState {
     ) where
         T: Into<f64> + Copy,
     {
+        assert_eq!(absorb_tau_flat.len(), self.scratch_absorption.len());
+        assert_eq!(absorb_eta_flat.len(), self.scratch_absorption.len());
+        for ((pair, &tau), &eta) in self
+            .scratch_absorption
+            .iter_mut()
+            .zip(absorb_tau_flat)
+            .zip(absorb_eta_flat)
+        {
+            *pair = [tau, eta];
+        }
         self.update_medium_variable(c0_flat, rho0_flat);
         let commands = WgpuPstdCommandProvider::new(self.device(), self.queue());
         commands.write_buffer(&self.medium_buffers.bon_a, 0, bon_a_flat);
-        commands.write_buffer(&self.absorption_buffers.tau, 0, absorb_tau_flat);
-        commands.write_buffer(&self.absorption_buffers.eta, 0, absorb_eta_flat);
+        commands.write_buffer(
+            &self.absorption_buffers.coefficients,
+            0,
+            &self.scratch_absorption,
+        );
     }
 
     fn disable_source_correction(&self) {
@@ -74,7 +87,7 @@ where
     /// Reuses the existing device, pipelines, kappa, PML, nonlinearity, and
     /// absorption state. Only the sound speed and density tensors that change
     /// between scan lines are re-uploaded. This avoids redundant writes of the
-    /// static `bon_a`, `absorb_tau`, and `absorb_eta` buffers.
+    /// static nonlinearity and [tau, eta] buffers.
     ///
     /// Call this before `run()` when only the phantom slice changes between runs.
     pub fn update_medium_variable<T>(&mut self, c0_flat: &[T], rho0_flat: &[T])
@@ -89,6 +102,9 @@ where
     /// This is the full refresh path for callers that change nonlinearity or
     /// attenuation terms between runs. Scan-line B-mode paths should prefer
     /// `update_medium_variable()` so the static buffers remain resident.
+    ///
+    /// # Panics
+    /// Panics if an absorption coefficient array does not span the solver grid.
     pub fn update_medium<T>(
         &mut self,
         c0_flat: &[T],

@@ -9,7 +9,8 @@ use kwavers_grid::Grid;
 /// Storage-buffer bindings used by the three lossless PSTD bind groups.
 pub(super) const LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE: u32 = 23;
 /// Storage-buffer bindings used when fractional-Laplacian absorption is enabled.
-pub(super) const ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE: u32 = 31;
+pub(super) const ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE: u32 =
+    LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE + 6;
 
 /// Provider contract for PSTD solver state ownership.
 pub trait PstdStateProvider {
@@ -265,14 +266,10 @@ pub(super) struct WgpuPstdFftPlans {
 
 /// WGPU-owned PSTD fractional-Laplacian absorption buffers.
 pub(super) struct WgpuPstdAbsorptionBuffers {
-    /// |k|^(y-2) in FFT order.
-    pub(super) nabla1: wgpu::Buffer,
-    /// |k|^(y-1) in FFT order.
-    pub(super) nabla2: wgpu::Buffer,
-    /// -2*alpha0*c0^(y-1) per voxel.
-    pub(super) tau: wgpu::Buffer,
-    /// 2*alpha0*c0^y*tan(pi*y/2) per voxel.
-    pub(super) eta: wgpu::Buffer,
+    /// Pairs of spectral symbols [|k|^(y-2), |k|^(y-1)] in FFT order.
+    pub(super) symbols: wgpu::Buffer,
+    /// Pairs of material coefficients [tau, eta] per voxel.
+    pub(super) coefficients: wgpu::Buffer,
     pub(super) scratch_kre: wgpu::Buffer,
     pub(super) scratch_kim: wgpu::Buffer,
     pub(super) scratch_l1: wgpu::Buffer,
@@ -378,6 +375,8 @@ pub struct WgpuPstdState {
     pub(super) scratch_rho0_inv: Vec<f32>,
     /// Preallocated host buffer for density uploads.
     pub(super) scratch_rho0_flat: Vec<f32>,
+    /// Preallocated host buffer for [tau, eta] uploads.
+    pub(super) scratch_absorption: Vec<[f32; 2]>,
     /// Persistent unity upload buffer for source-correction disablement.
     pub(super) scratch_source_kappa_ones: Vec<f32>,
     /// Packed host-side pressure source upload buffer.
