@@ -12,6 +12,7 @@
 //! [`BubbleModel::RayleighPlesset`]: kwavers_physics::factory::models::BubbleModel::RayleighPlesset
 //! [`BubbleModel::Gilmore`]: kwavers_physics::factory::models::BubbleModel::Gilmore
 
+pub mod gas_transfer;
 pub mod plugin;
 
 pub use plugin::{BubbleDynamicsConfig, BubbleDynamicsPlugin};
