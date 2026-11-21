@@ -108,3 +108,4 @@
 | [138](138-release-scope-4-0.md) | Kwavers release scope for 4.0 | Accepted |
 | [139](139-native-provider-registry-cutover.md) | Native providers and the Kwavers registry graph | Accepted |
 | [140](140-published-typed-provider-cutover.md) | Share the published typed providers across Kwavers | Accepted |
+| [141](141-type-coupling-getters.md) | Carry physical quantities in coupling getters | Proposed |

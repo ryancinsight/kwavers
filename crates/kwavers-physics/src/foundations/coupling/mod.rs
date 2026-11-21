@@ -35,17 +35,22 @@ pub use domain_decomposition::{
 pub use electromagnetic_acoustic::ElectromagneticAcousticCoupling;
 pub use electromagnetic_thermal::ElectromagneticThermalCoupling;
 
-use std::fmt::Debug;
+use aequitas::systems::si::quantities::{
+    Dimensionless, Length, ReciprocalTime, Time, VolumetricPowerDensity,
+};
+
+/// Position of a sample in the coupling geometry.
+pub type CouplingPosition = [Length; 3];
 
 /// Coupling strength between physics domains
 #[derive(Debug, Clone)]
 pub struct CouplingStrength {
-    /// Spatial coupling coefficient (dimensionless or with units)
-    pub spatial_coefficient: f64,
+    /// Dimensionless spatial weight.
+    pub spatial_weight: Dimensionless,
     /// Temporal coupling coefficient (1/s)
-    pub temporal_coefficient: f64,
+    pub temporal_coefficient: ReciprocalTime,
     /// Energy transfer efficiency (dimensionless)
-    pub energy_efficiency: f64,
+    pub energy_efficiency: Dimensionless,
 }
 
 /// Interface condition type
@@ -64,22 +69,31 @@ pub enum CouplingInterfaceCondition {
     /// Robin-type: weighted combination αu + β∂u/∂n = γu₂ + δ∂u₂/∂n
     Robin {
         /// Coefficient α on the field value of side 1.
-        alpha: f64,
+        alpha: Dimensionless,
         /// Coefficient β on the normal derivative of side 1.
-        beta: f64,
+        beta: Length,
         /// Coefficient γ on the field value of side 2.
-        gamma: f64,
+        gamma: Dimensionless,
         /// Coefficient δ on the normal derivative of side 2.
-        delta: f64,
+        delta: Length,
     },
     /// Transmission condition for wave propagation
     Transmission {
         /// Acoustic impedance ratio Z₂/Z₁ across the interface.
-        impedance_ratio: f64,
+        impedance_ratio: Dimensionless,
     },
 }
 
-/// Multi-physics coupling trait
+/// Multi-physics coupling in physical coordinates.
+///
+/// A point in the coupling geometry has three length components.
+/// ```compile_fail,E0308
+/// use aequitas::systems::si::quantities::Time;
+/// use kwavers_physics::foundations::coupling::{CouplingPosition, MultiPhysicsCoupling};
+/// fn use_time_as_power(coupling: &impl MultiPhysicsCoupling, point: &CouplingPosition) {
+///     let _: Time = coupling.energy_transfer_rate(point);
+/// }
+/// ```
 pub trait MultiPhysicsCoupling: Send + Sync {
     /// Get coupling strength between domains
     fn coupling_strength(&self) -> CouplingStrength;
@@ -88,17 +102,18 @@ pub trait MultiPhysicsCoupling: Send + Sync {
     fn interface_conditions(&self) -> Vec<CouplingInterfaceCondition>;
 
     /// Compute energy transfer rate between domains (W/m³)
-    fn energy_transfer_rate(&self, interface_position: &[f64]) -> f64;
+    fn energy_transfer_rate(&self, interface_position: &CouplingPosition)
+        -> VolumetricPowerDensity;
 
     /// Check stability criteria for coupled time stepping
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn stability_criteria(&self, dt: f64) -> Result<(), String>;
+    fn stability_criteria(&self, dt: Time) -> Result<(), String>;
 
     /// Apply coupling at interface
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn apply_coupling(&mut self, dt: f64) -> Result<(), String>;
+    fn apply_coupling(&mut self, dt: Time) -> Result<(), String>;
 }

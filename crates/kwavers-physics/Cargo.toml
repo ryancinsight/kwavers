@@ -48,6 +48,8 @@ clinical-imaging = [
 ]
 
 [dev-dependencies]
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 mnemosyne = { workspace = true }
 # Rejection assertions shared across the workspace's test modules.
 kwavers-core = { path = "../kwavers-core", features = ["test-util"] }

@@ -4364,3 +4364,11 @@ Standing facts (do NOT re-flag):
   allocation/conversion (route facade `_into` through apollo `_into`, reuse scratch
   buffers across timesteps) and verify no accuracy regression on the elastic_fwi
   convergence tests. Dedicated effort; do not rush.
+
+## 2026-11-21 · Coupling quantity getters
+
+The physics coupling traits carry fixed three-axis positions and signed,
+dimensioned transfer quantities. Scaling by the larger impedance bounds
+both pressure coefficient expressions. The thermal layer uses material
+properties and typed temperature differences. The source cohort retains
+its staged 4.0.0 version. [ADR 141](docs/adr/141-type-coupling-getters.md)

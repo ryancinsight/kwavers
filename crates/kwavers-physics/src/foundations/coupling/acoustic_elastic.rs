@@ -14,30 +14,56 @@
 //!
 //! - Kinsler et al. (2000) "Fundamentals of Acoustics" Ch. 6
 
-use super::MultiPhysicsCoupling;
+use super::{CouplingPosition, MultiPhysicsCoupling};
+use aequitas::systems::si::quantities::{AcousticImpedance, Dimensionless, Stress, Velocity};
+use eunomia::FloatElement;
 
-/// Acoustic-elastic coupling for fluid-solid interfaces
+/// Acoustic-elastic coupling for fluid-solid interfaces.
 pub trait AcousticElasticCoupling: MultiPhysicsCoupling {
-    /// Normal stress continuity σ·n (Pa)
-    fn normal_stress(&self, position: &[f64]) -> f64;
+    /// Signed normal stress.
+    fn normal_stress(&self, position: &CouplingPosition) -> Stress;
 
-    /// Tangential velocity continuity v_τ (m/s)
-    fn tangential_velocity(&self, position: &[f64]) -> [f64; 2];
+    /// Tangential velocity in the interface basis.
+    fn tangential_velocity(&self, position: &CouplingPosition) -> [Velocity; 2];
 
-    /// Acoustic impedance matching Z = ρc (kg/m²s)
-    fn acoustic_impedance(&self, position: &[f64]) -> f64;
+    /// Positive, finite specific acoustic impedance.
+    fn acoustic_impedance(&self, position: &CouplingPosition) -> AcousticImpedance;
 
-    /// Reflection coefficient R = (Z2 - Z1)/(Z2 + Z1)
-    fn reflection_coefficient(&self, position: &[f64]) -> f64 {
-        let z1 = self.acoustic_impedance(&[position[0] - 1e-6, position[1], position[2]]);
-        let z2 = self.acoustic_impedance(&[position[0] + 1e-6, position[1], position[2]]);
-        (z2 - z1) / (z2 + z1)
+    /// Pressure reflection at normal incidence. Supply samples on opposite sides.
+    fn reflection_coefficient(
+        &self,
+        incident: &CouplingPosition,
+        transmitted: &CouplingPosition,
+    ) -> Dimensionless {
+        pressure_coefficients(
+            self.acoustic_impedance(incident),
+            self.acoustic_impedance(transmitted),
+        )[0]
     }
 
-    /// Transmission coefficient T = 2Z2/(Z1 + Z2)
-    fn transmission_coefficient(&self, position: &[f64]) -> f64 {
-        let z1 = self.acoustic_impedance(&[position[0] - 1e-6, position[1], position[2]]);
-        let z2 = self.acoustic_impedance(&[position[0] + 1e-6, position[1], position[2]]);
-        2.0 * z2 / (z1 + z2)
+    /// Pressure transmission at normal incidence. Supply samples on opposite sides.
+    fn transmission_coefficient(
+        &self,
+        incident: &CouplingPosition,
+        transmitted: &CouplingPosition,
+    ) -> Dimensionless {
+        pressure_coefficients(
+            self.acoustic_impedance(incident),
+            self.acoustic_impedance(transmitted),
+        )[1]
     }
+}
+
+/// For positive finite impedances, dividing by their maximum puts one
+/// normalized impedance at 1 and the other in [0, 1]. The common factor
+/// cancels analytically, and the sum and doubled numerator cannot overflow.
+pub(super) fn pressure_coefficients<T: FloatElement>(
+    incident: AcousticImpedance<T>,
+    transmitted: AcousticImpedance<T>,
+) -> [Dimensionless<T>; 2] {
+    let scale = incident.max(transmitted);
+    let first = incident / scale;
+    let second = transmitted / scale;
+    let sum = first + second;
+    [(second - first) / sum, (second + second) / sum]
 }
