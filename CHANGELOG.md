@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+
+- [major] Coupling getter inputs and outputs carry physical quantities.
+  Use `CouplingPosition` for points, signed `Stress` for normal traction,
+  and `VolumetricPowerDensity` for energy transfer, heating, and perfusion.
+  Pass incident and transmitted sample points to the acoustic pressure
+  coefficients and implement the viscous dissipation law for the medium.
+  See [ADR 141](docs/adr/141-type-coupling-getters.md).
+
 ## 4.0.0 Rust registry cohort
 
 The application and most layer crates use 4.0.0. Analysis, Diagnostics,
@@ -13,13 +24,6 @@ source revisions and verification for all 22 packages.
   published-provider graph. Update typed dependencies together.
   The driver requires Rust 1.97 for its supported features. See
   [ADR 140](docs/adr/140-published-typed-provider-cutover.md).
-
-- [major] Coupling getter inputs and outputs carry physical quantities.
-  Use `CouplingPosition` for points, signed `Stress` for normal traction,
-  and `VolumetricPowerDensity` for energy transfer, heating, and perfusion.
-  Pass incident and transmitted sample points to the acoustic pressure
-  coefficients and implement the viscous dissipation law for the medium.
-  See [ADR 141](docs/adr/141-type-coupling-getters.md).
 
 ### Fixed
 
