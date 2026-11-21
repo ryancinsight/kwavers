@@ -58,12 +58,14 @@ fn absorption_at_frequency_scales_each_voxel_by_its_exponent() {
     // Np/m storage (storage convention in `kwavers_medium::core`): the 0.7
     // dB/cm prefactor converted once, so `alpha_coefficient` keeps reporting
     // the same SI values and the expectations below are unchanged.
-    medium.absorption.fill(0.7 * DB_TO_NP * 100.0);
-    medium.alpha0.fill(0.7 * DB_TO_NP * 100.0);
+    medium.absorption.fill(
+        aequitas::systems::si::quantities::ReciprocalLength::from_base(0.7 * DB_TO_NP * 100.0),
+    );
+
     let exponent_at = |i: usize| if i < 4 { 1.3 } else { 1.7 };
-    for ([i, _, _], value) in medium.alpha_power.indexed_iter_mut().unwrap() {
-        *value = exponent_at(i);
-    }
+    let exponents =
+        leto::Array3::from_shape_fn([grid.nx, grid.ny, grid.nz], |[i, _, _]| exponent_at(i));
+    medium.alpha_power = kwavers_medium::heterogeneous::AbsorptionField::from_base(exponents);
     let config = PSTDConfig {
         nt: 2,
         absorption_mode: AbsorptionMode::PowerLaw {

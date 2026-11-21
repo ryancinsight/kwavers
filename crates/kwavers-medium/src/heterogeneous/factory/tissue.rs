@@ -3,7 +3,9 @@
 //! **Factory Pattern**: Encapsulated creation logic per Gang of Four
 //! **Evidence-Based**: Tissue parameters from Hamilton & Blackstock (1998)
 
+use crate::absorption::power_law::reference_loss_from_decibels_per_centimetre;
 use crate::heterogeneous::core::HeterogeneousMedium;
+use crate::heterogeneous::AbsorptionField;
 use kwavers_core::constants::acoustic_parameters::{
     TISSUE_NONLINEARITY_B_A, VISCOSITY_SOFT_TISSUE,
 };
@@ -22,7 +24,6 @@ use kwavers_core::constants::tissue_thermal::{
     SPECIFIC_HEAT_BRAIN, THERMAL_CONDUCTIVITY_BLOOD, THERMAL_DIFFUSIVITY_TISSUE,
     THERMAL_EXPANSION_SOFT_TISSUE,
 };
-use kwavers_core::constants::DB_TO_NP;
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -124,7 +125,8 @@ impl TissueFactory {
         // convention in `crate::core`): the dB α₀ prefactor converted once here.
         // Precomputing α(180 kHz) here made PSTD read 0.09 as the 1 MHz α₀
         // (5.6x low); leaving dB behind made typed getters 11.5x low.
-        let absorption = alpha0.mapv(|a| a * DB_TO_NP * 100.0);
+        let absorption =
+            alpha0.mapv(|a| reference_loss_from_decibels_per_centimetre(a).into_base());
         let nonlinearity = b_a.clone();
 
         debug!(
@@ -151,19 +153,20 @@ impl TissueFactory {
             temperature,
             bubble_radius,
             bubble_velocity,
-            alpha0,
             delta,
             b_a,
-            absorption,
+            absorption: AbsorptionField::from_base(absorption),
             // Tissue default: y = 1.5 per Szabo (1994) Table I.
-            alpha_power: grid.array_fill(1.5_f64),
+            alpha_power: AbsorptionField::from_base(grid.array_fill(1.5_f64)),
             nonlinearity,
             shear_sound_speed,
             shear_viscosity_coeff,
             bulk_viscosity_coeff,
             lame_lambda,
             lame_mu,
-            reference_frequency,
+            reference_frequency: aequitas::systems::si::quantities::Frequency::from_base(
+                reference_frequency,
+            ),
         }
     }
 }

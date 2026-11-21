@@ -11,6 +11,12 @@
 
 ### Breaking
 
+- [major] Heterogeneous media carry Aequitas-typed reference attenuation,
+  dimensionless exponent fields, and reference frequency. Update voxels with
+  `AbsorptionField::set` or `fill`, and use `from_base` to adopt a Leto buffer
+  already in SI. The write-only `alpha0` array is removed. See
+  [ADR 145](docs/adr/145-type-heterogeneous-absorption.md).
+
 - [major] Construct fractional absorption from reciprocal length,
   reference frequency, and a dimensionless exponent. Evaluation
   takes a typed frequency and applies the supplied reference.

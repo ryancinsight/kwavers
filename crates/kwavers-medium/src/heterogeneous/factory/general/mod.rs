@@ -8,10 +8,11 @@ mod layered;
 #[cfg(test)]
 mod tests;
 
+use crate::absorption::power_law::reference_loss_from_decibels_per_centimetre;
 use crate::heterogeneous::core::HeterogeneousMedium;
+use crate::heterogeneous::AbsorptionField;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K;
-use kwavers_core::constants::DB_TO_NP;
 use kwavers_core::traversal::zip_mut_indexed;
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -70,7 +71,12 @@ impl HeterogeneousFactory {
         // Caller contract stays dB α₀; storage is Np/m (storage convention in
         // `crate::core`).
         let absorption = absorption
-            .map(|a| a * DB_TO_NP * 100.0)
+            .map(|mut values| {
+                values.iter_mut().for_each(|value| {
+                    *value = reference_loss_from_decibels_per_centimetre(*value).into_base();
+                });
+                values
+            })
             .unwrap_or_else(|| Array3::zeros([nx, ny, nz]));
         let alpha_power = alpha_power.unwrap_or_else(|| Array3::from_elem([nx, ny, nz], 1.0));
         let nonlinearity = nonlinearity.unwrap_or_else(|| Array3::zeros([nx, ny, nz]));
@@ -98,18 +104,20 @@ impl HeterogeneousFactory {
             temperature: Array3::from_elem([nx, ny, nz], ROOM_TEMPERATURE_K),
             bubble_radius: Array3::zeros([nx, ny, nz]),
             bubble_velocity: Array3::zeros([nx, ny, nz]),
-            alpha0: Array3::zeros([nx, ny, nz]),
+
             delta: Array3::zeros([nx, ny, nz]),
             b_a: nonlinearity.clone(),
-            absorption,
-            alpha_power,
+            absorption: AbsorptionField::from_base(absorption),
+            alpha_power: AbsorptionField::from_base(alpha_power),
             nonlinearity,
             shear_sound_speed: Array3::zeros([nx, ny, nz]),
             shear_viscosity_coeff: Array3::zeros([nx, ny, nz]),
             bulk_viscosity_coeff: Array3::zeros([nx, ny, nz]),
             lame_lambda: Array3::zeros([nx, ny, nz]),
             lame_mu: Array3::zeros([nx, ny, nz]),
-            reference_frequency,
+            reference_frequency: aequitas::systems::si::quantities::Frequency::from_base(
+                reference_frequency,
+            ),
         })
     }
 
@@ -171,7 +179,8 @@ impl HeterogeneousFactory {
         if let Some(ref abs_fn) = absorption_fn {
             // dB α₀ in, Np/m stored (storage convention in `crate::core`).
             zip_mut_indexed(absorption.view_mut(), (), |[i, j, k], v, ()| {
-                *v = abs_fn(x[i], y[j], z[k]) * DB_TO_NP * 100.0;
+                *v = reference_loss_from_decibels_per_centimetre(abs_fn(x[i], y[j], z[k]))
+                    .into_base();
             });
         }
         if let Some(ref yf) = alpha_power_fn {
@@ -204,18 +213,20 @@ impl HeterogeneousFactory {
             temperature: grid.array_fill(ROOM_TEMPERATURE_K),
             bubble_radius: grid.array_zeros(),
             bubble_velocity: grid.array_zeros(),
-            alpha0: grid.array_zeros(),
+
             delta: grid.array_zeros(),
             b_a: nonlinearity.clone(),
-            absorption,
-            alpha_power,
+            absorption: AbsorptionField::from_base(absorption),
+            alpha_power: AbsorptionField::from_base(alpha_power),
             nonlinearity,
             shear_sound_speed: grid.array_zeros(),
             shear_viscosity_coeff: grid.array_zeros(),
             bulk_viscosity_coeff: grid.array_zeros(),
             lame_lambda: grid.array_zeros(),
             lame_mu: grid.array_zeros(),
-            reference_frequency,
+            reference_frequency: aequitas::systems::si::quantities::Frequency::from_base(
+                reference_frequency,
+            ),
         }
     }
 }

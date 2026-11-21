@@ -35,8 +35,15 @@ fn rejects_heterogeneous_absorption_exponents_during_factory_preparation() {
         .for_each(|value| *value = 1_500.0);
     medium.density.iter_mut().for_each(|value| *value = 1_000.0);
     medium.absorption.iter_mut().for_each(|value| *value = 0.2);
-    medium.alpha_power.iter_mut().for_each(|value| *value = 1.3);
-    medium.alpha_power[[0, 0, 1]] = 1.7;
+    medium
+        .alpha_power
+        .fill(aequitas::systems::si::quantities::Dimensionless::from_base(
+            1.3,
+        ));
+    medium.alpha_power.set(
+        [0, 0, 1],
+        aequitas::systems::si::quantities::Dimensionless::from_base(1.7),
+    );
     let config = SolverConfiguration {
         solver_type: SolverType::PSTD,
         fft_backend: FftBackend::Hephaestus,

@@ -53,9 +53,19 @@ fn fullwave_scatterer_experiment_medium_fits_both_exponents() {
         // Np/m storage (storage convention in `kwavers_medium::core`); the
         // relaxation fit below sees identical SI spectra, only converted once.
         let alpha = (if inside { 0.75 } else { 0.5 }) * DB_TO_NP * 100.0;
-        medium.absorption[[i, 0, 0]] = alpha;
-        medium.alpha0[[i, 0, 0]] = alpha;
-        medium.alpha_power[[i, 0, 0]] = if inside { 1.1 } else { 1.0 };
+        medium.absorption.set(
+            [i, 0, 0],
+            aequitas::systems::si::quantities::ReciprocalLength::from_base(alpha),
+        );
+
+        medium.alpha_power.set(
+            [i, 0, 0],
+            aequitas::systems::si::quantities::Dimensionless::from_base(if inside {
+                1.1
+            } else {
+                1.0
+            }),
+        );
     }
 
     let dt = 0.2 * DX / 1600.0;
