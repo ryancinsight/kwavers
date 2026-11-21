@@ -1,10 +1,3 @@
-## Medium-aware collocated field coupling
-
-The coupler samples and validates physical coefficients for each cell at
-the supplied frequency before applying the selected strategy. A real solver
-test checks local intensity and heating changes at two frequencies. A
-derived volumetric heat capacity overflow rejects the step before mutation.
-
 ## Capability surveys by keyword produce false positives on name collisions
 
 Recorded 2026-08-12 from the Fullwave 2.5 parity comparison.
@@ -4371,11 +4364,3 @@ Standing facts (do NOT re-flag):
   allocation/conversion (route facade `_into` through apollo `_into`, reuse scratch
   buffers across timesteps) and verify no accuracy regression on the elastic_fwi
   convergence tests. Dedicated effort; do not rush.
-
-## 2026-11-21 · Coupling quantity getters
-
-The physics coupling traits carry fixed three-axis positions and signed,
-dimensioned transfer quantities. Scaling by the larger impedance bounds
-both pressure coefficient expressions. The thermal layer uses material
-properties and typed temperature differences. The source cohort retains
-its staged 4.0.0 version. [ADR 141](docs/adr/141-type-coupling-getters.md)
