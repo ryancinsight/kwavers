@@ -64,8 +64,11 @@
 //! - Xu M., Wang L.V. (2006). "Photoacoustic imaging in biomedicine."
 //!   Rev. Sci. Instrum. 77(4), 041101. DOI: 10.1063/1.2195024
 
-use super::MultiPhysicsCoupling;
-use aequitas::systems::si::quantities::{Length, ReciprocalLength};
+use super::{CouplingPosition, MultiPhysicsCoupling};
+use aequitas::systems::si::quantities::{
+    Dimensionless, EnergyPerArea, EnergyPerVolume, Length, Pressure, ReciprocalLength, Time,
+    Velocity,
+};
 use hyperion::{
     coefficient::{Absorption, InteractionCoefficient, ReducedScattering},
     quantity::PathLength,
@@ -74,84 +77,93 @@ use hyperion::{
 };
 use leto::Array3;
 
-/// Electromagnetic-acoustic coupling for photoacoustic effects
+/// Electromagnetic-acoustic coupling for photoacoustic effects.
 pub trait ElectromagneticAcousticCoupling: MultiPhysicsCoupling {
-    /// Optical absorption coefficient μ_a (m⁻¹)
-    fn optical_absorption_coefficient(&self, position: &[f64], wavelength: f64) -> f64;
+    /// Optical absorption coefficient at the given wavelength.
+    fn optical_absorption_coefficient(
+        &self,
+        position: &CouplingPosition,
+        wavelength: Length,
+    ) -> InteractionCoefficient<f64, Absorption>;
 
-    /// Reduced scattering coefficient μ_s' (m⁻¹)
-    fn reduced_scattering_coefficient(&self, position: &[f64], wavelength: f64) -> f64;
+    /// Reduced scattering coefficient at the given wavelength.
+    fn reduced_scattering_coefficient(
+        &self,
+        position: &CouplingPosition,
+        wavelength: Length,
+    ) -> InteractionCoefficient<f64, ReducedScattering>;
 
-    /// Grüneisen parameter Γ = β c² / C_p (dimensionless)
-    fn gruneisen_parameter(&self, position: &[f64]) -> f64;
+    /// Grüneisen parameter.
+    fn gruneisen_parameter(&self, position: &CouplingPosition) -> Dimensionless;
 
-    /// Anisotropy factor g (dimensionless, -1 to 1)
-    fn anisotropy_factor(&self, _position: &[f64]) -> f64 {
-        0.9 // Typical for tissue (forward scattering)
-    }
+    /// Mean cosine of the photon scattering angle.
+    fn anisotropy_factor(&self, position: &CouplingPosition) -> Dimensionless;
 
-    /// Compute initial acoustic pressure from optical fluence: p₀ = Γ μ_a Φ
+    /// Initial pressure under stress confinement, p₀ = Γ μₐ Φ.
     fn fluence_to_pressure(
         &self,
-        fluence: &Array3<f64>,
-        position: &[f64],
-        wavelength: f64,
-    ) -> Array3<f64> {
-        let gamma = self.gruneisen_parameter(position);
-        let mu_a = self.optical_absorption_coefficient(position, wavelength);
-        fluence.mapv(|phi| gamma * mu_a * phi)
+        fluence: EnergyPerArea<&Array3<f64>>,
+        position: &CouplingPosition,
+        wavelength: Length,
+    ) -> Pressure<Array3<f64>> {
+        let gain = self.gruneisen_parameter(position)
+            * self
+                .optical_absorption_coefficient(position, wavelength)
+                .into_quantity();
+        Pressure::from_base(
+            fluence
+                .into_base()
+                .mapv(|value| (gain * EnergyPerArea::from_base(value)).into_base()),
+        )
     }
 
-    /// Compute optical fluence from electromagnetic energy density
+    /// Fluence for energy density held constant over the pulse duration.
+    /// Photon travel distance is the propagation speed times that duration.
     fn em_energy_to_fluence(
         &self,
-        energy_density: &Array3<f64>,
-        pulse_duration: f64,
-    ) -> Array3<f64> {
-        energy_density.mapv(|u| u * pulse_duration)
+        energy_density: EnergyPerVolume<&Array3<f64>>,
+        propagation_speed: Velocity,
+        pulse_duration: Time,
+    ) -> EnergyPerArea<Array3<f64>> {
+        let travel = propagation_speed * pulse_duration;
+        EnergyPerArea::from_base(
+            energy_density
+                .into_base()
+                .mapv(|value| (EnergyPerVolume::from_base(value) * travel).into_base()),
+        )
     }
 
-    /// Optical diffusion approximation for fluence
+    /// Evaluate the radial diffusion kernel exp(−μ_eff r)/r away from the source.
     ///
     /// # Errors
     ///
-    /// Returns a Hyperion transport error when a coefficient, path, or derived
-    /// effective attenuation is outside its physical domain.
-    fn diffuse_fluence(
+    /// Returns a Hyperion transport error for a coincident point or an invalid
+    /// path or coefficient.
+    fn diffuse_fluence_kernel(
         &self,
-        source_position: &[f64],
-        evaluation_position: &[f64],
-        wavelength: f64,
-    ) -> Result<f64, TransportError<f64>> {
-        let r = (evaluation_position[2] - source_position[2])
-            .mul_add(
-                evaluation_position[2] - source_position[2],
-                (evaluation_position[1] - source_position[1]).mul_add(
-                    evaluation_position[1] - source_position[1],
-                    (evaluation_position[0] - source_position[0]).powi(2),
-                ),
-            )
-            .sqrt();
-
-        if r == 0.0 {
-            return Ok(0.0);
+        source_position: &CouplingPosition,
+        evaluation_position: &CouplingPosition,
+        wavelength: Length,
+    ) -> Result<ReciprocalLength, TransportError<f64>> {
+        let [dx, dy, dz] = std::array::from_fn(|axis| {
+            (evaluation_position[axis] - source_position[axis]).into_base()
+        });
+        let distance = Length::from_base(dx.hypot(dy).hypot(dz));
+        if distance.into_base() == 0.0 {
+            return Err(TransportError::InvalidValue {
+                field: hyperion::ValueKind::PathLength,
+                value: 0.0,
+                constraint: hyperion::ValueConstraint::FinitePositive,
+            });
         }
-
-        let absorption =
-            InteractionCoefficient::<_, Absorption>::new(ReciprocalLength::from_base(
-                self.optical_absorption_coefficient(evaluation_position, wavelength),
-            ))?;
-        let reduced =
-            InteractionCoefficient::<_, ReducedScattering>::new(ReciprocalLength::from_base(
-                self.reduced_scattering_coefficient(evaluation_position, wavelength),
-            ))?;
+        let absorption = self.optical_absorption_coefficient(evaluation_position, wavelength);
+        let reduced = self.reduced_scattering_coefficient(evaluation_position, wavelength);
         let attenuation =
             DiffusionCoefficients::new(absorption, reduced)?.effective_attenuation()?;
         let transmission = attenuation
-            .optical_depth(PathLength::new(Length::from_base(r))?)?
+            .optical_depth(PathLength::new(distance)?)?
             .transmission()
-            .into_quantity()
-            .into_base();
-        Ok(transmission / r)
+            .into_quantity();
+        Ok(transmission / distance)
     }
 }

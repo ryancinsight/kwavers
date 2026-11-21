@@ -14,54 +14,83 @@
 //! - Pennes (1948) J Appl Physiol 1(2):93-122
 //! - Welch & van Gemert (2011) "Optical-Thermal Response of Laser-Irradiated Tissue"
 
-use super::MultiPhysicsCoupling;
-use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-use kwavers_core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
-use kwavers_core::constants::thermodynamic::{
-    BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
+use super::{CouplingPosition, MultiPhysicsCoupling};
+use aequitas::systems::si::quantities::{
+    Intensity, Length, MassDensity, ReciprocalTime, SpecificHeatCapacity, ThermalDiffusivity,
+    ThermodynamicTemperature, Time, VolumetricPowerDensity,
 };
-use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
+use hyperion::coefficient::{Absorption, InteractionCoefficient};
 use leto::Array3;
 
-/// Electromagnetic-thermal coupling for photothermal effects
+/// Electromagnetic-thermal coupling for photothermal effects.
 pub trait ElectromagneticThermalCoupling: MultiPhysicsCoupling {
-    /// Optical absorption coefficient μ_a (m⁻¹)
-    fn optical_absorption_coefficient(&self, position: &[f64], wavelength: f64) -> f64;
+    /// Optical absorption coefficient at the given wavelength.
+    fn optical_absorption_coefficient(
+        &self,
+        position: &CouplingPosition,
+        wavelength: Length,
+    ) -> InteractionCoefficient<f64, Absorption>;
 
-    /// Optical heating rate Q = μ_a Φ (W/m³)
+    /// Local thermal diffusivity.
+    fn thermal_diffusivity(&self, position: &CouplingPosition) -> ThermalDiffusivity;
+
+    /// Blood volume perfusion per tissue volume per unit time.
+    fn perfusion_rate(&self, position: &CouplingPosition) -> ReciprocalTime;
+
+    /// Blood mass density.
+    fn blood_density(&self, position: &CouplingPosition) -> MassDensity;
+
+    /// Blood heat capacity per unit mass.
+    fn blood_specific_heat(&self, position: &CouplingPosition) -> SpecificHeatCapacity;
+
+    /// Arterial blood reference temperature.
+    fn blood_temperature(&self, position: &CouplingPosition) -> ThermodynamicTemperature;
+
+    /// Volumetric optical heating Q = μₐ Φ̇.
     fn optical_heating_rate(
         &self,
-        fluence_rate: &Array3<f64>,
-        position: &[f64],
-        wavelength: f64,
-    ) -> Array3<f64> {
-        let mu_a = self.optical_absorption_coefficient(position, wavelength);
-        fluence_rate.mapv(|dphi_dt| mu_a * dphi_dt)
+        fluence_rate: Intensity<&Array3<f64>>,
+        position: &CouplingPosition,
+        wavelength: Length,
+    ) -> VolumetricPowerDensity<Array3<f64>> {
+        let absorption = self
+            .optical_absorption_coefficient(position, wavelength)
+            .into_quantity();
+        VolumetricPowerDensity::from_base(
+            fluence_rate
+                .into_base()
+                .mapv(|value| (absorption * Intensity::from_base(value)).into_base()),
+        )
     }
 
-    /// Thermal relaxation time τ = ρ C_p / k (s)
-    fn thermal_relaxation_time(&self, _position: &[f64]) -> f64 {
-        DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER / THERMAL_CONDUCTIVITY_WATER
+    /// Diffusion timescale L²/α at the supplied length scale.
+    fn thermal_relaxation_time(&self, length: Length, position: &CouplingPosition) -> Time {
+        length * length / self.thermal_diffusivity(position)
     }
 
-    /// Perfusion cooling rate (W/m³). Pennes (1948) Eq 1: q_p = w·ρ_b·c_b·(T − T_b).
-    fn perfusion_cooling(&self, temperature: f64, _position: &[f64]) -> f64 {
-        TISSUE_PERFUSION_RATE
-            * DENSITY_BLOOD
-            * BLOOD_SPECIFIC_HEAT
-            * (temperature - BODY_TEMPERATURE_C)
+    /// Signed Pennes perfusion cooling q = w ρ_b c_b (T − T_b).
+    fn perfusion_cooling(
+        &self,
+        temperature: ThermodynamicTemperature,
+        position: &CouplingPosition,
+    ) -> VolumetricPowerDensity {
+        let difference = temperature - self.blood_temperature(position);
+        self.perfusion_rate(position)
+            * self.blood_density(position)
+            * self.blood_specific_heat(position)
+            * difference
     }
 
-    /// Bioheat equation source term (including perfusion)
+    /// Net optical and perfusion source in W/m³.
     fn bioheat_source(
         &self,
-        fluence_rate: &Array3<f64>,
-        temperature: f64,
-        position: &[f64],
-        wavelength: f64,
-    ) -> Array3<f64> {
-        let optical_heating = self.optical_heating_rate(fluence_rate, position, wavelength);
+        fluence_rate: Intensity<&Array3<f64>>,
+        temperature: ThermodynamicTemperature,
+        position: &CouplingPosition,
+        wavelength: Length,
+    ) -> VolumetricPowerDensity<Array3<f64>> {
+        let net = self.optical_heating_rate(fluence_rate, position, wavelength);
         let perfusion = self.perfusion_cooling(temperature, position);
-        optical_heating.mapv(|q_opt| q_opt - perfusion)
+        VolumetricPowerDensity::from_base(net.into_base().mapv(|q| q - perfusion.into_base()))
     }
 }
