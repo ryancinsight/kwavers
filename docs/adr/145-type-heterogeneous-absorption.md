@@ -1,4 +1,8 @@
-# ADR 145 — Type heterogeneous absorption fields
+# ADR 145: Type heterogeneous absorption fields
+
+- Status: Proposed
+- Class: [major]
+- Date: 2026-11-21
 
 Heterogeneous media store one reciprocal-length field for reference loss,
 one dimensionless exponent field, and an Aequitas reference frequency.

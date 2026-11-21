@@ -112,5 +112,4 @@
 | [142](142-medium-aware-field-coupling.md) | Apply local material coefficients in field coupling | Proposed |
 | [143](143-type-bone-and-skull-acoustics.md) | Type bone and skull acoustic references | Proposed |
 | [144](144-type-fractional-absorption.md) | Type fractional absorption at a reference frequency | Proposed |
-
-- [ADR 145 — Type heterogeneous absorption fields](145-type-heterogeneous-absorption.md)
+| [145](145-type-heterogeneous-absorption.md) | Type heterogeneous absorption fields | Proposed |
