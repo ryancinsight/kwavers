@@ -15,7 +15,7 @@ pub(super) fn lesion_speed(
     Array2::from_shape_fn(prepared.sound_speed_m_s.shape(), |idx| {
         if prepared.body_mask[idx] {
             (prepared.sound_speed_m_s[idx] + config.lesion_delta_c_m_s * lesion[idx])
-                .clamp(SOUND_SPEED_WATER_SIM, BONE_SOUND_SPEED)
+                .clamp(SOUND_SPEED_WATER_SIM, BONE_SOUND_SPEED.into_base())
         } else {
             prepared.sound_speed_m_s[idx]
         }

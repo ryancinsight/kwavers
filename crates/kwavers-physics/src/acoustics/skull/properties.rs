@@ -95,30 +95,30 @@ impl AcousticSkullProperties {
     /// Returns the canonical adult cortical-skull configuration.
     pub const fn cortical() -> Self {
         Self {
-            sound_speed: Velocity::from_base(SOUND_SPEED_SKULL_CORTICAL),
-            density: MassDensity::from_base(BONE_DENSITY),
+            sound_speed: SOUND_SPEED_SKULL_CORTICAL,
+            density: BONE_DENSITY,
             attenuation_at_one_megahertz: ReciprocalLength::from_base(60.0),
             thickness: Length::from_base(0.007),
-            shear_speed: Some(Velocity::from_base(SHEAR_SPEED_SKULL_CORTICAL)),
+            shear_speed: Some(SHEAR_SPEED_SKULL_CORTICAL),
         }
     }
 
     /// Returns the canonical trabecular-skull configuration.
     pub const fn trabecular() -> Self {
         Self {
-            sound_speed: Velocity::from_base(SOUND_SPEED_SKULL_TRABECULAR),
-            density: MassDensity::from_base(DENSITY_SKULL_TRABECULAR),
+            sound_speed: SOUND_SPEED_SKULL_TRABECULAR,
+            density: DENSITY_SKULL_TRABECULAR,
             attenuation_at_one_megahertz: ReciprocalLength::from_base(40.0),
             thickness: Length::from_base(0.005),
-            shear_speed: Some(Velocity::from_base(SHEAR_SPEED_SKULL_TRABECULAR)),
+            shear_speed: Some(SHEAR_SPEED_SKULL_TRABECULAR),
         }
     }
 
     /// Returns the canonical cranial-suture configuration.
     pub const fn suture() -> Self {
         Self {
-            sound_speed: Velocity::from_base(SOUND_SPEED_SKULL_SUTURE),
-            density: MassDensity::from_base(DENSITY_SKULL_SUTURE),
+            sound_speed: SOUND_SPEED_SKULL_SUTURE,
+            density: DENSITY_SKULL_SUTURE,
             attenuation_at_one_megahertz: ReciprocalLength::from_base(20.0),
             thickness: Length::from_base(0.002),
             shear_speed: None,

@@ -11,6 +11,11 @@
 
 ### Breaking
 
+- [major] Use typed bone and skull sound speeds, shear speeds, and
+  densities. Replace scalar linear attenuation constants with
+  `BONE_ATTENUATION_SLOPE` and `SKULL_MARSAC_ATTENUATION_SLOPE`, evaluated
+  at a typed frequency. See [ADR 143](docs/adr/143-type-bone-and-skull-acoustics.md).
+
 - [major] Coupling getter inputs and outputs carry physical quantities.
   Use `CouplingPosition` for points, signed `Stress` for normal traction,
   and `VolumetricPowerDensity` for energy transfer, heating, and perfusion.

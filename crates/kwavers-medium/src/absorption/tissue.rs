@@ -256,8 +256,8 @@ pub fn tissue_properties() -> HashMap<AbsorptionTissueType, AbsorptionTissueProp
         AbsorptionTissueProperties::new(
             20.0,
             1.0,
-            BONE_DENSITY,
-            BONE_SOUND_SPEED,
+            BONE_DENSITY.into_base(),
+            BONE_SOUND_SPEED.into_base(),
             B_OVER_A_BONE,
             0.32,
             SPECIFIC_HEAT_BONE,

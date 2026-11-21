@@ -5,10 +5,12 @@ use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
 use leto::Array3;
 
 use super::{
-    config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM},
-    medium::{soft_tissue_speed, SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ},
+    config::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM},
+    medium::{soft_tissue_attenuation_at_reference, soft_tissue_speed},
 };
-use kwavers_core::constants::acoustic_parameters::SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ;
+use kwavers_core::constants::bone_acoustics::{
+    marsac_skull_attenuation_slope, marsac_skull_sound_speed, MARSAC_REFERENCE_FREQUENCY,
+};
 use kwavers_core::constants::ct_acoustics::{HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD};
 
 /// CT volume resampled to the isotropic cubic transcranial UST inversion domain.
@@ -74,12 +76,12 @@ impl AcousticVolume {
                     skull_mask[[ix, iy, iz]] = skull;
                     sound_speed[[ix, iy, iz]] = if skull {
                         let phi = (hu / 1000.0).clamp(0.0, 1.0);
-                        attenuation[[ix, iy, iz]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ
-                            * (1.0 - phi)
-                            + SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ * phi;
-                        SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi
+                        attenuation[[ix, iy, iz]] = (marsac_skull_attenuation_slope(phi)
+                            * MARSAC_REFERENCE_FREQUENCY)
+                            .into_base();
+                        marsac_skull_sound_speed(phi).into_base()
                     } else if hu > HU_BRAIN_BODY_THRESHOLD {
-                        attenuation[[ix, iy, iz]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ;
+                        attenuation[[ix, iy, iz]] = soft_tissue_attenuation_at_reference();
                         soft_tissue_speed(hu)
                     } else {
                         SOUND_SPEED_WATER_SIM

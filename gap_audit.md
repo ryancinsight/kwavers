@@ -1,3 +1,9 @@
+## Bone and skull acoustic references
+
+Skull CT maps share a typed sound-speed and linear amplitude-loss blend.
+Evaluate the slope at the map's reference frequency before scalar
+extraction. Fractional power-law material parameters remain distinct.
+
 ## Capability surveys by keyword produce false positives on name collisions
 
 Recorded 2026-08-12 from the Fullwave 2.5 parity comparison.

@@ -286,7 +286,7 @@ mod tests {
             z_water,
             z_skull,
             z_brain,
-            SOUND_SPEED_SKULL,
+            SOUND_SPEED_SKULL.into_base(),
             0.0,
         );
         let expected_pressure = 2.0 * z_brain / (z_water + z_brain);
@@ -307,7 +307,7 @@ mod tests {
             1.5e6,
             1.5e6,
             1.5e6,
-            SOUND_SPEED_SKULL,
+            SOUND_SPEED_SKULL.into_base(),
             7e-3,
         );
         // With equal impedances, the 1+Z3/Z1 = 2 and Z3/Z2+Z2/Z1 = 2,
@@ -317,8 +317,13 @@ mod tests {
 
     #[test]
     fn surface_temperature_zero_at_t0() {
-        let dt =
-            skull_surface_temperature_rise(&[0.0], 1000.0, 0.5, BONE_DENSITY, SPECIFIC_HEAT_BONE);
+        let dt = skull_surface_temperature_rise(
+            &[0.0],
+            1000.0,
+            0.5,
+            BONE_DENSITY.into_base(),
+            SPECIFIC_HEAT_BONE,
+        );
         assert!((dt[0]).abs() < 1e-15);
     }
 }

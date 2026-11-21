@@ -15,11 +15,10 @@ type MaterialMaps = (
 
 use super::super::super::AnatomyKind;
 use super::attenuation::{attenuation_np_per_m_mhz_from_hu, attenuation_power_law_y_from_hu};
-use kwavers_core::constants::acoustic_parameters::SOUND_SPEED_SKULL;
+use kwavers_core::constants::bone_acoustics::marsac_skull_sound_speed;
 use kwavers_core::constants::ct_acoustics::HU_BONE_THRESHOLD;
 use kwavers_core::constants::fundamental::{
     DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
-    SOUND_SPEED_WATER_SIM,
 };
 use kwavers_core::constants::tissue_acoustics::{
     B_OVER_A_AIR, B_OVER_A_BONE, B_OVER_A_SOFT_TISSUE, B_OVER_A_WATER_37C, DENSITY_AIR,
@@ -174,7 +173,7 @@ fn speed_from_hu(anatomy: AnatomyKind, hu: f64, label: i16) -> f64 {
     }
     if hu >= HU_BONE_THRESHOLD {
         let phi = (hu / HU_SPEED_BONE_MAX).clamp(0.0, 1.0);
-        return SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi;
+        return marsac_skull_sound_speed(phi).into_base();
     }
     let organ_speed = match anatomy {
         AnatomyKind::Brain => SOUND_SPEED_TISSUE,
