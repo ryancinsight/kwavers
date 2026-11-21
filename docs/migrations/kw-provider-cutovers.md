@@ -40,7 +40,7 @@
   harness compile. The hosted wheel checks pass the k-Wave comparison,
   angular-spectrum and thermal-acoustic cases. The merged cutover and
   published cohort resolve from fresh workspaces with zero Chrono.
-  [The registry release record](../../backlog/kw-release-crates-01.md) links the evidence.
+  [The registry release checklist](registry-cutover.md) records the published archives and consumer builds.
 - 103 other tracked Rust files still exceed the 500-line limit. The largest
   production module is the lithotripsy cavitation cloud. Split remaining
   modules by numerical operation and measure compile-time specialization,

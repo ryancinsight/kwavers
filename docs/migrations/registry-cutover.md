@@ -100,6 +100,6 @@ pinned providers, value-level results, and outstanding source and
 integration gates. Kwavers owns the Python ndarray conversion at its
 consuming boundary in accordance with Leto ADR 0017.
 The native provider and Chrono graph gates pass with the cutover lock.
-[Registry verification](../../backlog/kw-release-crates-01.md) closes the
-Aequitas 0.4 cutover. The lock guard recognizes workspace-owned packages by
+The [native cutover](https://github.com/ryancinsight/kwavers/pull/1118) and
+[registry verification](#aequitas-04-registry-cutover) close the Aequitas 0.4 cutover. The lock guard recognizes workspace-owned packages by
 name and version, and the supply-chain policy rejects Chrono in the audited graph.
