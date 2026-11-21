@@ -124,7 +124,7 @@ impl MultiphysicsFieldCoupler {
         match self.strategy {
             FieldCouplingStrategy::None => Ok(()),
             FieldCouplingStrategy::Weak => {
-                self.apply_weak_coupling(fields, gains, self.coupling_strength)
+                Self::apply_weak_coupling(fields, gains, self.coupling_strength)
             }
             FieldCouplingStrategy::Strong => self.apply_strong_coupling(fields, gains),
             FieldCouplingStrategy::Adaptive => self.apply_adaptive_coupling(fields, gains),

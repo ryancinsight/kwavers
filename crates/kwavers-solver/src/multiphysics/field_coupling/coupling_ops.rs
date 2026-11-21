@@ -11,7 +11,6 @@ impl MultiphysicsFieldCoupler {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_weak_coupling(
-        &self,
         fields: &mut [Array3<f64>],
         gains: &impl Fn([usize; 3]) -> FieldCouplingGains,
         strength: f64,
@@ -34,7 +33,7 @@ impl MultiphysicsFieldCoupler {
         let mut previous_fields = fields.to_vec();
 
         for iteration in 0..self.max_iterations {
-            self.apply_weak_coupling(fields, gains, self.coupling_strength)?;
+            Self::apply_weak_coupling(fields, gains, self.coupling_strength)?;
 
             if self.check_convergence(&previous_fields, fields) {
                 break;
@@ -61,7 +60,7 @@ impl MultiphysicsFieldCoupler {
     ) -> KwaversResult<()> {
         let gradients = Self::calculate_field_gradients(fields);
         let coupling_strength = Self::adjust_coupling_strength(&gradients);
-        self.apply_weak_coupling(fields, gains, coupling_strength)
+        Self::apply_weak_coupling(fields, gains, coupling_strength)
     }
 
     /// Scale optical intensity by the pressure-driven refractive-index response.
