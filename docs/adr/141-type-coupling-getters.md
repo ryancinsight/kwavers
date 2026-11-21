@@ -1,4 +1,4 @@
-# ADR 141 · Carry physical quantities in coupling getters
+# ADR 141: Carry physical quantities in coupling getters
 
 - Status: Proposed
 - Class: [major]
