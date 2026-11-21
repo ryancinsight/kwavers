@@ -1,6 +1,11 @@
 # Changelog
 
-## 4.0.0 source cohort
+## 4.0.0 Rust registry cohort
+
+The application and most layer crates use 4.0.0. Analysis, Diagnostics,
+Medium, and Transducer use 5.0.0, GPU uses 6.0.0, and Driver uses 0.4.0.
+The [registry checklist](docs/migrations/registry-cutover.md) records the
+source revisions and verification for all 22 packages.
 
 ### Breaking
 
@@ -14,6 +19,9 @@
 - [patch] Pack the two spectral symbols and two material coefficients
   into paired buffers. The absorbing PSTD pipelines use 29 storage
   bindings and retain the fractional-Laplacian formulas.
+- [patch] Exclude Driver datasheets and renders from its crates.io archive
+  to meet the upload limit. The CAD models and archives remain available
+  in the package.
 
 ## 3.0.0 Rust registry cohort
 
