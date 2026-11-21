@@ -54,7 +54,11 @@ impl MultiphysicsFieldCoupler {
         }
     }
 
-    /// Couple fields using the nominal water and tissue coefficients.
+    /// Couple fields using the nominal water and tissue coefficients and
+    /// a fixed acoustic intensity loss of 0.5 m⁻¹.
+    ///
+    /// Use [`Self::couple_fields_with_medium`] to evaluate a spectral loss law.
+    ///
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///

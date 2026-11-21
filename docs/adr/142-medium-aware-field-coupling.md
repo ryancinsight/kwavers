@@ -26,8 +26,9 @@ Embedding optical or acoustic parameters as nominal values in the
 medium-specific API would discard the caller's material law. Adding
 optical properties to all general media would require unrelated
 implementations to invent coefficients. The existing nominal entry
-points retain the historical water and tissue calibration, including its
-constant acoustic intensity loss.
+points retain the historical nominal values. The fixed acoustic intensity
+loss is 0.5 m⁻¹ and is defined independently of the tissue spectral slope
+in dB/(cm·MHz).
 
 Tests use a real coupled solver and compare two adjacent cells across two
 frequencies against the analytical result. An overflowing denominator in

@@ -120,10 +120,14 @@ impl FieldCouplingMaterial {
 
     pub(super) fn nominal() -> KwaversResult<Self> {
         use kwavers_core::constants::fundamental::{
-            ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, OPTICAL_ABSORPTION_TISSUE_NIR,
-            SOUND_SPEED_TISSUE,
+            DENSITY_WATER_NOMINAL, OPTICAL_ABSORPTION_TISSUE_NIR, SOUND_SPEED_TISSUE,
         };
         use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
+
+        // The legacy frequency-independent step applies a fixed 0.5 m⁻¹
+        // intensity loss. Keep it independent of any spectral slope.
+        const NOMINAL_ACOUSTIC_INTENSITY_ABSORPTION: ReciprocalLength =
+            ReciprocalLength::from_base(0.5);
 
         let optical_absorption =
             InteractionCoefficient::new(ReciprocalLength::from_base(OPTICAL_ABSORPTION_TISSUE_NIR))
@@ -132,9 +136,7 @@ impl FieldCouplingMaterial {
             photoelastic_coefficient: PhotoelasticCoefficient::from_base(1e-12),
             photoelastic_response_rate: ReciprocalTime::from_base(1.0),
             optical_absorption,
-            // The nominal solver was calibrated with this constant intensity
-            // loss. Medium-specific calls resolve the actual spectral law.
-            acoustic_intensity_absorption: ReciprocalLength::from_base(ACOUSTIC_ABSORPTION_TISSUE),
+            acoustic_intensity_absorption: NOMINAL_ACOUSTIC_INTENSITY_ABSORPTION,
             density: MassDensity::from_base(DENSITY_WATER_NOMINAL),
             sound_speed: Velocity::from_base(SOUND_SPEED_TISSUE),
             specific_heat: SpecificHeatCapacity::from_base(SPECIFIC_HEAT_WATER),
