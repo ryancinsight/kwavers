@@ -11,11 +11,12 @@ needs the typed Hephaestus FFT preflight before it allocates its PSTD state.
 ## Decision
 
 Use the matching registry cohort for Aequitas, Leto, RITK, Athena, Apollo,
-Coeus, and the Hephaestus 0.32 FFT backend. Pin the private Python quantity
-reader to the revision that imports published Aequitas 0.5. Move all affected
-public package versions together. The approved 0.4-based release continues
-from its checked source commit. The 0.5 cohort uses a separate registry
-release decision and the main-branch publisher remains unarmed for it.
+Coeus, and the Hephaestus 0.32 FFT backend. Use `aequitas-python` 0.1.0 from
+crates.io for the Python quantity reader. It shares Aequitas 0.5.0 with
+Kwavers. Move all affected public package versions together. The approved
+0.4-based release continues from its checked source commit. The 0.5 cohort
+uses a separate registry release decision and the main-branch publisher
+remains unarmed for it.
 
 The lossless pipelines use 23 storage bindings. The absorbing pipelines
 add six through the paired spectral-symbol and material-coefficient
