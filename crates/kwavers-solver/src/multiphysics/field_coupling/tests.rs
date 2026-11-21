@@ -1,3 +1,5 @@
+mod medium;
+
 use super::{FieldCouplingStrategy, MultiphysicsFieldCoupler};
 use kwavers_core::constants::{
     fundamental::{

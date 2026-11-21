@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- [minor] Apply typed, spatially varying photoelastic, optical absorption,
+  and acoustic absorption properties in field coupling. Use
+  `couple_fields_with_medium` or `step_with_medium` to supply the material at
+  each voxel and acoustic frequency. See [ADR 142](docs/adr/142-medium-aware-field-coupling.md).
+
 ### Breaking
 
 - [major] Coupling getter inputs and outputs carry physical quantities.

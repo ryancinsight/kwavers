@@ -109,3 +109,4 @@
 | [139](139-native-provider-registry-cutover.md) | Native providers and the Kwavers registry graph | Accepted |
 | [140](140-published-typed-provider-cutover.md) | Share the published typed providers across Kwavers | Accepted |
 | [141](141-type-coupling-getters.md) | Carry physical quantities in coupling getters | Proposed |
+| [142](142-medium-aware-field-coupling.md) | Apply local material coefficients in field coupling | Proposed |

@@ -177,7 +177,8 @@ pub use inverse::{
     ReconstructionConfig, Reconstructor, TimeReversalConfig, TimeReversalReconstructor,
 };
 pub use multiphysics::{
-    CoupledMultiPhysicsSolver, FieldCouplingStrategy, MultiphysicsFieldCoupler,
+    CoupledMultiPhysicsSolver, FieldCouplingMaterial, FieldCouplingMedium, FieldCouplingStrategy,
+    MultiphysicsFieldCoupler, PhotoelasticCoefficient,
 };
 
 // Constants module remains at root level for easy access
