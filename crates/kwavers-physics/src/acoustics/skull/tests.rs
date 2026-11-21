@@ -12,8 +12,8 @@ use kwavers_grid::Grid;
 #[test]
 fn test_skull_properties_default() {
     let props = AcousticSkullProperties::default();
-    assert_eq!(props.sound_speed().into_base(), SOUND_SPEED_SKULL_CORTICAL);
-    assert_eq!(props.density().into_base(), BONE_DENSITY);
+    assert_eq!(props.sound_speed(), SOUND_SPEED_SKULL_CORTICAL);
+    assert_eq!(props.density(), BONE_DENSITY);
     assert_eq!(props.attenuation_at_one_megahertz().into_base(), 60.0);
     assert_eq!(props.thickness().into_base(), 0.007);
 }
@@ -33,14 +33,14 @@ fn test_bone_types() {
 fn test_acoustic_impedance() {
     let props = AcousticSkullProperties::default();
     let z = props.acoustic_impedance();
-    assert_eq!(z.into_base(), BONE_DENSITY * SOUND_SPEED_SKULL_CORTICAL);
+    assert_eq!(z, BONE_DENSITY * SOUND_SPEED_SKULL_CORTICAL);
 }
 
 #[test]
 fn test_transmission_coefficient() {
     let props = AcousticSkullProperties::default();
     let water_z = 1.5e6;
-    let skull_z = BONE_DENSITY * SOUND_SPEED_SKULL_CORTICAL;
+    let skull_z = (BONE_DENSITY * SOUND_SPEED_SKULL_CORTICAL).into_base();
     let expected = 4.0 * water_z * skull_z / (water_z + skull_z).powi(2);
     let observed = props
         .transmission_coefficient(AcousticImpedance::from_base(water_z))
@@ -70,21 +70,21 @@ fn skull_properties_reject_invalid_physical_values() {
     let invalid = [
         AcousticSkullProperties::new(
             Velocity::from_base(0.0),
-            MassDensity::from_base(BONE_DENSITY),
+            BONE_DENSITY,
             ReciprocalLength::from_base(60.0),
             Length::from_base(0.007),
             None,
         ),
         AcousticSkullProperties::new(
-            Velocity::from_base(SOUND_SPEED_SKULL_CORTICAL),
+            SOUND_SPEED_SKULL_CORTICAL,
             MassDensity::from_base(f64::NAN),
             ReciprocalLength::from_base(60.0),
             Length::from_base(0.007),
             None,
         ),
         AcousticSkullProperties::new(
-            Velocity::from_base(SOUND_SPEED_SKULL_CORTICAL),
-            MassDensity::from_base(BONE_DENSITY),
+            SOUND_SPEED_SKULL_CORTICAL,
+            BONE_DENSITY,
             ReciprocalLength::from_base(-1.0),
             Length::from_base(0.007),
             None,
@@ -147,4 +147,67 @@ fn test_insertion_loss_estimation() {
     // factor of four covers platform libm rounding in exp and operation order.
     let roundoff_bound = 64.0 * f64::EPSILON * expected.abs();
     assert!((loss - expected).abs() <= roundoff_bound);
+}
+
+#[test]
+fn marsac_skull_mix_preserves_speed_and_frequency_scale() {
+    use aequitas::systems::si::quantities::{Frequency, ReciprocalLength, Velocity};
+    use kwavers_core::constants::bone_acoustics::{
+        marsac_skull_attenuation_slope, marsac_skull_sound_speed, BONE_ATTENUATION_SLOPE,
+        MARSAC_REFERENCE_FREQUENCY,
+    };
+
+    let subscriber = tracing_subscriber::fmt()
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
+        .with_test_writer()
+        .finish();
+    tracing::subscriber::with_default(subscriber, || {
+        let (base_hz, mixtures) = tracing::info_span!("arrange").in_scope(|| {
+            let soft = 2.5 * 10.0_f64.ln();
+            (
+                Frequency::from_base(1e6),
+                [
+                    (0.0, 1500.0, soft),
+                    (0.5, 2200.0, 35.0 + soft / 2.0),
+                    (1.0, 2900.0, 70.0),
+                ],
+            )
+        });
+        let (values, bone_amplitude) = tracing::info_span!("act").in_scope(|| {
+            (
+                mixtures.map(|(fraction, _, _)| {
+                    let slope = marsac_skull_attenuation_slope(fraction);
+                    (
+                        marsac_skull_sound_speed(fraction),
+                        slope * base_hz,
+                        slope * (base_hz * 2.0),
+                    )
+                }),
+                (-BONE_ATTENUATION_SLOPE
+                    * MARSAC_REFERENCE_FREQUENCY
+                    * aequitas::systems::si::quantities::Length::from_base(0.01))
+                .into_base()
+                .exp(),
+            )
+        });
+        tracing::info_span!("assert").in_scope(|| {
+            for ((speed, loss, double_loss), (_, expected_speed, expected_loss)) in
+                values.into_iter().zip(mixtures)
+            {
+                assert_eq!(speed, Velocity::from_base(expected_speed));
+                // The stored constants and slope evaluation contribute at most
+                // ten rounded arithmetic operations at these magnitudes.
+                let tolerance = 10.0 * f64::EPSILON * expected_loss;
+                assert!(
+                    (loss - ReciprocalLength::from_base(expected_loss))
+                        .into_base()
+                        .abs()
+                        <= tolerance
+                );
+                assert_eq!(double_loss, loss * 2.0);
+            }
+            // 20 dB of pressure-amplitude loss over 1 cm gives 10^(-20/20).
+            assert!((bone_amplitude - 0.1).abs() <= 10.0 * f64::EPSILON * 0.1);
+        });
+    });
 }

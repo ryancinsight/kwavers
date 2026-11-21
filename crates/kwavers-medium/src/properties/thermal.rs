@@ -212,8 +212,8 @@ impl ThermalPropertyData {
     pub fn bone() -> Self {
         Self::new(
             0.32,
-            SPECIFIC_HEAT_BONE, // 1313 J/(kg·K) (Duck 1990 Table 9.1)
-            BONE_DENSITY,       // 1900 kg/m³ (Duck 1990)
+            SPECIFIC_HEAT_BONE,       // 1313 J/(kg·K) (Duck 1990 Table 9.1)
+            BONE_DENSITY.into_base(), // 1900 kg/m³ (Duck 1990)
             None,
             None,
         )

@@ -146,6 +146,6 @@ impl ElasticPropertyData {
     /// Bone properties (cortical bone)
     #[must_use]
     pub fn bone() -> Self {
-        Self::from_engineering(BONE_DENSITY, 17e9, 0.3)
+        Self::from_engineering(BONE_DENSITY.into_base(), 17e9, 0.3)
     }
 }

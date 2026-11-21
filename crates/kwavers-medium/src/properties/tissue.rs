@@ -134,7 +134,7 @@ pub const BRAIN_GRAY_MATTER: TissueProperties = TissueProperties {
 /// Source: Duck (1990), Table 3.3
 pub const SKULL: TissueProperties = TissueProperties {
     sound_speed: 4080.0,
-    density: DENSITY_SKULL,
+    density: *DENSITY_SKULL.as_base(),
     // Z = ρ·c = 1920 × 4080 = 7 833 600 Pa·s/m
     impedance: 7833600.0,
     absorption_coefficient: ACOUSTIC_ABSORPTION_SKULL_BULK, // 3.0 dB/(cm·MHz) — Duck (1990)

@@ -1,23 +1,22 @@
 //! CT slice preparation and CT-to-acoustic property mapping.
 
-use kwavers_core::constants::acoustic_parameters::SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ;
+use kwavers_core::constants::bone_acoustics::{
+    marsac_skull_attenuation_slope, marsac_skull_sound_speed, MARSAC_REFERENCE_FREQUENCY,
+    MARSAC_SOFT_TISSUE_ATTENUATION_SLOPE,
+};
 use kwavers_core::constants::ct_acoustics::{
     HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD, SOUND_SPEED_SOFT_TISSUE_MAX,
 };
-use kwavers_core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_WATER_37C};
+use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_37C;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::numerics::operators::interpolation::bilinear_index_space;
 use leto::{Array2, Array3};
 
-use super::config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
+use super::config::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
-/// Soft-tissue attenuation in Np/(m·MHz) derived from `ACOUSTIC_ABSORPTION_TISSUE`
-/// (0.5 dB/(cm·MHz)) through the `const`-capable owner beside
-/// `PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS).
-pub(super) const SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ: f64 =
-    kwavers_medium::absorption::power_law::db_per_cm_mhz_to_np_per_m_mhz(
-        ACOUSTIC_ABSORPTION_TISSUE,
-    );
+pub(super) fn soft_tissue_attenuation_at_reference() -> f64 {
+    (MARSAC_SOFT_TISSUE_ATTENUATION_SLOPE * MARSAC_REFERENCE_FREQUENCY).into_base()
+}
 
 /// CT slice resampled to the square transcranial UST inversion domain.
 #[derive(Clone, Debug)]
@@ -218,11 +217,12 @@ impl AcousticSlice {
                 skull_mask[[ix, iy]] = skull;
                 sound_speed[[ix, iy]] = if skull {
                     let phi = (hu / 1000.0).clamp(0.0, 1.0);
-                    attenuation[[ix, iy]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ * (1.0 - phi)
-                        + SKULL_ATTENUATION_MARSAC_MAX_NP_PER_M_MHZ * phi;
-                    SOUND_SPEED_WATER_SIM * (1.0 - phi) + SOUND_SPEED_SKULL * phi
+                    attenuation[[ix, iy]] = (marsac_skull_attenuation_slope(phi)
+                        * MARSAC_REFERENCE_FREQUENCY)
+                        .into_base();
+                    marsac_skull_sound_speed(phi).into_base()
                 } else if hu > HU_BRAIN_BODY_THRESHOLD {
-                    attenuation[[ix, iy]] = SOFT_TISSUE_ATTENUATION_NP_PER_M_MHZ;
+                    attenuation[[ix, iy]] = soft_tissue_attenuation_at_reference();
                     soft_tissue_speed(hu)
                 } else {
                     SOUND_SPEED_WATER_SIM

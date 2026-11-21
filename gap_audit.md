@@ -1,3 +1,9 @@
+## Bone and skull acoustic references
+
+Skull CT maps share a typed sound-speed and linear amplitude-loss blend.
+Evaluate the slope at the map's reference frequency before scalar
+extraction. Fractional power-law material parameters remain distinct.
+
 ## Medium-aware collocated field coupling
 
 The coupler samples and validates physical coefficients for each cell at

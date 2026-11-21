@@ -59,7 +59,7 @@ pub(crate) const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
 
 /// Colormap bounds [m/s] for skull image panels.
 pub(crate) const C_LO: f64 = SOUND_SPEED_WATER_SIM; // 1500 m/s → blue
-pub(crate) const C_HI: f64 = SOUND_SPEED_SKULL_CORTICAL; // 3100 m/s → red
+pub(crate) const C_HI: f64 = *SOUND_SPEED_SKULL_CORTICAL.as_base(); // 3100 m/s → red
 
 // Stage-2 brain tissue FWI constants (Guasch 2020 §Methods)
 

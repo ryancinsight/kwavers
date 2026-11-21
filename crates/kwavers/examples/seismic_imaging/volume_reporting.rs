@@ -22,7 +22,7 @@ pub(super) fn write_outputs(
     })?;
 
     let c_lo = kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    let c_hi = SOUND_SPEED_SKULL_CORTICAL;
+    let c_hi = SOUND_SPEED_SKULL_CORTICAL.into_base();
     let skull_path = abs_dir.join("brain3d_fwi_orthogonal.png");
     let t1_tissue_path = abs_dir.join("brain3d_t1_tissue.png");
     let brain_tissue_path = abs_dir.join("brain3d_brain_tissue.png");
