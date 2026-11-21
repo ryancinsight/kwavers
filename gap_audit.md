@@ -1,3 +1,24 @@
+## Aequitas 0.4 registry cutover
+
+Kwavers source `4f82907ce181d073dda22dd731acd0e0f85f6f96` uses the Aequitas 0.4 registry cohort.
+All 22 crates.io archives match their remote source tags. The driver package adds a
+packaging-only change at `aa4ba0d06c25f67b7b1196fd1e2021676d7e957b`. The archive
+preserves all 381 original CAD files. The driver suite has 495 passes and two
+pre-existing generated-board fixture checks that return early. The release
+workspace resolves 565 package versions from an empty lockfile.
+The registry-only consumer resolves 506 package versions.
+Kwavers main `d5853a77a32ecf31e4cd92fd6ddd2fd79b9d183c` independently resolves
+565 package versions with its Aequitas 0.5 configuration. The
+root-only consumer resolves 454 default and 505 all-feature package versions
+without pinning transitive Kwavers crates. The all-target graphs cover normal, build,
+and development edges and contain zero Chrono.
+
+The legacy audit reports zero references, and all 39 Python binding tests pass.
+Fifteen WGPU tests cover Metal absorption, bitwise coefficient readback, packed-field
+limits, Bluestein workspace refusal, and pressure and velocity parity.
+The cutover suite passes 2,827 cases. The triplet-pulse parity case remains
+unverified because the prototype’s external RF reference files were unavailable.
+
 ## 2026-11-19 — Provider and numerical module candidates
 
 See [KW-PROVIDER-CUTOVERS](backlog/kw-provider-cutovers.md) for the
@@ -5,10 +26,9 @@ pinned providers, value-level results, and outstanding source and
 integration gates. Kwavers owns the Python ndarray conversion at its
 consuming boundary in accordance with Leto ADR 0017.
 The native provider and Chrono graph gates pass with the cutover lock.
-[Registry verification](backlog/kw-release-crates-01.md) remains open for
-the Aequitas 0.4 candidate. The manifest uses the registry cohort. The
-lock guard recognizes workspace-owned packages by name and version, and
-the supply-chain policy rejects Chrono in the audited graph.
+[Registry verification](backlog/kw-release-crates-01.md) closes the
+Aequitas 0.4 cutover. The lock guard recognizes workspace-owned packages by
+name and version, and the supply-chain policy rejects Chrono in the audited graph.
 
 ## Capability surveys by keyword produce false positives on name collisions
 

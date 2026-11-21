@@ -37,8 +37,10 @@
 - The locked all-feature, all-target Cargo tree and lockfile both exclude
   Chrono. `cargo-deny check advisories` passes without a Chrono exception.
 - The plotting-disabled build, clinical example, and Python validation
-  harness compile on the reconciled tree. Live external k-Wave parity,
-  hosted CI, and fresh-consumer resolution remain open.
+  harness compile. The hosted wheel checks pass the k-Wave comparison,
+  angular-spectrum and thermal-acoustic cases. The merged cutover and
+  published cohort resolve from fresh workspaces with zero Chrono.
+  [The registry release record](kw-release-crates-01.md) links the evidence.
 - 103 other tracked Rust files still exceed the 500-line limit. The largest
   production module is the lithotripsy cavitation cloud. Split remaining
   modules by numerical operation and measure compile-time specialization,

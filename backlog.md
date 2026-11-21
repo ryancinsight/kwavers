@@ -39,7 +39,7 @@
 <a id="kw-mat-043"></a>- [KW-MAT-043](backlog/kw-mat-043.md) — Direct FWI L-BFGS provider ownership [patch] [arch] — todo
 <a id="kw-py-uvlock-stale-2026-09-21"></a>- [KW-PY-UVLOCK-STALE-2026-09-21](backlog/kw-py-uvlock-stale-2026-09-21.md) — The Python dev lockfile is stale against its own pyproject [patch] — todo
 <a id="kw-ray-040"></a>- [KW-RAY-040](backlog/kw-ray-040.md) — Layered focus-path contract [minor] — todo
-<a id="kw-release-crates-01"></a>- [KW-RELEASE-CRATES-01](backlog/kw-release-crates-01.md) — Publish the Rust package closure [patch] — in progress
+<a id="kw-release-crates-01"></a>- [KW-RELEASE-CRATES-01](backlog/kw-release-crates-01.md) — Publish the Rust package closure [patch] — done
 <a id="kw-sim-test-compile-graph"></a>- [KW-SIM-TEST-COMPILE-GRAPH](backlog/kw-sim-test-compile-graph.md) — Reduce simulation test build latency [patch] [perf] — todo
 <a id="kw-vis-105"></a>- [KW-VIS-105](backlog/kw-vis-105.md) — Visualization renderer ignores the field type, and engine tests leave four behaviours unpinned [patch] — todo
 <a id="kwavers-aeq-met-66"></a>- [KWAVERS-AEQ-MET-66](backlog/kwavers-aeq-met-66.md) — Type thermal-diffusion quantities [major] [arch] — blocked
