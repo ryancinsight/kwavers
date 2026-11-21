@@ -1204,8 +1204,8 @@ the other public layers use 3.0.0. See
 
 - **Documentation:** The generic field-coupling implementation now states its
   nominal medium-coefficient contract explicitly. The remaining medium-aware
-  provider extension is recorded in `KWAVERS-COUPLING-CONTRACT-001`; numerical
-  behavior is unchanged.
+  provider follow-up is documented in [ADR 142](docs/adr/142-medium-aware-field-coupling.md).
+  This documentation change preserved numerical behavior.
 
 - **Breaking:** Removed `BoundaryParameters`, `SolverBoundaryKind`,
   `SimulationBuilder::boundary`, and `Configuration::boundary`. The struct was
