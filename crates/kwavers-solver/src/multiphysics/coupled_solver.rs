@@ -2,7 +2,10 @@
 //!
 //! This module implements a unified solver for coupled acoustic-optical-thermal simulations.
 
-use crate::multiphysics::field_coupling::{FieldCouplingStrategy, MultiphysicsFieldCoupler};
+use crate::multiphysics::field_coupling::{
+    FieldCouplingMedium, FieldCouplingStrategy, MultiphysicsFieldCoupler,
+};
+use aequitas::systems::si::quantities::{Frequency, Time};
 use kwavers_core::error::KwaversResult;
 use kwavers_field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX, TOTAL_FIELDS};
 use kwavers_grid::Grid;
@@ -59,6 +62,24 @@ impl CoupledMultiPhysicsSolver {
         self.field_coupler.couple_fields(&mut self.fields, dt)?;
 
         Ok(())
+    }
+
+    /// Step with spatially varying, frequency-resolved material coefficients.
+    ///
+    /// # Errors
+    /// Returns any field geometry, time, frequency, or material validation error.
+    pub fn step_with_medium(
+        &mut self,
+        duration: Time,
+        acoustic_frequency: Frequency,
+        medium: &impl FieldCouplingMedium,
+    ) -> KwaversResult<()> {
+        self.field_coupler.couple_fields_with_medium(
+            &mut self.fields,
+            duration,
+            acoustic_frequency,
+            medium,
+        )
     }
 
     /// Get reference to multi-physics fields

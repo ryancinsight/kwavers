@@ -1,3 +1,10 @@
+## Medium-aware collocated field coupling
+
+The coupler samples and validates physical coefficients for each cell at
+the supplied frequency before applying the selected strategy. A real solver
+test checks local intensity and heating changes at two frequencies. A
+derived volumetric heat capacity overflow rejects the step before mutation.
+
 ## Capability surveys by keyword produce false positives on name collisions
 
 Recorded 2026-08-12 from the Fullwave 2.5 parity comparison.

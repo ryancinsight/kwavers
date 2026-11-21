@@ -1,9 +1,6 @@
+use super::material::FieldCouplingGains;
 use super::MultiphysicsFieldCoupler;
-use kwavers_core::constants::fundamental::{
-    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, OPTICAL_ABSORPTION_TISSUE_NIR,
-    SOUND_SPEED_TISSUE,
-};
-use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
+use aequitas::systems::si::quantities::{Intensity, Pressure};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
 use leto::Array3;
@@ -14,14 +11,13 @@ impl MultiphysicsFieldCoupler {
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_weak_coupling(
-        &self,
         fields: &mut [Array3<f64>],
-        dt: f64,
+        gains: &impl Fn([usize; 3]) -> FieldCouplingGains,
+        strength: f64,
     ) -> KwaversResult<()> {
-        validate_coupled_field_set(fields)?;
-        self.couple_acoustic_to_optical(fields, dt)?;
-        Self::couple_optical_to_thermal(fields, dt)?;
-        Self::couple_acoustic_to_thermal(fields, dt)?;
+        Self::couple_acoustic_to_optical(fields, gains, strength)?;
+        Self::couple_optical_to_thermal(fields, gains)?;
+        Self::couple_acoustic_to_thermal(fields, gains)?;
         Ok(())
     }
 
@@ -32,13 +28,12 @@ impl MultiphysicsFieldCoupler {
     pub(super) fn apply_strong_coupling(
         &self,
         fields: &mut [Array3<f64>],
-        dt: f64,
+        gains: &impl Fn([usize; 3]) -> FieldCouplingGains,
     ) -> KwaversResult<()> {
-        validate_coupled_field_set(fields)?;
         let mut previous_fields = fields.to_vec();
 
         for iteration in 0..self.max_iterations {
-            self.apply_weak_coupling(fields, dt)?;
+            Self::apply_weak_coupling(fields, gains, self.coupling_strength)?;
 
             if self.check_convergence(&previous_fields, fields) {
                 break;
@@ -59,80 +54,50 @@ impl MultiphysicsFieldCoupler {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn apply_adaptive_coupling(
-        &self,
         fields: &mut [Array3<f64>],
-        dt: f64,
+        gains: &impl Fn([usize; 3]) -> FieldCouplingGains,
     ) -> KwaversResult<()> {
-        validate_coupled_field_set(fields)?;
         let gradients = Self::calculate_field_gradients(fields);
         let coupling_strength = Self::adjust_coupling_strength(&gradients);
-        self.apply_coupling_with_strength(fields, dt, coupling_strength)
+        Self::apply_weak_coupling(fields, gains, coupling_strength)
     }
 
-    /// Couple acoustic field to optical field (photoelastic effect).
-    ///
-    /// Refractive index modulation: Δn = dn/dp · p, where dn/dp ≈ 1.5×10⁻¹⁰ Pa⁻¹
-    /// for water (Schmid et al. 2012, "Photoacoustic sound generation in water
-    /// droplets", Appl. Phys. Lett. 100:014105). The field-coupler contract
-    /// accepts collocated fields but no medium-property provider, so this path
-    /// uses the documented nominal coefficient. [`AcousticOpticalSolver`]
-    /// carries a caller-supplied coefficient for medium-specific coupling.
-    fn couple_acoustic_to_optical(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
+    /// Scale optical intensity by the pressure-driven refractive-index response.
+    fn couple_acoustic_to_optical(
+        fields: &mut [Array3<f64>],
+        gains: &impl Fn([usize; 3]) -> FieldCouplingGains,
+        strength: f64,
+    ) -> KwaversResult<()> {
         let (pressure, intensity) = read_write_fields::<PRESSURE_IDX, LIGHT_IDX>(fields)?;
-
-        // The generic field-coupler API has no medium-property input.
-        const DN_DP: f64 = 1e-12; // documented nominal water coefficient
-
-        for ([i, j, k], &p) in pressure.indexed_iter() {
-            let delta_n = DN_DP * p;
-            let modulation = (self.coupling_strength * delta_n).mul_add(dt, 1.0);
-            intensity[[i, j, k]] *= modulation;
+        for (cell, &p) in pressure.indexed_iter() {
+            let response = gains(cell).photoelastic * Pressure::from_base(p);
+            intensity[cell] *= strength.mul_add(response.into_base(), 1.0);
         }
-
         Ok(())
     }
 
-    /// Couple optical field to thermal field (absorption heating).
-    ///
-    /// Heat source: Q = μ_a · I, where μ_a is the optical absorption coefficient
-    /// and I is the optical intensity (fluence rate). Uses
-    /// [`OPTICAL_ABSORPTION_TISSUE_NIR`] (10 m⁻¹, typical for soft tissue in the
-    /// NIR window, Jacques 2013). The generic field-coupler API has no
-    /// per-voxel optical-property input, so it applies this nominal tissue
-    /// coefficient.
-    fn couple_optical_to_thermal(fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
+    /// Apply optical absorption heating over the step duration.
+    fn couple_optical_to_thermal(
+        fields: &mut [Array3<f64>],
+        gains: &impl Fn([usize; 3]) -> FieldCouplingGains,
+    ) -> KwaversResult<()> {
         let (intensity, temperature) = read_write_fields::<LIGHT_IDX, TEMPERATURE_IDX>(fields)?;
-
-        for ([i, j, k], &i_val) in intensity.indexed_iter() {
-            let heat_source = OPTICAL_ABSORPTION_TISSUE_NIR * i_val;
-            let delta_t = heat_source * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
-            temperature[[i, j, k]] += delta_t;
+        for (cell, &value) in intensity.indexed_iter() {
+            temperature[cell] += (gains(cell).optical * Intensity::from_base(value)).into_base();
         }
-
         Ok(())
     }
 
-    /// Couple acoustic field to thermal field (absorption heating).
-    ///
-    /// Acoustic intensity: I = p² / (2ρc) (Morton & Ter Haar 1998).
-    /// Heat source: Q = α · I, where α is the acoustic absorption coefficient.
-    /// Uses [`ACOUSTIC_ABSORPTION_TISSUE`] (0.5 dB/(cm·MHz), Duck 1990) as a
-    /// generic tissue default. The generic field-coupler API has no
-    /// frequency-dependent medium-property input, so it applies this nominal
-    /// tissue coefficient.
-    fn couple_acoustic_to_thermal(fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
+    /// Apply acoustic intensity absorption with peak pressure p and I = p²/(2ρc).
+    fn couple_acoustic_to_thermal(
+        fields: &mut [Array3<f64>],
+        gains: &impl Fn([usize; 3]) -> FieldCouplingGains,
+    ) -> KwaversResult<()> {
         let (pressure, temperature) = read_write_fields::<PRESSURE_IDX, TEMPERATURE_IDX>(fields)?;
-
-        const TWO: f64 = 2.0;
-        let impedance = DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE;
-
-        for ([i, j, k], &p) in pressure.indexed_iter() {
-            let intensity = p * p / (TWO * impedance);
-            let heat_source = ACOUSTIC_ABSORPTION_TISSUE * intensity;
-            let delta_t = heat_source * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
-            temperature[[i, j, k]] += delta_t;
+        for (cell, &value) in pressure.indexed_iter() {
+            let p = Pressure::from_base(value);
+            temperature[cell] += (gains(cell).acoustic * (p * p)).into_base();
         }
-
         Ok(())
     }
 
@@ -178,9 +143,10 @@ impl MultiphysicsFieldCoupler {
             .iter()
             .map(|field| {
                 let mut max_gradient: f64 = 0.0;
-                for i in 1..field.shape()[0] - 1 {
-                    for j in 1..field.shape()[1] - 1 {
-                        for k in 1..field.shape()[2] - 1 {
+                let [nx, ny, nz] = field.shape();
+                for i in 1..nx.saturating_sub(1) {
+                    for j in 1..ny.saturating_sub(1) {
+                        for k in 1..nz.saturating_sub(1) {
                             let grad_x = field[[i + 1, j, k]] - field[[i - 1, j, k]];
                             let grad_y = field[[i, j + 1, k]] - field[[i, j - 1, k]];
                             let grad_z = field[[i, j, k + 1]] - field[[i, j, k - 1]];
@@ -207,25 +173,9 @@ impl MultiphysicsFieldCoupler {
             1.0
         }
     }
-
-    /// Apply coupling with a specified strength override.
-    fn apply_coupling_with_strength(
-        &self,
-        fields: &mut [Array3<f64>],
-        dt: f64,
-        strength: f64,
-    ) -> KwaversResult<()> {
-        let temp_coupler = Self {
-            strategy: self.strategy,
-            coupling_strength: strength,
-            max_iterations: self.max_iterations,
-            tolerance: self.tolerance,
-        };
-        temp_coupler.apply_weak_coupling(fields, dt)
-    }
 }
 
-fn validate_coupled_field_set(fields: &[Array3<f64>]) -> KwaversResult<()> {
+pub(super) fn validate_coupled_field_set(fields: &[Array3<f64>]) -> KwaversResult<()> {
     validate_field_index::<PRESSURE_IDX>(fields.len())?;
     validate_field_index::<TEMPERATURE_IDX>(fields.len())?;
     validate_field_index::<LIGHT_IDX>(fields.len())?;
