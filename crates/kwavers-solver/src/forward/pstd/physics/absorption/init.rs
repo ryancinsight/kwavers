@@ -29,11 +29,13 @@
 use super::kernel::AbsorptionKernel;
 use super::strata::{resolve_exponent_spectrum, uniform_spectrum};
 use crate::forward::pstd::config::{PSTDConfig, PowerLawDispersion};
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, ReciprocalLength};
 use kwavers_core::constants::acoustic_parameters::REFERENCE_FREQUENCY_HZ;
-use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
+use kwavers_medium::absorption::power_law::{
+    angular_frequency_prefactor, power_law_db_cm_to_np_omega_m,
+};
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers_physics::acoustics::mechanics::RelaxationAbsorption;
@@ -242,8 +244,11 @@ pub(crate) fn initialize_absorption_operators(
                         let alpha_0_si = if alpha_coeff.is_some() {
                             power_law_db_cm_to_np_omega_m(alpha_db_field[[i, j, k]], y)
                         } else {
-                            alpha_np_field[[i, j, k]]
-                                * (1.0 / (TWO_PI * REFERENCE_FREQUENCY_HZ)).powf(y)
+                            angular_frequency_prefactor(
+                                ReciprocalLength::from_base(alpha_np_field[[i, j, k]]),
+                                Frequency::from_base(REFERENCE_FREQUENCY_HZ),
+                                Dimensionless::from_base(y),
+                            )
                         };
 
                         // Treeby & Cox (2010) Eqs. 19–20

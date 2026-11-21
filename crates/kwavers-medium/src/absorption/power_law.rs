@@ -140,8 +140,10 @@ impl PowerLawAbsorption {
     }
 }
 
+/// Convert a reference pressure-amplitude loss from dB/cm to reciprocal metres.
+#[must_use]
 #[inline]
-fn reference_loss_from_decibels_per_centimetre(decibels: f64) -> ReciprocalLength {
+pub fn reference_loss_from_decibels_per_centimetre(decibels: f64) -> ReciprocalLength {
     ReciprocalLength::from_base(decibels * (DB_TO_NP / CM_TO_M))
 }
 
@@ -180,11 +182,26 @@ fn evaluate(
 #[inline]
 pub fn power_law_db_cm_to_np_omega_m(alpha_db_cm: f64, alpha_power: f64) -> f64 {
     // The `/ CM_TO_M` factor converts dB/cm → dB/m (1/0.01 = 100).
-    let reference_loss = reference_loss_from_decibels_per_centimetre(alpha_db_cm);
-    // The raw spectral coefficient has runtime-dependent units. Strip the
-    // reference angular frequency only at the kernel coefficient boundary.
-    let omega_ref = Frequency::from_base(REFERENCE_FREQUENCY_HZ) * TWO_PI;
-    reference_loss.into_base() * omega_ref.into_base().recip().powf(alpha_power)
+    angular_frequency_prefactor(
+        reference_loss_from_decibels_per_centimetre(alpha_db_cm),
+        Frequency::from_base(REFERENCE_FREQUENCY_HZ),
+        Dimensionless::from_base(alpha_power),
+    )
+}
+
+/// Convert a reference loss to the scalar coefficient of the angular-frequency
+/// power law. Callers supply a finite positive reference frequency and the
+/// exponent that their spectral operator uses. The output unit is
+/// `(rad/s)^(-y)/m`, which depends on the runtime exponent.
+#[must_use]
+#[inline]
+pub fn angular_frequency_prefactor(
+    reference_loss: ReciprocalLength,
+    reference_frequency: Frequency,
+    exponent: Dimensionless,
+) -> f64 {
+    let omega_ref = reference_frequency * TWO_PI;
+    reference_loss.into_base() * omega_ref.into_base().recip().powf(exponent.into_base())
 }
 
 /// Amplitude attenuation `α(f)` [Np·m⁻¹] at frequency `f` for the k-Wave

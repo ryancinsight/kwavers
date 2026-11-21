@@ -3,10 +3,12 @@
 use crate::pstd_gpu::medium::{
     validate_absorption_coefficient, validate_active_power_law_exponent, PstdMediumSnapshot,
 };
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, ReciprocalLength};
 use eunomia::FloatElement;
 use kwavers_core::constants::{acoustic_parameters::REFERENCE_FREQUENCY_HZ, numerical::TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
+use kwavers_medium::absorption::power_law::angular_frequency_prefactor;
 use kwavers_solver::forward::pstd::config::PowerLawDispersion;
 use std::f64::consts::PI;
 
@@ -93,7 +95,8 @@ pub fn power_law_operators(
     let (dk_x, dk_y, dk_z) = (TWO_PI / lx, TWO_PI / ly, TWO_PI / lz);
     let y = exponent;
     // Spectral normalizer for the SI base prefactor (Np/m at 1 MHz).
-    let inv_omega_ref = 1.0 / (TWO_PI * REFERENCE_FREQUENCY_HZ);
+    let reference_frequency = Frequency::from_base(REFERENCE_FREQUENCY_HZ);
+    let exponent = Dimensionless::from_base(y);
     let dispersion_factor = match dispersion {
         PowerLawDispersion::Causal => (PI * y / 2.0).tan(),
         PowerLawDispersion::Omitted => 0.0,
@@ -116,7 +119,11 @@ pub fn power_law_operators(
             operators.nabla2[flat] = f32::from_f64(k_mag.powf(y - 1.0));
         }
 
-        let alpha_0_si = coefficient_si_at(flat) * inv_omega_ref.powf(y);
+        let alpha_0_si = angular_frequency_prefactor(
+            ReciprocalLength::from_base(coefficient_si_at(flat)),
+            reference_frequency,
+            exponent,
+        );
         let c0_local = f64::from(c0);
         operators.tau[flat] = f32::from_f64(-2.0 * alpha_0_si * c0_local.powf(y - 1.0));
         operators.eta[flat] =
