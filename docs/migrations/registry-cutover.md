@@ -1,10 +1,59 @@
 # Kwavers registry cutover checklist
 
-## Aequitas 0.5 source cohort
+## Target 4.0.0 Rust registry cohort
 
 - [x] [major] Verify one registry provider set and pass 15 Metal capacity,
   readback, and parity cases.
-- [ ] [major] Verify the final registry lock and required checks.
+- [x] [major] Verify the required GitHub checks and accept the version
+  increments against the previous published baselines with
+  `cargo-semver-checks`.
+- [x] [patch] Compile and publish all 22 packages in dependency order and
+  match each crates.io archive's SHA-256 and source revision.
+- [x] [patch] Verify the cohort from empty standalone lockfiles and
+  build with the published provider graph.
+
+The cohort uses merge commit `2bd53ba9af6b586c2962f608aa82b1e6e7a0819b`
+from [#1124](https://github.com/ryancinsight/kwavers/pull/1124).
+[Driver 0.4.0](https://crates.io/crates/kwavers-driver/0.4.0) uses merge
+commit `d5853a77a32ecf31e4cd92fd6ddd2fd79b9d183c` from
+[#1125](https://github.com/ryancinsight/kwavers/pull/1125). Its 7.0 MiB archive
+excludes the datasheets and renders and preserves all 381 files in the
+CAD model and archive directories byte for byte. Driver passes 495 cases.
+Two component checks return early because their generated board fixtures
+are absent from the release source.
+
+A fresh consumer depending only on the application resolves its 21-package
+Kwavers dependency graph. A second consumer resolves all 22 packages, with
+Driver's Transducer feature enabled. Both resolve one Aequitas 0.5.0,
+Eunomia 0.12.1, and Leto 0.52.0 provider set with zero Chrono packages.
+The consumer passes the numerical smoke test with default features and
+type-checks with the CUDA provider feature enabled. Each package's
+`crate-<package>-v<version>` tag identifies its published source commit.
+
+| Package | Published version |
+| --- | --- |
+| `kwavers` | [4.0.0](https://crates.io/crates/kwavers/4.0.0) |
+| `kwavers-analysis` | [5.0.0](https://crates.io/crates/kwavers-analysis/5.0.0) |
+| `kwavers-boundary` | [4.0.0](https://crates.io/crates/kwavers-boundary/4.0.0) |
+| `kwavers-core` | [4.0.0](https://crates.io/crates/kwavers-core/4.0.0) |
+| `kwavers-diagnostics` | [5.0.0](https://crates.io/crates/kwavers-diagnostics/5.0.0) |
+| `kwavers-driver` | [0.4.0](https://crates.io/crates/kwavers-driver/0.4.0) |
+| `kwavers-field` | [4.0.0](https://crates.io/crates/kwavers-field/4.0.0) |
+| `kwavers-gpu` | [6.0.0](https://crates.io/crates/kwavers-gpu/6.0.0) |
+| `kwavers-grid` | [4.0.0](https://crates.io/crates/kwavers-grid/4.0.0) |
+| `kwavers-imaging` | [4.0.0](https://crates.io/crates/kwavers-imaging/4.0.0) |
+| `kwavers-math` | [4.0.0](https://crates.io/crates/kwavers-math/4.0.0) |
+| `kwavers-medium` | [5.0.0](https://crates.io/crates/kwavers-medium/5.0.0) |
+| `kwavers-mesh` | [4.0.0](https://crates.io/crates/kwavers-mesh/4.0.0) |
+| `kwavers-phantom` | [4.0.0](https://crates.io/crates/kwavers-phantom/4.0.0) |
+| `kwavers-physics` | [4.0.0](https://crates.io/crates/kwavers-physics/4.0.0) |
+| `kwavers-receiver` | [4.0.0](https://crates.io/crates/kwavers-receiver/4.0.0) |
+| `kwavers-signal` | [4.0.0](https://crates.io/crates/kwavers-signal/4.0.0) |
+| `kwavers-simulation` | [4.0.0](https://crates.io/crates/kwavers-simulation/4.0.0) |
+| `kwavers-solver` | [4.0.0](https://crates.io/crates/kwavers-solver/4.0.0) |
+| `kwavers-source` | [4.0.0](https://crates.io/crates/kwavers-source/4.0.0) |
+| `kwavers-therapy` | [4.0.0](https://crates.io/crates/kwavers-therapy/4.0.0) |
+| `kwavers-transducer` | [5.0.0](https://crates.io/crates/kwavers-transducer/5.0.0) |
 
 ## Target 3.0.0 Rust registry cohort
 

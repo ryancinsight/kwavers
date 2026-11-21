@@ -16,4 +16,9 @@ priority: feature; needs: none; scope: root `Cargo.toml` workspace members; `.gi
   [release branch](https://github.com/ryancinsight/kwavers/tree/release/aequitas-0.4),
   [legacy audit repair](https://github.com/ryancinsight/kwavers/pull/1122),
   and [Metal absorption repair](https://github.com/ryancinsight/kwavers/pull/1123).
+- The 4.0.0 cohort publishes all 22 packages for the Aequitas 0.5 and Leto
+  0.52 cutover. The release uses [#1124](https://github.com/ryancinsight/kwavers/pull/1124)
+  and the Driver archive adjustment in [#1125](https://github.com/ryancinsight/kwavers/pull/1125).
+  The [registry checklist](../docs/migrations/registry-cutover.md) records
+  checksum verification, archive provenance, and standalone consumer results.
 - **Version class to carry.** #1059 adds a defaulted method to the public trait `PstdStateBuilder` of `kwavers-gpu` under the commit type `fix`; by contract it is [minor], so a release tool that reads commit types alone assigns too small a bump (its first verdict, comment 6814685775, finding 3).

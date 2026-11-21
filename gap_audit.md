@@ -309,10 +309,10 @@ families remain separate audit candidates. The next item is the shared
   equalities, Bessel far-field differential validation, geometric invariance
   tests, bounded-work rejection, warning-denied package diagnostics, and
   212/212 package tests.
-- Residual evidence limit: `cargo-semver-checks` cannot compare
-  `kwavers-transducer` because no registry release exists. The additive public
-  surface is classified [minor] by source review; no machine semver proof is
-  claimed.
+- Closed 2026-11-21: `cargo-semver-checks` compares the published
+  `kwavers-transducer` 4.1.0 baseline with 5.0.0 and accepts the major bump.
+  The [registry checklist](docs/migrations/registry-cutover.md) records the
+  release archive and consumer verification.
 
 - Closed 2026-07-12: `nd_to_leto1` and `leto1_to_nd1` duplicated Leto's owned
   rank-1 ndarray conversions and coupled ten PyO3 consumers to a local

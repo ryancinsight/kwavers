@@ -1,6 +1,6 @@
 # Kwavers 🌀
 
-[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/crates/v/kwavers)](https://crates.io/crates/kwavers)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-available-blue.svg)](https://docs.rs/kwavers)
 [![Rust](https://img.shields.io/badge/rust-2021+-orange.svg)](https://www.rust-lang.org/)
@@ -77,10 +77,11 @@ independent provider algorithms, while model-residual adaptive refinement
 remains solver-owned. See
 [ADR 043](docs/ADR/043-tyche-uncertainty-provider.md).
 
-The application and most layer crates use the `3.0.0` release line.
+The application and most layer crates use the `4.0.0` registry release.
 The registry cohort lists independently versioned layers in the
-[changelog](CHANGELOG.md). The stable application `4.0.0` milestone is
-tracked in [ADR 138](docs/adr/138-release-scope-4-0.md).
+[changelog](CHANGELOG.md). [ADR 140](docs/adr/140-published-typed-provider-cutover.md)
+describes the typed-provider cutover. [ADR 138](docs/adr/138-release-scope-4-0.md)
+tracks the simulation capability milestones.
 
 Validation status: the k-space pseudospectral solver matches the k-Wave
 reference solver on the homogeneous-water IVP benchmark at Pearson
@@ -162,15 +163,15 @@ Add the layer crates you need to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-kwavers-grid = "3.0.0"
-kwavers-medium = "4.0.0"
+kwavers-grid = "4.0.0"
+kwavers-medium = "5.0.0"
 ```
 
 For GPU acceleration and advanced features, add the top-level integration crate:
 
 ```toml
 [dependencies]
-kwavers = { version = "3.0.0", features = ["gpu", "pinn"] }
+kwavers = { version = "4.0.0", features = ["gpu", "pinn"] }
 ```
 
 ### Example 1: Basic Grid Setup

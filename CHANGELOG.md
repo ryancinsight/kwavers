@@ -1,13 +1,8 @@
 # Changelog
 
-## 4.0.0 source cohort
+## Unreleased
 
 ### Breaking
-
-- [major] Use Aequitas 0.5 quantities and Leto 0.52 arrays throughout the
-  published-provider graph. Update typed dependencies together.
-  The driver requires Rust 1.97 for its supported features. See
-  [ADR 140](docs/adr/140-published-typed-provider-cutover.md).
 
 - [major] Coupling getter inputs and outputs carry physical quantities.
   Use `CouplingPosition` for points, signed `Stress` for normal traction,
@@ -16,11 +11,28 @@
   coefficients and implement the viscous dissipation law for the medium.
   See [ADR 141](docs/adr/141-type-coupling-getters.md).
 
+## 4.0.0 Rust registry cohort
+
+The application and most layer crates use 4.0.0. Analysis, Diagnostics,
+Medium, and Transducer use 5.0.0, GPU uses 6.0.0, and Driver uses 0.4.0.
+The [registry checklist](docs/migrations/registry-cutover.md) records the
+source revisions and verification for all 22 packages.
+
+### Breaking
+
+- [major] Use Aequitas 0.5 quantities and Leto 0.52 arrays throughout the
+  published-provider graph. Update typed dependencies together.
+  The driver requires Rust 1.97 for its supported features. See
+  [ADR 140](docs/adr/140-published-typed-provider-cutover.md).
+
 ### Fixed
 
 - [patch] Pack the two spectral symbols and two material coefficients
   into paired buffers. The absorbing PSTD pipelines use 29 storage
   bindings and retain the fractional-Laplacian formulas.
+- [patch] Exclude Driver datasheets and renders from its crates.io archive
+  to meet the upload limit. The CAD models and archives remain available
+  in the package.
 
 ## 3.0.0 Rust registry cohort
 
