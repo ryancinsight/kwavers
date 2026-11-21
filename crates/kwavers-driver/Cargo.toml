@@ -11,6 +11,7 @@ rust-version = "1.97"
 description = "Physics-guided, manufacturing-aware driver electronics design for kwavers"
 license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
+exclude = ["/docs/datasheets/", "/docs/renders/"]
 authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
 
 [dependencies]
