@@ -4,17 +4,12 @@ resolver = "2"
 
 [workspace.dependencies]
 aequitas = { version = "0.5.0", default-features = false, features = ["std", "serde"] }
-# The binding-side half of the same repository. It owns the quantity protocol
-# reader and `Dimensioned<D>`, so the extraction lives once upstream rather
-# than being reimplemented here. Unpublished by design: the wheel is its
-# deliverable, and this crate consumes it as a library.
-aequitas_python = { package = "aequitas-python", version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "7625b7b99925f271cdf30f52b8351fc46fcaa871" }
+# The published quantity protocol reader and `Dimensioned<D>` adapter.
+aequitas_python = { package = "aequitas-python", version = "0.1.0" }
 asclepius = { version = "0.5.0", default-features = false, features = ["std"] }
 hyperion = { package = "hyperion-transport", version = "0.3.0" }
 proteus = { package = "proteus-mat", version = "0.3.0" }
 tyche-core = "0.5.0"
-# Public Atlas providers resolve through crates.io. The private Python member
-# uses the pinned quantity protocol provider above.
 ritk-core = "0.12.0"
 ritk-io = "0.7.0"
 ritk-image = "0.6.0"

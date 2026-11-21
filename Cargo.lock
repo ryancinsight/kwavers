@@ -80,7 +80,8 @@ dependencies = [
 [[package]]
 name = "aequitas-python"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/aequitas?rev=7625b7b99925f271cdf30f52b8351fc46fcaa871#7625b7b99925f271cdf30f52b8351fc46fcaa871"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07f355b5090aabbeae020f92dfb4699b7c19a4d22293a96981d441a280e837ab"
 dependencies = [
  "aequitas",
  "pyo3",

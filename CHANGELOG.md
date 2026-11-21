@@ -11,6 +11,11 @@
   coefficients and implement the viscous dissipation law for the medium.
   See [ADR 141](docs/adr/141-type-coupling-getters.md).
 
+### Changed
+
+- [patch] Use the published `aequitas-python` 0.1.0 quantity adapter in the
+  Python wheel with Aequitas 0.5.0 and Eunomia 0.12.1.
+
 ## 4.0.0 Rust registry cohort
 
 The application and most layer crates use 4.0.0. Analysis, Diagnostics,
