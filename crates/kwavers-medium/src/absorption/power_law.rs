@@ -144,7 +144,7 @@ impl PowerLawAbsorption {
 #[must_use]
 #[inline]
 pub fn reference_loss_from_decibels_per_centimetre(decibels: f64) -> ReciprocalLength {
-    ReciprocalLength::from_base(decibels * (DB_TO_NP / CM_TO_M))
+    ReciprocalLength::from_base(decibels * DB_TO_NP * CM_TO_M.recip())
 }
 
 #[inline]
