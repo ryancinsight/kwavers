@@ -2,6 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
+use kwavers_medium::absorption::power_law::reference_loss_from_decibels_per_centimetre;
 use kwavers_medium::{core::MIN_PHYSICAL_SOUND_SPEED, Medium};
 use kwavers_solver::forward::pstd::config::PowerLawDispersion;
 
@@ -64,13 +65,14 @@ impl PowerLawResolver {
             validate_active_power_law_exponent(alpha_power, dispersion)?;
             // User boundary is k-Wave dB; the prepared coefficients are SI
             // Np/m at 1 MHz, matching what the medium path pushes.
-            use kwavers_core::constants::DB_TO_NP;
             return Ok(Self {
                 dispersion,
                 fallback_exponent: alpha_power,
                 exponent: Some(alpha_power),
                 coefficients: None,
-                uniform_coefficient: Some(alpha_coeff_db * DB_TO_NP * 100.0),
+                uniform_coefficient: Some(
+                    reference_loss_from_decibels_per_centimetre(alpha_coeff_db).into_base(),
+                ),
             });
         }
         Ok(Self {

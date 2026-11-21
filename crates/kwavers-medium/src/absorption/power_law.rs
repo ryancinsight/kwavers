@@ -1,107 +1,162 @@
 //! Power-law absorption model
 
+use aequitas::systems::si::quantities::{
+    Dimensionless, Frequency, Length, ReciprocalLength, Velocity,
+};
 use kwavers_core::constants::acoustic_parameters::{ABSORPTION_TISSUE, WATER_ABSORPTION_ALPHA_0};
-use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ, TWO_PI};
+use kwavers_core::constants::numerical::{CM_TO_M, TWO_PI};
 use kwavers_core::constants::{DB_TO_NP, REFERENCE_FREQUENCY_HZ};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
-/// Power-law absorption model configuration
+mod wire;
+
+/// A pressure-amplitude absorption law with a runtime exponent.
+/// `α(f) = α_ref · (f/f_ref)^y` raises only a dimensionless ratio, so
+/// fractional exponents leave the returned attenuation in reciprocal metres.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(try_from = "wire::PowerLawWire", into = "wire::PowerLawWire")]
 pub struct PowerLawAbsorption {
-    /// Absorption coefficient at 1 `MHz` [dB/(MHz^y cm)]
-    pub alpha_0: f64,
-    /// Power law exponent (typically 1.0-1.5)
-    pub y: f64,
-    /// Reference frequency for `alpha_0` \[Hz\]
-    pub f_ref: f64,
-    /// Enable dispersion correction
-    pub dispersion_correction: bool,
+    reference_loss: ReciprocalLength,
+    reference_frequency: Frequency,
+    exponent: Dimensionless,
+    dispersion_correction: bool,
 }
 
 impl Default for PowerLawAbsorption {
     fn default() -> Self {
-        Self {
-            alpha_0: ABSORPTION_TISSUE, // 0.75 dB/(MHz^y·cm) — Duck (1990) Table 4.1
-            y: 1.1,                     // Typical soft tissue exponent
-            f_ref: REFERENCE_FREQUENCY_HZ,
-            dispersion_correction: true,
-        }
+        Self::soft_tissue()
     }
 }
 
 impl PowerLawAbsorption {
-    /// Create absorption model for water at 20°C
+    /// Construct a law from amplitude loss at the specified frequency.
+    ///
+    /// # Errors
+    /// Rejects nonfinite inputs, negative loss or exponent, and nonpositive
+    /// reference frequency.
+    pub fn new(
+        reference_loss: ReciprocalLength,
+        reference_frequency: Frequency,
+        exponent: Dimensionless,
+        dispersion_correction: bool,
+    ) -> KwaversResult<Self> {
+        if !reference_loss.as_base().is_finite()
+            || reference_loss.into_base() < 0.0
+            || !reference_frequency.as_base().is_finite()
+            || reference_frequency.into_base() <= 0.0
+            || !exponent.as_base().is_finite()
+            || exponent.into_base() < 0.0
+        {
+            return Err(KwaversError::InvalidInput(
+                "Invalid reference amplitude loss, reference frequency, or power-law exponent"
+                    .into(),
+            ));
+        }
+        Ok(Self {
+            reference_loss,
+            reference_frequency,
+            exponent,
+            dispersion_correction,
+        })
+    }
+
+    /// Water at 20°C with a quadratic frequency dependence.
     #[must_use]
     pub fn water() -> Self {
         Self {
-            alpha_0: WATER_ABSORPTION_ALPHA_0, // 0.0022 dB/(MHz^y·cm) — Duck (1990) Table 4.1
-            y: 2.0,                            // Quadratic frequency dependence
-            f_ref: REFERENCE_FREQUENCY_HZ,
+            reference_loss: reference_loss_from_decibels_per_centimetre(WATER_ABSORPTION_ALPHA_0),
+            reference_frequency: Frequency::from_base(REFERENCE_FREQUENCY_HZ),
+            exponent: Dimensionless::from_base(2.0),
             dispersion_correction: false,
         }
     }
 
-    /// Create absorption model for soft tissue
+    /// Generic soft tissue with the Duck (1990) reference loss at 1 MHz.
     #[must_use]
     pub fn soft_tissue() -> Self {
         Self {
-            alpha_0: ABSORPTION_TISSUE,
-            y: 1.1,
-            f_ref: REFERENCE_FREQUENCY_HZ,
+            reference_loss: reference_loss_from_decibels_per_centimetre(ABSORPTION_TISSUE),
+            reference_frequency: Frequency::from_base(REFERENCE_FREQUENCY_HZ),
+            exponent: Dimensionless::from_base(1.1),
             dispersion_correction: true,
         }
     }
 
-    /// Calculate absorption coefficient at given frequency
-    #[must_use]
-    pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
-        // Convert dB/(MHz^y cm) → Np/m:
-        //   α [Np/m] = α [dB/cm] · (1/CM_TO_M) [cm/m] · DB_TO_NP [Np/dB]
-        let f_mhz = frequency / MHZ_TO_HZ;
-        let alpha_db = self.alpha_0 * f_mhz.powf(self.y);
-
-        alpha_db * DB_TO_NP / CM_TO_M
-    }
-
-    /// Phase velocity from the Szabo / Treeby-Cox Kramers-Kronig relation
-    /// for power-law absorption.
+    /// Evaluate the pressure-amplitude attenuation at a physical frequency.
     ///
-    /// ## Formula (Szabo 1994 Eq 13; Treeby & Cox 2010 Eq 11)
-    ///
-    /// ```text
-    /// c_p(ω)⁻¹ − c_0⁻¹ = α(ω) · tan(πy/2) / ω
-    /// ```
-    ///
-    /// where `α(ω) = α(ω)` (Np/m) is obtained from
-    /// [`Self::absorption_at_frequency`] (which handles the dB/(cm·MHz^y) →
-    /// Np/m conversion).  Inverting:
-    ///
-    /// ```text
-    /// c_p(ω) = c_0 / (1 + c_0 · α(ω) · tan(πy/2) / ω)
-    /// ```
-    ///
-    /// Prior to 2026-05-21 this used `self.alpha_0` directly in the
-    /// formula — a value stored in dB/(cm·MHz^y), not the SI Np/m
-    /// required by Kramers-Kronig — *and* omitted the `c_0` factor that
-    /// scales the inverse-phase-velocity correction.  Combined, the prior
-    /// dispersion correction was off by ~10⁵× from the canonical result.
-    ///
-    /// ## References
-    /// - Szabo T. L. (1994). *J. Acoust. Soc. Am.* 96(1), 491–500. Eq 13.
-    /// - Treeby B. E. & Cox B. T. (2010). *J. Acoust. Soc. Am.* 127(5), 2741. Eq 11.
-    #[must_use]
-    pub fn phase_velocity(&self, frequency: f64, c0: f64) -> f64 {
-        if !self.dispersion_correction || frequency == 0.0 {
-            return c0;
+    /// # Errors
+    /// Rejects negative or nonfinite frequencies and nonrepresentable losses.
+    pub fn absorption_at_frequency(&self, frequency: Frequency) -> KwaversResult<ReciprocalLength> {
+        if !frequency.as_base().is_finite() || frequency.into_base() < 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Frequency must be finite and nonnegative".into(),
+            ));
         }
-
-        let omega = TWO_PI * frequency;
-        let tan_term = (std::f64::consts::PI * self.y / 2.0).tan();
-        let alpha = self.absorption_at_frequency(frequency); // Np/m
-
-        let denom = 1.0 + c0 * alpha * tan_term / omega;
-        c0 / denom
+        let loss = evaluate(
+            self.reference_loss,
+            frequency / self.reference_frequency,
+            self.exponent,
+        );
+        if !loss.as_base().is_finite() {
+            return Err(KwaversError::InvalidInput(
+                "Power-law attenuation exceeds the scalar range".into(),
+            ));
+        }
+        Ok(loss)
     }
+
+    /// Phase velocity from `c_p = c₀/(1 + c₀ α tan(πy/2)/(2πf))`.
+    ///
+    /// # Errors
+    /// Rejects invalid speed or frequency, a singular odd exponent when
+    /// dispersion is enabled, and nonpositive phase velocity.
+    pub fn phase_velocity(&self, frequency: Frequency, c0: Velocity) -> KwaversResult<Velocity> {
+        if !c0.as_base().is_finite() || c0.into_base() <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Sound speed must be finite and positive".into(),
+            ));
+        }
+        let loss = self.absorption_at_frequency(frequency)?;
+        if !self.dispersion_correction || frequency.into_base() == 0.0 || loss.into_base() == 0.0 {
+            return Ok(c0);
+        }
+        let exponent = self.exponent.into_base();
+        if exponent % 2.0 == 1.0 {
+            return Err(KwaversError::InvalidInput(
+                "Odd exponents are singular in the phase-velocity law".into(),
+            ));
+        }
+        let tan_term = (std::f64::consts::FRAC_PI_2 * exponent).tan();
+        let correction = c0 * loss / (frequency * TWO_PI);
+        let denominator = 1.0 + correction.into_base() * tan_term;
+        let velocity = c0 / denominator;
+        if !velocity.as_base().is_finite() || velocity.into_base() <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Power-law phase velocity must be finite and positive".into(),
+            ));
+        }
+        Ok(velocity)
+    }
+}
+
+/// Convert a reference pressure-amplitude loss from dB/cm to reciprocal metres.
+#[must_use]
+#[inline]
+pub fn reference_loss_from_decibels_per_centimetre(decibels: f64) -> ReciprocalLength {
+    ReciprocalLength::from_base(decibels * DB_TO_NP * CM_TO_M.recip())
+}
+
+#[inline]
+fn evaluate(
+    reference_loss: ReciprocalLength,
+    ratio: Dimensionless,
+    exponent: Dimensionless,
+) -> ReciprocalLength {
+    if reference_loss.into_base() == 0.0 {
+        return reference_loss;
+    }
+    reference_loss * ratio.into_base().powf(exponent.into_base())
 }
 
 /// Convert the k-Wave power-law absorption coefficient from
@@ -127,7 +182,26 @@ impl PowerLawAbsorption {
 #[inline]
 pub fn power_law_db_cm_to_np_omega_m(alpha_db_cm: f64, alpha_power: f64) -> f64 {
     // The `/ CM_TO_M` factor converts dB/cm → dB/m (1/0.01 = 100).
-    alpha_db_cm * DB_TO_NP / CM_TO_M * (1.0 / (TWO_PI * REFERENCE_FREQUENCY_HZ)).powf(alpha_power)
+    angular_frequency_prefactor(
+        reference_loss_from_decibels_per_centimetre(alpha_db_cm),
+        Frequency::from_base(REFERENCE_FREQUENCY_HZ),
+        Dimensionless::from_base(alpha_power),
+    )
+}
+
+/// Convert a reference loss to the scalar coefficient of the angular-frequency
+/// power law. Callers supply a finite positive reference frequency and the
+/// exponent that their spectral operator uses. The output unit is
+/// `(rad/s)^(-y)/m`, which depends on the runtime exponent.
+#[must_use]
+#[inline]
+pub fn angular_frequency_prefactor(
+    reference_loss: ReciprocalLength,
+    reference_frequency: Frequency,
+    exponent: Dimensionless,
+) -> f64 {
+    let omega_ref = reference_frequency * TWO_PI;
+    reference_loss.into_base() * omega_ref.into_base().recip().powf(exponent.into_base())
 }
 
 /// Amplitude attenuation `α(f)` [Np·m⁻¹] at frequency `f` for the k-Wave
@@ -152,7 +226,12 @@ pub fn power_law_db_cm_to_np_m(alpha_db_cm: f64, alpha_power: f64, freq_hz: f64)
     if !freq_hz.is_finite() || freq_hz <= 0.0 {
         return 0.0;
     }
-    alpha_db_cm * (DB_TO_NP / CM_TO_M) * (freq_hz / REFERENCE_FREQUENCY_HZ).powf(alpha_power)
+    evaluate(
+        reference_loss_from_decibels_per_centimetre(alpha_db_cm),
+        Frequency::from_base(freq_hz) / Frequency::from_base(REFERENCE_FREQUENCY_HZ),
+        Dimensionless::from_base(alpha_power),
+    )
+    .into_base()
 }
 
 /// k-Wave `dB/(MHz^y·cm)` power-law prefactor that reproduces a given
@@ -216,7 +295,7 @@ pub const fn db_per_cm_mhz_to_np_per_m_mhz(alpha_db_cm_mhz: f64) -> f64 {
 #[must_use]
 #[inline]
 pub fn power_law_db_cm_to_np_m_hz(alpha_db_cm: f64, alpha_power: f64) -> f64 {
-    alpha_db_cm * DB_TO_NP / CM_TO_M / MHZ_TO_HZ.powf(alpha_power)
+    power_law_db_cm_to_np_m(alpha_db_cm, alpha_power, 1.0)
 }
 
 /// Power law model implementation
@@ -232,162 +311,45 @@ impl PowerLawModel {
         Self { config }
     }
 
-    /// Apply power law absorption in frequency domain
+    /// Apply the amplitude response to every complex sample in each plane.
     ///
-    /// # Panics
-    ///
-    /// Panics if the spectrum's frequency axis length differs from
-    /// `frequencies.len()`. The frequency response is applied plane-by-plane,
-    /// so the two lengths must match.
+    /// # Errors
+    /// Returns an error for a mismatched frequency axis, an invalid distance,
+    /// or an invalid evaluated loss. Validation precedes spectrum mutation.
     pub fn apply_frequency_domain(
         &self,
         spectrum: &mut leto::Array3<eunomia::Complex64>,
-        frequencies: &[f64],
-        distance: f64,
-    ) {
-        assert_eq!(
-            spectrum.shape()[0],
-            frequencies.len(),
-            "invariant: power-law absorption frequency count must match spectrum axis 0"
-        );
-
+        frequencies: &[Frequency],
+        distance: Length,
+    ) -> KwaversResult<()> {
+        if spectrum.shape()[0] != frequencies.len() {
+            return Err(KwaversError::InvalidInput(
+                "Power-law absorption frequency count must match spectrum axis 0".into(),
+            ));
+        }
+        if !distance.as_base().is_finite() || distance.into_base() < 0.0 {
+            return Err(KwaversError::InvalidInput(
+                "Propagation distance must be finite and nonnegative".into(),
+            ));
+        }
+        let gains = frequencies
+            .iter()
+            .map(|&frequency| {
+                let loss = self.config.absorption_at_frequency(frequency)?;
+                Ok((-(loss * distance).into_base()).exp())
+            })
+            .collect::<KwaversResult<Vec<_>>>()?;
         let [_, ny, nz] = spectrum.shape();
-        for (i, &freq) in frequencies.iter().enumerate() {
-            if freq > 0.0 {
-                let alpha = self.config.absorption_at_frequency(freq);
-                let attenuation = (-alpha * distance).exp();
-                for j in 0..ny {
-                    for k in 0..nz {
-                        spectrum[[i, j, k]] *= attenuation;
-                    }
+        for (i, attenuation) in gains.into_iter().enumerate() {
+            for j in 0..ny {
+                for k in 0..nz {
+                    spectrum[[i, j, k]] *= attenuation;
                 }
             }
         }
+        Ok(())
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use eunomia::assert_relative_eq;
-    use eunomia::Complex;
-    use leto::Array3;
-
-    #[test]
-    fn apply_frequency_domain_scales_frequency_planes() {
-        let config = PowerLawAbsorption {
-            alpha_0: 1.0,
-            y: 1.0,
-            f_ref: REFERENCE_FREQUENCY_HZ,
-            dispersion_correction: false,
-        };
-        let model = PowerLawModel::new(config);
-        let initial = Complex::new(2.0, -1.0);
-        let mut spectrum = Array3::from_elem([2, 2, 1], initial);
-        let distance = 0.25;
-
-        model.apply_frequency_domain(&mut spectrum, &[0.0, MHZ_TO_HZ], distance);
-
-        assert_eq!(spectrum[[0, 0, 0]], initial);
-        assert_eq!(spectrum[[0, 1, 0]], initial);
-
-        let attenuation = (-config.absorption_at_frequency(MHZ_TO_HZ) * distance).exp();
-        let expected = initial * attenuation;
-        for j in 0..2 {
-            assert_relative_eq!(spectrum[[1, j, 0]].re, expected.re, epsilon = 1e-12);
-            assert_relative_eq!(spectrum[[1, j, 0]].im, expected.im, epsilon = 1e-12);
-        }
-    }
-
-    #[test]
-    #[should_panic(expected = "power-law absorption frequency count")]
-    fn apply_frequency_domain_rejects_frequency_axis_mismatch() {
-        let model = PowerLawModel::new(PowerLawAbsorption::default());
-        let mut spectrum = Array3::from_elem([2, 1, 1], Complex::new(1.0, 0.0));
-
-        model.apply_frequency_domain(&mut spectrum, &[MHZ_TO_HZ], 1.0);
-    }
-
-    #[test]
-    fn np_m_conversion_round_trips_against_its_inverse() {
-        for &(alpha_db, y, f) in &[
-            (0.5_f64, 1.1_f64, 1.0e6_f64),
-            (0.75, 1.5, 3.0e6),
-            (0.25, 0.4, 5.0e5),
-        ] {
-            let np_m = power_law_db_cm_to_np_m(alpha_db, y, f);
-            let back = np_m_to_power_law_db_cm(np_m, f, y);
-            assert!(
-                (back - alpha_db).abs() < 1e-12 * alpha_db,
-                "round trip {alpha_db} -> {np_m} -> {back}"
-            );
-        }
-        // At the reference frequency the exponent drops out and the conversion
-        // is exactly dB/cm -> Np/m.
-        let at_ref = power_law_db_cm_to_np_m(1.0, 1.7, 1.0e6);
-        assert!((at_ref - 100.0 / 8.685_889_638_065_035).abs() < 1e-12);
-        assert_eq!(power_law_db_cm_to_np_m(1.0, 1.0, 0.0), 0.0);
-    }
-
-    #[test]
-    fn test_power_law_db_cm_to_np_omega_m_matches_kwave_reference() {
-        let got = power_law_db_cm_to_np_omega_m(0.75, 1.5);
-        let expected: f64 = 5.482_481_235_081_536e-10;
-        // The conversion contains six rounded elementary operations and a
-        // libm `powf` call. Sixteen ulps bounds this composed forward error
-        // at the reference magnitude while retaining k-Wave as the oracle.
-        let tolerance = 16.0 * f64::EPSILON * expected.abs().max(got.abs());
-        assert!(
-            (got - expected).abs() <= tolerance,
-            "conversion mismatch: got {got}, expected {expected}, tolerance {tolerance}"
-        );
-    }
-
-    #[test]
-    fn np_m_to_db_cm_round_trips_at_frequency() {
-        // A target attenuation [Np/m] at a drive frequency must convert to a
-        // power-law prefactor that reproduces exactly that attenuation at f.
-        let alpha_target_np_m = 37.0;
-        let f = 0.5e6;
-        let y = 1.1;
-        let db_cm = np_m_to_power_law_db_cm(alpha_target_np_m, f, y);
-        let alpha_si = power_law_db_cm_to_np_omega_m(db_cm, y);
-        let omega = 2.0 * std::f64::consts::PI * f;
-        let recovered = alpha_si * omega.powf(y);
-        assert!(
-            (recovered - alpha_target_np_m).abs() <= 1e-9 * alpha_target_np_m,
-            "round-trip: target={alpha_target_np_m} Np/m, recovered={recovered} Np/m"
-        );
-    }
-
-    #[test]
-    fn np_m_to_db_cm_guards_nonpositive_frequency() {
-        assert_eq!(np_m_to_power_law_db_cm(10.0, 0.0, 1.1), 0.0);
-        assert_eq!(np_m_to_power_law_db_cm(10.0, -1.0, 1.1), 0.0);
-    }
-
-    #[test]
-    fn omega_inverse_round_trips_against_forward() {
-        for &(db, y) in &[(0.75_f64, 1.5_f64), (0.5, 1.1), (2.0, 2.0)] {
-            let si = power_law_db_cm_to_np_omega_m(db, y);
-            let back = np_omega_m_to_power_law_db_cm(si, y);
-            assert!(
-                (back - db).abs() <= 8.0 * f64::EPSILON * db.abs().max(1e-300),
-                "omega round trip {db} -> {si} -> {back}"
-            );
-        }
-    }
-
-    #[test]
-    fn hz_prefactor_matches_at_frequency_form_at_1hz() {
-        // The Np/(m·Hz^y) prefactor is the at-frequency form at 1 Hz exactly.
-        for &(alpha_db, y) in &[(0.5_f64, 1.1_f64), (0.75, 1.5), (2.0, 2.0)] {
-            let prefac = power_law_db_cm_to_np_m_hz(alpha_db, y);
-            let at_1hz = power_law_db_cm_to_np_m(alpha_db, y, 1.0);
-            assert!(
-                (prefac - at_1hz).abs() <= 4.0 * f64::EPSILON * at_1hz.abs().max(1e-300),
-                "Hz prefactor {prefac} != at-1Hz {at_1hz}"
-            );
-        }
-    }
-}
+mod tests;

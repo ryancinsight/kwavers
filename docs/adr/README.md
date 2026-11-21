@@ -111,3 +111,4 @@
 | [141](141-type-coupling-getters.md) | Carry physical quantities in coupling getters | Proposed |
 | [142](142-medium-aware-field-coupling.md) | Apply local material coefficients in field coupling | Proposed |
 | [143](143-type-bone-and-skull-acoustics.md) | Type bone and skull acoustic references | Proposed |
+| [144](144-type-fractional-absorption.md) | Type fractional absorption at a reference frequency | Proposed |

@@ -2581,6 +2581,8 @@ dependencies = [
  "proptest",
  "proteus-mat",
  "serde",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

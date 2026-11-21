@@ -1,4 +1,5 @@
 use crate::acoustics::mechanics::elastic_wave::ElasticBodyForceConfig;
+use aequitas::systems::si::quantities::{Frequency, ReciprocalLength};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::absorption::PowerLawAbsorption;
@@ -16,7 +17,7 @@ pub struct AcousticRadiationForce {
     /// Medium sound speed (m/s)
     sound_speed: f64,
     /// Power-law absorption model (α(f) = α₀·f^y for soft tissue) — evaluated
-    /// at the current push frequency in `absorption_np_per_m()`.
+    /// at the current push frequency in `absorption()`.
     absorption_model: PowerLawAbsorption,
     /// Medium density (kg/m³)
     density: f64,
@@ -46,7 +47,7 @@ impl AcousticRadiationForce {
 
         // Soft-tissue power-law absorption α(f) = α₀·f^y from SSOT
         // (Duck 1990, Physical Properties of Tissue). Evaluated at the active
-        // push frequency in `absorption_np_per_m()`. The previous code stored
+        // push frequency in `absorption()`. The previous code stored
         // a single scalar 5.8 Np/m — the 1 MHz value — even though the
         // default push frequency is 5 MHz, under-predicting the radiation-
         // force density `f = 2αI/c` by ~5× whenever the caller used the
@@ -65,9 +66,9 @@ impl AcousticRadiationForce {
     /// Power-law absorption coefficient evaluated at the active push frequency
     /// (Np/m).
     #[inline]
-    fn absorption_np_per_m(&self) -> f64 {
+    fn absorption(&self) -> KwaversResult<ReciprocalLength> {
         self.absorption_model
-            .absorption_at_frequency(self.parameters.frequency)
+            .absorption_at_frequency(Frequency::from_base(self.parameters.frequency))
     }
 
     /// Set custom push pulse parameters
@@ -112,7 +113,7 @@ impl AcousticRadiationForce {
         // Calculate radiation force density magnitude (N/m³)
         // f = (2·α(f)·I)/c — α is frequency-dependent power-law absorption.
         let force_density =
-            (2.0 * self.absorption_np_per_m() * self.parameters.intensity) / self.sound_speed;
+            (2.0 * self.absorption()?.into_base() * self.parameters.intensity) / self.sound_speed;
 
         // Convert pulse duration into an impulse density J = ∫ f(t) dt (N·s/m³).
         // We model the temporal envelope as a unit-area Gaussian in the solver, so this is the
@@ -169,7 +170,7 @@ impl AcousticRadiationForce {
         // Calculate radiation force density
         // f = (2·α(f)·I)/c (N/m³) — α evaluated at the active push frequency.
         let force_density =
-            (2.0 * self.absorption_np_per_m() * self.parameters.intensity) / self.sound_speed;
+            (2.0 * self.absorption()?.into_base() * self.parameters.intensity) / self.sound_speed;
 
         // NOTE: This computes a quantity with units [m/s], not [m]. Historically this was used as a
         // displacement initializer; we keep it only for backward compatibility.
