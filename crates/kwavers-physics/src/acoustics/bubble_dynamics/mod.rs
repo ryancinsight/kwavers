@@ -34,6 +34,7 @@ pub mod dissolution; // Gas-diffusion dissolution (Epstein–Plesset 1950 + shel
 pub mod encapsulated; // NEW: Encapsulated bubbles with shell dynamics (Church, Marmottant)
 pub mod energy;
 pub mod epstein_plesset; // Epstein-Plesset oscillation-STABILITY theorem (distinct from dissolution)
+pub mod gas_transfer;
 pub mod gilmore; // Gilmore equation for violent collapse // NEW: Comprehensive energy balance model
 pub mod heterogeneous_nucleation;
 pub mod imex_integration;
