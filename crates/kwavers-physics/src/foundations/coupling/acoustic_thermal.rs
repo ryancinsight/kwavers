@@ -9,46 +9,66 @@
 //!
 //! Thermal damping penetration depth:
 //! ```text
-//! δ = √(2α/(ω ρ c_p))
+//! δ = √(2α/ω)
 //! ```
 //!
 //! ## References
 //!
 //! - Swift (1988) "Thermoacoustic engines" JASA 84(4):1145-1180
 
-use super::MultiPhysicsCoupling;
-use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
+use super::{CouplingPosition, MultiPhysicsCoupling};
+use aequitas::systems::si::quantities::{
+    Frequency, Length, MassDensity, PressureRate, ReciprocalTemperature, TemperatureDifference,
+    ThermalDiffusivity, Time, Velocity, VolumetricPowerDensity,
+};
 use leto::Array3;
 
-/// Acoustic-thermal coupling for thermoacoustic effects
+/// Acoustic-thermal coupling for thermoacoustic effects.
 pub trait AcousticThermalCoupling: MultiPhysicsCoupling {
-    /// Thermal expansion coefficient β (1/K)
-    fn thermal_expansion_coefficient(&self, position: &[f64]) -> f64;
+    /// Isobaric volume expansion coefficient.
+    fn thermal_expansion_coefficient(&self, position: &CouplingPosition) -> ReciprocalTemperature;
 
-    /// Compute acoustic pressure source from temperature rate ∂T/∂t
+    /// Mass density of the local medium.
+    fn mass_density(&self, position: &CouplingPosition) -> MassDensity;
+
+    /// Sound speed of the local medium.
+    fn sound_speed(&self, position: &CouplingPosition) -> Velocity;
+
+    /// Thermal diffusivity of the local medium.
+    fn thermal_diffusivity(&self, position: &CouplingPosition) -> ThermalDiffusivity;
+
+    /// Pressure rate induced by a temperature change over a positive timestep.
     fn pressure_source_from_temperature(
         &self,
-        temperature_rate: &Array3<f64>,
-        position: &[f64],
-    ) -> Array3<f64> {
+        temperature_change: TemperatureDifference<&Array3<f64>>,
+        duration: Time,
+        position: &CouplingPosition,
+    ) -> PressureRate<Array3<f64>> {
         let beta = self.thermal_expansion_coefficient(position);
-        let rho = DENSITY_WATER_NOMINAL;
-        let c = SOUND_SPEED_WATER_SIM;
-        temperature_rate.mapv(|dtdt| beta * rho * c * c * dtdt)
+        let rho = self.mass_density(position);
+        let c = self.sound_speed(position);
+        let gain = beta * rho * c * c / duration;
+        PressureRate::from_base(
+            temperature_change
+                .into_base()
+                .mapv(|change| (gain * TemperatureDifference::from_base(change)).into_base()),
+        )
     }
 
-    /// Viscous dissipation heating rate (W/m³)
-    fn viscous_heating(&self, _velocity_field: &Array3<f64>, _position: &[f64]) -> f64 {
-        0.0 // Override with actual strain-rate computation
-    }
+    /// Volumetric heating from the local viscous dissipation model.
+    fn viscous_heating(
+        &self,
+        velocity_field: Velocity<&Array3<[f64; 3]>>,
+        position: &CouplingPosition,
+    ) -> VolumetricPowerDensity;
 
-    /// Thermal conductivity damping coefficient
-    fn thermal_conductivity_damping(&self, frequency: f64, _position: &[f64]) -> f64 {
-        let alpha = THERMAL_CONDUCTIVITY_WATER / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
-        let omega = TWO_PI * frequency;
-        // δ = √(2·α_th / ω) [m] — classical thermal penetration depth
-        (2.0 * alpha / omega).sqrt()
+    /// Thermal penetration depth for a positive frequency.
+    fn thermal_penetration_depth(
+        &self,
+        frequency: Frequency,
+        position: &CouplingPosition,
+    ) -> Length {
+        let diffusivity = self.thermal_diffusivity(position);
+        (diffusivity * 2.0 / (frequency * std::f64::consts::TAU)).sqrt()
     }
 }
