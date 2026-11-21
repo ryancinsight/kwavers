@@ -70,20 +70,9 @@
 //! factor in the `dR0/dt` form cancels against `dn/dR0` in the molar-flux
 //! form, so it does not appear above.
 //!
-//! ## What this replaces (KW-PHYS-001)
-//! The previous implementation returned
-//! `4π R D C (P_ac/P_0) √Pe` — linear in the pressure ratio with a
-//! `√Pe` factor and no amplitude dependence. That is not the Eller–Flynn
-//! rate: the genuine rectified term is second order in the oscillation
-//! amplitude (`∝ ε²`, with `ε = |α| P_ac/P_0`), has no `√Pe` factor
-//! (the `√Pe`-like term in the theory is the *transient*
-//! `R0/√(πDt)`, which tends to 1 at long times and is not part of the
-//! steady rate), and is opposed by Laplace dissolution. At Eller's
-//! (1969) conditions the old formula gave 515–527 µm/min against ~13
-//! µm/min measured — a 40× overprediction — while the genuine theory
-//! *underpredicts* the same measurement by >20× (Smith & Wang 2022,
-//! §1). The old formula was therefore wrong in both directions at once:
-//! ~1000× the genuine rectified flux.
+//! KW-PHYS-001 restored the second-order oscillation-amplitude dependence
+//! and the Laplace term. The additive transient contribution is proportional
+//! to `R0/√(πDt)` and decays to zero in the steady limit.
 //!
 //! ## Benchmark: Eller (1969)
 //! Conditions (Smith & Wang 2022, §4.2, from Eller 1969): air-saturated
@@ -99,44 +88,19 @@
 //! | 40 | −0.13 | +0.53 | 528 |
 //! | 50 | +0.05 | +0.47 | 530 |
 //!
-//! Measured (Eller 1969, via Smith & Wang 2022, fig. 3): ~13 µm/min,
-//! roughly flat from 30–50 µm. Eller's own theoretical values were
-//! ~0.6 µm/min (13/20 — the ">20×" gap of Smith & Wang §1). The
-//! growth term here (+0.66 µm/min at 30 µm, 0.47–0.94 µm/min across
-//! 20–50 µm) reproduces Eller's theoretical value within ~2×; the net
-//! rate is small (|net| ≲ 2 µm/min) and changes sign near this theory's
-//! threshold radius R0 ≈ 47 µm (P_T ≈ 27 kPa at 30 µm) versus the
-//! measured ~27 µm. The remaining >20× gap to the *measured* rate is a
-//! formula error: acoustic microstreaming intensifies growth/dissolution
-//! up to twentyfold once surface oscillations ("crispations") appear
-//! (Gould 1974, abstract), and the exact leading-order theory with the
-//! history integral reproduces the measured rapid early growth (Smith &
-//! Wang 2022, JFM 939, A28). Church (1988, JASA 84, 1758–1764) gives a
-//! method to account for microstreaming; it is not implemented here
-//! (see below). No factor has been fitted to force agreement with
-//! Eller: the numbers above are the theory as published.
+//! The measurements replotted in Smith & Wang (2022, A28, figure 3)
+//! vary with initial equilibrium radius. The plotted rates at approximately
+//! 30, 36, 42.5, and 45 µm are +0.5, +5, +9, and +16 µm/min.
+//! Compare them with the signed net rate. The isolated rectified-growth
+//! term measures the acoustic contribution before Laplace dissolution.
+//! The saturated steady model predicts net dissolution at all four radii.
 //!
-//! ## What is NOT fixed here
-//! - **Microstreaming.** The >20× gap between the genuine theory and
-//!   Eller's measurement is attributed in the literature to acoustic
-//!   microstreaming and surfactants (Smith & Wang 2022, §1; Gould 1974;
-//!   Church 1988, JASA 83, 2210–2217, found agreement with Eller 1969
-//!   only below 35 µm). Church (1988, JASA 84, 1758–1764) is the
-//!   published microstreaming correction, but its full text was not
-//!   accessible for this fix, so no streaming term is implemented.
-//!   Adding it requires reading Church (1988, JASA 84) and benchmarking
-//!   against Eller (1969) — it must not be fitted to the 13 µm/min.
-//! - **Early-time growth.** This is the long-time rate. The early-time
-//!   rate is asymptotically larger (Smith & Wang 2022, A28); their
-//!   two-ODE model (Rayleigh–Plesset + gas-mass ODE with fading-memory
-//!   history integral, eqs. (3.27)–(3.29)) is the more accurate
-//!   in-regime alternative, and the three-timescale form (Smith & Wang
-//!   2022, JFM 951, A12) is the implementable long-timescale version.
-//!   Neither is ported here.
-//! - **Supersaturation.** The single `concentration` argument is used as
-//!   both the saturation concentration `C_0` and the far-field
-//!   concentration `C_i` (saturated liquid, `C_i/C_0 = 1`).
-//!   Supersaturated or undersaturated liquids need the split.
+//! At finite exposure, the dissolved-gas profile records the pressure
+//! and radius history. Smith & Wang (2022, A28) study this transient
+//! regime. Near boundaries or with non-spherical motion, microstreaming
+//! may also alter the mass transfer (Church 1988; Moreno Soto et al. 2020).
+//! The explicit-concentration API allows independent far-field and flat-interface
+//! saturation concentrations within the same steady, small-oscillation law.
 //!
 //! # References
 //! - Eller, A. I., & Flynn, H. G. (1965). "Rectified diffusion during
@@ -178,6 +142,10 @@
 //!   PhD thesis, University of Warwick, §3.2 (Crum's analysis,
 //!   eqs. (3.6)–(3.19)) and §2.2 (thermal effects, eqs. (2.44),
 //!   (2.48)–(2.52)).
+
+mod saturation;
+
+pub use saturation::rectified_diffusion_rate_with_concentrations;
 
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
@@ -334,7 +302,7 @@ fn oscillation_response(
 pub struct RectifiedDiffusionTerms {
     /// Net molar flux [mol/s]; positive = growth, negative = dissolution.
     pub net_flux: f64,
-    /// Rectified (growth) term only [mol/s]; ≥ 0 for `P_ac > 0`.
+    /// Rectified growth term [mol/s] in the small-amplitude growth regime.
     pub growth_flux: f64,
     /// Laplace dissolution term only [mol/s]; ≤ 0.
     pub dissolution_flux: f64,
@@ -376,30 +344,51 @@ pub fn rectified_diffusion_terms(
     if radius <= 0.0 || ambient_pressure <= 0.0 || diffusivity <= 0.0 || concentration <= 0.0 {
         return zero;
     }
-    let (epsilon, kappa, delta_tot, _beta_sq, k_factor) =
-        oscillation_response(radius, ambient_pressure, acoustic_pressure, frequency);
-    let eps_sq = epsilon * epsilon;
-    // Cycle averages (Crum & Mao 1996, eqs. (3.17)–(3.19)).
-    let avg_r = 1.0 + k_factor * eps_sq;
-    let avg_r4 = 1.0 + (3.0 + 4.0 * k_factor) * eps_sq;
-    let c1 = 3.0 * (kappa - 1.0) * (3.0 * kappa - 4.0) / 4.0 + (4.0 - 3.0 * kappa) * k_factor;
-    let laplace = 2.0 * SURFACE_TENSION / (radius * ambient_pressure);
-    let avg_r4p = (1.0 + c1 * eps_sq) * (1.0 + laplace);
-    // Net bracket (saturated: C_i/C_0 = 1) and its split.
-    let bracket_net = 1.0 - avg_r4p / avg_r4;
-    let bracket_growth = bracket_net + laplace;
-    // The (1 + 4σ/(3P_0R_0)) factor in the dR_0/dt form cancels against
-    // dn/dR_0 in the molar-flux form (see module docs).
-    let base = FOUR_PI * radius * diffusivity * concentration * avg_r;
+    let cycle = cycle_transport(radius, ambient_pressure, acoustic_pressure, frequency);
+    let bracket_growth = 1.0 - cycle.pressure_ratio + cycle.laplace_ratio;
+    let base = FOUR_PI * radius * diffusivity * concentration * cycle.mean_radius;
     let growth_flux = base * bracket_growth;
-    let dissolution_flux = base * (-laplace);
+    let dissolution_flux = base * (-cycle.laplace_ratio);
     RectifiedDiffusionTerms {
         net_flux: growth_flux + dissolution_flux,
         growth_flux,
         dissolution_flux,
+        epsilon: cycle.epsilon,
+        kappa: cycle.kappa,
+        damping_total: cycle.damping_total,
+    }
+}
+
+struct CycleTransport {
+    pressure_ratio: f64,
+    laplace_ratio: f64,
+    mean_radius: f64,
+    epsilon: f64,
+    kappa: f64,
+    damping_total: f64,
+}
+
+fn cycle_transport(
+    radius: f64,
+    ambient_pressure: f64,
+    acoustic_pressure: f64,
+    frequency: f64,
+) -> CycleTransport {
+    let (epsilon, kappa, damping_total, _, k_factor) =
+        oscillation_response(radius, ambient_pressure, acoustic_pressure, frequency);
+    let eps_sq = epsilon * epsilon;
+    // Cycle averages (Zhang 2012, Eqs. 3.17–3.19).
+    let avg_r4 = 1.0 + (3.0 + 4.0 * k_factor) * eps_sq;
+    let c1 = 3.0 * (kappa - 1.0) * (3.0 * kappa - 4.0) / 4.0 + (4.0 - 3.0 * kappa) * k_factor;
+    let laplace_ratio = 2.0 * SURFACE_TENSION / (radius * ambient_pressure);
+    let avg_r4p = (1.0 + c1 * eps_sq) * (1.0 + laplace_ratio);
+    CycleTransport {
+        pressure_ratio: avg_r4p / avg_r4,
+        laplace_ratio,
+        mean_radius: 1.0 + k_factor * eps_sq,
         epsilon,
         kappa,
-        damping_total: delta_tot,
+        damping_total,
     }
 }
 
@@ -415,13 +404,10 @@ pub fn rectified_diffusion_terms(
 /// # Validity
 /// The linearized law is valid only for P_ac/P₀ ≲ 3
 /// ([`RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO`]) and ε << 1. Outside
-/// that regime the returned flux is an extrapolation artifact, not a
-/// prediction — see the Stage 6 audit. Prefer
-/// [`rectified_diffusion_rate_checked`], which rejects out-of-regime
-/// inputs instead of silently returning a flux. This is the long-time
-/// (quasi-steady) rate; the early-time rate is larger (Smith & Wang
-/// 2022, JFM 939, A28). Microstreaming is not included (see module
-/// docs): the genuine theory underpredicts Eller (1969) by >20×.
+/// that regime the output extrapolates the small-amplitude model. Use
+/// [`rectified_diffusion_rate_checked`] for the pressure-ratio guard and
+/// [`oscillation_amplitude_fraction`] to assess the amplitude. This is
+/// the long-time (quasi-steady) rate for a spherical bubble in bulk water.
 #[must_use]
 pub fn rectified_diffusion_rate(
     radius: f64,            // [m]
@@ -504,264 +490,4 @@ pub fn rectified_diffusion_rate_checked(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use eunomia::assert_relative_eq;
-    use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, GAS_CONSTANT};
-    use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use kwavers_core::constants::thermodynamic::T_AMBIENT;
-
-    // Standard air-in-water parameters (Eller & Flynn 1965 regime)
-    const R0: f64 = 5e-6; // 5 µm bubble radius
-    const P0: f64 = ATMOSPHERIC_PRESSURE; // atmospheric pressure [Pa]
-    const P_AC: f64 = 120_000.0; // ~1.18 atm acoustic amplitude
-    const FREQ: f64 = MHZ_TO_HZ; // 1 MHz ultrasound
-    const D_AIR: f64 = 2.0e-9; // O₂ diffusivity in water [m²/s]
-    const C_SAT: f64 = 0.26; // dissolved O₂ at saturation [mol/m³]
-
-    /// Isothermal ideal-gas dn/dR for a bubble (Laplace term included);
-    /// converts a molar flux [mol/s] to dR/dt [m/s]. Same conversion as
-    /// the Stage 7 cross-check (smith_wang_diffusion.py).
-    fn dn_dr_mol_per_m(radius: f64) -> f64 {
-        (FOUR_PI * radius * radius * P0
-            + (16.0 / 3.0) * std::f64::consts::PI * radius * SURFACE_TENSION)
-            / (GAS_CONSTANT * T_AMBIENT)
-    }
-
-    fn flux_to_um_per_min(flux: f64, radius: f64) -> f64 {
-        flux / dn_dr_mol_per_m(radius) * 1e6 * 60.0
-    }
-
-    #[test]
-    fn test_rectified_diffusion_positive_flux() {
-        // Above the rectified-diffusion threshold the net flux is
-        // positive: 30 µm at 35 kPa, 26.6 kHz is above threshold
-        // (P_T ≈ 27 kPa there) and grows at ≈ +0.75 µm/min.
-        let flux = rectified_diffusion_rate(30e-6, P0, 35e3, 26.6e3, D_AIR, C_SAT);
-        assert!(
-            flux > 0.0,
-            "Above threshold, acoustic pressure must yield positive molar flux"
-        );
-        // Physical reasonableness: flux should be very small (pico- to nano-moles/s)
-        assert!(
-            flux < 1.0,
-            "Molar flux should be << 1 mol/s for microbubbles"
-        );
-        // The growth term is positive whenever P_ac > 0, even below
-        // threshold: the 5 µm / 120 kPa / 1 MHz point is below
-        // threshold (net ≈ −11.6 µm/min) but its rectified term is
-        // ≈ +25 µm/min.
-        let terms = rectified_diffusion_terms(R0, P0, P_AC, FREQ, D_AIR, C_SAT);
-        assert!(
-            terms.growth_flux > 0.0,
-            "Rectified growth term must be positive for P_ac > 0"
-        );
-        assert!(
-            terms.net_flux < 0.0,
-            "5 µm / 120 kPa / 1 MHz is below threshold (net dissolution), got {}",
-            terms.net_flux
-        );
-    }
-
-    #[test]
-    fn test_rectified_diffusion_amplitude_scaling() {
-        // The genuine rectified term is second order in the oscillation
-        // amplitude (∝ ε² ∝ P_ac²), NOT linear in P_ac as the old formula
-        // had it. At small amplitude (30 µm, 26.6 kHz, 5 vs 10 kPa,
-        // ε ≈ 0.012/0.024) the growth flux must quadruple when P_ac
-        // doubles. The NET flux does not scale this way (the Laplace
-        // dissolution term is P_ac-independent), so the scaling is
-        // asserted on the growth term.
-        let r_ell = 30e-6;
-        let f_ell = 26.6e3;
-        let g5 = rectified_diffusion_terms(r_ell, P0, 5e3, f_ell, D_AIR, C_SAT).growth_flux;
-        let g10 = rectified_diffusion_terms(r_ell, P0, 10e3, f_ell, D_AIR, C_SAT).growth_flux;
-        assert_relative_eq!(g10 / g5, 4.0, epsilon = 0.02);
-
-        // Flux is linear in concentration (both terms scale with C).
-        let base = rectified_diffusion_rate(R0, P0, P_AC, FREQ, D_AIR, C_SAT);
-        let doubled_c = rectified_diffusion_rate(R0, P0, P_AC, FREQ, D_AIR, 2.0 * C_SAT);
-        assert_relative_eq!(doubled_c / base, 2.0, epsilon = 1e-10);
-    }
-
-    #[test]
-    fn test_rectified_diffusion_zero_acoustic_pressure() {
-        // With no sound there is no rectified term — but the bubble still
-        // dissolves by Laplace-driven diffusion, so the NET flux is
-        // negative, not zero. (The old test asserted zero flux, which
-        // encoded the missing dissolution term flagged by the Stage 6
-        // audit.) The growth term itself must be exactly zero.
-        let terms = rectified_diffusion_terms(R0, P0, 0.0, FREQ, D_AIR, C_SAT);
-        assert_eq!(terms.growth_flux, 0.0, "No sound => no rectified growth");
-        assert_eq!(terms.epsilon, 0.0, "No sound => zero oscillation amplitude");
-        assert!(
-            terms.net_flux < 0.0,
-            "No sound => net Laplace dissolution, got {}",
-            terms.net_flux
-        );
-        assert_relative_eq!(terms.net_flux, terms.dissolution_flux, epsilon = 1e-12);
-    }
-
-    #[test]
-    fn test_rectified_diffusion_zero_diffusivity() {
-        // No diffusion => no flux of either sign.
-        let flux = rectified_diffusion_rate(R0, P0, P_AC, FREQ, 0.0, C_SAT);
-        assert_eq!(
-            flux, 0.0,
-            "Zero diffusivity must yield zero flux, got {flux}"
-        );
-        let flux_c0 = rectified_diffusion_rate(R0, P0, P_AC, FREQ, D_AIR, 0.0);
-        assert_eq!(flux_c0, 0.0, "Zero concentration must yield zero flux");
-    }
-
-    #[test]
-    fn test_rectified_diffusion_checked_accepts_in_regime() {
-        // P_AC = 120 kPa is P_ac/P0 = 1.18, inside the small-amplitude regime.
-        let flux = rectified_diffusion_rate_checked(R0, P0, P_AC, FREQ, D_AIR, C_SAT)
-            .expect("in-regime input must be accepted");
-        assert_relative_eq!(
-            flux,
-            rectified_diffusion_rate(R0, P0, P_AC, FREQ, D_AIR, C_SAT),
-            epsilon = 1e-12
-        );
-    }
-
-    #[test]
-    fn test_rectified_diffusion_checked_rejects_burst_pressures() {
-        // Stage 6 audit: the law was applied at P_ac/P0 = 66 (Iwasaki burst,
-        // 6.7 MPa) and 146 (Kuji burst, 14.7 MPa), producing 986/1904 µm
-        // growth artifacts. The checked form must refuse those inputs.
-        for p_ac in [6.7e6, 14.7e6] {
-            let err = rectified_diffusion_rate_checked(R0, P0, p_ac, FREQ, D_AIR, C_SAT)
-                .expect_err("burst pressure must be rejected");
-            assert!(
-                matches!(
-                    err,
-                    KwaversError::Physics(PhysicsError::InvalidParameter { .. })
-                ),
-                "expected InvalidParameter, got {err:?}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_rectified_diffusion_checked_rejects_nonpositive_ambient() {
-        let err = rectified_diffusion_rate_checked(R0, 0.0, P_AC, FREQ, D_AIR, C_SAT)
-            .expect_err("zero ambient pressure must be rejected");
-        assert!(
-            matches!(
-                err,
-                KwaversError::Physics(PhysicsError::InvalidParameter { .. })
-            ),
-            "expected InvalidParameter, got {err:?}"
-        );
-    }
-
-    #[test]
-    fn test_thermal_phi_limits() {
-        // Adiabatic limit X → 0: Φ → 3γ, κ → γ, δ_th → 0.
-        let (re, im) = thermal_phi(1e-6, GAMMA_AIR);
-        assert_relative_eq!(re / 3.0, GAMMA_AIR, epsilon = 0.01);
-        assert!(
-            im / re < 0.02,
-            "thermal damping must vanish, got {}",
-            im / re
-        );
-        // Isothermal limit X → ∞: Φ → 3, κ → 1, δ_th → 0.
-        let (re, im) = thermal_phi(100.0, GAMMA_AIR);
-        assert_relative_eq!(re / 3.0, 1.0, epsilon = 0.01);
-        assert!(
-            im / re < 0.02,
-            "thermal damping must vanish, got {}",
-            im / re
-        );
-        // Devin (1959) simplified forms: δ_th ≈ 3(γ−1)χ/2 for χ ≤ 0.08
-        // (eq. (2.50)) and δ_th ≈ (γ−1)/(15γχ) for χ ≥ 0.5 (eq. (2.52)),
-        // with χ = √X. Agreement is ~30% at small χ, ~1% at χ ≥ 1.
-        let (re, im) = thermal_phi(0.05_f64.powi(2), GAMMA_AIR);
-        let d_th = im / re;
-        assert!(
-            (0.02..0.05).contains(&d_th),
-            "δ_th at χ=0.05 must be ~0.03 (Devin (2.50)), got {d_th}"
-        );
-        let (re, im) = thermal_phi(1.0_f64.powi(2), GAMMA_AIR);
-        let d_th = im / re;
-        assert!(
-            (0.01..0.03).contains(&d_th),
-            "δ_th at χ=1 must be ~0.019 (Devin (2.52)), got {d_th}"
-        );
-    }
-
-    #[test]
-    fn test_eller_1969_benchmark() {
-        // Eller (1969) conditions (Smith & Wang 2022, §4.2): 26.6 kHz,
-        // P_ac = 20 kPa, air-saturated water, D = 2e-9 m²/s. Benchmark
-        // constants C = 0.26 mol/m³ as in the Stage 7 cross-check.
-        // Measured: ~13 µm/min, roughly flat 30–50 µm. Eller's own
-        // theoretical values: ~0.6 µm/min (the >20× gap, Smith & Wang §1).
-        // The old formula gave 515–527 µm/min here.
-        // Expected values (κ-faithful Crum–Hansen, cross-checked against
-        // an independent Python implementation to 6+ digits):
-        //   R0:  20 µm   30 µm   40 µm   50 µm
-        //   net: −1.65   −0.50   −0.13   +0.05 µm/min
-        //   gro: +0.94   +0.66   +0.53   +0.47 µm/min
-        //   ε:   0.064   0.065   0.066   0.069
-        let f_ell = 26.6e3;
-        let p_ell = 20e3;
-        for (r_um, net_lo, net_hi) in [
-            (20.0, -2.5, -0.5),
-            (30.0, -1.0, 0.0),
-            (40.0, -0.5, 0.2),
-            (50.0, -0.2, 0.3),
-        ] {
-            let r = r_um * 1e-6;
-            let terms = rectified_diffusion_terms(r, P0, p_ell, f_ell, D_AIR, C_SAT);
-            let net_um_min = flux_to_um_per_min(terms.net_flux, r);
-            let gro_um_min = flux_to_um_per_min(terms.growth_flux, r);
-            // Net rate is small (|net| ≲ 2 µm/min) and changes sign near
-            // the theory's threshold radius R0 ≈ 47 µm (P_T ≈ 27 kPa at
-            // 30 µm) versus ~27 µm measured — the documented theory gap,
-            // not a formula error.
-            assert!(
-                net_um_min > net_lo && net_um_min < net_hi,
-                "R={r_um} µm: net rate must be small (|net| ≲ 2 µm/min), got {net_um_min:.2} µm/min"
-            );
-            // Growth term reproduces Eller's theoretical ~0.6 µm/min
-            // within a factor of 2 at every radius (0.47–0.94 µm/min).
-            assert!(
-                gro_um_min > 0.2 && gro_um_min < 1.2,
-                "R={r_um} µm: growth term must be within 2× of Eller's theoretical ~0.6 µm/min, got {gro_um_min:.2}"
-            );
-            // Oscillation amplitude is small (ε ≈ 0.065), as the law assumes.
-            assert!(
-                terms.epsilon > 0.05 && terms.epsilon < 0.08,
-                "R={r_um} µm: ε must be ≈0.065, got {}",
-                terms.epsilon
-            );
-        }
-        // The old 40× overprediction is gone: the net flux magnitude at
-        // 30 µm is >100× smaller than the old formula's 4.2e-12 mol/s.
-        let old_flux =
-            FOUR_PI * 30e-6 * D_AIR * C_SAT * (p_ell / P0) * (30e-6 * 30e-6 * f_ell / D_AIR).sqrt();
-        let new_flux = rectified_diffusion_rate(30e-6, P0, p_ell, f_ell, D_AIR, C_SAT).abs();
-        assert!(
-            new_flux < old_flux / 100.0,
-            "new |flux| {new_flux:.2e} must be >100× smaller than old {old_flux:.2e}"
-        );
-    }
-
-    #[test]
-    fn test_eller_threshold_pressure() {
-        // Threshold pressure at R0 = 30 µm is ≈ 27 kPa in this theory
-        // (net rate crosses zero between 25 and 30 kPa at 26.6 kHz).
-        let r = 30e-6;
-        let f_ell = 26.6e3;
-        let below = rectified_diffusion_rate(r, P0, 25e3, f_ell, D_AIR, C_SAT);
-        let above = rectified_diffusion_rate(r, P0, 30e3, f_ell, D_AIR, C_SAT);
-        assert!(
-            below < 0.0,
-            "25 kPa must still dissolve at 30 µm, got {below:.2e}"
-        );
-        assert!(above > 0.0, "30 kPa must grow at 30 µm, got {above:.2e}");
-    }
-}
+mod tests;
