@@ -54,7 +54,6 @@ impl MultiphysicsFieldCoupler {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn apply_adaptive_coupling(
-        &self,
         fields: &mut [Array3<f64>],
         gains: &impl Fn([usize; 3]) -> FieldCouplingGains,
     ) -> KwaversResult<()> {
