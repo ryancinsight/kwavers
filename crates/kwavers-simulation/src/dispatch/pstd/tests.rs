@@ -47,7 +47,10 @@ fn heterogeneous_medium(absorbing_voxel: Option<[usize; 3]>) -> HeterogeneousMed
     medium.sound_speed = leto::Array3::from_elem((N, N, N), 1500.0);
     medium.density = leto::Array3::from_elem((N, N, N), 1000.0);
     if let Some(index) = absorbing_voxel {
-        medium.absorption[index] = 0.5;
+        medium.absorption.set(
+            index,
+            aequitas::systems::si::quantities::ReciprocalLength::from_base(0.5),
+        );
     }
     medium
 }
@@ -58,7 +61,7 @@ fn heterogeneous_medium(absorbing_voxel: Option<[usize; 3]>) -> HeterogeneousMed
 fn a_medium_absorbing_away_from_the_origin_is_not_lossless() {
     let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).expect("grid");
     let medium = heterogeneous_medium(Some([2, 1, 3]));
-    assert_eq!(medium.absorption[[0, 0, 0]], 0.0);
+    assert_eq!(medium.absorption.get([0, 0, 0]).into_base(), 0.0);
     assert_eq!(
         power_law_absorption_mode(&medium, &grid, 0.0, 1.5),
         AbsorptionMode::PowerLaw {

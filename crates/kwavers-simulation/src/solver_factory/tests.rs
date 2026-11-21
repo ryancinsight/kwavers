@@ -141,7 +141,11 @@ fn absorbing_medium() -> kwavers_medium::heterogeneous::HeterogeneousMedium {
         .for_each(|value| *value = 1_500.0);
     medium.density.iter_mut().for_each(|value| *value = 1_000.0);
     medium.absorption.iter_mut().for_each(|value| *value = 0.2);
-    medium.alpha_power.iter_mut().for_each(|value| *value = 1.3);
+    medium
+        .alpha_power
+        .fill(aequitas::systems::si::quantities::Dimensionless::from_base(
+            1.3,
+        ));
     medium
 }
 
@@ -152,7 +156,10 @@ fn absorbing_medium() -> kwavers_medium::heterogeneous::HeterogeneousMedium {
 fn reports_the_adapter_rejection_for_hephaestus_pstd() {
     let grid = Grid::new(2, 2, 2, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let mut medium = absorbing_medium();
-    medium.alpha_power[[0, 0, 1]] = 1.7;
+    medium.alpha_power.set(
+        [0, 0, 1],
+        aequitas::systems::si::quantities::Dimensionless::from_base(1.7),
+    );
     let config = SolverConfiguration {
         solver_type: SolverType::PSTD,
         fft_backend: FftBackend::Hephaestus,
@@ -198,7 +205,10 @@ fn reports_the_adapter_time_step_rejection_for_hephaestus_pstd() {
 fn reports_the_adapter_coefficient_rejection_for_hephaestus_pstd() {
     let grid = Grid::new(2, 2, 2, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let mut medium = absorbing_medium();
-    medium.absorption[[0, 0, 1]] = -0.2;
+    medium.absorption.set(
+        [0, 0, 1],
+        aequitas::systems::si::quantities::ReciprocalLength::from_base(-0.2),
+    );
     let config = |fft_backend| SolverConfiguration {
         solver_type: SolverType::PSTD,
         fft_backend,

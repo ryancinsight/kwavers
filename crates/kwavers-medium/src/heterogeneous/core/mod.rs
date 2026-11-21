@@ -6,3 +6,6 @@ pub mod structure;
 
 // Re-export core type
 pub use structure::HeterogeneousMedium;
+
+mod absorption_field;
+pub use absorption_field::AbsorptionField;

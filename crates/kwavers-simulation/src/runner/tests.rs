@@ -309,8 +309,15 @@ fn gpu_selection_reports_the_provider_medium_rejection() {
         .for_each(|value| *value = 1_500.0);
     medium.density.iter_mut().for_each(|value| *value = 1_000.0);
     medium.absorption.iter_mut().for_each(|value| *value = 0.2);
-    medium.alpha_power.iter_mut().for_each(|value| *value = 1.3);
-    medium.alpha_power[[0, 0, 1]] = 1.7;
+    medium
+        .alpha_power
+        .fill(aequitas::systems::si::quantities::Dimensionless::from_base(
+            1.3,
+        ));
+    medium.alpha_power.set(
+        [0, 0, 1],
+        aequitas::systems::si::quantities::Dimensionless::from_base(1.7),
+    );
     let request = SimulationRunRequest {
         medium: &medium,
         sensor_mask: Some(leto::Array3::from_elem([8, 8, 8], true)),

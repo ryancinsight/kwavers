@@ -307,17 +307,15 @@ fn near_uniform_medium_exponent_resolves_to_its_midpoint_everywhere() {
     // The `absorption` field stores SI base prefactors (Np/m at the reference
     // frequency), so 0.7 dB/(MHz^y cm) is filled boundary-converted, as the
     // medium's own constructors store it.
-    medium.absorption.fill(alpha0 * DB_TO_NP * 100.0);
-    medium.alpha0.fill(alpha0);
-    for ([i, _, _], y) in medium
-        .alpha_power
-        .indexed_iter_mut()
-        .expect("invariant: alpha_power field is materialized")
-    {
-        // Voxel [0, 0, 0] carries the low end, so a sample-voxel rule would
-        // resolve to `low`, not the midpoint.
-        *y = if i == 0 { low } else { high };
-    }
+    medium.absorption.fill(
+        aequitas::systems::si::quantities::ReciprocalLength::from_base(alpha0 * DB_TO_NP * 100.0),
+    );
+
+    medium.alpha_power =
+        kwavers_medium::heterogeneous::AbsorptionField::from_base(leto::Array3::from_shape_fn(
+            [grid.nx, grid.ny, grid.nz],
+            |[i, _, _]| if i == 0 { low } else { high },
+        ));
     let config = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
             alpha_coeff: None,

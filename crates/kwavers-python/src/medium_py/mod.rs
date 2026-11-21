@@ -78,12 +78,15 @@ impl Medium {
                     "absorption shape must match sound_speed shape",
                 ));
             }
-            het.absorption = into_leto(abs_arr);
+            het.absorption =
+                kwavers_medium::heterogeneous::AbsorptionField::from_base(into_leto(abs_arr));
         }
 
         if let Some(py_ap) = alpha_power {
             if let Ok(scalar) = py_ap.extract::<f64>() {
-                het.alpha_power = leto::Array3::from_elem((nx, ny, nz), scalar);
+                het.alpha_power = kwavers_medium::heterogeneous::AbsorptionField::from_base(
+                    leto::Array3::from_elem((nx, ny, nz), scalar),
+                );
             } else if let Ok(arr) = py_ap.extract::<PyReadonlyArray3<f64>>() {
                 let ap_arr = arr.as_array().to_owned();
                 if ap_arr.shape() != [nx, ny, nz] {
@@ -91,7 +94,8 @@ impl Medium {
                         "alpha_power shape must match sound_speed shape",
                     ));
                 }
-                het.alpha_power = into_leto(ap_arr);
+                het.alpha_power =
+                    kwavers_medium::heterogeneous::AbsorptionField::from_base(into_leto(ap_arr));
             } else {
                 return Err(PyValueError::new_err(
                     "alpha_power must be a float or a 3D ndarray matching sound_speed shape",

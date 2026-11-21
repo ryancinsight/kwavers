@@ -3,6 +3,7 @@
 //! Following GRASP principle: Separated core data structure from trait implementations
 //! to achieve optimal cohesion per senior engineering standards.
 
+use super::AbsorptionField;
 use crate::homogeneous::HomogeneousMedium;
 use crate::{
     acoustic::AcousticProperties,
@@ -14,6 +15,7 @@ use crate::{
     viscous::ViscousProperties,
 };
 use aequitas::systems::si::units::PerMeter;
+use aequitas::systems::si::{dimensions, quantities::Frequency};
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -56,23 +58,12 @@ pub struct HeterogeneousMedium {
     pub bubble_velocity: Array3<f64>,
 
     // Acoustic parameters
-    //
-    // `absorption` stores Np/m at `reference_frequency` (storage convention in
-    // `crate::core`); every fill converts the dB α₀ prefactor once. `alpha0`
-    // is legacy write-only scratch (nothing reads it); do not add readers.
-    pub alpha0: Array3<f64>,
     pub delta: Array3<f64>,
     pub b_a: Array3<f64>,
-    pub absorption: Array3<f64>,
-    /// Power-law absorption exponent y per voxel (dimensionless).
-    ///
-    /// **Theorem (Szabo power-law absorption).**  The absorption coefficient at
-    /// frequency f is
-    ///   α(f) = α₀ · (f / f_ref)^y   [dB/(MHz^y cm)]
-    ///
-    /// k-Wave uses y ∈ (0, 3], typically y = 1.5 for tissue (Szabo 1994).
-    /// Default 1.0 (linear frequency dependence) for generic heterogeneous media.
-    pub alpha_power: Array3<f64>,
+    /// Reference attenuation in Np/m, evaluated at the medium reference frequency.
+    pub absorption: AbsorptionField<dimensions::ReciprocalLength>,
+    /// Dimensionless power-law exponent y per voxel.
+    pub alpha_power: AbsorptionField<dimensions::Dimensionless>,
     pub nonlinearity: Array3<f64>,
 
     // Viscoelastic properties
@@ -85,7 +76,7 @@ pub struct HeterogeneousMedium {
     pub lame_mu: Array3<f64>,
 
     // Frequency reference
-    pub reference_frequency: f64,
+    pub reference_frequency: Frequency,
 }
 
 impl HeterogeneousMedium {
@@ -114,18 +105,18 @@ impl HeterogeneousMedium {
             temperature: Array3::zeros([nx, ny, nz]),
             bubble_radius: Array3::zeros([nx, ny, nz]),
             bubble_velocity: Array3::zeros([nx, ny, nz]),
-            alpha0: Array3::zeros([nx, ny, nz]),
+
             delta: Array3::zeros([nx, ny, nz]),
             b_a: Array3::zeros([nx, ny, nz]),
-            absorption: Array3::zeros([nx, ny, nz]),
-            alpha_power: Array3::from_elem([nx, ny, nz], 1.0),
+            absorption: AbsorptionField::from_base(Array3::zeros([nx, ny, nz])),
+            alpha_power: AbsorptionField::from_base(Array3::from_elem([nx, ny, nz], 1.0)),
             nonlinearity: Array3::zeros([nx, ny, nz]),
             shear_sound_speed: Array3::zeros([nx, ny, nz]),
             shear_viscosity_coeff: Array3::zeros([nx, ny, nz]),
             bulk_viscosity_coeff: Array3::zeros([nx, ny, nz]),
             lame_lambda: Array3::zeros([nx, ny, nz]),
             lame_mu: Array3::zeros([nx, ny, nz]),
-            reference_frequency: REFERENCE_FREQUENCY_HZ,
+            reference_frequency: Frequency::from_base(REFERENCE_FREQUENCY_HZ),
         }
     }
 
@@ -196,7 +187,7 @@ impl HeterogeneousMedium {
         let lame_mu_arr = h.lame_mu_array();
 
         // Scalar properties via trait methods
-        let ref_freq = h.reference_frequency().into_base();
+        let ref_freq = h.reference_frequency();
         let vis = h.viscosity(0.0, 0.0, 0.0, grid).into_base();
         let shear_vis = h.shear_viscosity(0.0, 0.0, 0.0, grid).into_base();
         let bulk_vis = h.bulk_viscosity(0.0, 0.0, 0.0, grid).into_base();
@@ -263,12 +254,11 @@ impl HeterogeneousMedium {
             bubble_radius: h.bubble_radius().clone(),
             bubble_velocity: h.bubble_velocity().clone(),
 
-            alpha0: fill(0.0), // α0 (reference) not exposed directly; keep 0, use absorption array
-            delta: fill(0.0),  // power law exponent not exposed directly; keep 0
+            delta: fill(0.0), // power law exponent not exposed directly; keep 0
             b_a: nonlinearity.clone(),
-            absorption,
+            absorption: AbsorptionField::from_base(absorption),
             // Propagate alpha_power from homogeneous medium (uniform broadcast).
-            alpha_power: fill(h.alpha_power(0.0, 0.0, 0.0, grid)),
+            alpha_power: AbsorptionField::from_base(fill(h.alpha_power(0.0, 0.0, 0.0, grid))),
             nonlinearity,
 
             shear_sound_speed: shear_speed_arr,

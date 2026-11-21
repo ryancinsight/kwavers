@@ -14,10 +14,11 @@
 //! - Duck FA (1990). *Physical Properties of Tissue.* (y, B/A)
 //! - Connor CW, Hynynen K (2002). *Phys. Med. Biol.* 47(12), 2213–2231. (skull y)
 
+use crate::absorption::power_law::reference_loss_from_decibels_per_centimetre;
+use crate::heterogeneous::AbsorptionField;
 use crate::heterogeneous::HeterogeneousMedium;
 use crate::HomogeneousMedium;
 use kwavers_core::constants::hu_mapping::HuAcousticModel;
-use kwavers_core::constants::DB_TO_NP;
 use kwavers_core::error::{KwaversError, KwaversResult, MediumError};
 use kwavers_grid::Grid;
 use leto::Array3;
@@ -95,9 +96,11 @@ impl<'a> CtMediumBuilder<'a> {
         // `nonlinearity`/`b_a` the B/A parameter.
         medium.density = self.ct.mapv(|hu| model.density(hu));
         medium.sound_speed = self.ct.mapv(|hu| model.sound_speed(hu));
-        medium.absorption = self.ct.mapv(|hu| model.absorption(hu) * DB_TO_NP * 100.0);
-        medium.alpha0 = medium.absorption.clone();
-        medium.alpha_power = self.ct.mapv(|hu| model.power_law_exponent(hu));
+        medium.absorption = AbsorptionField::from_base(self.ct.mapv(|hu| {
+            reference_loss_from_decibels_per_centimetre(model.absorption(hu)).into_base()
+        }));
+        medium.alpha_power =
+            AbsorptionField::from_base(self.ct.mapv(|hu| model.power_law_exponent(hu)));
         medium.nonlinearity = self.ct.mapv(|hu| model.nonlinearity(hu));
         medium.b_a = medium.nonlinearity.clone();
 

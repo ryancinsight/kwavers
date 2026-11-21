@@ -1,14 +1,16 @@
 //! `HeterogeneousTissueMedium` implementation
 
 use super::{DomainTissueRegion, TissueMap};
+use crate::absorption::power_law::reference_loss_from_decibels_per_centimetre;
 use crate::absorption::AbsorptionTissueType;
+use crate::heterogeneous::AbsorptionField;
 use crate::{
     absorption::{tissue::AbsorptionTissueProperties, TISSUE_PROPERTIES},
     core::{ArrayAccess, CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
 };
+use aequitas::systems::si::dimensions;
 use aequitas::systems::si::quantities::{Dimensionless, MassDensity, ReciprocalLength, Velocity};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
-use kwavers_core::constants::DB_TO_NP;
 use kwavers_core::error::{KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use leto::{Array3, ArrayView3, ArrayViewMut3};
@@ -49,7 +51,7 @@ pub struct HeterogeneousTissueMedium {
     // Np/m at the 1 MHz reference (storage convention in `crate::core`).
     pub(super) density: Array3<f64>,
     pub(super) sound_speed: Array3<f64>,
-    pub(super) absorption: Array3<f64>,
+    pub(super) absorption: AbsorptionField<dimensions::ReciprocalLength>,
     pub(super) nonlinearity: Array3<f64>,
 
     // Thermal state
@@ -78,7 +80,10 @@ impl HeterogeneousTissueMedium {
         let sound_speed = Array3::from_elem(shape, props.sound_speed.max(MIN_PHYSICAL_SOUND_SPEED));
         // Np/m at the 1 MHz reference: the dB α₀ prefactor converted once here
         // (storage convention in `crate::core`).
-        let absorption = Array3::from_elem(shape, props.alpha_0 * DB_TO_NP * 100.0);
+        let absorption = AbsorptionField::from_base(Array3::from_elem(
+            shape,
+            reference_loss_from_decibels_per_centimetre(props.alpha_0).into_base(),
+        ));
         let nonlinearity = Array3::from_elem(shape, props.nonlinearity);
 
         let temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K); // 37°C default
@@ -130,7 +135,10 @@ impl HeterogeneousTissueMedium {
             if let Some(props) = TISSUE_PROPERTIES.get(tissue_type) {
                 self.density[[i, j, k]] = props.density.max(MIN_PHYSICAL_DENSITY);
                 self.sound_speed[[i, j, k]] = props.sound_speed.max(MIN_PHYSICAL_SOUND_SPEED);
-                self.absorption[[i, j, k]] = props.alpha_0 * DB_TO_NP * 100.0;
+                self.absorption.set(
+                    [i, j, k],
+                    reference_loss_from_decibels_per_centimetre(props.alpha_0),
+                );
                 self.nonlinearity[[i, j, k]] = props.nonlinearity;
             }
         }
@@ -163,7 +171,7 @@ impl CoreMedium for HeterogeneousTissueMedium {
     }
 
     fn absorption(&self, i: usize, j: usize, k: usize) -> ReciprocalLength<f64> {
-        ReciprocalLength::from_base(self.absorption[[i, j, k]])
+        self.absorption.get([i, j, k])
     }
 
     fn nonlinearity(&self, i: usize, j: usize, k: usize) -> Dimensionless<f64> {
@@ -207,7 +215,7 @@ impl ArrayAccess for HeterogeneousTissueMedium {
     }
 
     fn absorption_array(&self) -> ArrayView3<'_, f64> {
-        self.absorption.view()
+        self.absorption.base().view()
     }
 
     fn nonlinearity_array(&self) -> ArrayView3<'_, f64> {
@@ -223,7 +231,7 @@ impl ArrayAccess for HeterogeneousTissueMedium {
     }
 
     fn absorption_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
-        Some(self.absorption.view_mut())
+        Some(self.absorption.base_mut().view_mut())
     }
 
     fn nonlinearity_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {

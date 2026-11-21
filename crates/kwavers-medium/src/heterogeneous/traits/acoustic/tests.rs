@@ -28,9 +28,13 @@ fn small_grid() -> Grid {
 /// y, and f_ref. The field stores Np/m (storage convention in `crate::core`).
 fn uniform_medium(alpha0: f64, alpha_power: f64, f_ref: f64) -> HeterogeneousMedium {
     let mut m = HeterogeneousMedium::new(4, 4, 4, false);
-    m.absorption = Array3::from_elem([4, 4, 4], alpha0 * DB_CM_TO_NP_M);
-    m.alpha_power = Array3::from_elem([4, 4, 4], alpha_power);
-    m.reference_frequency = f_ref;
+    m.absorption = crate::heterogeneous::AbsorptionField::from_base(Array3::from_elem(
+        [4, 4, 4],
+        alpha0 * DB_CM_TO_NP_M,
+    ));
+    m.alpha_power =
+        crate::heterogeneous::AbsorptionField::from_base(Array3::from_elem([4, 4, 4], alpha_power));
+    m.reference_frequency = aequitas::systems::si::quantities::Frequency::from_base(f_ref);
     m
 }
 
@@ -137,7 +141,10 @@ fn test_power_law_linear_exponent_y1() {
 #[test]
 fn test_alpha_power_query_returns_stored_exponent() {
     let mut m = HeterogeneousMedium::new(4, 4, 4, false);
-    m.alpha_power[[1, 1, 1]] = 2.3;
+    m.alpha_power.set(
+        [1, 1, 1],
+        aequitas::systems::si::quantities::Dimensionless::from_base(2.3),
+    );
     let grid = small_grid();
 
     // Nearest-neighbor: coordinates (1.0, 1.0, 1.0) map to voxel [1,1,1].
@@ -162,11 +169,21 @@ fn test_spatially_varying_alpha_power() {
     let f_ref = MHZ_TO_HZ;
     let alpha0 = 1.0_f64;
     let mut m = HeterogeneousMedium::new(4, 4, 4, false);
-    m.absorption = Array3::from_elem([4, 4, 4], alpha0 * DB_CM_TO_NP_M);
-    m.alpha_power = Array3::from_elem([4, 4, 4], 1.5);
-    m.alpha_power[[0, 0, 0]] = 1.0;
-    m.alpha_power[[3, 3, 3]] = 2.0;
-    m.reference_frequency = f_ref;
+    m.absorption = crate::heterogeneous::AbsorptionField::from_base(Array3::from_elem(
+        [4, 4, 4],
+        alpha0 * DB_CM_TO_NP_M,
+    ));
+    m.alpha_power =
+        crate::heterogeneous::AbsorptionField::from_base(Array3::from_elem([4, 4, 4], 1.5));
+    m.alpha_power.set(
+        [0, 0, 0],
+        aequitas::systems::si::quantities::Dimensionless::from_base(1.0),
+    );
+    m.alpha_power.set(
+        [3, 3, 3],
+        aequitas::systems::si::quantities::Dimensionless::from_base(2.0),
+    );
+    m.reference_frequency = aequitas::systems::si::quantities::Frequency::from_base(f_ref);
     let grid = small_grid();
 
     let r0 = m
@@ -196,7 +213,7 @@ fn test_spatially_varying_alpha_power() {
 fn test_default_alpha_power_is_one() {
     let m = HeterogeneousMedium::new(4, 4, 4, false);
     // Every voxel must be exactly 1.0.
-    for v in m.alpha_power.iter() {
+    for v in m.alpha_power.base().iter() {
         assert!(
             (*v - 1.0).abs() < f64::EPSILON,
             "default alpha_power voxel is {v}, expected 1.0"
@@ -243,10 +260,50 @@ fn test_tissue_factory_alpha_power_is_1_5() {
     use crate::heterogeneous::factory::tissue::TissueFactory;
     let grid = Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).expect("grid must be valid");
     let medium = TissueFactory::create_tissue_medium(&grid);
-    for v in medium.alpha_power.iter() {
+    for v in medium.alpha_power.base().iter() {
         assert!(
             (*v - 1.5).abs() < f64::EPSILON,
             "tissue alpha_power voxel is {v}, expected 1.5"
         );
     }
+}
+
+#[test]
+fn heterogeneous_loss_storage_keeps_reference_units_at_the_solver_boundary() {
+    use crate::core::{ArrayAccess, CoreMedium};
+    use aequitas::systems::si::quantities::{Dimensionless, Frequency, ReciprocalLength};
+
+    let _trace = tracing::subscriber::set_default(
+        tracing_subscriber::fmt()
+            .with_test_writer()
+            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
+            .finish(),
+    );
+    let (grid, medium) = tracing::info_span!("arrange").in_scope(|| {
+        let grid = Grid::new(4, 4, 4, 1.0e-3, 1.0e-3, 1.0e-3).expect("valid grid");
+        let mut medium = HeterogeneousMedium::new(4, 4, 4, false);
+        medium.reference_frequency = Frequency::from_base(2.0e6);
+        medium
+            .absorption
+            .set([1, 0, 0], ReciprocalLength::from_base(6.0));
+        medium
+            .alpha_power
+            .set([1, 0, 0], Dimensionless::from_base(1.5));
+        (grid, medium)
+    });
+    let (stored, solver, at_reference, at_four_times_reference) = tracing::info_span!("act")
+        .in_scope(|| {
+            (
+                medium.absorption(1, 0, 0),
+                medium.absorption_array()[[1, 0, 0]],
+                medium.absorption_coefficient(1.0e-3, 0.0, 0.0, &grid, 2.0e6),
+                medium.absorption_coefficient(1.0e-3, 0.0, 0.0, &grid, 8.0e6),
+            )
+        });
+    tracing::info_span!("assert").in_scope(|| {
+        assert_eq!(stored, ReciprocalLength::from_base(6.0));
+        assert_eq!(solver, stored.into_base());
+        assert_eq!(at_reference, stored);
+        assert_eq!(at_four_times_reference, ReciprocalLength::from_base(48.0));
+    });
 }

@@ -500,15 +500,14 @@ fn stratified_exponent_matches_per_tissue_uniform_operator() {
         .expect("valid homogeneous optical properties");
     het.use_trilinear_interpolation = false; // piecewise-constant exponent lookup
                                              // Np/m storage (storage convention in `kwavers_medium::core`).
-    het.absorption.fill(alpha0 * DB_TO_NP * 100.0);
-    het.alpha0.fill(alpha0 * DB_TO_NP * 100.0);
-    for ([i, _, _], a) in het
-        .alpha_power
-        .indexed_iter_mut()
-        .expect("invariant: alpha_power field is materialized")
-    {
-        *a = if i < nx / 2 { ya } else { yb };
-    }
+    het.absorption.fill(
+        aequitas::systems::si::quantities::ReciprocalLength::from_base(alpha0 * DB_TO_NP * 100.0),
+    );
+    het.alpha_power =
+        kwavers_medium::heterogeneous::AbsorptionField::from_base(leto::Array3::from_shape_fn(
+            [grid.nx, grid.ny, grid.nz],
+            |[i, _, _]| if i < nx / 2 { ya } else { yb },
+        ));
     let cfg = PSTDConfig {
         absorption_mode: AbsorptionMode::PowerLaw {
             alpha_coeff: None,

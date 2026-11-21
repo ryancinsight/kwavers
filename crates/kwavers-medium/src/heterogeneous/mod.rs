@@ -20,6 +20,6 @@ pub mod constants;
 mod ct;
 pub mod tissue;
 
-pub use core::HeterogeneousMedium;
+pub use core::{AbsorptionField, HeterogeneousMedium};
 pub use ct::CtMediumBuilder;
 pub use factory::{HeterogeneousFactory, TissueFactory};

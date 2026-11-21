@@ -36,7 +36,7 @@ impl CoreMedium for HeterogeneousMedium {
     /// Get absorption coefficient at grid point
     #[inline]
     fn absorption(&self, i: usize, j: usize, k: usize) -> ReciprocalLength<f64> {
-        ReciprocalLength::from_base(self.absorption[[i, j, k]])
+        self.absorption.get([i, j, k])
     }
 
     /// Get maximum sound speed in the medium
@@ -46,7 +46,7 @@ impl CoreMedium for HeterogeneousMedium {
 
     /// Get reference frequency for absorption calculations
     fn reference_frequency(&self) -> Frequency<f64> {
-        Frequency::from_base(self.reference_frequency)
+        self.reference_frequency
     }
 
     /// Check if medium properties are spatially varying
@@ -95,7 +95,7 @@ impl ArrayAccess for HeterogeneousMedium {
 
     /// Get absorption array view (zero-copy)
     fn absorption_array(&self) -> leto::ArrayView3<'_, f64> {
-        self.absorption.view()
+        self.absorption.base().view()
     }
 }
 
@@ -123,16 +123,16 @@ impl AcousticProperties for HeterogeneousMedium {
         grid: &Grid,
         frequency: f64,
     ) -> ReciprocalLength<f64> {
-        let base_absorption = self.lookup_field(&self.absorption, x, y, z, grid);
-        let exponent = self.lookup_field(&self.alpha_power, x, y, z, grid);
-        let freq_ratio = frequency / self.reference_frequency;
+        let base_absorption = self.alpha_coefficient(x, y, z, grid);
+        let exponent = self.alpha_power(x, y, z, grid);
+        let freq_ratio = Frequency::from_base(frequency) / self.reference_frequency;
         // Storage is already Np/m at the reference frequency (storage
         // convention in `crate::core`); scale to the requested frequency
         // here (Szabo 1994).
-        ReciprocalLength::from_base(base_absorption * freq_ratio.powf(exponent))
+        base_absorption * freq_ratio.into_base().powf(exponent)
     }
 
-    /// Power-law prefactor α₀ in Np/m at the 1 MHz reference, at the given
+    /// Power-law prefactor α₀ in Np/m at the medium reference, at the given
     /// continuous coordinates.
     ///
     /// Returns the spatially interpolated absorption prefactor from
@@ -141,7 +141,7 @@ impl AcousticProperties for HeterogeneousMedium {
     /// implementation returns 0 (lossless), so this override is required for
     /// the solver to pick up the medium's field.
     fn alpha_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> ReciprocalLength<f64> {
-        ReciprocalLength::from_base(self.lookup_field(&self.absorption, x, y, z, grid))
+        ReciprocalLength::from_base(self.lookup_field(self.absorption.base(), x, y, z, grid))
     }
 
     /// Per-voxel power-law exponent y at the given continuous coordinates.
@@ -149,6 +149,6 @@ impl AcousticProperties for HeterogeneousMedium {
     /// Used by solvers that need the exponent separately from the absorption
     /// coefficient (e.g. fractional-Laplacian PSTD absorber).
     fn alpha_power(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.lookup_field(&self.alpha_power, x, y, z, grid)
+        self.lookup_field(self.alpha_power.base(), x, y, z, grid)
     }
 }

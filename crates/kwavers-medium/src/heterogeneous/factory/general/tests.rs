@@ -18,8 +18,8 @@ fn test_from_arrays_basic() {
 
     assert_eq!(medium.sound_speed[[0, 0, 0]], SOUND_SPEED_WATER_SIM);
     assert_eq!(medium.density[[0, 0, 0]], DENSITY_WATER_NOMINAL);
-    assert_eq!(medium.reference_frequency, MHZ_TO_HZ);
-    assert_eq!(medium.alpha_power[[0, 0, 0]], 1.0);
+    assert_eq!(medium.reference_frequency.into_base(), MHZ_TO_HZ);
+    assert_eq!(medium.alpha_power.get([0, 0, 0]).into_base(), 1.0);
 }
 
 #[test]
@@ -35,8 +35,11 @@ fn test_from_arrays_with_optional() {
             .unwrap();
 
     // Caller passes the dB α₀ prefactor; storage is Np/m.
-    assert_eq!(medium.absorption[[0, 0, 0]], 0.5 * DB_TO_NP * 100.0);
-    assert_eq!(medium.alpha_power[[0, 0, 0]], 1.5);
+    assert_eq!(
+        medium.absorption.get([0, 0, 0]).into_base(),
+        0.5 * DB_TO_NP * 100.0
+    );
+    assert_eq!(medium.alpha_power.get([0, 0, 0]).into_base(), 1.5);
     assert_eq!(medium.nonlinearity[[0, 0, 0]], 6.0);
 }
 
@@ -56,7 +59,7 @@ fn test_from_functions() {
 
     assert_eq!(medium.sound_speed[[0, 0, 0]], SOUND_SPEED_WATER_SIM);
     assert_eq!(medium.density[[0, 0, 0]], DENSITY_WATER_NOMINAL);
-    assert_eq!(medium.alpha_power[[0, 0, 0]], 1.5);
+    assert_eq!(medium.alpha_power.get([0, 0, 0]).into_base(), 1.5);
 }
 
 #[test]
