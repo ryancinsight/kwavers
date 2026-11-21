@@ -10,7 +10,8 @@ pub mod thresholds;
 
 pub use growth::{
     oscillation_amplitude_fraction, rectified_diffusion_rate, rectified_diffusion_rate_checked,
-    rectified_diffusion_terms, RectifiedDiffusionTerms, RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO,
+    rectified_diffusion_rate_with_concentrations, rectified_diffusion_terms,
+    RectifiedDiffusionTerms, RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO,
 };
 pub use model::{CavitationCore, CavitationModel};
 pub use state::{CavitationDose, CavitationMechanicsState};
