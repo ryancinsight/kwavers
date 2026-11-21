@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0
+
+### Fixed
+
+- [patch] Keep the crates.io archive within the size limit by delivering
+  datasheets and reference renders through the source repository. The archive
+  contains the CAD fixtures used by the driver tests.
+
 ## 0.1.0 - Unreleased
 
 ### Added
