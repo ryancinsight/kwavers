@@ -26,6 +26,8 @@ proteus = { workspace = true }
 # Rejection assertions shared across the workspace's test modules.
 kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 proptest = "1.2"
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 [lints]
 workspace = true

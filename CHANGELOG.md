@@ -11,6 +11,12 @@
 
 ### Breaking
 
+- [major] Construct fractional absorption from reciprocal length,
+  reference frequency, and a dimensionless exponent. Evaluation
+  takes a typed frequency and applies the supplied reference.
+  Existing serialized field names remain available. See
+  [ADR 144](docs/adr/144-type-fractional-absorption.md).
+
 - [major] Use typed bone and skull sound speeds, shear speeds, and
   densities. Replace scalar linear attenuation constants with
   `BONE_ATTENUATION_SLOPE` and `SKULL_MARSAC_ATTENUATION_SLOPE`, evaluated

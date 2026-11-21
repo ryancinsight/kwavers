@@ -35,6 +35,7 @@ pub mod spatially_varying;
 pub mod stokes;
 pub mod tissue;
 
+use aequitas::systems::si::quantities::{Frequency, ReciprocalLength, Time, Velocity};
 pub use dispersion::{AbsorptionDispersionCorrection, DispersionModel};
 pub use fractional::{FractionalDerivative, FractionalLaplacian};
 pub use histotripsy::{
@@ -83,15 +84,29 @@ impl AbsorptionCalculator {
         Self { model }
     }
 
-    /// Calculate absorption coefficient at a given frequency
-    #[must_use]
-    pub fn absorption_coefficient(&self, frequency: f64) -> f64 {
-        match &self.model {
-            AbsorptionModel::PowerLaw(m) => m.absorption_at_frequency(frequency),
-            AbsorptionModel::Tissue(m) => m.absorption_at_frequency(frequency),
-            AbsorptionModel::Stokes(m) => m.absorption_at_frequency(frequency),
-            AbsorptionModel::Fractional(m) => m.absorption_at_frequency(frequency),
+    /// Evaluate amplitude loss at the supplied physical frequency.
+    ///
+    /// # Errors
+    /// Returns an error if the frequency or evaluated attenuation is invalid.
+    pub fn absorption_coefficient(&self, frequency: Frequency) -> KwaversResult<ReciprocalLength> {
+        let hertz = frequency.into_base();
+        if !hertz.is_finite() || hertz < 0.0 {
+            return Err(kwavers_core::error::KwaversError::InvalidInput(
+                "Frequency must be finite and nonnegative".into(),
+            ));
         }
+        let loss = match &self.model {
+            AbsorptionModel::PowerLaw(model) => return model.absorption_at_frequency(frequency),
+            AbsorptionModel::Tissue(model) => model.absorption_at_frequency(hertz),
+            AbsorptionModel::Stokes(model) => model.absorption_at_frequency(hertz),
+            AbsorptionModel::Fractional(model) => model.absorption_at_frequency(hertz),
+        };
+        if !loss.is_finite() || loss < 0.0 {
+            return Err(kwavers_core::error::KwaversError::InvalidInput(
+                "Invalid evaluated amplitude attenuation".into(),
+            ));
+        }
+        Ok(ReciprocalLength::from_base(loss))
     }
 
     /// Apply absorption to a field over one time step.
@@ -110,12 +125,28 @@ impl AbsorptionCalculator {
     pub fn apply_absorption(
         &self,
         field: &mut Array3<f64>,
-        frequency: f64,
-        dt: f64,
-        sound_speed: f64,
+        frequency: Frequency,
+        dt: Time,
+        sound_speed: Velocity,
     ) -> KwaversResult<()> {
-        let alpha = self.absorption_coefficient(frequency);
-        let decay = (-alpha * sound_speed * dt).exp();
+        if !dt.as_base().is_finite()
+            || dt.into_base() < 0.0
+            || !sound_speed.as_base().is_finite()
+            || sound_speed.into_base() <= 0.0
+        {
+            return Err(kwavers_core::error::KwaversError::InvalidInput(
+                "Time must be finite and nonnegative and sound speed must be finite and positive"
+                    .into(),
+            ));
+        }
+        let alpha = self.absorption_coefficient(frequency)?;
+        let distance = sound_speed * dt;
+        if !distance.as_base().is_finite() {
+            return Err(kwavers_core::error::KwaversError::InvalidInput(
+                "Propagation distance exceeds scalar range".into(),
+            ));
+        }
+        let decay = (-(alpha * distance).into_base()).exp();
         zip_mut(field.view_mut(), (), |x, ()| *x *= decay);
         Ok(())
     }
