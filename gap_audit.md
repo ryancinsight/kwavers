@@ -1,3 +1,24 @@
+## Fractional Laplacian correction
+
+ADR 144 adopts calibrated amplitude damping in Medium 7.0.0 and Solver
+6.0.0. The typed step uses the same law for its frequency query and its
+FFT mask. Each mask entry is a single real gain. The previous Solver
+stored two scalars per mode and evaluated sine and cosine on every step.
+The plugin rejects a heterogeneous medium before changing pressure.
+
+The Medium regression constructs the same dimensioned inputs with metres
+and seconds or millimetres and milliseconds. Two half-steps give total
+gains 1, exp(−0.5), and exp(−4) for angular wavenumbers 0, 1, and 4
+at order 1.5. It also checks exact DC at order zero, malformed axes and
+an extreme calibration with intermediate powers 2^1200 and 2^−1200.
+
+The Solver oracle compares every complex sample of six periodic modes with
+its analytic response at orders 1, 1.5, and 2. For quadratic loss, modes
+1 and 2 now yield exp(−0.25) and exp(−1). The catalog test reads both
+calibration formats and evolves a real wave with two different timesteps.
+Run `cargo nextest run --locked --release -p kwavers-medium -p kwavers-solver
+--test fractional_laplacian`. The original failures are recorded below.
+
 ## Fractional Laplacian audit at `64f540052`
 
 The Medium implementation assigns three incompatible dimensions to τ.

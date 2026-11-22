@@ -37,7 +37,7 @@ pub mod tissue;
 
 use aequitas::systems::si::quantities::{Frequency, ReciprocalLength, Time, Velocity};
 pub use dispersion::AbsorptionDispersionCorrection;
-pub use fractional::{FractionalDerivative, FractionalLaplacian};
+pub use fractional::{FractionalAbsorptionStep, FractionalDerivative, FractionalLaplacian};
 pub use histotripsy::{
     histotripsy_tissue_properties, histotripsy_tissue_properties_by_name,
     HistotripsyTissueProperties,
@@ -99,7 +99,7 @@ impl AbsorptionCalculator {
             AbsorptionModel::PowerLaw(model) => return model.absorption_at_frequency(frequency),
             AbsorptionModel::Tissue(model) => model.absorption_at_frequency(hertz),
             AbsorptionModel::Stokes(model) => model.absorption_at_frequency(hertz),
-            AbsorptionModel::Fractional(model) => model.absorption_at_frequency(hertz),
+            AbsorptionModel::Fractional(model) => return model.absorption_at_frequency(frequency),
         };
         if !loss.is_finite() || loss < 0.0 {
             return Err(kwavers_core::error::KwaversError::InvalidInput(

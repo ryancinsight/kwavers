@@ -2,6 +2,11 @@
 
 ## Target 6.0.0 typed acoustic analysis cohort
 
+- [x] [major] Verify Medium 7.0.0 homogeneous damping in two unit systems
+  and Solver 6.0.0 FFT amplitudes and phase for DC, opposite, oblique and
+  Nyquist modes. Verify Physics 6.0.0 configuration migration through the
+  real pressure plugin with varying elapsed time.
+
 - [major] See the [migration notes](../../CHANGELOG.md) for the Analysis and
   Medium 7.0.0 contracts, the affected downstream layers and the Core 5.1.0
   attenuation-slope alias.

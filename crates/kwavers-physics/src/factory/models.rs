@@ -2,7 +2,10 @@
 //!
 //! Comprehensive type system for physics models following domain principles
 
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, ReciprocalLength};
 use serde::{Deserialize, Serialize};
+
+mod fractional;
 
 /// Physics model configuration with strong typing
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,16 +37,16 @@ pub enum PhysicsModelType {
     ThermalDiffusion { bioheat: bool, perfusion: bool },
     /// Optical propagation and absorption via the diffusion approximation.
     OpticalPropagation { scattering: bool, anisotropy: f64 },
-    /// Linear acoustic wave propagation with exact power-law absorption via
-    /// a fractional-Laplacian spectral filter (Treeby & Cox 2010).
-    ///
-    /// More accurate than relaxation-arm memory variables for broadband
-    /// power-law media such as soft tissue.
+    /// Homogeneous pressure-amplitude damping with α(f) = α_ref (f/f_ref)^y.
+    #[serde(deserialize_with = "fractional::read_calibration")]
     FractionalViscoacoustic {
-        /// Absorption coefficient α₀ in Np/m/(rad/s)^y.
-        alpha0: f64,
-        /// Power-law exponent y (typical tissue: 1.0–1.5).
-        exponent: f64,
+        /// Reference amplitude loss in reciprocal metres. Legacy configurations
+        /// store this at unit angular frequency under the field name `alpha0`.
+        reference_loss: ReciprocalLength,
+        /// Calibration frequency in hertz.
+        reference_frequency: Frequency,
+        /// Nonnegative, dimensionless power-law exponent.
+        exponent: Dimensionless,
     },
     /// Elastic (mechanical) stress–velocity propagation in a solid (λ, μ).
     ///

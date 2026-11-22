@@ -59,3 +59,24 @@ for positive α and one for zero α. Negative α at DC is singular and
 returns an error. Borrow the input so every rejected call preserves it.
 The periodic Fourier derivative and the causal finite-history operator
 have different boundary conditions.
+
+## Accepted homogeneous fractional Laplacian absorption step
+
+The approved contract evolves each spatial Fourier coefficient over elapsed
+time in a homogeneous medium. At angular wavenumber magnitude k, its
+frequency is ck/(2π). Its logarithmic amplitude loss is α(ck/(2π)) c Δt.
+This is the exact solution of dp̂/dt = −c α(ck/(2π)) p̂. Gains compose over
+successive steps, are real and lie in [0,1]. Positive powers leave DC
+unchanged. At order zero the calibrated loss is constant, including DC.
+
+Medium owns the calibrated material and the gain. Solver caches those gains
+on its periodic FFT lattice. A real even multiplier preserves Hermitian
+symmetry. Dispersion is a separate phase operation (see above). Attaching
+the previous unsigned phase to both conjugate bins corrupts real pressure
+when the plugin discards the imaginary part. A bare spatial derivative
+would change the field dimension and does not implement elapsed-time damping.
+
+Require matching shapes, finite nonnegative wavenumber magnitudes and time,
+and finite positive speed and reference frequency. Validate before mutation.
+Verify equal physical inputs in different units, attenuation at the reference,
+and the absolute complex response of DC, opposite and oblique Fourier modes.

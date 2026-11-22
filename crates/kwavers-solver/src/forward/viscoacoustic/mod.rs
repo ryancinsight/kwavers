@@ -2,8 +2,7 @@
 //!
 //! This is the time-domain realization of the generalized-Maxwell viscoacoustic
 //! medium ([`kwavers_medium::viscoelastic::GeneralizedMaxwellModel`] supplies the
-//! frequency-domain complex modulus). Unlike the fractional-Laplacian path
-//! (which realizes the absorption at a single drive frequency), this solver
+//! frequency-domain complex modulus). This solver
 //! reproduces the **full broadband** absorption and dispersion of the relaxation
 //! spectrum exactly, by carrying one memory variable per relaxation arm.
 //!
@@ -51,5 +50,5 @@ mod solver;
 mod tests;
 
 pub use fractional::FractionalAbsorptionOperator;
-pub use fractional_plugin::{FractionalViscoacousticConfig, FractionalViscoacousticPlugin};
+pub use fractional_plugin::FractionalViscoacousticPlugin;
 pub use solver::{ViscoacousticGrid, ViscoacousticMemorySolver};

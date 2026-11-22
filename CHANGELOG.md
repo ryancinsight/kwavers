@@ -4,6 +4,24 @@
 
 ### Breaking
 
+- [major] Medium 7.0.0 keeps the fractional Laplacian as a homogeneous
+  absorption step. Construct `FractionalLaplacian::new(reference_loss,
+  reference_frequency, exponent)?` and call `step(sound_speed, elapsed)?`.
+  Supply angular wavenumber magnitudes in rad/m to `gain` or `apply_k_space`.
+  To preserve an old Medium loss calibration, evaluate its loss query
+  τ(2πf_ref)^y/(2c³) at a positive reference frequency. The former filter
+  exponent has no unit-invariant conversion.
+- [major] Solver 6.0.0 takes grid shape, typed spacings, and the Medium step
+  in `FractionalAbsorptionOperator::new`. Its `apply` returns a result and
+  preserves modal phase. Use `AbsorptionDispersionCorrection` for a separate
+  phase operation. The homogeneous plugin takes the calibrated model and a
+  typed timestep. It refreshes its mask when the grid, speed, or elapsed
+  time changes. Physics 6.0.0 uses typed `reference_loss`,
+  `reference_frequency`, and `exponent` fields for this capability.
+  Existing named-field configurations with `alpha0` and `exponent` use
+  f_ref = 1/(2π) Hz, where the old angular-frequency coefficient equals the
+  reference loss numerically. [ADR 144](docs/adr/144-type-fractional-absorption.md)
+
 - [major] Medium 7.0.0 fractional derivatives take a typed dimensionless
   order, and both methods return a `Result<RuntimeQuantity<Vec<_>>>`.
   Wrap the borrowed SI sample slice in its Aequitas quantity or borrow

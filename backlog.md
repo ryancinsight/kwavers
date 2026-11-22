@@ -1,5 +1,10 @@
 # Backlog / Strategy
 
+[major] The calibrated fractional Laplacian uses one dimensionless gain
+per mode in Medium and Solver. Unit and periodic-mode oracles are in the
+[cutover checklist](docs/migrations/registry-cutover.md). Continue the
+physics audit through the separate material-property and propagation callers.
+
 [major] The physical fractional derivative is implemented for Medium 7.0.0.
 The runtime is published. The [registry cutover checklist](docs/migrations/registry-cutover.md)
 records the provider version and source.

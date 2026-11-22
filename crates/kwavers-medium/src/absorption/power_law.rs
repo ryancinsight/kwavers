@@ -94,7 +94,8 @@ impl PowerLawAbsorption {
         }
         let loss = evaluate(
             self.reference_loss,
-            frequency / self.reference_frequency,
+            frequency,
+            self.reference_frequency,
             self.exponent,
         );
         if !loss.as_base().is_finite() {
@@ -116,13 +117,35 @@ pub fn reference_loss_from_decibels_per_centimetre(decibels: f64) -> ReciprocalL
 #[inline]
 fn evaluate(
     reference_loss: ReciprocalLength,
-    ratio: Dimensionless,
+    frequency: Frequency,
+    reference_frequency: Frequency,
     exponent: Dimensionless,
 ) -> ReciprocalLength {
-    if reference_loss.into_base() == 0.0 {
+    if reference_loss.into_base() == 0.0 || exponent.into_base() == 0.0 {
         return reference_loss;
     }
-    reference_loss * ratio.into_base().powf(exponent.into_base())
+    let ratio = (frequency / reference_frequency).into_base();
+    let scale = ratio.powf(exponent.into_base());
+    if (ratio.is_normal() && scale.is_normal())
+        || frequency.into_base() == 0.0
+        || !reference_loss.into_base().is_finite()
+        || !exponent.into_base().is_finite()
+    {
+        return reference_loss * scale;
+    }
+    // A positive frequency ratio or its power can leave binary64 range even
+    // when the product with the calibration is normal. Combine the exponents
+    // before converting back to a loss, preserving the sign of scalar callers.
+    let log_ratio = if ratio.is_normal() {
+        ratio.log2()
+    } else {
+        frequency.into_base().log2() - reference_frequency.into_base().log2()
+    };
+    let calibration = reference_loss.into_base();
+    let log_loss = exponent
+        .into_base()
+        .mul_add(log_ratio, calibration.abs().log2());
+    ReciprocalLength::from_base(log_loss.exp2().copysign(calibration))
 }
 
 /// Convert the k-Wave power-law absorption coefficient from
@@ -194,7 +217,8 @@ pub fn power_law_db_cm_to_np_m(alpha_db_cm: f64, alpha_power: f64, freq_hz: f64)
     }
     evaluate(
         reference_loss_from_decibels_per_centimetre(alpha_db_cm),
-        Frequency::from_base(freq_hz) / Frequency::from_base(REFERENCE_FREQUENCY_HZ),
+        Frequency::from_base(freq_hz),
+        Frequency::from_base(REFERENCE_FREQUENCY_HZ),
         Dimensionless::from_base(alpha_power),
     )
     .into_base()
