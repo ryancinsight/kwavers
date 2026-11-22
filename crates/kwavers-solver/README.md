@@ -21,6 +21,14 @@ compute-backend trait seam that accelerators implement.
 Elastic wave equations, Helmholtz, and boundary-element formulations live under `forward`
 alongside them.
 
+For single-bubble gas exchange, opt in to
+`forward::bubble_dynamics::gas_transfer::DiffusiveBubble`. It couples
+Rayleigh–Plesset wall motion to a retained dissolved-gas profile and returns the
+ambient equilibrium radius for the current gas inventory. Supply the absolute
+far-field pressure at each step midpoint, including the ambient pressure during
+quiet intervals. The [coupling design and verification](src/forward/bubble_dynamics/gas_transfer/DESIGN.md)
+specify the physical inputs and benchmark range.
+
 ## Inverse solvers
 
 `Reconstructor` implementations cover time reversal (`TimeReversalReconstructor`),

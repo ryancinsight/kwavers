@@ -15,6 +15,28 @@ pub struct GasTransfer<T = f64> {
     pub into_reservoir: AmountOfSubstance<T>,
 }
 
+/// A successful solve that has yet to replace the accepted liquid field.
+pub(super) struct DiffusionTrial<'a, T> {
+    solver: &'a mut TransientGasDiffusion<T>,
+    exchange: GasTransfer<T>,
+    radius: T,
+    boundary_excess: T,
+}
+
+impl<T: FloatElement> DiffusionTrial<'_, T> {
+    pub(super) fn exchange(&self) -> GasTransfer<T> {
+        self.exchange
+    }
+
+    pub(super) fn commit(self) -> GasTransfer<T> {
+        std::mem::swap(&mut self.solver.liquid, &mut self.solver.trial);
+        self.solver.radius = self.radius;
+        self.solver.boundary_excess = self.boundary_excess;
+        self.solver.has_advanced = true;
+        self.exchange
+    }
+}
+
 /// Finite-volume solution of the full moving spherical diffusion equation.
 ///
 /// The spatial scheme uses material cells and a shared flux per face. A
@@ -109,6 +131,14 @@ impl<T: FloatElement> TransientGasDiffusion<T> {
         interval: Time<T>,
         wall: GasDiffusionWall<T>,
     ) -> Result<GasTransfer<T>, GasTransferError> {
+        Ok(self.trial(interval, wall)?.commit())
+    }
+
+    pub(super) fn trial(
+        &mut self,
+        interval: Time<T>,
+        wall: GasDiffusionWall<T>,
+    ) -> Result<DiffusionTrial<'_, T>, GasTransferError> {
         let interval = positive(interval.into_base(), "time interval")?;
         let radius = positive(wall.radius.into_base(), "wall radius")? / self.reference;
         if !radius.is_finite() || radius <= T::ZERO {
@@ -135,11 +165,12 @@ impl<T: FloatElement> TransientGasDiffusion<T> {
             return Err(GasTransferError::Unrepresentable);
         }
         let exchange = self.solve_flux(time, scale_radius, boundary_mid, implicit_fraction)?;
-        std::mem::swap(&mut self.liquid, &mut self.trial);
-        self.radius = radius;
-        self.boundary_excess = boundary;
-        self.has_advanced = true;
-        Ok(exchange)
+        Ok(DiffusionTrial {
+            solver: self,
+            exchange,
+            radius,
+            boundary_excess: boundary,
+        })
     }
 
     fn solve_flux(

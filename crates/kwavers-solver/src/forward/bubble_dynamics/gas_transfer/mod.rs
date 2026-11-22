@@ -1,4 +1,4 @@
-//! Conservative transient diffusion for a prescribed spherical bubble interface.
+//! Conservative transient diffusion for a prescribed or Rayleigh–Plesset spherical interface.
 //!
 //! The state is the liquid concentration field in the material coordinate,
 //! retained across each pulse and its off interval. The far boundary uses the
@@ -8,7 +8,9 @@
 
 mod error;
 mod grid;
+mod rayleigh_plesset;
 mod step;
 
 pub use error::GasTransferError;
+pub use rayleigh_plesset::{DiffusiveBubble, DiffusiveBubbleError, DiffusiveBubbleState};
 pub use step::{GasTransfer, TransientGasDiffusion};

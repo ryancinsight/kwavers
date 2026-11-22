@@ -1,5 +1,6 @@
 use super::super::acoustic_pressure::PressureAmplitude;
 use super::gas_dynamics::{GasSpecies, GasType};
+use eunomia::FloatElement;
 use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use kwavers_core::constants::cavitation::{
     INITIAL_BUBBLE_RADIUS, SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER, VISCOSITY_WATER,
@@ -19,7 +20,12 @@ use std::collections::HashMap;
 /// (e.g., Marmottant state-dependent surface tension) without borrowing `self`.
 #[inline(always)]
 pub fn young_laplace_pressure(sigma: f64, r: f64) -> f64 {
-    2.0 * sigma / r
+    spherical_capillary_pressure(sigma, r)
+}
+
+#[inline]
+pub(crate) fn spherical_capillary_pressure<T: FloatElement>(sigma: T, radius: T) -> T {
+    T::from_count(2) * sigma / radius
 }
 
 /// Liquid-side viscous bubble-wall stress.
@@ -31,7 +37,12 @@ pub fn young_laplace_pressure(sigma: f64, r: f64) -> f64 {
 /// Accepts variable `mu_liquid` for generality; all standard models pass `params.mu_liquid`.
 #[inline(always)]
 pub fn viscous_bubble_wall_stress(mu_liquid: f64, r_dot: f64, r: f64) -> f64 {
-    4.0 * mu_liquid * r_dot / r
+    radial_viscous_stress(mu_liquid, r_dot, r)
+}
+
+#[inline]
+pub(crate) fn radial_viscous_stress<T: FloatElement>(viscosity: T, velocity: T, radius: T) -> T {
+    T::from_count(4) * viscosity * velocity / radius
 }
 
 /// Physical parameters for bubble dynamics

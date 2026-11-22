@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.1.0 Physics and Solver (unreleased)
+
+### Added
+
+- [minor] Couple Rayleigh–Plesset wall motion to conservative transient
+  single-species gas diffusion through the opt-in `DiffusiveBubble` API.
+  The solver retains the liquid profile and noncondensable gas inventory
+  across bursts and quiet intervals. Its equilibrium-radius diagnostic uses
+  that inventory and the configured pressure closure.
+
 ## 5.0.0 Rust registry cohort
 
 The application and most layers use 5.0.0. Analysis, Diagnostics, Medium,

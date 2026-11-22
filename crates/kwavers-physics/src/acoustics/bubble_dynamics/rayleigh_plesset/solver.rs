@@ -72,7 +72,7 @@ impl RayleighPlessetSolver {
         // Solving for R̈: R̈ = (Δp/ρR) - (3/2)(Ṙ²/R)
         let net_pressure = pressure_diff - surface_tension - viscous_stress;
 
-        (net_pressure / (self.params.rho_liquid * r)) - (1.5 * v * v / r)
+        super::wall_acceleration(r, v, self.params.rho_liquid, net_pressure)
     }
 
     /// Calculate internal pressure using consistent thermodynamics

@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-solver"
-version = "5.0.0"
+version = "5.1.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -24,7 +24,7 @@ kwavers-mesh = { path = "../kwavers-mesh", version = "5.0.0" }
 kwavers-medium = { path = "../kwavers-medium", version = "6.0.0" }
 kwavers-field = { path = "../kwavers-field", version = "5.0.0" }
 kwavers-signal = { path = "../kwavers-signal", version = "5.0.0" }
-kwavers-physics = { path = "../kwavers-physics", version = "5.0.0" }
+kwavers-physics = { path = "../kwavers-physics", version = "5.1.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { workspace = true }
 log = "0.4"
