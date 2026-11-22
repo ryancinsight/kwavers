@@ -21,23 +21,23 @@ asclepius = { workspace = true }
 # Layered kwavers crates — depended on directly (no facade; ADR 011 amendment).
 # kwavers-core keeps `channels`+`registration` (flume/ritk-registration were
 # always-on in the former facade).
-kwavers-core = { path = "../kwavers-core", features = ["channels", "registration"], version = "4.0.0" }
-kwavers-math = { path = "../kwavers-math", version = "4.0.0" }
-kwavers-grid = { path = "../kwavers-grid", version = "4.0.0" }
-kwavers-transducer = { path = "../kwavers-transducer", version = "5.0.0" }
-kwavers-receiver = { path = "../kwavers-receiver", version = "4.0.0" }
-kwavers-source = { path = "../kwavers-source", version = "4.0.0" }
-kwavers-boundary = { path = "../kwavers-boundary", version = "4.0.0" }
-kwavers-medium = { path = "../kwavers-medium", version = "5.0.0" }
-kwavers-signal = { path = "../kwavers-signal", version = "4.0.0" }
-kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"], version = "4.0.0" }
-kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"], version = "4.0.0" }
-kwavers-analysis = { path = "../kwavers-analysis", version = "5.0.0" }
-kwavers-imaging = { path = "../kwavers-imaging", version = "4.0.0" }
-kwavers-simulation = { path = "../kwavers-simulation", version = "4.0.0" }
-kwavers-diagnostics = { path = "../kwavers-diagnostics", version = "5.0.0" }
-kwavers-therapy = { path = "../kwavers-therapy", version = "4.0.0" }
-kwavers-gpu = { path = "../kwavers-gpu", version = "6.0.0" }
+kwavers-core = { path = "../kwavers-core", features = ["channels", "registration"], version = "5.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "5.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "5.0.0" }
+kwavers-transducer = { path = "../kwavers-transducer", version = "6.0.0" }
+kwavers-receiver = { path = "../kwavers-receiver", version = "5.0.0" }
+kwavers-source = { path = "../kwavers-source", version = "5.0.0" }
+kwavers-boundary = { path = "../kwavers-boundary", version = "5.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "6.0.0" }
+kwavers-signal = { path = "../kwavers-signal", version = "5.0.0" }
+kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"], version = "5.0.0" }
+kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"], version = "5.0.0" }
+kwavers-analysis = { path = "../kwavers-analysis", version = "6.0.0" }
+kwavers-imaging = { path = "../kwavers-imaging", version = "5.0.0" }
+kwavers-simulation = { path = "../kwavers-simulation", version = "5.0.0" }
+kwavers-diagnostics = { path = "../kwavers-diagnostics", version = "6.0.0" }
+kwavers-therapy = { path = "../kwavers-therapy", version = "5.0.0" }
+kwavers-gpu = { path = "../kwavers-gpu", version = "7.0.0" }
 coeus-core = { workspace = true }
 leto = { workspace = true }
 ritk-io = { workspace = true }

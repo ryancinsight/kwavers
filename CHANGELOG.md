@@ -1,9 +1,18 @@
 # Changelog
 
-## Unreleased
+## 5.0.0 Rust registry cohort
+
+The application and most layers use 5.0.0. Analysis, Diagnostics, Medium,
+and Transducer use 6.0.0. GPU uses 7.0.0 and Driver uses 0.5.0.
+Upgrade the linked layer crates together so quantities, grids, and solver
+types use the same package identities. The [registry checklist](docs/migrations/registry-cutover.md)
+records the cohort and its verification.
 
 ### Added
 
+- [minor] Retain the spherical dissolved-gas profile between acoustic
+  pulses. The transient diffusion solver advances the profile with the
+  bubble state and verifies it against the committed reference trajectories.
 - [minor] Apply typed, spatially varying photoelastic, optical absorption,
   and acoustic absorption properties in field coupling. Use
   `couple_fields_with_medium` or `step_with_medium` to supply the material at

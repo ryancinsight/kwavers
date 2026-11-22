@@ -2270,7 +2270,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -2345,7 +2345,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-analysis"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -2383,7 +2383,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-boundary"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "eunomia",
  "kwavers-core",
@@ -2399,7 +2399,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-core"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -2421,7 +2421,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-diagnostics"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -2458,7 +2458,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-driver"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -2468,7 +2468,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-field"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "eunomia",
  "kwavers-core",
@@ -2479,7 +2479,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-gpu"
-version = "6.0.0"
+version = "7.0.0"
 dependencies = [
  "aequitas",
  "bytemuck",
@@ -2513,7 +2513,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-grid"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "eunomia",
  "kwavers-core",
@@ -2530,7 +2530,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-imaging"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "coeus-core",
  "eunomia",
@@ -2548,7 +2548,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-math"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "apollo-fft",
  "athena-core",
@@ -2566,7 +2566,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-medium"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -2587,7 +2587,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-mesh"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "eunomia",
  "gaia-mesh",
@@ -2598,7 +2598,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-phantom"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -2612,7 +2612,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-physics"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -2688,7 +2688,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-receiver"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "criterion",
  "eunomia",
@@ -2706,7 +2706,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-signal"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -2726,7 +2726,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-simulation"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -2757,7 +2757,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-solver"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "aequitas",
  "anyhow",
@@ -2806,7 +2806,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-source"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "eunomia",
  "kwavers-core",
@@ -2821,7 +2821,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-therapy"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "aequitas",
  "asclepius",
@@ -2847,7 +2847,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-transducer"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "aequitas",
  "eunomia",

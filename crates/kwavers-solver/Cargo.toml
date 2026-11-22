@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-solver"
-version = "4.0.0"
+version = "5.0.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -12,19 +12,19 @@ repository = "https://github.com/ryancinsight/kwavers"
 aequitas = { workspace = true }
 hyperion = { workspace = true }
 
-kwavers-core = { path = "../kwavers-core", version = "4.0.0" }
-kwavers-math = { path = "../kwavers-math", version = "4.0.0" }
-kwavers-grid = { path = "../kwavers-grid", version = "4.0.0" }
-kwavers-imaging = { path = "../kwavers-imaging", optional = true, version = "4.0.0" }
-kwavers-transducer = { path = "../kwavers-transducer", version = "5.0.0" }
-kwavers-receiver = { path = "../kwavers-receiver", version = "4.0.0" }
-kwavers-source = { path = "../kwavers-source", version = "4.0.0" }
-kwavers-boundary = { path = "../kwavers-boundary", version = "4.0.0" }
-kwavers-mesh = { path = "../kwavers-mesh", version = "4.0.0" }
-kwavers-medium = { path = "../kwavers-medium", version = "5.0.0" }
-kwavers-field = { path = "../kwavers-field", version = "4.0.0" }
-kwavers-signal = { path = "../kwavers-signal", version = "4.0.0" }
-kwavers-physics = { path = "../kwavers-physics", version = "4.0.0" }
+kwavers-core = { path = "../kwavers-core", version = "5.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "5.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "5.0.0" }
+kwavers-imaging = { path = "../kwavers-imaging", optional = true, version = "5.0.0" }
+kwavers-transducer = { path = "../kwavers-transducer", version = "6.0.0" }
+kwavers-receiver = { path = "../kwavers-receiver", version = "5.0.0" }
+kwavers-source = { path = "../kwavers-source", version = "5.0.0" }
+kwavers-boundary = { path = "../kwavers-boundary", version = "5.0.0" }
+kwavers-mesh = { path = "../kwavers-mesh", version = "5.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "6.0.0" }
+kwavers-field = { path = "../kwavers-field", version = "5.0.0" }
+kwavers-signal = { path = "../kwavers-signal", version = "5.0.0" }
+kwavers-physics = { path = "../kwavers-physics", version = "5.0.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { workspace = true }
 log = "0.4"

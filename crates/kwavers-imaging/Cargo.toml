@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-imaging"
-version = "4.0.0"
+version = "5.0.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -9,9 +9,9 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-kwavers-core = { path = "../kwavers-core", features = ["registration"], version = "4.0.0" }
-kwavers-grid = { path = "../kwavers-grid", version = "4.0.0" }
-kwavers-medium = { path = "../kwavers-medium", version = "5.0.0" }
+kwavers-core = { path = "../kwavers-core", features = ["registration"], version = "5.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "5.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "6.0.0" }
 coeus-core = { workspace = true }
 leto = { workspace = true }
 log = "0.4"

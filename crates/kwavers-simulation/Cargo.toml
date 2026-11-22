@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-simulation"
-version = "4.0.0"
+version = "5.0.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -10,24 +10,24 @@ repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 aequitas = { workspace = true }
-kwavers-core = { path = "../kwavers-core", version = "4.0.0" }
-kwavers-math = { path = "../kwavers-math", version = "4.0.0" }
-kwavers-grid = { path = "../kwavers-grid", version = "4.0.0" }
-kwavers-imaging = { path = "../kwavers-imaging", version = "4.0.0" }
-kwavers-transducer = { path = "../kwavers-transducer", version = "5.0.0" }
-kwavers-receiver = { path = "../kwavers-receiver", version = "4.0.0" }
-kwavers-source = { path = "../kwavers-source", version = "4.0.0" }
-kwavers-boundary = { path = "../kwavers-boundary", version = "4.0.0" }
-kwavers-mesh = { path = "../kwavers-mesh", version = "4.0.0" }
-kwavers-medium = { path = "../kwavers-medium", version = "5.0.0" }
-kwavers-field = { path = "../kwavers-field", version = "4.0.0" }
-kwavers-signal = { path = "../kwavers-signal", version = "4.0.0" }
-kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"], version = "4.0.0" }
-kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"], version = "4.0.0" }
+kwavers-core = { path = "../kwavers-core", version = "5.0.0" }
+kwavers-math = { path = "../kwavers-math", version = "5.0.0" }
+kwavers-grid = { path = "../kwavers-grid", version = "5.0.0" }
+kwavers-imaging = { path = "../kwavers-imaging", version = "5.0.0" }
+kwavers-transducer = { path = "../kwavers-transducer", version = "6.0.0" }
+kwavers-receiver = { path = "../kwavers-receiver", version = "5.0.0" }
+kwavers-source = { path = "../kwavers-source", version = "5.0.0" }
+kwavers-boundary = { path = "../kwavers-boundary", version = "5.0.0" }
+kwavers-mesh = { path = "../kwavers-mesh", version = "5.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "6.0.0" }
+kwavers-field = { path = "../kwavers-field", version = "5.0.0" }
+kwavers-signal = { path = "../kwavers-signal", version = "5.0.0" }
+kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"], version = "5.0.0" }
+kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"], version = "5.0.0" }
 leto = { workspace = true }
 # Concrete GPU backend (the GPU-PSTD adapter routes through it). Optional —
 # only pulled by the `gpu` feature.
-kwavers-gpu = { path = "../kwavers-gpu", optional = true, version = "6.0.0" }
+kwavers-gpu = { path = "../kwavers-gpu", optional = true, version = "7.0.0" }
 moirai-parallel = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

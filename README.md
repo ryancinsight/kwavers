@@ -77,7 +77,7 @@ independent provider algorithms, while model-residual adaptive refinement
 remains solver-owned. See
 [ADR 043](docs/ADR/043-tyche-uncertainty-provider.md).
 
-The application and most layer crates use the `4.0.0` registry release.
+The application and most layer crates use the `5.0.0` registry cohort.
 The registry cohort lists independently versioned layers in the
 [changelog](CHANGELOG.md). [ADR 140](docs/adr/140-published-typed-provider-cutover.md)
 describes the typed-provider cutover. [ADR 138](docs/adr/138-release-scope-4-0.md)
@@ -163,15 +163,15 @@ Add the layer crates you need to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-kwavers-grid = "4.0.0"
-kwavers-medium = "5.0.0"
+kwavers-grid = "5.0.0"
+kwavers-medium = "6.0.0"
 ```
 
 For GPU acceleration and advanced features, add the top-level integration crate:
 
 ```toml
 [dependencies]
-kwavers = { version = "4.0.0", features = ["gpu", "pinn"] }
+kwavers = { version = "5.0.0", features = ["gpu", "pinn"] }
 ```
 
 ### Example 1: Basic Grid Setup

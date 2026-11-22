@@ -1,5 +1,21 @@
 # Kwavers registry cutover checklist
 
+## Target 5.0.0 Rust registry cohort
+
+- [major] Verify the prior published API baselines and the new cohort using
+  `cargo-semver-checks`. Use the breaking migration entries in the
+  [changelog](../../CHANGELOG.md) and ADRs 141–145.
+- [patch] Build the workspace and Python extension with one crates.io
+  Aequitas 0.5.0 and Eunomia 0.12.1, then validate the normalized packages.
+- [patch] Publish the 22 packages in dependency order and verify each
+  archive's checksum and source revision.
+- [patch] Build a standalone registry consumer and verify the Atlas pin,
+  including the pin-age, conformance, and dependency graph checks.
+
+The application and normal layer package graph advances a major version
+together because changed public types cross their crate boundaries. Driver
+0.5.0 selects the new Transducer major through its optional integration.
+
 ## Target 4.0.0 Rust registry cohort
 
 - [x] [major] Verify one registry provider set and pass 15 Metal capacity,

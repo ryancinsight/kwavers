@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-math"
-version = "4.0.0"
+version = "5.0.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -9,7 +9,7 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-kwavers-core = { path = "../kwavers-core", version = "4.0.0" }
+kwavers-core = { path = "../kwavers-core", version = "5.0.0" }
 moirai-parallel = { workspace = true }
 hermes-simd = { workspace = true }
 leto = { workspace = true, features = ["std"] }
