@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-source"
-version = "5.0.0"
+version = "6.0.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -14,7 +14,7 @@ kwavers-core = { path = "../kwavers-core", version = "5.0.0" }
 kwavers-math = { path = "../kwavers-math", version = "5.0.0" }
 kwavers-grid = { path = "../kwavers-grid", version = "5.0.0" }
 kwavers-signal = { path = "../kwavers-signal", version = "5.0.0" }
-kwavers-medium = { path = "../kwavers-medium", version = "6.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "7.0.0" }
 moirai-parallel = { workspace = true }
 eunomia = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }

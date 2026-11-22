@@ -1,3 +1,29 @@
+## Typed acoustic gain and dispersion, 2026-11-22
+
+Base `bee13af7268b880be7858cd8f9419d8a783473a3`. The public TGC path
+accepted NaN slope on a real RF line. The power-law phase speed at y=2
+returned 6.283185307179587 m/s for c₀=6.283185307179586 m/s. The legacy
+group-velocity path returned NaN for a lossless medium at DC. Regression
+tests reproduce each on the original algorithm.
+
+ADR 105 covers validated TGC with Aequitas quantities and native scalar
+precision. ADR 144 consolidates dispersion on the calibrated power law,
+including the signed group velocity, DC limits, and typed spectral rotation.
+A dense frequency spectrum now uses contiguous plane updates after preflight.
+The Criterion fixture times an 8192-sample RF line and a 64³ complex spectrum.
+Use `cargo bench --locked -p kwavers-analysis --bench acoustic_attenuation`.
+The signed echo and storage-order tests check computed samples independently.
+
+**Remaining algorithm contracts.** Stokes, tissue and fractional absorption
+still expose raw input and output quantities. In
+`absorption/fractional.rs`, the spectral derivative silently truncates
+mismatched axes and leaves DC unchanged for positive order, although the
+Fourier multiplier (iω)^α vanishes at zero for α>0. Separate
+`frequency_dependent.rs` relaxation and viscoelastic models still expose raw
+phase-velocity interfaces. The triplet-pulse geometry and scalar display dB
+range are also open. A registered Aequitas dependency and a lexical scan do
+not prove solver-wide dimensional or numerical correctness.
+
 ## Capability surveys by keyword produce false positives on name collisions
 
 Recorded 2026-08-12 from the Fullwave 2.5 parity comparison.

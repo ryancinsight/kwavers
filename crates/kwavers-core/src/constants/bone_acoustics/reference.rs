@@ -8,7 +8,7 @@ use crate::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 
 /// Pressure-amplitude attenuation per unit distance per unit frequency.
 /// A power law with exponent other than one requires a reference loss and an exponent.
-pub type AttenuationSlope = <ReciprocalLength as Div<Frequency>>::Output;
+pub type AttenuationSlope<T = f64> = <ReciprocalLength<T> as Div<Frequency<T>>>::Output;
 
 /// Sound speed in dense cortical bone (m/s)
 ///

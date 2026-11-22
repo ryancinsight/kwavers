@@ -108,15 +108,15 @@ const TISSUE_MEAN_FLOOR: f64 = 1e-30;
 /// prototype's `linspace((nx*dx - ap)/2, (nx*dx + ap)/2, n_elem)`.
 #[derive(Debug, Clone)]
 pub struct TripletPulseGeometry {
-    /// Lateral position of each aperture element [m].
+    /// Lateral position of each aperture element (`m`).
     pub element_x_m: Vec<f64>,
-    /// Depth of the array face [m] (prototype: 2 mm).
+    /// Depth of the array face (`m`) (prototype: 2 mm).
     pub element_depth_m: f64,
-    /// Lateral position of the transmit origin / array centre [m].
+    /// Lateral position of the transmit origin / array centre (`m`).
     pub transmit_origin_x_m: f64,
-    /// Sound speed used for the DAS delays [m/s] (prototype: 1540, tissue).
+    /// Sound speed used for the DAS delays (`m/s`) (prototype: 1540, tissue).
     pub sound_speed_m_s: f64,
-    /// RF sampling interval [s] (prototype: 30 ns).
+    /// RF sampling interval (`s`) (prototype: 30 ns).
     pub dt_s: f64,
 }
 
@@ -494,9 +494,9 @@ pub struct TripletPulseContrast {
     pub bubble_max: f64,
     /// Mean tissue-ROI brightness of the baseline image.
     pub tissue_mean: f64,
-    /// `20·log10(bubble_mean / tissue_mean)` [dB].
+    /// `20·log10(bubble_mean / tissue_mean)` (`dB`).
     pub mean_db: f64,
-    /// `20·log10(bubble_max / tissue_mean)` [dB].
+    /// `20·log10(bubble_max / tissue_mean)` (`dB`).
     pub max_db: f64,
 }
 

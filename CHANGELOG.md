@@ -1,5 +1,43 @@
 # Changelog
 
+## 6.0.0 typed acoustic analysis cohort (unreleased)
+
+### Breaking
+
+- [major] Analysis 7.0.0 constructs time-gain compensation with
+  `TgcConfig::new(slope, frequency, sound_speed, sampling_rate)?`.
+  For an old slope in dB/(cm MHz), divide
+  `reference_loss_from_decibels_per_centimetre(old_slope)` by
+  `Frequency::from_base(1e6)`. Convert the old transmit frequency from
+  MHz to Hz. Use `depth(i)?` for length, `gain(i)?` for a dimensionless
+  amplitude ratio, and `gain_curve(n)?` for a dense buffer. See [ADR 105](docs/adr/105-b-mode-scan-conversion-quantities.md).
+- [major] Medium 7.0.0 replaces `DispersionModel` with
+  `PowerLawAbsorption`. Given the old angular-frequency coefficient A
+  and exponent y, choose a positive reference frequency f in Hz.
+  Construct the new law with loss A(2πf)^y in inverse metres, that
+  reference frequency, the dimensionless exponent, and dispersion enabled.
+  Pass the reference speed to `phase_velocity`, `group_velocity`, or
+  `AbsorptionDispersionCorrection::new`. Spectral correction accepts an
+  angular-wavenumber array and a typed timestep and returns a result.
+  Group velocity uses the derivative of the dispersion relation and
+  can be negative on a positive-phase branch. See [ADR 144](docs/adr/144-type-fractional-absorption.md).
+
+### Added
+
+- [minor] Core 5.1.0 permits a scalar parameter on `AttenuationSlope`,
+  defaulting to binary64. TGC can use native binary32 or binary64 and
+  can apply compensation directly to a mutable RF line.
+
+### Changed
+
+- [patch] Contiguous complex spectra apply each prevalidated attenuation
+  gain to one plane at a time. Strided spectra use logical frequency indices.
+- [major] The publishable layers depending on the new Medium or Analysis
+  major advance together. Analysis, Diagnostics, Medium and Transducer
+  target 7.0.0, GPU targets 8.0.0 and Driver targets 0.6.0. The application,
+  Boundary, Imaging, Phantom, Physics, Simulation, Solver, Source and Therapy
+  target 6.0.0. Other layers retain compatible requirements.
+
 ## 5.0.0 Rust registry cohort
 
 The application and most layers use 5.0.0. Analysis, Diagnostics, Medium,

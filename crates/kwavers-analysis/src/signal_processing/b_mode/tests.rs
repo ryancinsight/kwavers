@@ -2,64 +2,12 @@
 
 use super::detection::{envelope, log_compress};
 use super::scan_conversion::{CartesianGrid, ScanConverter, ScanGeometry};
-use super::tgc::TgcConfig;
 use aequitas::systems::si::quantities::{Angle, Length};
 use aequitas::systems::si::units::{Meter, Radian};
 use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
-// ── Time-gain compensation ────────────────────────────────────────────────────
-
-fn tgc_config() -> TgcConfig {
-    TgcConfig {
-        attenuation_db_cm_mhz: 0.5,
-        frequency_mhz: 5.0,
-        sound_speed: 1540.0,
-        sampling_rate: 40e6,
-    }
-}
-
-#[test]
-fn tgc_gain_matches_attenuation_law() {
-    let cfg = tgc_config();
-    // At sample i, gain_dB = 2·a₀·f·z_cm.
-    let i = 5000;
-    let z_cm = cfg.depth_m(i) * 100.0;
-    let expected_db = 2.0 * 0.5 * 5.0 * z_cm;
-    let expected_gain = 10.0_f64.powf(expected_db / 20.0);
-    assert!((cfg.gain(i) - expected_gain).abs() < 1e-9 * expected_gain);
-    assert!((cfg.gain(0) - 1.0).abs() < 1e-12, "depth 0 ⇒ unit gain");
-}
-
-#[test]
-fn tgc_flattens_attenuated_echoes() {
-    let cfg = tgc_config();
-    let n = 8000;
-    // Equal reflectors attenuated by the round-trip law: a(i) = 10^(−A(z)/20).
-    let attenuated = Array1::from_shape_fn(n, |[i]| {
-        let z_cm = cfg.depth_m(i) * 100.0;
-        let a_db = 2.0 * cfg.attenuation_db_cm_mhz * cfg.frequency_mhz * z_cm;
-        10.0_f64.powf(-a_db / 20.0)
-    });
-    let corrected = cfg.apply(&attenuated).unwrap();
-    // After TGC every reflector reads ≈ 1.0 regardless of depth.
-    for i in (0..n).step_by(500) {
-        assert!(
-            (corrected[i] - 1.0).abs() < 1e-9,
-            "corrected[{i}] = {}",
-            corrected[i]
-        );
-    }
-}
-
-#[test]
-fn tgc_rejects_invalid_config() {
-    let bad = TgcConfig {
-        sound_speed: 0.0,
-        ..tgc_config()
-    };
-    assert!(bad.apply(&Array1::zeros(10)).is_err());
-}
+mod tgc;
 
 // ── Envelope + log compression ────────────────────────────────────────────────
 

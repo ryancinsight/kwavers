@@ -41,3 +41,20 @@ The affected `kwavers-analysis` library check, warning-denied all-target
 Clippy, B-mode Nextest filter (9/9), doctests, Rustdoc, formatting, and diff
 checks pass. The overlay reports existing unused local patches and linker
 diagnostics outside this change.
+
+## Accepted extension for time-gain compensation, 2026-11-22
+
+Analysis 7.0.0 validates the TGC configuration at construction. The linear
+amplitude attenuation slope carries reciprocal length per frequency, both
+frequencies carry hertz, and sound speed carries velocity. Depth returns
+length and point gain is dimensionless. For axial sample index i, the
+round-trip path is c i/fₛ. Multiplication by the slope and transmit frequency
+produces the dimensionless natural-log gain. Compute the per-sample increment
+once. Factor a line into blocks of 64 samples, using
+exp(a(b+j)) = exp(ab) exp(aj). Evaluate each anchor and local offset
+independently in the selected precision. This bounds rounding per output
+independently of line length. Check the last complete and partial block
+endpoints before writing. A first prototype evaluating one exponential per
+sample regressed against the original public RF-line benchmark. Dense RF lines and gain buffers retain scalar storage.
+Reject invalid coefficients before processing. Document overflow at the
+requested sample separately from invalid physical input.

@@ -159,6 +159,10 @@ Key architectural decisions:
 
 ### Installation
 
+The examples below use the published 5.0 cohort. The development branch
+contains the typed gain and dispersion migrations for the next cohort.
+See the [changelog](CHANGELOG.md).
+
 Add the layer crates you need to your `Cargo.toml`:
 
 ```toml

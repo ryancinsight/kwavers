@@ -33,16 +33,16 @@ let impedance = DENSITY_WATER * C_WATER;
 assert!((impedance - 1.48e6).abs() < 0.1e6);
 ```
 
-Absorption coefficients are published in dB/(MHz^y · cm) but integrated in SI.
-The conversions are owned by `kwavers_medium::absorption::power_law` beside
-`PowerLawAbsorption` (KW-POWER-LAW-INVERSE-FORMS):
+A linear attenuation slope multiplied by a frequency gives the amplitude
+loss per metre. The scalar type determines the calculation precision.
 
 ```rust
-use kwavers_medium::absorption::power_law::power_law_db_cm_to_np_omega_m;
+use aequitas::systems::si::quantities::{Frequency, ReciprocalLength};
+use kwavers_core::constants::bone_acoustics::AttenuationSlope;
 
-// Water: alpha_0 = 0.0022 dB/(MHz^2 cm), power law exponent y = 2.
-let alpha_si = power_law_db_cm_to_np_omega_m(0.0022, 2.0);
-assert!(alpha_si > 0.0);
+let reference = Frequency::from_base(1e6_f32);
+let slope: AttenuationSlope<f32> = ReciprocalLength::from_base(8.0) / reference;
+assert_eq!(slope * (reference * 2.0), ReciprocalLength::from_base(16.0));
 ```
 
 ## Features

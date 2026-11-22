@@ -1,5 +1,16 @@
 # Kwavers registry cutover checklist
 
+## Target 6.0.0 typed acoustic analysis cohort
+
+- [major] See the [migration notes](../../CHANGELOG.md) for the Analysis and
+  Medium 7.0.0 contracts, the affected downstream layers and the Core 5.1.0
+  attenuation-slope alias.
+- [patch] Check the locked candidate, numerical regressions, default-feature
+  compatibility and the production RF-line and complex-spectrum benchmarks.
+- [patch] Before publishing, reconcile any intervening upstream release,
+  run the release matrix, verify normalized packages and check the released
+  graph from a fresh registry consumer.
+
 ## Target 5.0.0 Rust registry cohort
 
 - [major] Verify the prior published API baselines and the new cohort using

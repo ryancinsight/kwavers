@@ -186,3 +186,67 @@ fn fractional_absorption_uses_declared_reference_and_rejects_invalid_axis_atomic
         });
     });
 }
+
+mod dispersion;
+
+#[test]
+fn spectrum_scales_each_logical_plane_in_both_storage_orders() {
+    use leto::{Layout, VecStorage};
+    let subscriber = tracing_subscriber::fmt()
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
+        .with_test_writer()
+        .finish();
+    tracing::subscriber::with_default(subscriber, || {
+        let reference = Frequency::from_base(1.0);
+        let model = tracing::info_span!("arrange").in_scope(|| {
+            PowerLawModel::new(
+                PowerLawAbsorption::new(
+                    ReciprocalLength::from_base(std::f64::consts::LN_2),
+                    reference,
+                    Dimensionless::from_base(1.0),
+                    false,
+                )
+                .unwrap(),
+            )
+        });
+        let frequencies = [reference * 0.0, reference, reference * 2.0];
+        for layout in [
+            Layout::c_contiguous([3, 2, 4]).unwrap(),
+            Layout::f_contiguous([3, 2, 4]).unwrap(),
+        ] {
+            let mut spectrum = Array3::new(
+                layout,
+                VecStorage::new(
+                    (0..24)
+                        .map(|i| Complex::new(f64::from(i + 1), -f64::from(i + 2)))
+                        .collect(),
+                ),
+            )
+            .unwrap();
+            let input = spectrum.clone();
+            tracing::info_span!("act").in_scope(|| {
+                model
+                    .apply_frequency_domain(&mut spectrum, &frequencies, Length::from_base(1.0))
+                    .unwrap()
+            });
+            tracing::info_span!("assert").in_scope(|| {
+                for (i, gain) in [1.0, 0.5, 0.25].into_iter().enumerate() {
+                    for j in 0..2 {
+                        for k in 0..4 {
+                            let expected = input[[i, j, k]] * gain;
+                            let actual = spectrum[[i, j, k]];
+                            assert!(
+                                (actual.re - expected.re).abs()
+                                    <= 2.0 * f64::EPSILON * expected.re.abs()
+                            );
+                            assert!(
+                                (actual.im - expected.im).abs()
+                                    <= 2.0 * f64::EPSILON * expected.im.abs()
+                            );
+                        }
+                    }
+                }
+            });
+        }
+    });
+}

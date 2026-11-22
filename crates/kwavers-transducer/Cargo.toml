@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-transducer"
-version = "6.0.0"
+version = "7.0.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -16,8 +16,8 @@ eunomia = { workspace = true }
 kwavers-grid = { path = "../kwavers-grid", version = "5.0.0" }
 kwavers-signal = { path = "../kwavers-signal", version = "5.0.0" }
 kwavers-field = { path = "../kwavers-field", version = "5.0.0" }
-kwavers-medium = { path = "../kwavers-medium", version = "6.0.0" }
-kwavers-source = { path = "../kwavers-source", version = "5.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "7.0.0" }
+kwavers-source = { path = "../kwavers-source", version = "6.0.0" }
 kwavers-receiver = { path = "../kwavers-receiver", version = "5.0.0" }
 leto = { workspace = true }
 leto-ops = { workspace = true }

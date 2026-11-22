@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-medium"
-version = "6.0.0"
+version = "7.0.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]

@@ -36,7 +36,7 @@ pub mod stokes;
 pub mod tissue;
 
 use aequitas::systems::si::quantities::{Frequency, ReciprocalLength, Time, Velocity};
-pub use dispersion::{AbsorptionDispersionCorrection, DispersionModel};
+pub use dispersion::AbsorptionDispersionCorrection;
 pub use fractional::{FractionalDerivative, FractionalLaplacian};
 pub use histotripsy::{
     histotripsy_tissue_properties, histotripsy_tissue_properties_by_name,

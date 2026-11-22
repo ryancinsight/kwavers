@@ -20,3 +20,24 @@ exponent.
 Tests use a 2 MHz reference and a three-halves exponent. At four times
 the reference, attenuation is eight times the stored value. Invalid
 frequency in a later plane leaves the entire input spectrum unchanged.
+
+## Accepted dispersion extension, 2026-11-22
+
+Medium 7.0.0 uses the reference-frequency power law for both dispersion
+entry points. A second scalar angular-frequency prefactor cannot encode
+its units independently of the runtime exponent. Clients specify the loss
+at a reference frequency instead.
+
+For positive angular frequency ω, define q = c₀ α(ω) tan(πy/2)/ω.
+Then k = ω(1+q)/c₀ and dk/dω = (1+yq)/c₀. Their inverses give phase
+and group velocity. A zero group slowness is singular. Negative group
+slowness gives signed group velocity on the positive-phase branch. At DC,
+use the right-hand limit. Even exponents have zero tangent, odd exponents
+are poles in this particular power law. Zero loss and disabled dispersion
+give c₀ at all frequencies.
+
+The k-space operator takes signed angular wavenumbers in radians per metre
+and a time step. It evaluates the phase at the same reference frequencies
+as the original operator, validates the whole update, and then rotates
+the complex spectrum. Verify the derivative, DC limits, signs, opposite
+wavenumbers and atomic rejection against analytic values.

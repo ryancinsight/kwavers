@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-analysis"
-version = "6.0.0"
+version = "7.0.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
@@ -10,15 +10,15 @@ repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 aequitas = { workspace = true }
-kwavers-core = { path = "../kwavers-core", version = "5.0.0" }
+kwavers-core = { path = "../kwavers-core", version = "5.1.0" }
 kwavers-math = { path = "../kwavers-math", version = "5.0.0" }
 kwavers-grid = { path = "../kwavers-grid", version = "5.0.0" }
-kwavers-transducer = { path = "../kwavers-transducer", version = "6.0.0" }
+kwavers-transducer = { path = "../kwavers-transducer", version = "7.0.0" }
 kwavers-receiver = { path = "../kwavers-receiver", version = "5.0.0" }
-kwavers-medium = { path = "../kwavers-medium", version = "6.0.0" }
+kwavers-medium = { path = "../kwavers-medium", version = "7.0.0" }
 kwavers-field = { path = "../kwavers-field", version = "5.0.0" }
 kwavers-signal = { path = "../kwavers-signal", version = "5.0.0" }
-kwavers-solver = { path = "../kwavers-solver", version = "5.0.0" }
+kwavers-solver = { path = "../kwavers-solver", version = "6.0.0" }
 apollo = { workspace = true }
 eunomia = { workspace = true }
 leto = { workspace = true }
@@ -62,6 +62,7 @@ egui = ["dep:egui"]
 pinn = ["kwavers-solver/pinn"]
 
 [dev-dependencies]
+criterion = "0.4"
 serde_json = { workspace = true }
 tempfile = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -77,3 +78,7 @@ leto = { workspace = true }
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "acoustic_attenuation"
+harness = false

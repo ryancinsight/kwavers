@@ -1,14 +1,13 @@
 //! Power-law absorption model
 
-use aequitas::systems::si::quantities::{
-    Dimensionless, Frequency, Length, ReciprocalLength, Velocity,
-};
+use aequitas::systems::si::quantities::{Dimensionless, Frequency, Length, ReciprocalLength};
 use kwavers_core::constants::acoustic_parameters::{ABSORPTION_TISSUE, WATER_ABSORPTION_ALPHA_0};
 use kwavers_core::constants::numerical::{CM_TO_M, TWO_PI};
 use kwavers_core::constants::{DB_TO_NP, REFERENCE_FREQUENCY_HZ};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use serde::{Deserialize, Serialize};
 
+mod dispersion;
 mod wire;
 
 /// A pressure-amplitude absorption law with a runtime exponent.
@@ -104,39 +103,6 @@ impl PowerLawAbsorption {
             ));
         }
         Ok(loss)
-    }
-
-    /// Phase velocity from `c_p = c₀/(1 + c₀ α tan(πy/2)/(2πf))`.
-    ///
-    /// # Errors
-    /// Rejects invalid speed or frequency, a singular odd exponent when
-    /// dispersion is enabled, and nonpositive phase velocity.
-    pub fn phase_velocity(&self, frequency: Frequency, c0: Velocity) -> KwaversResult<Velocity> {
-        if !c0.as_base().is_finite() || c0.into_base() <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "Sound speed must be finite and positive".into(),
-            ));
-        }
-        let loss = self.absorption_at_frequency(frequency)?;
-        if !self.dispersion_correction || frequency.into_base() == 0.0 || loss.into_base() == 0.0 {
-            return Ok(c0);
-        }
-        let exponent = self.exponent.into_base();
-        if exponent % 2.0 == 1.0 {
-            return Err(KwaversError::InvalidInput(
-                "Odd exponents are singular in the phase-velocity law".into(),
-            ));
-        }
-        let tan_term = (std::f64::consts::FRAC_PI_2 * exponent).tan();
-        let correction = c0 * loss / (frequency * TWO_PI);
-        let denominator = 1.0 + correction.into_base() * tan_term;
-        let velocity = c0 / denominator;
-        if !velocity.as_base().is_finite() || velocity.into_base() <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                "Power-law phase velocity must be finite and positive".into(),
-            ));
-        }
-        Ok(velocity)
     }
 }
 
@@ -339,12 +305,24 @@ impl PowerLawModel {
                 Ok((-(loss * distance).into_base()).exp())
             })
             .collect::<KwaversResult<Vec<_>>>()?;
-        let [_, ny, nz] = spectrum.shape();
-        for (i, attenuation) in gains.into_iter().enumerate() {
-            for j in 0..ny {
-                for k in 0..nz {
-                    spectrum[[i, j, k]] *= attenuation;
+        if spectrum.is_empty() {
+            return Ok(());
+        }
+        if let Some(samples) = spectrum.as_slice_mut() {
+            // Logical C-order places each frequency plane in one contiguous
+            // run. A nonempty array has at least one gain and one sample per plane.
+            let plane_len = samples.len() / gains.len();
+            for (plane, gain) in samples.chunks_exact_mut(plane_len).zip(gains) {
+                for sample in plane {
+                    *sample *= gain;
                 }
+            }
+        } else {
+            let samples = spectrum
+                .indexed_iter_mut()
+                .map_err(|e| KwaversError::InvalidInput(e.to_string()))?;
+            for ([i, _, _], sample) in samples {
+                *sample *= gains[i];
             }
         }
         Ok(())
