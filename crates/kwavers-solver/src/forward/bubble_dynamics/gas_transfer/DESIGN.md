@@ -211,6 +211,94 @@ uv run --no-project --with scipy==1.18.1 --with numpy==2.5.5 python "$fixture/se
 cargo nextest run --locked -p kwavers-solver --test coupled_acceptance
 ```
 
+## Opt-in compressible and thermal coupling
+
+Use `DiffusiveBubble::new_with_models` to choose `RadialMechanics` and an
+optional `GasHeatTransfer` grid. The existing constructor selects
+Rayleigh–Plesset and the given polytrope. Both wall models share the
+conservative liquid transport, Henry pressure, gas ledger and equilibrium
+diagnostic. Keller–Miksis requires `advance_with_forcing` with absolute
+far-field pressure and its time derivative at the same midpoint. For
+quiet intervals use `BubbleForcing::steady` at ambient pressure.
+
+Keller–Miksis retains first-order liquid compressibility for radial motion.
+For signed Mach number M=U/c and the liquid-wall to far-field jump Δp,
+
+```text
+(1−M) R A + (3/2)(1−M/3) U² = [(1+M) Δp + (R/c) dΔp/dt]/ρ.
+```
+
+The surface tension and viscous terms come from the same wall traction as
+Rayleigh–Plesset. Differentiating viscosity moves `4μ/(ρc)` into the
+inertial coefficient. The derivative of the fixed polytrope includes
+the signed gas change. The temperature-field branch uses the difference
+between accepted and trial gas pressures divided by the step. The slope
+is a second-order approximation at the time midpoint. The incompressible
+limit recovers Rayleigh–Plesset. The existing uncoupled Keller–Miksis
+consumer retains its approximate viscous derivative and shares the
+pressure-driven radial kernel.
+
+### Heat equation and transactional coupling
+
+Use `y=r/R` and `q=T/T₀−1` with an even temperature grid. At the center
+temperature is even. The clean interface has fixed temperature T₀. For
+uniform gas pressure, the ideal-gas law integrated over the sphere gives
+`(p/p_g0) 3∫₀¹ y²/(1+q)dy = (n/n₀)(R₀/R)³`. Combining continuous
+energy and mass balances yields
+
+```text
+ρ_g c_p D_t T = dp/dt + k_g ∇²T
+u = −r (dp/dt)/(3γp) + (γ−1) k_g (∂T/∂r)/(γp).
+```
+
+At frozen midpoint coefficients, the thermal solve is tridiagonal for
+each of two right-hand sides and affine in the gas pressure increment.
+Use Simpson integration and a scalar Newton solve to enforce the
+endpoint inventory equation. Iterate the midpoint coefficients and wall
+motion, then use the shared liquid solver to obtain the gas amount.
+Each rejected step retains the last accepted wall, liquid and heat fields.
+Work per trial is linear in the two radial grid sizes, and the solver
+reuses both accepted and scratch buffers across steps.
+The ambient equilibrium radius under heat transfer is the relaxed
+isothermal radius for the accepted inventory.
+
+A fixed real polytrope cannot represent the thermal phase lag. A lumped
+heat-transfer coefficient would add a different thermal closure from the
+standalone benchmark. This option retains the gas temperature gradient
+to reproduce that benchmark's ideal-gas energy balance. The forcing
+contract requires the caller to supply the rate because a midpoint
+pressure sample alone cannot determine the derivative. The heat solve
+contracts locally with time refinement. The numerical wall Mach check
+escapes the acoustic singularity and does not validate large excursions.
+
+### Reference acceptance
+
+`tests/compressible_thermal_bubble.rs` uses the standalone C reference's
+physical-distance solute grid and BDF4 histories. The fixture contains
+all four radial and thermal model combinations at each of 220 and 230 kHz.
+The isolated 30 µm bubble receives 3.03975 kPa peak pressure in two
+10 ms bursts. Each quiet interval lasts 5.625 ms. The heat parameters are
+γ=1.4 and a reference gas diffusivity of 2.2×10⁻⁵ m²/s. For Keller–Miksis
+the sound speed is 1480 m/s. All other synthetic inputs match the
+isothermal case above.
+
+The Rust baseline uses 64 steps per carrier period, 384 liquid cells, and
+48 heat intervals when gas heat transfer is enabled. The fixture compares
+each signed phase and cumulative exchange using
+`max(0.003 ppm of n₀, 2% of |reference|)`, phase-end radius within 0.1 nm,
+and phase-end velocity within 50 µm/s. It verifies gas conservation
+against gross exchange and tests rollback after a coupled step failure.
+The combined model halves the step and doubles each grid independently,
+using one-third of the corresponding reference budget per refinement.
+See the [fixture provenance](../../../../tests/fixtures/diffusive_bubble/compressible_thermal.md).
+
+The compressible option modifies the wall equation. The liquid
+concentration still evolves on incompressible material shells. The heat
+option assumes uniform pressure, constant gas conductivity and fixed
+wall temperature, with a single noncondensable ideal gas and constant
+vapor pressure. The comparison verifies these declared synthetic cases
+and makes no experimental, tissue, resonance or collapse claim.
+
 ## References
 
 - Smith & Wang (2022), JFM 951 A12, equations (2.1)–(2.8).
@@ -220,3 +308,7 @@ cargo nextest run --locked -p kwavers-solver --test coupled_acceptance
   https://doi.org/10.1017/jfm.2022.218
 - Peñas-López et al. (2016), JFM 800, 180–212.
   https://doi.org/10.1017/jfm.2016.401
+- Keller & Miksis (1980), JASA 68, 628–633.
+  https://doi.org/10.1121/1.384720
+- Prosperetti, Crum & Commander (1988), JASA 83, 502–514.
+  https://doi.org/10.1121/1.396198

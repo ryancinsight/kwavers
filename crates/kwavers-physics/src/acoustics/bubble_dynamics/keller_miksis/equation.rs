@@ -1,8 +1,10 @@
-use super::KellerMiksisModel;
+use super::{pressure_driven_acceleration, KellerMiksisModel};
 use crate::acoustics::bubble_dynamics::{
     acoustic_pressure::InstantaneousPressure, bubble_state::BubbleState,
 };
-use aequitas::systems::si::quantities::PressureRate;
+use aequitas::systems::si::quantities::{
+    DynamicViscosity, Length, MassDensity, Pressure, PressureRate, Velocity,
+};
 use kwavers_core::error::KwaversResult;
 
 /// Calculate bubble wall acceleration using Keller-Miksis equation.
@@ -99,14 +101,7 @@ pub(crate) fn calculate_acceleration(
     // This accounts for compressibility through the R/ρc × dp_B/dt term
     let dp_wall_dt = estimate_wall_pressure_derivative(model, state, p_gas, r, v, gamma, dp_dt)?;
 
-    // Keller-Miksis equation components
-    let v_c = v / c;
-    let pressure_term = (1.0 + v_c) * (p_wall - p_inf) / model.params.rho_liquid;
-    let radiation_term = r / (model.params.rho_liquid * c) * dp_wall_dt;
-    let nonlinear_term = 1.5 * (1.0 - v_c / 3.0) * v * v;
-
-    // Solve for R̈ from the K-M equation
-    let lhs_coeff = r * (1.0 - v_c);
+    let lhs_coeff = r * (1.0 - v / c);
 
     // Check for division by zero (should not occur if mach < 0.95)
     if lhs_coeff.abs() < 1e-12 {
@@ -117,7 +112,17 @@ pub(crate) fn calculate_acceleration(
         .into());
     }
 
-    let acceleration = (pressure_term + radiation_term - nonlinear_term) / lhs_coeff;
+    let acceleration = pressure_driven_acceleration(
+        Length::from_base(r),
+        Velocity::from_base(v),
+        MassDensity::from_base(model.params.rho_liquid),
+        Velocity::from_base(c),
+        Pressure::from_base(p_wall - p_inf),
+        PressureRate::from_base(dp_wall_dt),
+        // This legacy closure supplies its complete approximate derivative.
+        DynamicViscosity::from_base(0.0),
+    )
+    .into_base();
 
     // Update state
     state.wall_acceleration = acceleration;
