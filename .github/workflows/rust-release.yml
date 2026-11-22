@@ -72,5 +72,5 @@ jobs:
       id-token: write # OIDC trusted publishing; no stored registry token.
     with:
       rust-toolchain: "1.97.0"
-      # Arm only the approved gas-diffusion release.
-      cohort-json: '{"kwavers-physics":"5.1.0","kwavers-solver":"5.1.0"}'
+      # Explicit release tags select the packages for the 5.2.0 release.
+      cohort-json: '{}'

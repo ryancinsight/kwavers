@@ -1,6 +1,10 @@
 # Changelog
 
-## 5.2.0 Physics and Solver (unreleased)
+## 5.2.0 Physics and Solver (2026-11-22)
+
+Physics 5.2.0 and Solver 5.2.0 are published on crates.io. The
+[release checklist](crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/checklist.md#520-registry-verification) records
+the release order, checksums, source revision, and fresh-consumer results.
 
 ### Added
 

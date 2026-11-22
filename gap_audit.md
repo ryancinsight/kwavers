@@ -4384,7 +4384,7 @@ dynamics require separate acceptance evidence.
 
 ## KW-PHYS-005 [minor] — Compressible and thermal diffusive bubbles
 
-The review candidate uses one pressure-driven Keller–Miksis kernel for both
+The released solver uses one pressure-driven Keller–Miksis kernel for both
 the previous radial solver and the conservative diffusive bubble. The
 diffusive path includes the acceleration-dependent viscous derivative and
 uses the selected gas closure for the wall and Henry boundary. Opt-in gas
@@ -4398,4 +4398,7 @@ compressibility. The liquid transport retains its incompressible material
 coordinate. Gas pressure is uniform, wall temperature and vapor pressure
 are fixed, and one noncondensable species transfers through Henry balance.
 The fixture does not supply experimental or high-pressure validation.
-Integration and publication are separate from the candidate review.
+Physics and Solver 5.2.0 complete the numerical release scope. The
+[release checklist](crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/checklist.md#520-registry-verification)
+records the ordered registry publish and fresh consumer. A measured exposure
+and bubble history are needed for the next physical validation increment.

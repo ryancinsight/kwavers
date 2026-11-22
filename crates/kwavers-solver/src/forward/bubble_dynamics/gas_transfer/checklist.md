@@ -1,12 +1,37 @@
-# Target 5.2.0 [minor]
+# Published 5.2.0 [minor]
 
 - [x] [minor] Implement separately selectable compressible radial motion and
   gas heat transfer through the existing conservative bubble solver.
 - [x] [minor] Pass the 220 and 230 kHz acceptance and refinement gates,
   focused legacy diffusion regressions, all-feature Physics tests and
   default-feature SemVer checks against 5.1.0.
-- [ ] [minor] Approve and integrate the candidate against the selected base.
-- [ ] [minor] Authorize and verify release of Physics before Solver.
+- [x] [minor] Merge the approved candidate after the required CI and Architecture gates pass.
+- [x] [minor] Publish Physics before Solver and verify each registry archive.
+- [x] [minor] Resolve both published versions in a fresh consumer and run the radial and pulse-history checks.
+
+## 5.2.0 registry verification
+
+Both packages trace to merge commit `9daa1fab5028ace90a075a635e56f482a8f3172d` from
+[PR #1142](https://github.com/ryancinsight/kwavers/pull/1142). The
+[Physics workflow](https://github.com/ryancinsight/kwavers/actions/runs/45065305939)
+publishes the upstream crate. Its archive and radial kernel pass verification
+before the [Solver workflow](https://github.com/ryancinsight/kwavers/actions/runs/45067369191)
+publishes the dependent crate. Archive hashes match the registry index and
+fresh Cargo lockfile. Changed source files match the tagged revision.
+
+| Crate | Registry version | Registry archive SHA-256 | Source tag |
+| --- | --- | --- | --- |
+| `kwavers-physics` | [5.2.0](https://crates.io/crates/kwavers-physics/5.2.0) | `f0e27fc8aed08dfc24d81eff1428cbdf3c77359f23777d0871969736763b70bb` | [`crate-kwavers-physics-v5.2.0`](https://github.com/ryancinsight/kwavers/releases/tag/crate-kwavers-physics-v5.2.0) |
+| `kwavers-solver` | [5.2.0](https://crates.io/crates/kwavers-solver/5.2.0) | `f0fdfa8351e18d844895fdbb4b665dd5465fd89a92cd44fcec32a08719508b18` | [`crate-kwavers-solver-v5.2.0`](https://github.com/ryancinsight/kwavers/releases/tag/crate-kwavers-solver-v5.2.0) |
+
+The fresh arm64 macOS consumer uses Rust 1.97.0 and a separate Cargo home.
+It resolves both crates from crates.io at exactly 5.2.0 and resolves Solver's
+Physics edge to that verified package. The Physics equilibrium and driven
+Keller–Miksis checks pass. All 15 Solver acceptance tests pass, including the
+220 and 230 kHz histories and independent time and radial-grid refinements.
+The consumer runs `cargo metadata --locked`, `cargo nextest run --locked
+--offline --test compressible_thermal_bubble`, and `cargo run --locked
+--offline`. The test and CSV fixture match the Solver archive.
 
 ## Published 5.1.0 [minor]
 
