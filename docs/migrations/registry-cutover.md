@@ -1,5 +1,11 @@
 # Kwavers registry cutover checklist
 
+## Target 5.1.0 Physics and Solver
+
+- [x] [minor] Publish both 5.1.0 crates and verify archive provenance and
+  the fresh registry consumer. See the
+  [5.1.0 release checklist](../../crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/checklist.md#registry-verification).
+
 ## Target 5.0.0 Rust registry cohort
 
 - [major] Verify the prior published API baselines and the new cohort using
