@@ -1,0 +1,9 @@
+<a id="kwavers-stable-qualification"></a>
+## KWAVERS-STABLE-QUALIFICATION — kwavers stable-release qualification [patch] — todo
+- priority: verification; milestone: M-solvers-core; basis: `cb2c7ecdb714`.
+- Outcome: Qualify the repaired release baseline and the current simulation cohort. Follow the [release scope](../docs/adr/138-release-scope-4-0.md) and [milestone exits](../backlog/milestones.md). [Failing security job](https://github.com/ryancinsight/kwavers/actions/runs/45037646079/job/137255042083).
+- Representative manifest `kwavers 5.0.0`. Target existing stable majors and Driver 1.0.0.
+- [x] [patch] [Fix #1140](https://github.com/ryancinsight/kwavers/pull/1140) locks url 2.5.9 and its form_urlencoded dependency 1.2.3. [Security Audit and both required gates passed](https://github.com/ryancinsight/kwavers/actions/runs/45059662383) at `6232759b`. The [default-branch verification](https://github.com/ryancinsight/kwavers/actions/runs/45063819460) covers merge `fc64e635`.
+- [x] [patch] The [5.2.0 release checklist](../crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/checklist.md) records the Physics and Solver archives, their single registry dependency, and all 15 independent-consumer tests. The published 5.1.0 evidence is retained there.
+- [ ] [major] Keep the facade and layer majors monotonic. Qualify the 0.5.0 Driver public surface under [proposed ADR 146](../docs/adr/146-stable-driver-surface.md), with a documented support boundary, compatibility check and downstream consumer before its freeze.
+- [ ] [patch] Attach exact-revision evidence for the local exits and this member’s [Atlas qualification criteria](https://github.com/ryancinsight/atlas/blob/17b0124a7548ad81e817284afc5cb115c1d1bc78/docs/parity/repositories.json).
