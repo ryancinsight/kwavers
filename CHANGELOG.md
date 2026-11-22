@@ -47,7 +47,12 @@
   Boundary, Imaging, Phantom, Physics, Simulation, Solver, Source and Therapy
   target 6.0.0. Other layers retain compatible requirements.
 
-## 5.1.0 Physics and Solver (unreleased)
+## 5.1.0 Physics and Solver (2026-11-22)
+
+Physics and Solver 5.1.0 are published on crates.io. The
+[release checklist](crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/checklist.md#registry-verification)
+records the published versions, archive checksums, source revision, and
+fresh-consumer results.
 
 ### Added
 
