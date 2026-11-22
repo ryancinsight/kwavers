@@ -35,6 +35,9 @@ The consumer runs `cargo metadata --locked`, `cargo nextest run --locked
 
 ## Published 5.1.0 [minor]
 
+KW-PHYS-004 is complete. The [design](DESIGN.md) retains the model and
+acceptance evidence.
+
 - [x] [minor] Expose the opt-in spherical Rayleigh–Plesset and Henry-transfer
   solver with a conservative gas budget, transactional steps, and a
   closure-consistent equilibrium radius.

@@ -8,7 +8,9 @@ use kwavers_physics::acoustics::bubble_dynamics::{
     gas_transfer::SphericalGasDiffusion,
     rayleigh_plesset::{PolytropicGas, PolytropicParameters},
 };
-use kwavers_solver::forward::bubble_dynamics::gas_transfer::DiffusiveBubble;
+use kwavers_solver::forward::bubble_dynamics::gas_transfer::{
+    DiffusiveBubble, DiffusiveBubbleError,
+};
 use tracing::info_span;
 use tracing_subscriber::fmt::format::FmtSpan;
 
@@ -94,7 +96,10 @@ fn rejected_coupled_step_preserves_wall_and_liquid() {
                 (before, liquid_before, outcome, after, liquid_after, a, b)
             });
         info_span!("assert").in_scope(|| {
-            assert!(outcome.is_err(), "the excessive coupled step must fail");
+            assert_eq!(
+                outcome.expect_err("the excessive coupled step must fail"),
+                DiffusiveBubbleError::InvalidState("trial wall")
+            );
             assert_eq!(before, after);
             assert_eq!(liquid_before, liquid_after);
             assert_eq!(a, b);
@@ -153,7 +158,12 @@ fn rejects_exponents_outside_the_static_closure_domain() {
         });
         info_span!("assert").in_scope(|| {
             assert!(accepted.into_iter().all(|result| result.is_none()));
-            assert!(PolytropicGas::new(Length::from_base(R0), mechanics(1.0)).is_some());
+            let radius = Length::from_base(R0);
+            let gas = PolytropicGas::new(radius, mechanics(1.0)).expect("isothermal closure");
+            assert_eq!(
+                gas.gas_pressure(radius, 1.0),
+                Some(Pressure::from_base(AMBIENT + 2.0 * SIGMA / R0))
+            );
         });
     });
 }
