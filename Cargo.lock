@@ -91,6 +91,8 @@ dependencies = [
 [[package]]
 name = "aequitas-runtime"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86ce35356a62344c3fc70d6ea278d6595b5af24285c8b6eb3b7148fe32b38116"
 dependencies = [
  "aequitas",
  "eunomia",

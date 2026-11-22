@@ -1,8 +1,8 @@
 # Backlog / Strategy
 
 [major] The physical fractional derivative is implemented for Medium 7.0.0.
-The upstream runtime publication and registry-consumer check remain on the
-[registry cutover checklist](docs/migrations/registry-cutover.md).
+The runtime is published. The [registry cutover checklist](docs/migrations/registry-cutover.md)
+records the provider version and source.
 
 
 <a id="atlas-kwavers-hephaestus-vis-104"></a>- [ATLAS-KWAVERS-HEPHAESTUS-VIS-104](backlog/atlas-kwavers-hephaestus-vis-104.md) — Multi-field hand-off and fallback render entries have no value test [patch] — todo

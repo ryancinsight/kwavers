@@ -11,9 +11,9 @@
   RF data available through `KWAVERS_TRIPLET_STAGE1_OUT`. See the [gap audit](../../gap_audit.md).
 - [x] [major] Verify the causal and spectral physical derivatives against
   analytic values, runtime dimensions, DC behavior and axis rejection.
-- [major] Local Medium 7.0.0 resolves `aequitas-runtime` from the Aequitas
-  checkout alongside Kwavers. Publish and verify runtime 0.1.0 first,
-  then remove the development path and check registry-only resolution.
+- [x] [major] Medium 7.0.0 resolves crates.io `aequitas-runtime` 0.1.0.
+  The lock checksum matches the downloaded archive, which identifies source
+  `1ee67958fa4fc456c86f37ec72d31efce7dab2b0`.
 - [patch] Before publishing, reconcile any intervening upstream release,
   run the release matrix, verify normalized packages and check the released
   graph from a fresh registry consumer.
