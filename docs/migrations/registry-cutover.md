@@ -5,8 +5,10 @@
 - [major] See the [migration notes](../../CHANGELOG.md) for the Analysis and
   Medium 7.0.0 contracts, the affected downstream layers and the Core 5.1.0
   attenuation-slope alias.
-- [patch] Check the locked candidate, numerical regressions, default-feature
-  compatibility and the production RF-line and complex-spectrum benchmarks.
+- [x] [patch] Verify the analytical regressions and compare the production
+  RF-line and complex-spectrum benchmarks against the Atlas baseline.
+- [ ] [patch] Complete the five-package release suite with the original Stage 1
+  RF data available through `KWAVERS_TRIPLET_STAGE1_OUT`. See the [gap audit](../../gap_audit.md).
 - [patch] Before publishing, reconcile any intervening upstream release,
   run the release matrix, verify normalized packages and check the released
   graph from a fresh registry consumer.

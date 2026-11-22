@@ -11,5 +11,7 @@ priority: architecture; needs: none; basis: a3a72689be0fbfed3f64231c52186eac79de
   slope, both frequencies and velocity. Point queries return length and
   dimensionless gain. Signed echoes exercise the dB-domain oracle and both
   scalar precisions exercise the in-place path. The scope of ADR 105 is
-  geometry and physical TGC calibration. Display compression still takes a
+  geometry and physical TGC calibration. The remaining package Nextest
+  failure requires the original Stage 1 RF reference for image parity.
+  Display compression still takes a
   scalar dB range. See the [gap audit](../gap_audit.md) for pending work.

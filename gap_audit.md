@@ -14,11 +14,41 @@ The Criterion fixture times an 8192-sample RF line and a 64³ complex spectrum.
 Use `cargo bench --locked -p kwavers-analysis --bench acoustic_attenuation`.
 The signed echo and storage-order tests check computed samples independently.
 
+**Local verification.** At candidate `1a99e1d44`, release Nextest for Core,
+Analysis, Medium, Physics and Solver executed 3,716 cases. Of these,
+3,715 passed and the triplet image parity case failed on its missing
+external RF input. Six existing cases were skipped. Set
+`KWAVERS_TRIPLET_STAGE1_OUT` to the original prototype output to execute
+the comparison. After merging upstream `148ca1d26` locally, the integrated
+candidate `481653e19` passed 3,728 of 3,729 executed tests, with the same
+fixture failure and six skips. The locked workspace library check,
+all-target strict Clippy for Core, Analysis and Medium, formatting and
+warning-denied Rustdoc passed. The three crates passed 16 doctests with
+22 ignored. The SemVer check applied 196 rules to Core and skipped
+57. The major-version check applies zero compatibility rules to the two
+new majors. Forcing a minor comparison identified three categories of
+breaking change in Analysis and two in Medium. A standalone registry
+consumer could not resolve the unpublished Analysis 7.0.0.
+
+At 30 Criterion samples on this host, the original and candidate point
+estimates were 19.590 and 4.781 µs for the RF line, and 522.59 and
+70.127 µs for the spectrum. The original spectrum estimate had a wide
+interval (408.84–630.19 µs). These numbers describe the two specified
+fixtures. The separate group-velocity range regression verifies the
+closed-form result when the unweighted correction exceeds binary64 and
+the weighted group slowness remains representable.
+
 **Remaining algorithm contracts.** Stokes, tissue and fractional absorption
 still expose raw input and output quantities. In
 `absorption/fractional.rs`, the spectral derivative silently truncates
 mismatched axes and leaves DC unchanged for positive order, although the
-Fourier multiplier (iω)^α vanishes at zero for α>0. Separate
+Fourier multiplier (iω)^α vanishes at zero for α>0. At `481653e19`,
+calling the public method with order 0.5 and DC coefficient 3 returned
+3. With spectrum [1, 2] and a single frequency of 1 Hz, it rotated the
+first coefficient and left the second at 2. Aequitas 0.5.0 uses integer
+SI exponents. A reference-time-normalized operator and a physical
+derivative with runtime dimensions are different public contracts.
+Separate
 `frequency_dependent.rs` relaxation and viscoelastic models still expose raw
 phase-velocity interfaces. The triplet-pulse geometry and scalar display dB
 range are also open. A registered Aequitas dependency and a lexical scan do
