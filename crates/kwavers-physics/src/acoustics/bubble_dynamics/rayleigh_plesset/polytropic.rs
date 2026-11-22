@@ -1,7 +1,10 @@
-use super::super::bubble_state::{radial_viscous_stress, spherical_capillary_pressure};
+use super::super::{
+    bubble_state::{radial_viscous_stress, spherical_capillary_pressure},
+    keller_miksis::pressure_driven_acceleration,
+};
 use super::wall_acceleration;
 use aequitas::systems::si::quantities::{
-    Acceleration, AmountOfSubstance, DynamicViscosity, Length, MassDensity, Pressure,
+    Acceleration, AmountOfSubstance, DynamicViscosity, Length, MassDensity, Pressure, PressureRate,
     SurfaceTension, ThermodynamicTemperature, Velocity,
 };
 use eunomia::FloatElement;
@@ -26,7 +29,7 @@ pub struct PolytropicParameters<T = f64> {
     pub exponent: T,
 }
 
-/// Density-based gas-pressure closure for Rayleigh–Plesset with changing gas amount.
+/// Density-based gas-pressure closure for spherical dynamics with changing gas amount.
 ///
 /// For radius R and moles n, p_g/p_g0 = [(n/n0)(R0/R)^3]^κ.
 /// The initial ideal-gas reference uses p_g0 = P0 - p_v + 2σ/R0.
@@ -189,19 +192,54 @@ impl<T: FloatElement> PolytropicGas<T> {
     ) -> Acceleration<T> {
         let r = radius.into_base();
         let v = velocity.into_base();
-        let laplace = spherical_capillary_pressure(self.params.surface_tension.into_base(), r);
-        let viscous = radial_viscous_stress(self.params.liquid_viscosity.into_base(), v, r);
-        // Subtract the static balance first so the reference state is exactly
-        // at rest, including in lower precision.
-        let net = (gas_pressure.into_base() - self.pressure)
-            - (far_field_pressure.into_base() - self.params.ambient_pressure.into_base())
-            + (self.laplace - laplace)
-            - viscous;
         Acceleration::from_base(wall_acceleration(
             r,
             v,
             self.params.liquid_density.into_base(),
-            net,
+            self.pressure_jump(r, v, gas_pressure, far_field_pressure),
         ))
+    }
+
+    /// Keller–Miksis acceleration using supplied dry-gas and far-field pressure rates.
+    ///
+    /// Pressures are absolute. Include gas transfer and heat transport in the
+    /// supplied dry-gas rate. Inputs must be finite at a positive radius and
+    /// sound speed with subsonic radial motion.
+    #[must_use]
+    pub fn compressible_acceleration(
+        &self,
+        radius: Length<T>,
+        velocity: Velocity<T>,
+        (gas_pressure, gas_rate): (Pressure<T>, PressureRate<T>),
+        (far_field, far_field_rate): (Pressure<T>, PressureRate<T>),
+        sound_speed: Velocity<T>,
+    ) -> Acceleration<T> {
+        let r = radius.into_base();
+        let u = velocity.into_base();
+        let jump = self.pressure_jump(r, u, gas_pressure, far_field);
+        // The acceleration-dependent part of d(−4μU/R)/dt is on the left.
+        let rate = gas_rate.into_base() - far_field_rate.into_base()
+            + spherical_capillary_pressure(self.params.surface_tension.into_base(), r) * (u / r)
+            + radial_viscous_stress(self.params.liquid_viscosity.into_base(), u, r) * (u / r);
+        pressure_driven_acceleration(
+            radius,
+            velocity,
+            self.params.liquid_density,
+            sound_speed,
+            Pressure::from_base(jump),
+            PressureRate::from_base(rate),
+            self.params.liquid_viscosity,
+        )
+    }
+
+    fn pressure_jump(&self, r: T, v: T, gas_pressure: Pressure<T>, far_field: Pressure<T>) -> T {
+        let laplace = spherical_capillary_pressure(self.params.surface_tension.into_base(), r);
+        let viscous = radial_viscous_stress(self.params.liquid_viscosity.into_base(), v, r);
+        // Subtract the static balance first so the reference state is exactly
+        // at rest, including in lower precision.
+        (gas_pressure.into_base() - self.pressure)
+            - (far_field.into_base() - self.params.ambient_pressure.into_base())
+            + (self.laplace - laplace)
+            - viscous
     }
 }

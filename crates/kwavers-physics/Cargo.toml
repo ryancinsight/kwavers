@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-physics"
-version = "5.1.0"
+version = "5.2.0"
 publish = true
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]

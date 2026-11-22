@@ -4381,3 +4381,21 @@ The [coupling design](crates/kwavers-solver/src/forward/bubble_dynamics/gas_tran
 records the verified model range. A species-resolved pressure and energy
 closure, experimental growth validation, and nonspherical or tissue-coupled
 dynamics require separate acceptance evidence.
+
+## KW-PHYS-005 [minor] — Compressible and thermal diffusive bubbles
+
+The review candidate uses one pressure-driven Keller–Miksis kernel for both
+the previous radial solver and the conservative diffusive bubble. The
+diffusive path includes the acceleration-dependent viscous derivative and
+uses the selected gas closure for the wall and Henry boundary. Opt-in gas
+heating retains a radial field and enforces the ideal-gas inventory
+integral through an implicit pressure solve. See the
+[design](crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/DESIGN.md)
+for the phase-level reference and scope.
+
+The remaining physics boundary is spherical and first order in liquid
+compressibility. The liquid transport retains its incompressible material
+coordinate. Gas pressure is uniform, wall temperature and vapor pressure
+are fixed, and one noncondensable species transfers through Henry balance.
+The fixture does not supply experimental or high-pressure validation.
+Integration and publication are separate from the candidate review.
