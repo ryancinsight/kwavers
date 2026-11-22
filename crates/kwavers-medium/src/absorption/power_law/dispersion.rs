@@ -96,10 +96,13 @@ impl PowerLawAbsorption {
                 + tangent.abs().ln();
             let log_q = (y - 1.0).mul_add(log_ratio, log_scale);
             let log_weighted = weight.into_base().ln() + log_q;
-            // For a positive correction above MAX, adding 1 changes it by
-            // less than one ulp. Divide in log space while c₀/(w q) can
-            // still be representable, even when w q is not.
-            if tangent > 0.0 && log_weighted > f64::MAX.ln() {
+            // Group slowness uses wq. A sublinear exponent can make
+            // wq representable even if q alone would overflow.
+            if tangent > 0.0 && log_q >= f64::MAX.ln() && log_weighted < f64::MAX.ln() {
+                return finite_velocity(c0 / (1.0 + log_weighted.exp()));
+            }
+            if tangent > 0.0 && log_weighted >= f64::MAX.ln() {
+                // Adding one to wq at this scale is below half an ulp.
                 let speed = (c0.into_base().ln() - log_weighted).exp();
                 return finite_velocity(Velocity::from_base(speed));
             }

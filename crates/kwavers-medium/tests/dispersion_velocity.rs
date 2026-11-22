@@ -134,3 +134,19 @@ fn phase_velocity_survives_overflow_of_the_dimensionless_correction() {
         });
     });
 }
+
+#[test]
+fn group_velocity_survives_an_unweighted_correction_above_maximum() {
+    trace(|| {
+        let (model, speed) = tracing::info_span!("arrange")
+            .in_scope(|| (law(1.5 * TAU, 0.5), Velocity::from_base(f64::MAX)));
+        let group = tracing::info_span!("act")
+            .in_scope(|| model.group_velocity(Frequency::from_base(1.0), speed));
+        tracing::info_span!("assert").in_scope(|| {
+            // q = 1.5 c₀ is outside binary64, but y q = 0.75 c₀ fits.
+            let expected = 1.0 / (1.0 / f64::MAX + 0.75);
+            let bound = 8.0 * f64::EPSILON * f64::MAX.ln();
+            assert!((group.unwrap().into_base() / expected - 1.0).abs() <= bound);
+        });
+    });
+}
