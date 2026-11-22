@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.2.0 Physics and Solver (unreleased)
+
+### Added
+
+- [minor] Select Keller–Miksis wall motion and radial gas heat transfer
+  independently on `DiffusiveBubble`. The compressible option uses absolute
+  midpoint pressure and its derivative. The heat option couples a spherical
+  ideal-gas temperature field to the conservative dissolved-gas step.
+  Existing constructors retain the Rayleigh–Plesset and polytropic defaults.
+
 ## 5.1.0 Physics and Solver (2026-11-22)
 
 Physics and Solver 5.1.0 are published on crates.io. The

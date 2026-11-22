@@ -1,4 +1,14 @@
-# Target 5.1.0 [minor]
+# Target 5.2.0 [minor]
+
+- [x] [minor] Implement separately selectable compressible radial motion and
+  gas heat transfer through the existing conservative bubble solver.
+- [x] [minor] Pass the 220 and 230 kHz acceptance and refinement gates,
+  focused legacy diffusion regressions, all-feature Physics tests and
+  default-feature SemVer checks against 5.1.0.
+- [ ] [minor] Approve and integrate the candidate against the selected base.
+- [ ] [minor] Authorize and verify release of Physics before Solver.
+
+## Published 5.1.0 [minor]
 
 - [x] [minor] Expose the opt-in spherical Rayleigh–Plesset and Henry-transfer
   solver with a conservative gas budget, transactional steps, and a
