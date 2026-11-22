@@ -174,7 +174,12 @@ fn fractional_absorption_uses_declared_reference_and_rejects_invalid_axis_atomic
                 loss_at_four_times_reference,
                 ReciprocalLength::from_base(48.0)
             );
-            assert!(failure.is_err());
+            let error = failure.expect_err("a NaN frequency must be rejected");
+            assert!(matches!(
+                error,
+                KwaversError::InvalidInput(message)
+                    if message == "Frequency must be finite and nonnegative"
+            ));
             assert!(untouched
                 .iter()
                 .all(|value| *value == Complex::new(2.0, -1.0)));
