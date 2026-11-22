@@ -13,6 +13,8 @@ time and both grids for the combined model. The
 and [checklist](../crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/checklist.md)
 record the equations and review gates.
 
-Next increment after review is integration on the selected base. The
-release requires separate publication authorization. Experimental validation,
-large-amplitude collapse and compressible liquid mass transport remain open.
+PR #1142 integrates the candidate. Physics publishes before Solver, and
+the fresh registry consumer verifies both 5.2.0 packages. The release
+checklist records the archive checksums and acceptance results. Experimental
+validation, large-amplitude collapse and compressible liquid mass
+transport remain open.
