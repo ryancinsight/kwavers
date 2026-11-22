@@ -4390,3 +4390,20 @@ Standing facts (do NOT re-flag):
   allocation/conversion (route facade `_into` through apollo `_into`, reuse scratch
   buffers across timesteps) and verify no accuracy regression on the elastic_fwi
   convergence tests. Dedicated effort; do not rush.
+
+
+## Transient bubble gas exchange requires separate refinement of wall motion
+
+Recorded 2026-11-21 from [KW-PHYS-004](backlog/kw-phys-004.md).
+
+The prescribed-wall validation establishes transport accuracy for its supplied
+histories. Gas feedback adds a mechanical phase-error budget. At 512 steps per
+carrier cycle, two isothermal cases met the gas-transfer budget and exceeded
+the independent time-refinement budget for wall radius. At 1024 steps the
+same tests pass every budget. Extending the reservoir with matched inner
+material faces isolates the far boundary from near-wall mesh error.
+
+The [coupling design](crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/DESIGN.md)
+records the verified model range. A species-resolved pressure and energy
+closure, experimental growth validation, and nonspherical or tissue-coupled
+dynamics require separate acceptance evidence.
