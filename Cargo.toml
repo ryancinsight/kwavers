@@ -4,6 +4,7 @@ resolver = "2"
 
 [workspace.dependencies]
 aequitas = { version = "0.5.0", default-features = false, features = ["std", "serde"] }
+aequitas-runtime = { version = "0.1.0", path = "../aequitas/crates/aequitas-runtime" }
 # The published quantity protocol reader and `Dimensioned<D>` adapter.
 aequitas_python = { package = "aequitas-python", version = "0.1.0" }
 asclepius = { version = "0.5.0", default-features = false, features = ["std"] }

@@ -38,16 +38,26 @@ fixtures. The separate group-velocity range regression verifies the
 closed-form result when the unweighted correction exceeds binary64 and
 the weighted group slowness remains representable.
 
-**Remaining algorithm contracts.** Stokes, tissue and fractional absorption
-still expose raw input and output quantities. In
-`absorption/fractional.rs`, the spectral derivative silently truncates
-mismatched axes and leaves DC unchanged for positive order, although the
-Fourier multiplier (iω)^α vanishes at zero for α>0. At `481653e19`,
-calling the public method with order 0.5 and DC coefficient 3 returned
-3. With spectrum [1, 2] and a single frequency of 1 Hz, it rotated the
-first coefficient and left the second at 2. Aequitas 0.5.0 uses integer
-SI exponents. A reference-time-normalized operator and a physical
-derivative with runtime dimensions are different public contracts.
+**Fractional derivative migration.** The original method returned 3 for
+a DC coefficient of 3 at order 0.5 and changed the first sample of a
+two-bin spectrum paired with a one-element axis. Regression tests
+failed on both baseline behaviors. The physical derivative now uses
+Aequitas runtime dimensions and typed frequencies and timesteps. The
+provider candidate is Aequitas `381a090`. Medium passes all 241 release
+tests, eight doctests with one existing ignore, warning-denied Rustdoc
+and all-target strict Clippy. The locked workspace library check passes.
+The ordinary and extended-range paths agree on their common bins.
+
+For 4,096 binary64 samples at order 0.5, 32 retained lags and a 1 ms
+timestep, median elapsed time fell from 46.70 to 28.43 µs. The signed
+4,096-bin spectrum fell from 22.48 to 9.17 µs. Both comparisons include
+producing an owned result from borrowed data, using 21 samples of 16 calls
+against `706a12fa4` on the same host. Criterion independently estimated
+24.62 and 8.37 µs for the two candidate kernels. Reproduce the workloads
+with `cargo bench --locked -p kwavers-medium --bench fractional_derivative`.
+
+**Remaining algorithm contracts.** Stokes, tissue and the distinct
+`FractionalLaplacian` absorption model still accept raw physical inputs.
 Separate
 `frequency_dependent.rs` relaxation and viscoelastic models still expose raw
 phase-velocity interfaces. The triplet-pulse geometry and scalar display dB

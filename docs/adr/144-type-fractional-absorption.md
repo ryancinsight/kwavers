@@ -41,3 +41,21 @@ and a time step. It evaluates the phase at the same reference frequencies
 as the original operator, validates the whole update, and then rotates
 the complex spectrum. Verify the derivative, DC limits, signs, opposite
 wavenumbers and atomic rejection against analytic values.
+
+## Accepted physical fractional derivative, 2026-11-22
+
+Both methods take a homogeneous, dimensioned signal and return a new
+Aequitas runtime quantity. If the input has SI exponents D, the result
+has exponents D − α·time. Use the exact binary value of the supplied
+dimensionless order to derive that metadata. Each derivative can consume
+a previous result. Time samples use a finite positive timestep in seconds.
+The causal Grünwald–Letnikov convolution has zero prehistory and includes
+the present sample plus at most the specified number of lags.
+
+Spectral bins use signed frequencies in Hz and the principal multiplier
+(i·2πf)^α. Every coefficient needs a corresponding finite frequency.
+Repeated or unsorted frequencies are valid. A DC bin has multiplier zero
+for positive α and one for zero α. Negative α at DC is singular and
+returns an error. Borrow the input so every rejected call preserves it.
+The periodic Fourier derivative and the causal finite-history operator
+have different boundary conditions.

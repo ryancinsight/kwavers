@@ -89,6 +89,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "aequitas-runtime"
+version = "0.1.0"
+dependencies = [
+ "aequitas",
+ "eunomia",
+ "num-bigint 0.4.8",
+ "num-rational",
+ "typenum",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1388,7 +1399,7 @@ dependencies = [
  "melinoe",
  "mnemosyne-memory",
  "moirai-runtime",
- "num-bigint",
+ "num-bigint 0.5.1",
  "rand 0.8.8",
  "serde",
  "serde_json",
@@ -2570,6 +2581,8 @@ name = "kwavers-medium"
 version = "7.0.0"
 dependencies = [
  "aequitas",
+ "aequitas-runtime",
+ "criterion",
  "eunomia",
  "hyperion-transport",
  "kwavers-core",
@@ -3461,6 +3474,16 @@ dependencies = [
 
 [[package]]
 name = "num-bigint"
+version = "0.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c89e69e7e0f03bea5ef08013795c25018e101932225a656383bd384495ecc367"
+dependencies = [
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-bigint"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93e7820bc0a80a0238e650327316f929ba18d5be054b647490a3a6a339f3e7c0"
@@ -3484,6 +3507,17 @@ version = "0.1.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ce2d95d4b3734dc35aa2f45e1aa22cd416814592a4f9d9205e11affd5b8e10b"
 dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "num-rational"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f83d14da390562dca69fc84082e73e548e1ad308d24accdedd2720017cb37824"
+dependencies = [
+ "num-bigint 0.4.8",
+ "num-integer",
  "num-traits",
 ]
 

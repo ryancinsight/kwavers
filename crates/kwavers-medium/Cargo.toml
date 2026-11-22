@@ -10,6 +10,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 aequitas = { workspace = true }
+aequitas-runtime.workspace = true
 kwavers-core = { path = "../kwavers-core", version = "5.0.0" }
 kwavers-math = { path = "../kwavers-math", version = "5.0.0" }
 eunomia = { workspace = true }
@@ -23,6 +24,7 @@ moirai-parallel = { workspace = true }
 proteus = { workspace = true }
 
 [dev-dependencies]
+criterion = "0.4"
 # Rejection assertions shared across the workspace's test modules.
 kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 proptest = "1.2"
@@ -31,3 +33,7 @@ tracing-subscriber.workspace = true
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "fractional_derivative"
+harness = false

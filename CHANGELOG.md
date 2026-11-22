@@ -4,6 +4,15 @@
 
 ### Breaking
 
+- [major] Medium 7.0.0 fractional derivatives take a typed dimensionless
+  order, and both methods return a `Result<RuntimeQuantity<Vec<_>>>`.
+  Wrap the borrowed SI sample slice in its Aequitas quantity or borrow
+  a prior result with `as_deref()`. Pass a typed positive `Time` or a
+  signed `Frequency` per bin. The public spectral method borrows the
+  input and returns the transformed spectrum. At DC it returns zero for
+  positive orders, preserves the coefficient at order zero, and rejects
+  a negative order. Unequal axis lengths are an error.
+
 - [major] Analysis 7.0.0 constructs time-gain compensation with
   `TgcConfig::new(slope, frequency, sound_speed, sampling_rate)?`.
   For an old slope in dB/(cm MHz), divide

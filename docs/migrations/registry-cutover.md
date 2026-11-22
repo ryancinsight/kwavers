@@ -9,6 +9,11 @@
   RF-line and complex-spectrum benchmarks against the Atlas baseline.
 - [ ] [patch] Complete the five-package release suite with the original Stage 1
   RF data available through `KWAVERS_TRIPLET_STAGE1_OUT`. See the [gap audit](../../gap_audit.md).
+- [x] [major] Verify the causal and spectral physical derivatives against
+  analytic values, runtime dimensions, DC behavior and axis rejection.
+- [major] Local Medium 7.0.0 resolves `aequitas-runtime` from the Aequitas
+  checkout alongside Kwavers. Publish and verify runtime 0.1.0 first,
+  then remove the development path and check registry-only resolution.
 - [patch] Before publishing, reconcile any intervening upstream release,
   run the release matrix, verify normalized packages and check the released
   graph from a fresh registry consumer.
