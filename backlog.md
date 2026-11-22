@@ -1,6 +1,5 @@
 # Backlog / Strategy
 
-
 <a id="atlas-kwavers-hephaestus-vis-104"></a>- [ATLAS-KWAVERS-HEPHAESTUS-VIS-104](backlog/atlas-kwavers-hephaestus-vis-104.md) — Multi-field hand-off and fallback render entries have no value test [patch] — todo
 <a id="kw-arch-036"></a>- [KW-ARCH-036](backlog/kw-arch-036.md) — Clinical-imaging dependency boundary [major] — todo
 <a id="kw-arch-065"></a>- [KW-ARCH-065](backlog/kw-arch-065.md) — Consolidate optical transport in Hyperion [major] [arch] — todo
@@ -29,9 +28,7 @@
 <a id="kw-gpu-teardown"></a>- [KW-GPU-TEARDOWN](backlog/kw-gpu-teardown.md) — Dissolve the remaining internal `kwavers/src` into the layered crates [arch] — todo
 <a id="kw-img-045"></a>- [KW-IMG-045](backlog/kw-img-045.md) — Frame-resolved physical I/Q ensemble [minor] — todo
 <a id="kw-img-046"></a>- [KW-IMG-046](backlog/kw-img-046.md) — Triplet-pulse cavitation-bubble imaging [minor] — todo
-<a id="kw-phys-002"></a>- [KW-PHYS-002](backlog/kw-phys-002.md) — Thermal + mass-transfer coupling runs away under rarefaction (vapor accumulation, ~+16 R0 per cycle) [patch] — done
-<a id="kw-phys-003"></a>- [KW-PHYS-003](backlog/kw-phys-003.md) — Latent-heat term is unphysical: L_v goes negative above ~1056 °C, and a phantom latent flux is applied when mass transfer is off [patch] — done
-<a id="kw-phys-004"></a>- [KW-PHYS-004](backlog/kw-phys-004.md) — Opt-in Rayleigh–Plesset coupling to transient dissolved-gas diffusion [minor] — done
+<a id="kw-phys-004"></a>- [KW-PHYS-004](backlog/kw-phys-004.md) — Opt-in Rayleigh–Plesset gas feedback [minor] — done
 <a id="kw-integration-test-binaries"></a>- [KW-INTEGRATION-TEST-BINARIES](backlog/kw-integration-test-binaries.md) — kwavers integration tests link one binary per file: 89 targets, 81 on the push gate [patch] [perf] — todo
 <a id="kw-lint-1"></a>- [KW-LINT-1](backlog/kw-lint-1.md) — Burn down the clippy debt baseline [patch] — todo
 <a id="kw-manifest-implementation-2026-09-09"></a>- [KW-MANIFEST-IMPLEMENTATION-2026-09-09](backlog/kw-manifest-implementation-2026-09-09.md) — Reduce the implementation-bearing manifests [patch] [arch] — todo
@@ -54,7 +51,6 @@
 <a id="kw-dep-eunomia-requirement-lag"></a>- [KW-DEP-EUNOMIA-REQUIREMENT-LAG](backlog/kw-dep-eunomia-requirement-lag.md) — The Eunomia requirement admits no version its repository now holds [patch] — todo
 <a id="kw-gpu-pstd-buffer-request"></a>- [KW-GPU-PSTD-BUFFER-REQUEST](backlog/kw-gpu-pstd-buffer-request.md) — GPU PSTD requests a 128 MiB buffer limit whatever the adapter supports [minor] — todo
 <a id="kwavers-aeq-met-70"></a>- [KWAVERS-AEQ-MET-70](backlog/kwavers-aeq-met-70.md) — Inventory raw public metrics in the remaining transducer families [arch] — todo
-<a id="kwavers-aeq-met-71"></a>- [KWAVERS-AEQ-MET-71](backlog/kwavers-aeq-met-71.md) — Type instantaneous pressure vs pressure amplitude across all bubble-dynamics algorithms [arch] — done
 <a id="kw-ci-ubuntu-latest-unpinned"></a>- [KW-CI-UBUNTU-LATEST-UNPINNED](backlog/kw-ci-ubuntu-latest-unpinned.md) — 23 workflow jobs and one wheel-smoke matrix cell run on the moving `ubuntu-latest` image [patch] [ci] — todo
 <a id="kw-fdtd-avx512-doc"></a>- [KW-FDTD-AVX512-DOC](backlog/kw-fdtd-avx512-doc.md) — The FDTD solver doc and a standing fact advertise AVX-512 kernels that were deleted [patch] — todo
 <a id="kw-fdtd-sigma-test-slow"></a>- [KW-FDTD-SIGMA-TEST-SLOW](backlog/kw-fdtd-sigma-test-slow.md) — The FDTD sigma-factor test runs at two thirds of its 60 s bound in a parallel run [patch] [perf] — todo
@@ -64,3 +60,4 @@
 <a id="kw-hook-nextest-config-ungated"></a>- [KW-HOOK-NEXTEST-CONFIG-UNGATED](backlog/kw-hook-nextest-config-ungated.md) — A push changing only `.config/nextest.toml` passes the pre-push hook with no package gated [patch] [ci] — todo
 <a id="kw-py-hybrid-refused"></a>- [KW-PY-HYBRID-REFUSED](backlog/kw-py-hybrid-refused.md) — Python callers offer a Hybrid solver that `Simulation.run` refuses [patch] — todo
 <a id="kw-sim-sensor-mask-doc"></a>- [KW-SIM-SENSOR-MASK-DOC](backlog/kw-sim-sensor-mask-doc.md) — The Rustdoc of `SimulationRunRequest::sensor_mask` says no sensors are requested by `None`, which is false beside `transducer_ordered_indices` [patch] — todo
+<a id="kwavers-stable-qualification"></a>- [KWAVERS-STABLE-QUALIFICATION](backlog/kwavers-stable-qualification.md) — kwavers stable-release qualification [patch] — todo

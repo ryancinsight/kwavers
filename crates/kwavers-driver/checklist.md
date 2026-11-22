@@ -5,6 +5,11 @@ Phase: Closure
 In-flight item: [patch] CLOSED — `nsf_neuromod_phased_array` uses exact local `TC8020K6_G`
 CAD/footprint assets; generated board is LVS-clean but inspection-only until clearance cleanup.
 
+## Driver 1.0.0 qualification
+
+- [ ] [major] Review [the proposed stable public surface](../../docs/adr/146-stable-driver-surface.md) against the published 0.5.0 Driver package and inventory external callers and file-format contracts.
+- [ ] [patch] Run a clean archive consumer across the four I/O and Transducer feature combinations. Record output and error behavior and attach the exact-revision SemVer result before the API freeze.
+
 ## Completed
 - [x] [patch] Exact TC8020 output-stage CAD flow: `nsf_neuromod_phased_array` imports the local
       `TC8020K6_G` KiCad QFN56 footprint and symbol pin map, maps GP/GN/DP/DN/SP/SN pins by symbol
