@@ -13,7 +13,10 @@
   analytic values, runtime dimensions, DC behavior and axis rejection.
 - [x] [major] Medium 7.0.0 resolves crates.io `aequitas-runtime` 0.1.0.
   The lock checksum matches the downloaded archive, which identifies source
-  `1ee67958fa4fc456c86f37ec72d31efce7dab2b0`.
+  `1ee67958fa4fc456c86f37ec72d31efce7dab2b0`. A fresh clone of Kwavers
+  `64f540052` with an empty Cargo home and no sibling Aequitas built the
+  locked workspace libraries, passed all 241 Medium tests and passed eight
+  Medium doctests with one existing ignore. Its tracked tree stayed clean.
 - [patch] Before publishing, reconcile any intervening upstream release,
   run the release matrix, verify normalized packages and check the released
   graph from a fresh registry consumer.

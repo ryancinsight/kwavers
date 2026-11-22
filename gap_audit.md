@@ -1,3 +1,47 @@
+## Fractional Laplacian audit at `64f540052`
+
+The Medium implementation assigns three incompatible dimensions to τ.
+Here L and T denote length and time, and radian measure is dimensionless.
+
+| Site in `absorption/fractional.rs` | Requirement for τ |
+| --- | --- |
+| Documented wave-equation term τ ∂ₜʸ⁺¹ ∇²p | L² T^(y−1) |
+| Loss query α = τ ωʸ/(2c³), with α in inverse metres | L² T^(y−3) |
+| Spectral exponent −τ ω^(y+1) &#124;k&#124;ʸ, which must be dimensionless | Lʸ T^(y+1) |
+
+The first two time powers differ by two for every order. Taking τ from
+the loss query leaves the spectral exponent with units L^(2−y) T^−4.
+For y=2, c=1 m/s, τ=1 m²/s, ω=1 rad/s, and k²=1 m⁻², a unit input
+returned 0.36787944117144233. Expressing the same physical case in
+milliseconds gives c=0.001 m/ms, τ=0.001 m²/ms and ω=0.001 rad/ms.
+The loss query still returned 0.5 m⁻¹, but the filter returned
+0.999999999999. This is a dimensional homogeneity test of the formula.
+The public SI caller supplies frequency ω/(2π).
+
+A negative τ of −1 yielded a gain of 2.718281828459045. With k² values
+[1, NaN, −1], the spectral call returned amplitudes [exp(−1), 1, 1]
+without reporting the invalid axis. Differing shapes reach the assertion
+in Core's `ZipInputs::assert_shape`. The Medium calculator calls the
+loss query. The Solver plugin and Therapy nonlinear 3D recurrence have
+separate implementations.
+
+The separate Solver plugin documents α₀ in sʸ/m, but its absorption mask
+uses exp(−α₀ |k|^(y−1) c Δt). At y=2, the real FFT-based solver on an
+8×2×2 periodic grid returned gains 0.7788007830714049 and
+0.6065306597126334 for modes k=1 and 2. The ratio of logarithmic losses
+was 2; the documented quadratic law requires 4. The grid length in x was
+2π m, c=1 m/s, Δt=1 s, and α₀=0.25 s²/m. The constructor also accepted
+y=1 on its dispersion branch because the floating approximation to
+tan(π/2) was finite. The Therapy operator is a distinct time recurrence.
+
+A calibrated homogeneous damping step has a dimensionless exponent
+−α(c|k|/(2π)) c Δt. A spatial fractional Laplacian instead multiplies each
+Fourier coefficient by |k|ʸ and changes its dimension by L^−y. The wave
+equation is another contract, with coupled loss and dispersion terms.
+The maintainers of k-Wave also distinguish prescribed power-law attenuation
+from the behavior of its full fractional-Laplacian wave equation at
+large loss. [k-Wave model documentation](https://www.k-wave.org/documentation/fitPowerLawParams.php)
+
 ## Typed acoustic gain and dispersion, 2026-11-22
 
 Base `bee13af7268b880be7858cd8f9419d8a783473a3`. The public TGC path
