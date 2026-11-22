@@ -29,10 +29,17 @@
 //! - Qin et al. (2023): "Numerical investigation on acoustic cavitation characteristics"
 
 pub mod integration;
+mod polytropic;
 pub mod solver;
 
 pub use integration::integrate_bubble_dynamics_stable;
+pub use polytropic::{PolytropicGas, PolytropicParameters};
 pub use solver::RayleighPlessetSolver;
+
+#[inline]
+fn wall_acceleration<T: eunomia::FloatElement>(radius: T, velocity: T, density: T, net: T) -> T {
+    net / (density * radius) - (T::from_f64(1.5) * velocity * velocity / radius)
+}
 
 #[cfg(test)]
 mod tests;
