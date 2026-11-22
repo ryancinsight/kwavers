@@ -28,7 +28,6 @@
 <a id="kw-gpu-teardown"></a>- [KW-GPU-TEARDOWN](backlog/kw-gpu-teardown.md) — Dissolve the remaining internal `kwavers/src` into the layered crates [arch] — todo
 <a id="kw-img-045"></a>- [KW-IMG-045](backlog/kw-img-045.md) — Frame-resolved physical I/Q ensemble [minor] — todo
 <a id="kw-img-046"></a>- [KW-IMG-046](backlog/kw-img-046.md) — Triplet-pulse cavitation-bubble imaging [minor] — todo
-<a id="kw-phys-004"></a>- [KW-PHYS-004](backlog/kw-phys-004.md) — Opt-in Rayleigh–Plesset gas feedback [minor] — done
 <a id="kw-phys-005"></a>- [KW-PHYS-005](backlog/kw-phys-005.md) — Opt-in compressible radial motion and gas heat transfer with conservative dissolved-gas feedback [minor] — done
 <a id="kw-integration-test-binaries"></a>- [KW-INTEGRATION-TEST-BINARIES](backlog/kw-integration-test-binaries.md) — kwavers integration tests link one binary per file: 89 targets, 81 on the push gate [patch] [perf] — todo
 <a id="kw-lint-1"></a>- [KW-LINT-1](backlog/kw-lint-1.md) — Burn down the clippy debt baseline [patch] — todo

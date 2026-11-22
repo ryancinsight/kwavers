@@ -155,7 +155,10 @@ speed is 1480 m/s. Only the enumerated combinations have reference
 comparisons.
 
 The baseline uses 768 cells, 1024 steps per carrier cycle (36.7 ns),
-and a 120 µm wall-to-reservoir distance. Each refinement changes one
+and a 120 µm wall-to-reservoir distance. At 512 steps per carrier cycle,
+two cases pass the gas-transfer budget and exceed the independent
+time-refinement budget for wall radius. All cases pass both at 1024.
+Each refinement changes one
 control. The radial grid uses physical face gaps
 `L(j/N)^2`. Extending the reservoir to 480 µm with 1536 cells
 preserves the entire original near-wall grid as a prefix and adds
