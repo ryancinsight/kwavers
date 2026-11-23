@@ -9,8 +9,8 @@ Accept the eight standalone 220 and 230 kHz model histories for two
 10 ms bursts at 64% duty. Compare signed gas transfer and wall motion at
 every burst and quiet boundary, check total gas conservation, and refine
 time and both grids for the combined model. The
-[design](../crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/DESIGN.md)
-and [checklist](../crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/checklist.md)
+[design](../../crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/DESIGN.md)
+and [checklist](../../crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/checklist.md)
 record the equations and review gates.
 
 PR #1142 integrates the candidate. Physics publishes before Solver, and

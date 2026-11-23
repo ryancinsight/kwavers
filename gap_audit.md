@@ -4381,7 +4381,7 @@ compressibility. The liquid transport retains its incompressible material
 coordinate. Gas pressure is uniform, wall temperature and vapor pressure
 are fixed, and one noncondensable species transfers through Henry balance.
 The fixture does not supply experimental or high-pressure validation.
-Physics and Solver 5.2.0 complete the numerical release scope. The
+The completed [KW-PHYS-005](docs/verification/kw-phys-005.md) record includes the open physical-validation limits. Driver 0.5.0 has a separate [incremental qualification checklist](backlog/kwavers-stable-qualification.md). Physics and Solver 5.2.0 complete the numerical release scope. The
 [release checklist](crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/checklist.md#520-registry-verification)
 records the ordered registry publish and fresh consumer. A measured exposure
 and bubble history are needed for the next physical validation increment.
