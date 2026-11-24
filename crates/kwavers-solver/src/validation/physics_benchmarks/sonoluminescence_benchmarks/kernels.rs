@@ -47,8 +47,20 @@ pub fn minnaert_resonance_radius(freq_hz: f64, gamma: f64, p0: f64, rho_l: f64) 
 /// * `p_v`   — vapour pressure (Pa)
 /// * `r0`    — equilibrium bubble radius (m)
 /// * `sigma` — surface tension [N/m]
+///
+/// Returns `f64::NEG_INFINITY` for a non-positive radius or a negative
+/// surface tension (no finite threshold: `p_B` is tensile and its
+/// R₀ → 0 limit is −∞).
 #[must_use]
 pub fn blake_threshold(p0: f64, p_v: f64, r0: f64, sigma: f64) -> f64 {
+    // Guard (core cavitation-thresholds convention, adapted to this
+    // function's sign): a non-positive radius or a negative surface tension
+    // has no finite Blake pressure, so return NEG_INFINITY rather than the
+    // small-value fallback below, which would silently report a plausible
+    // finite tension for a non-existent nucleus.
+    if r0 <= 0.0 || sigma < 0.0 {
+        return f64::NEG_INFINITY;
+    }
     if r0 < 1e-15 || sigma < 1e-15 {
         return p_v - p0;
     }

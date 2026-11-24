@@ -116,6 +116,23 @@ fn test_cavitation_threshold() {
 }
 
 #[test]
+fn test_cavitation_threshold_infinite_for_nonpositive_radius() {
+    let constants = StateDependentConstants::default();
+
+    // Guard: a non-positive nucleus radius has no finite threshold; the
+    // sentinel is NEG_INFINITY in this function's negative-tension sign
+    // convention (a tension no pressure can reach).
+    assert_eq!(
+        constants.cavitation_threshold(20.0, 0.0, ATMOSPHERIC_PRESSURE),
+        f64::NEG_INFINITY
+    );
+    assert_eq!(
+        constants.cavitation_threshold(20.0, -1e-6, ATMOSPHERIC_PRESSURE),
+        f64::NEG_INFINITY
+    );
+}
+
+#[test]
 fn test_prandtl_number() {
     let constants = StateDependentConstants::default();
 
