@@ -36,6 +36,9 @@ neighbors on each side. Periodic grids wrap each axis. Homogeneous Neumann grids
 reflect about the endpoint nodes. Dirichlet mode writes zero to the halo in which
 the full centered stencil does not fit, including when the output buffer is reused.
 
+Run `cargo bench --locked -p kwavers-grid --bench laplacian` to time repeated
+applications on a preallocated 64³ volume for every order and boundary mode.
+
 ## Example
 
 Construction is fallible: zero dimensions and non-positive spacing are rejected at the
