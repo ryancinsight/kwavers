@@ -80,12 +80,13 @@ fn piston_directivity(theta: f64, ka: f64) -> f64 {
 /// (measured from broadside). The far-field response at observation angle `θ`
 /// is the product of the element directivity and the array factor,
 /// ```text
-/// P(θ) = D(θ) · | (1/N) Σ_i exp[ i·k·x_i·(sinθ − sin θ_s) ] |,
+/// P(θ) = |D(θ)| · | (1/N) Σ_i exp[ i·k·x_i·(sinθ − sin θ_s) ] |,
 /// ```
 /// where `D(θ) = 2 J₁(ka·sinθ)/(ka·sinθ)` is the baffled circular-piston
 /// element factor with parameter `ka_elem = k·a_elem`. At `θ = θ_s` the array
-/// factor is unity and `P = D(θ_s)` (the main lobe); coherent secondary peaks
-/// where the array factor returns to unity at other angles are grating lobes.
+/// factor is unity and `P = |D(θ_s)|` (the aimed pressure); coherent secondary peaks
+/// where the array-factor magnitude returns to unity are grating lobes.
+/// Element directivity can shift the local peak away from the command angle.
 ///
 /// # Arguments
 /// * `elem_x` – element x-positions `m`
@@ -118,7 +119,7 @@ pub fn steered_beam_pattern_1d(
             for &x in elem_x {
                 acc += Complex64::from_polar(1.0, k * x * dsin);
             }
-            piston_directivity(th, ka_elem) * (acc.norm() / n)
+            piston_directivity(th, ka_elem).abs() * (acc.norm() / n)
         })
         .collect()
 }
@@ -133,9 +134,9 @@ pub fn steered_beam_pattern_1d(
 /// ```text
 /// G(θ_s) = max_{|θ − θ_s| > Δ} P(θ) / P(θ_s),
 /// ```
-/// with `P(θ_s) = D(θ_s)` the main-lobe peak. The safe **steering envelope**
+/// with `P(θ_s) = |D(θ_s)|` the pressure at the command angle. The safe **steering envelope**
 /// is the set `{ θ_s : G(θ_s) ≤ 0.5 }`, where no secondary lobe exceeds half
-/// (−6 dB) the main-lobe pressure.
+/// (−6 dB) the pressure at the command angle.
 ///
 /// Holding frequency, aperture and element count fixed, a uniform array raises
 /// a coherent grating lobe once `θ_s` exceeds the threshold set by its element
@@ -169,7 +170,7 @@ pub fn steering_grating_lobe_ratio_1d(
 ) -> Vec<f64> {
     map_collect_with::<Adaptive, _, _, _>(steer_theta, |&ts| {
         let pat = steered_beam_pattern_1d(elem_x, obs_theta, k, ts, ka_elem);
-        let main = piston_directivity(ts, ka_elem).max(1e-300);
+        let main = piston_directivity(ts, ka_elem).abs().max(1e-300);
         let mut secondary = 0.0_f64;
         for (i, &th) in obs_theta.iter().enumerate() {
             if (th - ts).abs() <= mainlobe_halfwidth_rad {
