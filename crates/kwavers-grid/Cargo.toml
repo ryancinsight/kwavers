@@ -30,3 +30,7 @@ workspace = true
 [[bench]]
 name = "laplacian"
 harness = false
+
+[[bench]]
+name = "gradient"
+harness = false

@@ -1,6 +1,7 @@
 //! Halo traversal and ghost-node mappings. The two z strips in an interior
 //! row are disjoint even when the stencil covers the entire row.
 
+use super::super::neighbors::{periodic, reflect};
 use super::{LaplacianBoundary, LaplacianOperator, SecondDerivative};
 use leto::{ArrayView3, ArrayViewMut3};
 use std::ops::Range;
@@ -19,33 +20,6 @@ fn halo_rows<const R: usize>(
             }
         }
     }
-}
-
-#[inline]
-fn periodic(i: usize, d: usize, len: usize) -> (usize, usize) {
-    let step = if d < len { d } else { d % len };
-    let minus = if i >= step {
-        i - step
-    } else {
-        len - (step - i)
-    };
-    let plus = if step < len - i {
-        i + step
-    } else {
-        step - (len - i)
-    };
-    (minus, plus)
-}
-
-#[inline]
-fn reflect(i: usize, d: usize, len: usize) -> (usize, usize) {
-    if len == 1 {
-        return (0, 0);
-    }
-    let last = len - 1;
-    let period = 2 * last;
-    let fold = |j| last - last.abs_diff(j % period);
-    (fold(i.abs_diff(d)), fold(i + d))
 }
 
 impl LaplacianOperator {

@@ -1,6 +1,6 @@
 //! Curl operations module
 
-use super::coefficients::{FDCoefficients, FdAccuracyOrder};
+use super::coefficients::FdAccuracyOrder;
 use super::stencil::{centered_first_derivative_sum, validate_vector_field_shapes};
 use crate::Grid;
 use eunomia::FloatElement;
@@ -30,7 +30,8 @@ where
     let mut curl_y = Array3::<T>::zeros([nx, ny, nz]);
     let mut curl_z = Array3::<T>::zeros([nx, ny, nz]);
 
-    let coeffs = FDCoefficients::first_derivative::<T>(order);
+    let weights = order.first_weights::<T>();
+    let coeffs = &weights[..order.radius()];
     let stencil_radius = coeffs.len();
 
     let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx);
@@ -38,25 +39,25 @@ where
     let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz);
 
     // Compute curl in interior points
-    for i in stencil_radius..nx - stencil_radius {
-        for j in stencil_radius..ny - stencil_radius {
-            for k in stencil_radius..nz - stencil_radius {
-                let dvz_dy = centered_first_derivative_sum(&coeffs, |offset| {
+    for i in stencil_radius..nx.saturating_sub(stencil_radius) {
+        for j in stencil_radius..ny.saturating_sub(stencil_radius) {
+            for k in stencil_radius..nz.saturating_sub(stencil_radius) {
+                let dvz_dy = centered_first_derivative_sum(coeffs, |offset| {
                     vz[[i, j + offset, k]] - vz[[i, j - offset, k]]
                 });
-                let dvy_dz = centered_first_derivative_sum(&coeffs, |offset| {
+                let dvy_dz = centered_first_derivative_sum(coeffs, |offset| {
                     vy[[i, j, k + offset]] - vy[[i, j, k - offset]]
                 });
-                let dvx_dz = centered_first_derivative_sum(&coeffs, |offset| {
+                let dvx_dz = centered_first_derivative_sum(coeffs, |offset| {
                     vx[[i, j, k + offset]] - vx[[i, j, k - offset]]
                 });
-                let dvz_dx = centered_first_derivative_sum(&coeffs, |offset| {
+                let dvz_dx = centered_first_derivative_sum(coeffs, |offset| {
                     vz[[i + offset, j, k]] - vz[[i - offset, j, k]]
                 });
-                let dvy_dx = centered_first_derivative_sum(&coeffs, |offset| {
+                let dvy_dx = centered_first_derivative_sum(coeffs, |offset| {
                     vy[[i + offset, j, k]] - vy[[i - offset, j, k]]
                 });
-                let dvx_dy = centered_first_derivative_sum(&coeffs, |offset| {
+                let dvx_dy = centered_first_derivative_sum(coeffs, |offset| {
                     vx[[i, j + offset, k]] - vx[[i, j - offset, k]]
                 });
 

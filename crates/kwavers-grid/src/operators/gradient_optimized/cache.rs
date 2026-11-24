@@ -1,6 +1,6 @@
 //! Gradient cache for performance optimization.
 
-use super::super::coefficients::{FDCoefficients, FdAccuracyOrder};
+use super::super::coefficients::FdAccuracyOrder;
 use crate::Grid;
 use eunomia::FloatElement;
 use std::sync::{
@@ -8,21 +8,17 @@ use std::sync::{
     OnceLock,
 };
 
-/// Gradient cache for performance optimization.
+/// Lazily converts dimensionless weights to the field precision once per order.
 ///
-/// Coefficients are keyed by the [`FdAccuracyOrder`] discriminant, a zero-sized
-/// compile-time value, so the table has one slot per order and no hash or
-/// allocation is needed to locate a slot. Each slot is initialized once; a hit
-/// returns a borrow into that block instead of cloning a `Vec`.
+/// Four inline slots hold up to four weights each. A shared cache can serve
+/// grids with different spacings.
 #[derive(Debug)]
 pub struct GradientCache<T>
 where
     T: FloatElement + Clone + Send + Sync,
 {
     /// One immutable coefficient block per accuracy order.
-    coefficients: [OnceLock<Box<[T]>>; FdAccuracyOrder::COUNT],
-    /// Cached grid spacing inverses
-    pub(super) spacing_inverses: (T, T, T),
+    coefficients: [OnceLock<[T; 4]>; FdAccuracyOrder::COUNT],
     /// Cache hit counter for performance monitoring
     cache_hits: AtomicUsize,
     /// Cache miss counter for performance monitoring
@@ -33,18 +29,10 @@ impl<T> GradientCache<T>
 where
     T: FloatElement + Clone + Send + Sync,
 {
-    /// Create a new gradient cache
-    /// # Panics
-    /// - Panics if an internal invariant assumed to hold at this call site is violated.
-    ///
-    pub fn new(grid: &Grid) -> Self {
+    /// Create an empty coefficient cache. Spacing is read from each computation's grid.
+    pub fn new(_grid: &Grid) -> Self {
         Self {
             coefficients: std::array::from_fn(|_| OnceLock::new()),
-            spacing_inverses: (
-                T::from_f64(1.0) / T::from_f64(grid.dx),
-                T::from_f64(1.0) / T::from_f64(grid.dy),
-                T::from_f64(1.0) / T::from_f64(grid.dz),
-            ),
             cache_hits: AtomicUsize::new(0),
             cache_misses: AtomicUsize::new(0),
         }
@@ -52,20 +40,19 @@ where
 
     /// Borrow the coefficients for a spatial order, computing them on first use.
     ///
-    /// The returned slice lives as long as the cache and is the same allocation
-    /// on every call for a given order. Concurrent first callers publish one
-    /// block through `OnceLock`; losers borrow it without recomputing.
+    /// The returned slice borrows inline storage, including on first use.
     pub fn get_coefficients(&self, order: FdAccuracyOrder) -> &[T] {
-        let slot = &self.coefficients[order.index()];
-        if let Some(coeffs) = slot.get() {
-            self.cache_hits.fetch_add(1, Ordering::Relaxed);
-            return coeffs.as_ref();
-        }
-        slot.get_or_init(|| {
+        let mut initialized = false;
+        let weights = self.coefficients[order.index()].get_or_init(|| {
+            initialized = true;
+            order.first_weights()
+        });
+        if initialized {
             self.cache_misses.fetch_add(1, Ordering::Relaxed);
-            FDCoefficients::first_derivative::<T>(order).into_boxed_slice()
-        })
-        .as_ref()
+        } else {
+            self.cache_hits.fetch_add(1, Ordering::Relaxed);
+        }
+        &weights[..order.radius()]
     }
 
     /// Get cache statistics
@@ -86,6 +73,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::operators::FDCoefficients;
     use std::sync::Arc;
 
     const ALL_ORDERS: [FdAccuracyOrder; FdAccuracyOrder::COUNT] = [
@@ -114,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn a_hit_borrows_the_same_allocation() {
+    fn a_hit_borrows_the_same_storage() {
         let cache = GradientCache::<f64>::new(&Grid::default());
         let first = cache.get_coefficients(FdAccuracyOrder::Sixth);
         let ptr = first.as_ptr();
@@ -154,6 +142,9 @@ mod tests {
                 assert_eq!(got, expected);
             }
         }
-        assert_eq!(cache.cache_stats().1, FdAccuracyOrder::COUNT);
+        assert_eq!(
+            cache.cache_stats(),
+            (3 * FdAccuracyOrder::COUNT, FdAccuracyOrder::COUNT)
+        );
     }
 }

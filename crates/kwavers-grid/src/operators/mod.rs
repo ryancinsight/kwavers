@@ -11,6 +11,7 @@ pub mod divergence;
 pub mod gradient;
 pub mod gradient_optimized;
 pub mod laplacian;
+mod neighbors;
 mod stencil;
 
 // Re-export main types

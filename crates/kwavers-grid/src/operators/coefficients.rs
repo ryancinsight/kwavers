@@ -25,6 +25,27 @@ pub enum FdAccuracyOrder {
 }
 
 impl FdAccuracyOrder {
+    fn first_pairs(self) -> &'static [f64] {
+        match self {
+            FdAccuracyOrder::Second => &[0.5],
+            FdAccuracyOrder::Fourth => &[2.0 / 3.0, -1.0 / 12.0],
+            FdAccuracyOrder::Sixth => &[3.0 / 4.0, -3.0 / 20.0, 1.0 / 60.0],
+            FdAccuracyOrder::Eighth => &[4.0 / 5.0, -1.0 / 5.0, 4.0 / 105.0, -1.0 / 280.0],
+        }
+    }
+
+    pub(super) fn first_weights<T: FloatElement>(self) -> [T; 4] {
+        let mut native = [T::from_f64(0.0); 4];
+        for (out, &w) in native.iter_mut().zip(self.first_pairs()) {
+            *out = T::from_f64(w);
+        }
+        native
+    }
+
+    pub(super) fn radius(self) -> usize {
+        self.first_pairs().len()
+    }
+
     /// Dense table index of this order.
     ///
     /// The mapping is explicit so a table keyed by it needs no enum-to-integer
@@ -55,13 +76,12 @@ impl FDCoefficients {
     /// the native precision selected by `T`.
     #[must_use]
     pub fn first_derivative<T: FloatElement>(order: FdAccuracyOrder) -> Vec<T> {
-        let weights: &[f64] = match order {
-            FdAccuracyOrder::Second => &[0.5],
-            FdAccuracyOrder::Fourth => &[2.0 / 3.0, -1.0 / 12.0],
-            FdAccuracyOrder::Sixth => &[3.0 / 4.0, -3.0 / 20.0, 1.0 / 60.0],
-            FdAccuracyOrder::Eighth => &[4.0 / 5.0, -1.0 / 5.0, 4.0 / 105.0, -1.0 / 280.0],
-        };
-        weights.iter().copied().map(T::from_f64).collect()
+        order
+            .first_pairs()
+            .iter()
+            .copied()
+            .map(T::from_f64)
+            .collect()
     }
 
     /// Get coefficients for second derivative pairs (off-center points)

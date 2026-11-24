@@ -39,6 +39,16 @@ the full centered stencil does not fit, including when the output buffer is reus
 Run `cargo bench --locked -p kwavers-grid --bench laplacian` to time repeated
 applications on a preallocated 64³ volume for every order and boundary mode.
 
+`gradient` and `gradient_optimized` leave a component zero where that axis has
+no complete centered stencil. For boundary samples, `GradientOperatorBuilder`
+supports zero padding, periodic wrapping, even reflection, and constant endpoint
+extension. Each call uses its grid's spacing. A `GradientCache` holds dimensionless
+weights inline and can serve multiple grids at the same precision. For repeated steps,
+`GradientOperator::compute_into` writes directly into three reusable row-major buffers.
+Parallel execution
+groups complete z-rows per chunk. Run `cargo bench -p kwavers-grid --bench gradient`
+to measure the public entry points, including their three output allocations.
+
 ## Example
 
 Construction is fallible: zero dimensions and non-positive spacing are rejected at the

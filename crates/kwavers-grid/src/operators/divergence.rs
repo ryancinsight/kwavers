@@ -1,6 +1,6 @@
 //! Divergence operations module
 
-use super::coefficients::{FDCoefficients, FdAccuracyOrder};
+use super::coefficients::FdAccuracyOrder;
 use super::stencil::{centered_first_derivative_sum, validate_vector_field_shapes};
 use crate::Grid;
 use eunomia::FloatElement;
@@ -27,7 +27,8 @@ where
     let [nx, ny, nz] = validate_vector_field_shapes(vx, vy, vz, grid)?;
 
     let mut divergence = Array3::<T>::zeros([nx, ny, nz]);
-    let coeffs = FDCoefficients::first_derivative::<T>(order);
+    let weights = order.first_weights::<T>();
+    let coeffs = &weights[..order.radius()];
     let stencil_radius = coeffs.len();
 
     let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx);
@@ -35,16 +36,16 @@ where
     let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz);
 
     // Compute divergence in interior points
-    for i in stencil_radius..nx - stencil_radius {
-        for j in stencil_radius..ny - stencil_radius {
-            for k in stencil_radius..nz - stencil_radius {
-                let div_x = centered_first_derivative_sum(&coeffs, |offset| {
+    for i in stencil_radius..nx.saturating_sub(stencil_radius) {
+        for j in stencil_radius..ny.saturating_sub(stencil_radius) {
+            for k in stencil_radius..nz.saturating_sub(stencil_radius) {
+                let div_x = centered_first_derivative_sum(coeffs, |offset| {
                     vx[[i + offset, j, k]] - vx[[i - offset, j, k]]
                 });
-                let div_y = centered_first_derivative_sum(&coeffs, |offset| {
+                let div_y = centered_first_derivative_sum(coeffs, |offset| {
                     vy[[i, j + offset, k]] - vy[[i, j - offset, k]]
                 });
-                let div_z = centered_first_derivative_sum(&coeffs, |offset| {
+                let div_z = centered_first_derivative_sum(coeffs, |offset| {
                     vz[[i, j, k + offset]] - vz[[i, j, k - offset]]
                 });
 
