@@ -100,6 +100,38 @@ fn test_blake_threshold_above_minus_p0() {
     );
 }
 
+/// Blake threshold guard: a non-positive radius or a negative surface
+/// tension has no finite threshold. `p_B` is tensile, so the sentinel is
+/// NEG_INFINITY (the R₀ → 0 limit), not the `p_v − p₀` small-value fallback.
+/// σ = 0 keeps the existing fallback.
+/// # Panics
+/// - Panics if assertion fails.
+///
+#[test]
+fn test_blake_threshold_infinite_for_nonphysical_inputs() {
+    let c = COND();
+    let p_zero = blake_threshold(c.p0_pa, c.p_v, 0.0, c.sigma);
+    assert!(
+        p_zero == f64::NEG_INFINITY,
+        "R₀ = 0 must give −∞: got {p_zero:.3e}"
+    );
+    let p_neg = blake_threshold(c.p0_pa, c.p_v, -c.r0_m, c.sigma);
+    assert!(
+        p_neg == f64::NEG_INFINITY,
+        "R₀ < 0 must give −∞: got {p_neg:.3e}"
+    );
+    let p_neg_sigma = blake_threshold(c.p0_pa, c.p_v, c.r0_m, -c.sigma);
+    assert!(
+        p_neg_sigma == f64::NEG_INFINITY,
+        "σ < 0 must give −∞: got {p_neg_sigma:.3e}"
+    );
+    let p_sigma0 = blake_threshold(c.p0_pa, c.p_v, c.r0_m, 0.0);
+    assert!(
+        (p_sigma0 - (c.p_v - c.p0_pa)).abs() < 1.0,
+        "σ = 0 must keep the p_v − p₀ fallback: got {p_sigma0:.3e}"
+    );
+}
+
 // ── Rayleigh collapse time fraction ──────────────────────────────────────
 
 /// Collapse time fraction for SBSL must be small (Brenner 2002 §III).

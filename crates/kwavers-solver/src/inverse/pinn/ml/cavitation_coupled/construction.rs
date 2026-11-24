@@ -77,7 +77,17 @@ where
     ///
     /// Derived from equating the unstable equilibrium condition of the Rayleigh–
     /// Plesset equation (Brennen 1995, *Cavitation and Bubble Dynamics*, §1.3).
+    ///
+    /// Returns `f64::INFINITY` for a non-positive nucleus radius or a negative
+    /// surface tension (no finite threshold), following the guard convention of
+    /// the core cavitation thresholds.
     fn blake_threshold(r_nucleus: f64, surface_tension: f64, ambient_pressure: f64) -> f64 {
+        // Guard: with INFINITY, `detect_nucleation_sites`' magnitude comparison
+        // can never fire, so a non-physical nucleus nucleates nothing instead
+        // of comparing against NaN (R_n < 0) or a spurious finite value.
+        if r_nucleus <= 0.0 || surface_tension < 0.0 {
+            return f64::INFINITY;
+        }
         let term1 = 2.0 * surface_tension / r_nucleus;
         let term2 = (2.0 * surface_tension / (3.0 * r_nucleus * ambient_pressure)).sqrt() - 1.0;
         ambient_pressure + term1 * term2
@@ -188,5 +198,46 @@ where
         }
 
         interfaces
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::domain::CavitationCoupledDomain;
+    use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
+    use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+
+    type B = coeus_core::MoiraiBackend;
+
+    /// Blake threshold guard: a non-positive nucleus radius or a negative
+    /// surface tension has no finite threshold (INFINITY ⇒ the nucleation
+    /// comparison can never fire), mirroring the core cavitation thresholds.
+    /// σ = 0 stays on the formula path, where the threshold reduces to P₀.
+    #[test]
+    fn blake_threshold_infinite_for_nonphysical_inputs() {
+        assert!(CavitationCoupledDomain::<B>::blake_threshold(
+            0.0,
+            SURFACE_TENSION_WATER,
+            ATMOSPHERIC_PRESSURE
+        )
+        .is_infinite());
+        assert!(CavitationCoupledDomain::<B>::blake_threshold(
+            -5e-6,
+            SURFACE_TENSION_WATER,
+            ATMOSPHERIC_PRESSURE
+        )
+        .is_infinite());
+        assert!(CavitationCoupledDomain::<B>::blake_threshold(
+            5e-6,
+            -SURFACE_TENSION_WATER,
+            ATMOSPHERIC_PRESSURE
+        )
+        .is_infinite());
+        let sigma_zero =
+            CavitationCoupledDomain::<B>::blake_threshold(5e-6, 0.0, ATMOSPHERIC_PRESSURE);
+        assert!(
+            (sigma_zero - ATMOSPHERIC_PRESSURE).abs() < 1.0,
+            "σ = 0 must stay on the formula path: got {sigma_zero:.1}"
+        );
     }
 }
