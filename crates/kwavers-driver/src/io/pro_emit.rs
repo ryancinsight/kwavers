@@ -61,7 +61,7 @@ pub fn write_kicad_pro(basename: &str, rules: &DesignRules) -> String {
             "    }}\n",
             "  }},\n",
             "  \"meta\": {{\n",
-            "    \"filename\": \"{basename}.kicad_pro\",\n",
+            "    \"filename\": {filename},\n",
             "    \"version\": 3\n",
             "  }}\n",
             "}}\n",
@@ -72,11 +72,11 @@ pub fn write_kicad_pro(basename: &str, rules: &DesignRules) -> String {
         r.min_via_drill.to_mm(), // hole-to-hole floored at the mechanical drill diameter
         r.microvia_diameter().to_mm(),
         r.microvia_drill.to_mm(),
-        r.via_diameter().to_mm(),
+        r.min_via_drill.to_mm(),
         r.min_track.to_mm(),
         r.min_annular.to_mm(),
         r.via_diameter().to_mm(),
-        basename = basename,
+        filename = serde_json::Value::String(format!("{basename}.kicad_pro")),
     );
     body
 }

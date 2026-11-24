@@ -4385,3 +4385,7 @@ The completed [KW-PHYS-005](docs/verification/kw-phys-005.md) record includes th
 [release checklist](crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/checklist.md#520-registry-verification)
 records the ordered registry publish and fresh consumer. A measured exposure
 and bubble history are needed for the next physical validation increment.
+
+## Driver 0.5.1 external qualification
+
+[patch] Six public contract regressions reproduce on published 0.5.0. The [external qualification record](docs/verification/driver-0.5.md) gives the repair matrix and remaining stable gates.

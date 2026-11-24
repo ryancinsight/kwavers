@@ -11,8 +11,8 @@
 use crate::manifest::{DriverManifest, EnergyBudgetReport};
 #[cfg(not(feature = "kwavers"))]
 use crate::physics::acoustic::{
-    acoustic_intensity_w_per_m2, f_number, focal_pressure_gain, max_grating_free_steer_deg,
-    mechanical_index, near_field_distance_m, pitch_from_aperture_m, wavelength_m,
+    f_number, focal_pressure_gain, isppa_w_per_m2, max_grating_free_steer_deg, mechanical_index,
+    near_field_distance_m, pitch_from_aperture_m, wavelength_m,
 };
 #[cfg(feature = "kwavers")]
 use crate::physics::acoustic::{f_number, pitch_from_aperture_m, wavelength_m};
@@ -207,8 +207,9 @@ fn propagate_beam_step(
     budget: &EnergyBudgetReport,
 ) -> Result<BeamPropagationScalars, String> {
     let focal_pressure_pa = estimate_focal_pressure_pa(budget, step.lanes);
+    // Average over the sinusoidal pulse itself. Its on-window duty is one.
     let isppa_w_cm2 =
-        acoustic_intensity_w_per_m2(focal_pressure_pa, PHYSICS_WATER_Z0_RAYL) / UNIT_W_CM2_PER_W_M2;
+        isppa_w_per_m2(focal_pressure_pa, PHYSICS_WATER_Z0_RAYL, 1.0) / UNIT_W_CM2_PER_W_M2;
     let mi = mechanical_index(
         focal_pressure_pa / UNIT_PA_PER_MPA,
         step.frequency_hz / UNIT_MHZ_PER_HZ,

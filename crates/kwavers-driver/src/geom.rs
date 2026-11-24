@@ -204,9 +204,12 @@ impl GridSpec {
     /// Returns [`crate::error::Geometry::EmptyGrid`] when `pitch ≤ 0`, `nlayers == 0`, or the
     /// computed cell count on either axis is zero.
     pub fn cover(width: Nm, height: Nm, pitch: Nm, nlayers: usize) -> crate::Result<Self> {
+        if pitch.0 <= 0 || nlayers == 0 {
+            return Err(crate::error::Geometry::EmptyGrid.into());
+        }
         let nx = (width.0 / pitch.0).max(0) as usize + 1;
         let ny = (height.0 / pitch.0).max(0) as usize + 1;
-        if nx == 0 || ny == 0 || nlayers == 0 || pitch.0 <= 0 {
+        if nx == 0 || ny == 0 {
             return Err(crate::error::Geometry::EmptyGrid.into());
         }
         Ok(GridSpec {

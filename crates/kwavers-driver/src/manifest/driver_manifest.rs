@@ -57,7 +57,12 @@ impl DriverManifest {
     #[must_use]
     pub fn to_text(&self) -> String {
         let mut s = String::new();
-        let _ = writeln!(s, "format={MANIFEST_FORMAT_V2}");
+        let format = if self.stimulation.is_none() && self.tile_profiles.is_empty() {
+            MANIFEST_FORMAT_V1
+        } else {
+            MANIFEST_FORMAT_V2
+        };
+        let _ = writeln!(s, "format={format}");
         let _ = writeln!(s, "hv_board={}", self.hv_board);
         let _ = writeln!(s, "tx_connector={}", self.tx_connector);
         let _ = writeln!(s, "tx_nets={}", self.tx_nets.join(","));

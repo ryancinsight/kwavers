@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.1 (proposed)
+
+### Fixed
+
+- [patch] Compute fallback pulse-average intensity from peak sinusoidal pressure in the experiment and validator. Previously both reported twice the within-pulse mean.
+- [patch] Preserve readable v1 text when saving a manifest without a stimulation block.
+
+- [patch] Return the documented geometry error for zero grid pitch.
+- [patch] Retain nanometre precision for routed segment coordinates and widths in PCB export.
+- [patch] Export the configured through drill separately from the via pad diameter and encode project filenames as JSON strings.
+- [patch] Correct the documented ordering of pulser comparison scores.
+
 ## 0.4.0
 
 ### Fixed
