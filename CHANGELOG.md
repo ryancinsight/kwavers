@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.2.1 Physics (unreleased)
+
+### Fixed
+
+- [patch] Preserve circular-piston pressure magnitudes in steering patterns
+  and secondary-lobe ratios, including negative-phase lobes.
+- [patch] Evaluate the signed uniform array factor at and near spatial
+  replicas without dividing nearly canceled sine terms.
+
 ## 5.2.0 Physics and Solver (2026-11-22)
 
 Physics 5.2.0 and Solver 5.2.0 are published on crates.io. The

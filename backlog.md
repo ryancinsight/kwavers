@@ -49,6 +49,7 @@
 <a id="kw-phys-013"></a>- [KW-PHYS-013](backlog/kw-phys-013.md) — Foldy–Lax self-consistent coupled bubble driving (multiple scattering) [patch] — done
 <a id="kw-phys-014"></a>- [KW-PHYS-014](backlog/kw-phys-014.md) — Cycle-averaged rectified diffusion (Fyrillas–Szeri / Louisnard–Gomez) missing from the library [patch] — done
 <a id="kw-phys-015"></a>- [KW-PHYS-015](backlog/kw-phys-015.md) — Bader-family expansion-phase influx, D_MAX fit, and residual-radius maps missing from the library [patch] — done
+<a id="kw-phys-steering-magnitudes"></a>- [KW-PHYS-STEERING-MAGNITUDES](backlog/kw-phys-steering-magnitudes.md) — Correct steering magnitudes and stabilize spatial replicas [patch] — done
 <a id="kw-integration-test-binaries"></a>- [KW-INTEGRATION-TEST-BINARIES](backlog/kw-integration-test-binaries.md) — kwavers integration tests link one binary per file: 89 targets, 81 on the push gate [patch] [perf] — todo
 <a id="kw-lint-1"></a>- [KW-LINT-1](backlog/kw-lint-1.md) — Burn down the clippy debt baseline [patch] — todo
 <a id="kw-manifest-implementation-2026-09-09"></a>- [KW-MANIFEST-IMPLEMENTATION-2026-09-09](backlog/kw-manifest-implementation-2026-09-09.md) — Reduce the implementation-bearing manifests [patch] [arch] — todo
