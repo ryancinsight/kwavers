@@ -29,15 +29,20 @@ fn assert_quadratic_laplacian_exact(spatial_order: usize, radius: usize) {
         }
     }
 
+    solver.laplacian.fill(29.0);
     solver.calculate_laplacian(&grid).unwrap();
 
-    for i in radius..grid.nx - radius {
-        for j in radius..grid.ny - radius {
-            for k in radius..grid.nz - radius {
+    for i in 0..grid.nx {
+        for j in 0..grid.ny {
+            for k in 0..grid.nz {
+                let interior = (radius..grid.nx - radius).contains(&i)
+                    && (radius..grid.ny - radius).contains(&j)
+                    && (radius..grid.nz - radius).contains(&k);
+                let expected = if interior { 6.0 } else { 29.0 };
                 let actual = solver.laplacian[[i, j, k]];
                 assert!(
-                    (actual - 6.0).abs() < 1.0e-10,
-                    "order {spatial_order}: laplacian[{i},{j},{k}] = {actual}, expected 6"
+                    (actual - expected).abs() < 1.0e-10,
+                    "order {spatial_order}: laplacian[{i},{j},{k}] = {actual}, expected {expected}"
                 );
             }
         }
@@ -82,4 +87,25 @@ fn westervelt_laplacian_rejects_unsupported_spatial_order() {
         "unsupported spatial order must return a validation error, got {err:?}"
     );
     assert_eq!(solver.config.spatial_order, 8);
+}
+
+#[test]
+fn a_thin_axis_has_no_complete_three_dimensional_stencil() {
+    for spatial_order in [2, 4, 6] {
+        for [nx, ny, nz] in [[1, 8, 9], [8, 1, 9], [8, 9, 1]] {
+            let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3).unwrap();
+            let medium = HomogeneousMedium::water(&grid);
+            let mut solver = WesterveltFdtd::new(
+                WesterveltFdtdConfig {
+                    spatial_order,
+                    ..Default::default()
+                },
+                &grid,
+                &medium,
+            );
+            solver.laplacian.fill(17.0);
+            solver.calculate_laplacian(&grid).unwrap();
+            assert!(solver.laplacian.iter().all(|value| *value == 17.0));
+        }
+    }
 }

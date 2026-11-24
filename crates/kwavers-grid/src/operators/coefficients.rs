@@ -9,7 +9,7 @@
 
 use eunomia::FloatElement;
 
-pub(super) mod centered;
+pub mod centered;
 
 /// Spatial accuracy order for finite difference schemes
 #[derive(Debug, Clone, Copy, PartialEq)]

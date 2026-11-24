@@ -2772,6 +2772,7 @@ dependencies = [
  "coeus-ops",
  "coeus-optim",
  "coeus-tensor",
+ "criterion",
  "eunomia",
  "hermes-simd",
  "hyperion-transport",
