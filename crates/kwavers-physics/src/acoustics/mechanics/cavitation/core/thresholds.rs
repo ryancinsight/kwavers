@@ -69,6 +69,10 @@ pub enum ThresholdModel {
 /// # Physical limits
 /// - R_0 → ∞: P_Blake → P_0 − P_v  (surface tension negligible)
 /// - R_0 → 0: P_Blake → ∞  (tiny nuclei are very stable)
+///
+/// Returns `f64::INFINITY` for a non-positive nucleus radius or a negative
+/// surface tension (no finite threshold), following the guard convention of
+/// [`blake_critical_radius`]; σ = 0 stays on the formula path.
 #[must_use]
 pub fn blake_threshold(
     surface_tension: f64,  // [N/m]
@@ -76,6 +80,10 @@ pub fn blake_threshold(
     ambient_pressure: f64, // [Pa]
     vapor_pressure: f64,   // [Pa]
 ) -> f64 {
+    if initial_radius <= 0.0 || surface_tension < 0.0 {
+        return f64::INFINITY;
+    }
+
     // Equilibrium gas pressure (Young-Laplace)
     let p_g0 = (ambient_pressure - vapor_pressure + 2.0 * surface_tension / initial_radius)
         .max(f64::EPSILON);
@@ -119,6 +127,9 @@ pub fn blake_critical_radius(
 
 /// Calculate Neppiras threshold
 /// Based on Neppiras (1980): "Acoustic cavitation"
+///
+/// Returns `f64::INFINITY` for a non-positive nucleus radius (no nucleus ⇒ no
+/// finite threshold), following the guard convention of [`blake_critical_radius`].
 #[must_use]
 pub fn neppiras_threshold(
     ambient_pressure: f64, // [Pa]
@@ -126,6 +137,10 @@ pub fn neppiras_threshold(
     surface_tension: f64,  // [N/m]
     nucleus_radius: f64,   // [m]
 ) -> f64 {
+    if nucleus_radius <= 0.0 {
+        return f64::INFINITY;
+    }
+
     // Threshold for transient cavitation
     let hydrostatic = ambient_pressure - vapor_pressure;
     let surface = 2.0 * surface_tension / nucleus_radius;
@@ -135,6 +150,9 @@ pub fn neppiras_threshold(
 
 /// Calculate Flynn threshold for violent cavitation
 /// Based on Flynn (1964): "Physics of Acoustic Cavitation in Liquids"
+///
+/// Returns `f64::INFINITY` for a non-positive nucleus radius (no nucleus ⇒ no
+/// finite threshold), following the guard convention of [`blake_critical_radius`].
 #[must_use]
 pub fn flynn_threshold(
     ambient_pressure: f64, // [Pa]
@@ -143,6 +161,11 @@ pub fn flynn_threshold(
     nucleus_radius: f64,   // [m]
 ) -> f64 {
     use kwavers_core::constants::cavitation::FLYNN_COLLAPSE_COEFFICIENT;
+
+    if nucleus_radius <= 0.0 {
+        return f64::INFINITY;
+    }
+
     // P_Flynn = α * (P_0 + 2σ/R_n) - P_v, where α ≈ 0.83 (Flynn 1964)
     FLYNN_COLLAPSE_COEFFICIENT.mul_add(
         ambient_pressure + 2.0 * surface_tension / nucleus_radius,
@@ -270,5 +293,35 @@ mod tests {
             !flynn_criterion(2.0 * R0, R0),
             "R_max/R0=2.0 exactly is not > 2 → false"
         );
+    }
+
+    /// Blake threshold guard: a non-positive nucleus radius has no finite
+    /// threshold (the R_0 → 0 limit is ∞, not 0), and a negative surface
+    /// tension is non-physical. σ = 0 stays on the formula path, where the
+    /// threshold reduces to P_0 − P_v.
+    #[test]
+    fn blake_threshold_infinite_for_nonphysical_inputs() {
+        assert!(blake_threshold(SIGMA, 0.0, P0, PV).is_infinite());
+        assert!(blake_threshold(SIGMA, -R0, P0, PV).is_infinite());
+        assert!(blake_threshold(-SIGMA, R0, P0, PV).is_infinite());
+        let sigma_zero = blake_threshold(0.0, R0, P0, PV);
+        assert!(
+            (sigma_zero - (P0 - PV)).abs() < 1.0,
+            "σ = 0 must stay on the formula path: got {sigma_zero:.1}"
+        );
+    }
+
+    /// Neppiras threshold guard: a non-positive nucleus radius ⇒ no finite threshold.
+    #[test]
+    fn neppiras_threshold_infinite_for_nonpositive_radius() {
+        assert!(neppiras_threshold(P0, PV, SIGMA, 0.0).is_infinite());
+        assert!(neppiras_threshold(P0, PV, SIGMA, -R0).is_infinite());
+    }
+
+    /// Flynn threshold guard: a non-positive nucleus radius ⇒ no finite threshold.
+    #[test]
+    fn flynn_threshold_infinite_for_nonpositive_radius() {
+        assert!(flynn_threshold(P0, PV, SIGMA, 0.0).is_infinite());
+        assert!(flynn_threshold(P0, PV, SIGMA, -R0).is_infinite());
     }
 }
