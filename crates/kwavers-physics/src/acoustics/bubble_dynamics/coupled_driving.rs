@@ -528,18 +528,17 @@ pub fn solve_coupled_cloud<M: AdaptiveBubbleModel>(
 
     // Pass 0: independent driving.
     let zero_hist = vec![vec![0.0; nsteps + 1]; nb];
-    let run_pass =
-        |input_hist: &[Vec<f64>]| -> KwaversResult<(Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>)> {
-            let coup = coupling_field(input_hist, &weights, &delays, dt);
-            let mut drive_p = vec![vec![0.0; nsteps + 1]; nb];
-            for i in 0..nb {
-                for k in 0..=nsteps {
-                    drive_p[i][k] = incident[k] + coup[i][k];
-                }
+    let run_pass = |input_hist: &[Vec<f64>]| {
+        let coup = coupling_field(input_hist, &weights, &delays, dt);
+        let mut drive_p = vec![vec![0.0; nsteps + 1]; nb];
+        for i in 0..nb {
+            for k in 0..=nsteps {
+                drive_p[i][k] = incident[k] + coup[i][k];
             }
-            let drive_dp = grid_gradient(&drive_p, dt);
-            integrate_pass(models, bubbles, &drive_p, &drive_dp, dt)
-        };
+        }
+        let drive_dp = grid_gradient(&drive_p, dt);
+        integrate_pass(models, bubbles, &drive_p, &drive_dp, dt)
+    };
 
     let (mut radius, mut velocity, mut vddot) = run_pass(&zero_hist)?;
     let mut input_hist = vddot.clone();
