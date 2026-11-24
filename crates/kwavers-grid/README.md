@@ -24,6 +24,18 @@ geometric primitives that classify a point as inside or outside a region.
 k-space helpers (`KSpaceCalculator`, FFT shifts, optimal FFT sizes) are re-exported from
 `kwavers-math` so grid consumers need one import path.
 
+## Cartesian finite differences
+
+Centered stencil weights are ordered from the nearest pair of neighbors outward.
+The gradient has units of field per metre and the Laplacian has units of field per
+square metre when the grid spacing is in metres. Each axis uses its own spacing.
+
+`LaplacianOperator::apply_mut` writes directly into caller-owned output, including
+strided views. Second-, fourth-, sixth-, and eighth-order stencils use one to four
+neighbors on each side. Periodic grids wrap each axis. Homogeneous Neumann grids
+reflect about the endpoint nodes. Dirichlet mode writes zero to the halo in which
+the full centered stencil does not fit, including when the output buffer is reused.
+
 ## Example
 
 Construction is fallible: zero dimensions and non-positive spacing are rejected at the

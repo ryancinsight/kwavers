@@ -2,11 +2,15 @@
 //!
 //! Unified Laplacian operator implementation for discretized grids.
 
-use super::coefficients::{FDCoefficients, FdAccuracyOrder};
+use super::coefficients::{
+    centered::{SecondDerivative, EIGHTH, FOURTH, SECOND, SIXTH},
+    FdAccuracyOrder,
+};
 use crate::Grid;
 use kwavers_core::error::KwaversResult;
 use leto::{Array3, ArrayView3, ArrayViewMut3};
-use moirai_parallel::{for_each_unit_task_mut_with, Adaptive};
+mod boundary;
+mod interior;
 
 /// Configuration for Laplacian computation
 #[derive(Debug, Clone)]
@@ -20,11 +24,11 @@ pub struct LaplacianConfig {
 /// Boundary condition for Laplacian operator
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum LaplacianBoundary {
-    /// Zero at boundaries
+    /// Write zero wherever a centered stencil would extend outside the grid.
     Dirichlet,
-    /// Zero gradient at boundaries
+    /// Enforce zero normal derivative by even reflection about each endpoint node.
     Neumann,
-    /// Periodic boundaries
+    /// Wrap samples around each axis at the selected stencil order.
     Periodic,
 }
 
@@ -84,14 +88,16 @@ impl LaplacianOperator {
         Ok(result)
     }
 
-    /// Compute Laplacian in-place (zero-copy when possible)
+    /// Write the Laplacian into a caller-owned, possibly strided view.
+    /// Every output cell is overwritten. For spacing in metres, output units
+    /// are input units per square metre.
     /// # Errors
     /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn apply_mut(
         &self,
         input: ArrayView3<f64>,
-        mut output: ArrayViewMut3<f64>,
+        output: ArrayViewMut3<f64>,
     ) -> KwaversResult<()> {
         if input.shape() != output.shape() {
             return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
@@ -101,199 +107,50 @@ impl LaplacianOperator {
             )));
         }
 
-        let (center_coeff, side_coeffs) = (
-            FDCoefficients::second_derivative_center::<f64>(self.config.order),
-            FDCoefficients::second_derivative_pairs::<f64>(self.config.order),
-        );
-        let radius = side_coeffs.len();
-
-        // Handle interior points
-        if self.config.order == FdAccuracyOrder::Second {
-            self.apply_second_order_interior(input, output.reborrow());
-        } else {
-            self.apply_higher_order_interior(
-                input,
-                output.reborrow(),
-                radius,
-                center_coeff,
-                &side_coeffs,
-            );
+        match self.config.order {
+            FdAccuracyOrder::Second => self.apply_stencil(input, output, &SECOND),
+            FdAccuracyOrder::Fourth => self.apply_stencil(input, output, &FOURTH),
+            FdAccuracyOrder::Sixth => self.apply_stencil(input, output, &SIXTH),
+            FdAccuracyOrder::Eighth => self.apply_stencil(input, output, &EIGHTH),
         }
-
-        // Apply boundary conditions
-        self.apply_boundary_conditions(input, output.reborrow(), radius);
-
         Ok(())
     }
 
-    #[inline]
-    fn apply_second_order_interior(&self, input: ArrayView3<f64>, mut output: ArrayViewMut3<f64>) {
-        let [nx, ny, nz] = input.shape();
-        if nx <= 2 || ny <= 2 || nz <= 2 {
+    fn apply_stencil<const R: usize>(
+        &self,
+        input: ArrayView3<f64>,
+        mut output: ArrayViewMut3<f64>,
+        stencil: &SecondDerivative<R>,
+    ) {
+        if input.shape().contains(&0) {
             return;
         }
-
-        if let Some(output) = output.as_mut_slice() {
-            // One unit is an x-plane: it writes its own plane and the
-            // stencil reads the plane either side of it, so a task carries
-            // whole planes sized by the four it moves (moirai ADR 0059).
-            let plane_len = ny * nz;
-            let plane_bytes = plane_len.saturating_mul(4 * core::mem::size_of::<f64>());
-            for_each_unit_task_mut_with::<Adaptive, _, _, _, _>(
-                output,
-                plane_len,
-                plane_bytes,
-                || (),
-                |(), first_plane, planes| {
-                    for (offset, plane) in planes.chunks_exact_mut(plane_len).enumerate() {
-                        let i = first_plane + offset;
-                        if i == 0 || i + 1 == nx {
-                            continue;
-                        }
-                        for j in 1..ny - 1 {
-                            let row_offset = j * nz;
-                            for k in 1..nz - 1 {
-                                plane[row_offset + k] = self.second_order_value(input, i, j, k);
-                            }
-                        }
-                    }
-                },
-            );
-            return;
+        if R == 1 {
+            self.apply_second_order_interior(input, output.reborrow());
+        } else {
+            self.apply_interior(input, output.reborrow(), stencil);
         }
-
-        for i in 1..nx - 1 {
-            for j in 1..ny - 1 {
-                for k in 1..nz - 1 {
-                    output[[i, j, k]] = self.second_order_value(input, i, j, k);
-                }
-            }
-        }
+        self.apply_halo(input, output, stencil);
     }
 
     #[inline]
-    fn second_order_value(&self, input: ArrayView3<f64>, i: usize, j: usize, k: usize) -> f64 {
-        let d2_dx2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i + 1, j, k]])
-            + input[[i - 1, j, k]])
-            * self.dx2_inv;
-        let d2_dy2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j + 1, k]])
-            + input[[i, j - 1, k]])
-            * self.dy2_inv;
-        let d2_dz2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j, k + 1]])
-            + input[[i, j, k - 1]])
-            * self.dz2_inv;
-        d2_dx2 + d2_dy2 + d2_dz2
-    }
-
-    fn apply_higher_order_interior(
+    fn value<const R: usize>(
         &self,
-        input: ArrayView3<f64>,
-        mut output: ArrayViewMut3<f64>,
-        radius: usize,
-        center_coeff: f64,
-        side_coeffs: &[f64],
-    ) {
-        let [nx, ny, nz] = input.shape();
-        for k in radius..nz - radius {
-            for j in radius..ny - radius {
-                for i in radius..nx - radius {
-                    let center_val = input[[i, j, k]];
-                    let mut d2_dx2 = center_coeff * center_val;
-                    let mut d2_dy2 = center_coeff * center_val;
-                    let mut d2_dz2 = center_coeff * center_val;
-                    for (offset, &coeff) in side_coeffs.iter().enumerate() {
-                        let offset = offset + 1;
-                        d2_dx2 += coeff * (input[[i + offset, j, k]] + input[[i - offset, j, k]]);
-                        d2_dy2 += coeff * (input[[i, j + offset, k]] + input[[i, j - offset, k]]);
-                        d2_dz2 += coeff * (input[[i, j, k + offset]] + input[[i, j, k - offset]]);
-                    }
-                    output[[i, j, k]] = d2_dz2.mul_add(
-                        self.dz2_inv,
-                        d2_dx2.mul_add(self.dx2_inv, d2_dy2 * self.dy2_inv),
-                    );
-                }
+        stencil: &SecondDerivative<R>,
+        sample: f64,
+        pairs: impl Fn(usize) -> [f64; 3],
+    ) -> f64 {
+        let mut curvature = [stencil.center * sample; 3];
+        for (n, &weight) in stencil.pairs.iter().enumerate() {
+            let neighbors = pairs(n + 1);
+            for axis in 0..3 {
+                curvature[axis] += weight * neighbors[axis];
             }
         }
-    }
-
-    fn apply_boundary_conditions(
-        &self,
-        input: ArrayView3<f64>,
-        mut output: ArrayViewMut3<f64>,
-        radius: usize,
-    ) {
-        match self.config.boundary {
-            LaplacianBoundary::Dirichlet => {}
-            LaplacianBoundary::Neumann => {
-                self.apply_neumann_boundaries(input, output.reborrow(), radius);
-            }
-            LaplacianBoundary::Periodic => {
-                self.apply_periodic_boundaries(input, output.reborrow(), radius);
-            }
-        }
-    }
-
-    fn apply_neumann_boundaries(
-        &self,
-        input: ArrayView3<f64>,
-        mut output: ArrayViewMut3<f64>,
-        radius: usize,
-    ) {
-        let [nx, ny, nz] = input.shape();
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..radius.min(nx) {
-                    if i < nx - 2 {
-                        output[[i, j, k]] = (2.0f64
-                            .mul_add(-input[[i + 1, j, k]], input[[i, j, k]])
-                            + input[[i + 2, j, k]])
-                            * self.dx2_inv;
-                    }
-                }
-                for i in (nx - radius)..nx {
-                    if i >= 2 {
-                        output[[i, j, k]] = (2.0f64
-                            .mul_add(-input[[i - 1, j, k]], input[[i, j, k]])
-                            + input[[i - 2, j, k]])
-                            * self.dx2_inv;
-                    }
-                }
-            }
-        }
-        // Similar for Y and Z (omitted for brevity in this refactor, but kept if original had them)
-    }
-
-    fn apply_periodic_boundaries(
-        &self,
-        input: ArrayView3<f64>,
-        mut output: ArrayViewMut3<f64>,
-        _radius: usize,
-    ) {
-        let [nx, ny, nz] = input.shape();
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let im = if i == 0 { nx - 1 } else { i - 1 };
-                    let ip = if i == nx - 1 { 0 } else { i + 1 };
-                    let jm = if j == 0 { ny - 1 } else { j - 1 };
-                    let jp = if j == ny - 1 { 0 } else { j + 1 };
-                    let km = if k == 0 { nz - 1 } else { k - 1 };
-                    let kp = if k == nz - 1 { 0 } else { k + 1 };
-                    output[[i, j, k]] = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j, km]])
-                        + input[[i, j, kp]])
-                    .mul_add(
-                        self.dz2_inv,
-                        (2.0f64.mul_add(-input[[i, j, k]], input[[im, j, k]]) + input[[ip, j, k]])
-                            .mul_add(
-                                self.dx2_inv,
-                                (2.0f64.mul_add(-input[[i, j, k]], input[[i, jm, k]])
-                                    + input[[i, jp, k]])
-                                    * self.dy2_inv,
-                            ),
-                    );
-                }
-            }
-        }
+        curvature[2].mul_add(
+            self.dz2_inv,
+            curvature[0].mul_add(self.dx2_inv, curvature[1] * self.dy2_inv),
+        )
     }
 }
 
@@ -311,177 +168,4 @@ pub fn laplacian(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::Grid;
-    use eunomia::assert_relative_eq;
-
-    /// Every interior cell gets the stencil at its own index, across several
-    /// plane tasks.
-    ///
-    /// The constant and linear cases below are blind to a plane that a task
-    /// dropped, doubled or shifted — their Laplacian is zero everywhere, so a
-    /// wrong plane still reads zero — and at 10 cubed they sit under the
-    /// policy's parallel floor, so no task split ran at all. This case is 16
-    /// cubed, gives every cell a distinct value, and compares against the same
-    /// expression the operator applies, so the assertion is exact and a
-    /// mis-mapped plane fails it.
-    #[test]
-    fn every_interior_cell_takes_the_stencil_at_its_own_index() {
-        const N: usize = 16;
-        let grid = Grid::new(N, N, N, 0.1, 0.2, 0.05).unwrap();
-
-        let mut field = Array3::zeros([N, N, N]);
-        let mut value = 0.0_f64;
-        for i in 0..N {
-            for j in 0..N {
-                for k in 0..N {
-                    value += 0.25;
-                    field[[i, j, k]] = value;
-                }
-            }
-        }
-
-        let operator = LaplacianOperator::second_order(&grid);
-        let result = operator.apply(field.view()).unwrap();
-
-        let (dx2_inv, dy2_inv, dz2_inv) =
-            (1.0 / (0.1 * 0.1), 1.0 / (0.2 * 0.2), 1.0 / (0.05 * 0.05));
-        for i in 1..N - 1 {
-            for j in 1..N - 1 {
-                for k in 1..N - 1 {
-                    let centre = field[[i, j, k]];
-                    let expected = (2.0_f64.mul_add(-centre, field[[i + 1, j, k]])
-                        + field[[i - 1, j, k]])
-                        * dx2_inv
-                        + (2.0_f64.mul_add(-centre, field[[i, j + 1, k]]) + field[[i, j - 1, k]])
-                            * dy2_inv
-                        + (2.0_f64.mul_add(-centre, field[[i, j, k + 1]]) + field[[i, j, k - 1]])
-                            * dz2_inv;
-                    assert_eq!(
-                        result[[i, j, k]].to_bits(),
-                        expected.to_bits(),
-                        "laplacian[{i}, {j}, {k}]"
-                    );
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_laplacian_constant_field() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
-        let field = Array3::from_elem([10, 10, 10], 5.0);
-
-        let operator = LaplacianOperator::second_order(&grid);
-        let result = operator.apply(field.view()).unwrap();
-
-        // Laplacian of constant field should be zero (except boundaries)
-        for k in 1..9 {
-            for j in 1..9 {
-                for i in 1..9 {
-                    assert_relative_eq!(result[[i, j, k]], 0.0, epsilon = 1e-10);
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_laplacian_linear_field() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
-        let mut field = Array3::zeros([10, 10, 10]);
-
-        // Create linear field: f(x,y,z) = x + y + z
-        for k in 0..10 {
-            for j in 0..10 {
-                for i in 0..10 {
-                    field[[i, j, k]] = i as f64 + j as f64 + k as f64;
-                }
-            }
-        }
-
-        let operator = LaplacianOperator::second_order(&grid);
-        let result = operator.apply(field.view()).unwrap();
-
-        // Laplacian of linear field should be zero
-        for k in 1..9 {
-            for j in 1..9 {
-                for i in 1..9 {
-                    assert_relative_eq!(result[[i, j, k]], 0.0, epsilon = 1e-10);
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_laplacian_nonstandard_output_view() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
-        let mut field = Array3::zeros([10, 10, 10]);
-        for k in 0..10 {
-            for j in 0..10 {
-                for i in 0..10 {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
-                    field[[i, j, k]] = x * x + y * y + z * z;
-                }
-            }
-        }
-
-        let operator = LaplacianOperator::second_order(&grid);
-        let expected = operator.apply(field.view()).unwrap();
-        let mut storage = Array3::zeros([12, 10, 10]);
-        {
-            let mut output = storage
-                .slice_mut(&[(1, 11, 1), (0, 10, 1), (0, 10, 1)])
-                .unwrap();
-            operator.apply_mut(field.view(), output.reborrow()).unwrap();
-        }
-
-        for k in 1..9 {
-            for j in 1..9 {
-                for i in 1..9 {
-                    assert_relative_eq!(
-                        storage[[i + 1, j, k]],
-                        expected[[i, j, k]],
-                        epsilon = 1e-10
-                    );
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_different_orders() {
-        let grid = Grid::new(20, 20, 20, 0.1, 0.1, 0.1).unwrap();
-        let mut field = Array3::zeros([20, 20, 20]);
-
-        // Create a smooth test field
-        for k in 0..20 {
-            for j in 0..20 {
-                for i in 0..20 {
-                    let x = i as f64 * 0.1;
-                    let y = j as f64 * 0.1;
-                    let z = k as f64 * 0.1;
-                    field[[i, j, k]] = (x * std::f64::consts::PI).sin()
-                        * (y * std::f64::consts::PI).sin()
-                        * (z * std::f64::consts::PI).sin();
-                }
-            }
-        }
-
-        let op2 = LaplacianOperator::with_order(&grid, FdAccuracyOrder::Second);
-        let op4 = LaplacianOperator::with_order(&grid, FdAccuracyOrder::Fourth);
-
-        let result2 = op2.apply(field.view()).unwrap();
-        let result4 = op4.apply(field.view()).unwrap();
-
-        // Higher order should be more accurate (different from second order)
-        let diff: f64 = result4
-            .iter()
-            .zip(result2.iter())
-            .map(|(lhs, rhs)| (lhs - rhs).abs())
-            .sum();
-        assert!(diff > 1e-6, "Fourth order should differ from second order");
-    }
-}
+mod tests;

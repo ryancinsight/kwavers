@@ -9,6 +9,8 @@
 
 use eunomia::FloatElement;
 
+pub(super) mod centered;
+
 /// Spatial accuracy order for finite difference schemes
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FdAccuracyOrder {
@@ -46,33 +48,20 @@ impl FdAccuracyOrder {
 pub struct FDCoefficients;
 
 impl FDCoefficients {
-    /// Get coefficients for first derivative (generic over float type)
+    /// Centered first derivative pair weights, from the nearest neighbor outward.
+    /// Each weight multiplies the positive sample minus the negative sample.
     ///
     /// Coefficients are converted once from their `f64` rational evaluation to
     /// the native precision selected by `T`.
     #[must_use]
     pub fn first_derivative<T: FloatElement>(order: FdAccuracyOrder) -> Vec<T> {
-        match order {
-            FdAccuracyOrder::Second => vec![T::from_f64(0.5)],
-            FdAccuracyOrder::Fourth => {
-                vec![T::from_f64(-1.0 / 12.0), T::from_f64(2.0 / 3.0)]
-            }
-            FdAccuracyOrder::Sixth => {
-                vec![
-                    T::from_f64(1.0 / 60.0),
-                    T::from_f64(-3.0 / 20.0),
-                    T::from_f64(3.0 / 4.0),
-                ]
-            }
-            FdAccuracyOrder::Eighth => {
-                vec![
-                    T::from_f64(-1.0 / 280.0),
-                    T::from_f64(4.0 / 105.0),
-                    T::from_f64(-1.0 / 5.0),
-                    T::from_f64(4.0 / 5.0),
-                ]
-            }
-        }
+        let weights: &[f64] = match order {
+            FdAccuracyOrder::Second => &[0.5],
+            FdAccuracyOrder::Fourth => &[2.0 / 3.0, -1.0 / 12.0],
+            FdAccuracyOrder::Sixth => &[3.0 / 4.0, -3.0 / 20.0, 1.0 / 60.0],
+            FdAccuracyOrder::Eighth => &[4.0 / 5.0, -1.0 / 5.0, 4.0 / 105.0, -1.0 / 280.0],
+        };
+        weights.iter().copied().map(T::from_f64).collect()
     }
 
     /// Get coefficients for second derivative pairs (off-center points)
@@ -83,27 +72,12 @@ impl FDCoefficients {
     /// Coefficients are rounded once to the native precision selected by `T`.
     #[must_use]
     pub fn second_derivative_pairs<T: FloatElement>(order: FdAccuracyOrder) -> Vec<T> {
-        match order {
-            FdAccuracyOrder::Second => vec![T::from_f64(1.0)],
-            FdAccuracyOrder::Fourth => {
-                vec![T::from_f64(-1.0 / 12.0), T::from_f64(4.0 / 3.0)]
-            }
-            FdAccuracyOrder::Sixth => {
-                vec![
-                    T::from_f64(1.0 / 90.0),
-                    T::from_f64(-3.0 / 20.0),
-                    T::from_f64(3.0 / 2.0),
-                ]
-            }
-            FdAccuracyOrder::Eighth => {
-                vec![
-                    T::from_f64(-1.0 / 560.0),
-                    T::from_f64(8.0 / 315.0),
-                    T::from_f64(-1.0 / 5.0),
-                    T::from_f64(8.0 / 5.0),
-                ]
-            }
-        }
+        centered::weights(order)
+            .1
+            .iter()
+            .copied()
+            .map(T::from_f64)
+            .collect()
     }
 
     /// Get center coefficient for second derivative
@@ -111,12 +85,7 @@ impl FDCoefficients {
     /// The coefficient is rounded once to the native precision selected by `T`.
     #[must_use]
     pub fn second_derivative_center<T: FloatElement>(order: FdAccuracyOrder) -> T {
-        match order {
-            FdAccuracyOrder::Second => T::from_f64(-2.0),
-            FdAccuracyOrder::Fourth => T::from_f64(-5.0 / 2.0),
-            FdAccuracyOrder::Sixth => T::from_f64(-49.0 / 18.0),
-            FdAccuracyOrder::Eighth => T::from_f64(-205.0 / 72.0),
-        }
+        T::from_f64(centered::weights(order).0)
     }
 }
 
