@@ -64,6 +64,13 @@
 //!   ±3 mm, before/after frames). The 2.45 MHz "peak reproduction" is a
 //!   peak in this proxy, not in Kuji's Fig. 14 quantity (review §C3,
 //!   §K5). Do not claim Kuji-metric parity from these numbers.
+//!   **Superseded for the papers' own quantities (Build 14,
+//!   KW-IMG-047):** the corrected Kuji metric (coherent DAS of
+//!   high-pass-filtered RF, per-pixel linear 1P/3P reduction,
+//!   before/after ROI means, ensemble statistics) and the corrected
+//!   Iwasaki statistic live in
+//!   [`super::triplet_pulse_metrics`]; use them for any Kuji/Iwasaki
+//!   claim. This module remains only for prototype parity.
 //! * Transmit inconsistency, inherited from the prototype (review §C4,
 //!   D13): the PSTD transmit is a plane wave (32 elements fired
 //!   simultaneously, no delay law) while this DAS assumes a point-source

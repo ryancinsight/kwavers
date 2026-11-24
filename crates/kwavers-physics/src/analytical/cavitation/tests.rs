@@ -476,3 +476,20 @@ fn bubble_spectrum_length() {
     assert_eq!(f[0], 0.0);
     assert!(p.iter().all(|&v| v >= 0.0));
 }
+
+/// Blake threshold guard: a non-positive nucleus radius or a negative
+/// surface tension has no finite threshold — INFINITY, not this module's
+/// 0.0 invalid-input sentinel (0.0 Pa would claim cavitation at zero
+/// acoustic amplitude). σ = 0 stays on the formula path, where the closed
+/// form reduces to √2·P₀.
+#[test]
+fn blake_threshold_pa_infinite_for_nonphysical_inputs() {
+    assert!(blake_threshold_pa(0.0, ATMOSPHERIC_PRESSURE, 0.0728).is_infinite());
+    assert!(blake_threshold_pa(-5e-6, ATMOSPHERIC_PRESSURE, 0.0728).is_infinite());
+    assert!(blake_threshold_pa(5e-6, ATMOSPHERIC_PRESSURE, -0.0728).is_infinite());
+    let sigma_zero = blake_threshold_pa(5e-6, ATMOSPHERIC_PRESSURE, 0.0);
+    assert!(
+        (sigma_zero - ATMOSPHERIC_PRESSURE * std::f64::consts::SQRT_2).abs() < 1.0,
+        "σ = 0 must stay on the formula path: got {sigma_zero:.1}"
+    );
+}

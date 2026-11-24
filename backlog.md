@@ -28,6 +28,28 @@
 <a id="kw-gpu-teardown"></a>- [KW-GPU-TEARDOWN](backlog/kw-gpu-teardown.md) — Dissolve the remaining internal `kwavers/src` into the layered crates [arch] — todo
 <a id="kw-img-045"></a>- [KW-IMG-045](backlog/kw-img-045.md) — Frame-resolved physical I/Q ensemble [minor] — todo
 <a id="kw-img-046"></a>- [KW-IMG-046](backlog/kw-img-046.md) — Triplet-pulse cavitation-bubble imaging [minor] — todo
+<a id="kw-img-047"></a>- [KW-IMG-047](backlog/kw-img-047.md) — Corrected Kuji 2024 3P/1P-distribution metric (coherent DAS, linear reduction, ensemble) [minor] — done
+<a id="kw-img-048"></a>- [KW-IMG-048](backlog/kw-img-048.md) — Binned-distribution cloud sampling for the triplet cloud path (formation → imaging coupling) [minor] — done
+<a id="kw-img-049"></a>- [KW-IMG-049](backlog/kw-img-049.md) — Corrected Iwasaki 2018 statistic (spatiotemporal max ÷ same-frame background) [minor] — done
+<a id="kw-img-050"></a>- [KW-IMG-050](backlog/kw-img-050.md) — Absolute-magnitude gap in the corrected Kuji metric (simulated reductions ≈ 2.4–2.7 vs the paper's large experimental reductions) [minor] — todo
+<a id="kw-img-051"></a>- [KW-IMG-051](backlog/kw-img-051.md) — Coherent DAS fails on smooth volume-scattering tissue models (medium caveat for the corrected metrics) [minor] — todo
+<a id="kw-img-052"></a>- [KW-IMG-052](backlog/kw-img-052.md) — Representation benchmark for the triplet-pulse replicas (Kuji K1–K6, Iwasaki I1–I4) [minor] — todo
+<a id="kw-img-053"></a>- [KW-IMG-053](backlog/kw-img-053.md) — Iwasaki replica data requirements (four-phase acquisition; interface-free numerator) [minor] — done
+<a id="kw-img-054"></a>- [KW-IMG-054](backlog/kw-img-054.md) — Transmit-time models (TxModel) for the corrected metrics' DAS [minor] — todo
+<a id="kw-med-abs-001"></a>- [KW-MED-ABS-001](backlog/kw-med-abs-001.md) — Medium absorption storage-units divergence (Rust source vs pykwavers wheel) [minor] — todo
+<a id="kw-img-055"></a>- [KW-IMG-055](backlog/kw-img-055.md) — PNP indexing estimator: replace max|p| (E0) with windowed true PNP (E1) [minor] — todo
+<a id="kw-img-056"></a>- [KW-IMG-056](backlog/kw-img-056.md) — Tissue-model backscatter level is uncalibrated: K1 is bracketed, not adjudicated [major] — todo
+<a id="kw-phys-006"></a>- [KW-PHYS-006](backlog/kw-phys-006.md) — Single-bubble-extinction cloud attenuation (Xia 2020 route) and coherent shielding factor [patch] — done
+<a id="kw-phys-007"></a>- [KW-PHYS-007](backlog/kw-phys-007.md) — Bjerknes forces had no validity-regime guards; module header documented a formula matching neither implementation [patch] — done
+<a id="kw-phys-008"></a>- [KW-PHYS-008](backlog/kw-phys-008.md) — Fragmentation and coalescence population operators (own construction, gas-conserving) [patch] — done
+<a id="kw-phys-009"></a>- [KW-PHYS-009](backlog/kw-phys-009.md) — Known duplicates and regime gaps in the bubble-dynamics physics (consolidation backlog) [patch] — todo
+<a id="kw-phys-010"></a>- [KW-PHYS-010](backlog/kw-phys-010.md) — Kreider et al. (2011) reduced-form gain law (Eller–Flynn convolution) missing from the library [patch] — done
+<a id="kw-phys-011"></a>- [KW-PHYS-011](backlog/kw-phys-011.md) — Population evolution under an imaging pulse train (validated negative: acquisition is inert) [patch] — done
+<a id="kw-phys-012"></a>- [KW-PHYS-012](backlog/kw-phys-012.md) — Yoshida count-changing state-change law under interleaved HIFU pulses (open) [patch] — todo
+<a id="kw-phys-013"></a>- [KW-PHYS-013](backlog/kw-phys-013.md) — Foldy–Lax self-consistent coupled bubble driving (multiple scattering) [patch] — done
+<a id="kw-phys-014"></a>- [KW-PHYS-014](backlog/kw-phys-014.md) — Cycle-averaged rectified diffusion (Fyrillas–Szeri / Louisnard–Gomez) missing from the library [patch] — done
+<a id="kw-phys-015"></a>- [KW-PHYS-015](backlog/kw-phys-015.md) — Bader-family expansion-phase influx, D_MAX fit, and residual-radius maps missing from the library [patch] — done
+<a id="kw-phys-steering-magnitudes"></a>- [KW-PHYS-STEERING-MAGNITUDES](backlog/kw-phys-steering-magnitudes.md) — Correct steering magnitudes and stabilize spatial replicas [patch] — done
 <a id="kw-integration-test-binaries"></a>- [KW-INTEGRATION-TEST-BINARIES](backlog/kw-integration-test-binaries.md) — kwavers integration tests link one binary per file: 89 targets, 81 on the push gate [patch] [perf] — todo
 <a id="kw-lint-1"></a>- [KW-LINT-1](backlog/kw-lint-1.md) — Burn down the clippy debt baseline [patch] — todo
 <a id="kw-manifest-implementation-2026-09-09"></a>- [KW-MANIFEST-IMPLEMENTATION-2026-09-09](backlog/kw-manifest-implementation-2026-09-09.md) — Reduce the implementation-bearing manifests [patch] [arch] — todo
@@ -35,6 +57,8 @@
 <a id="kw-py-uvlock-stale-2026-09-21"></a>- [KW-PY-UVLOCK-STALE-2026-09-21](backlog/kw-py-uvlock-stale-2026-09-21.md) — The Python dev lockfile is stale against its own pyproject [patch] — todo
 <a id="kw-ray-040"></a>- [KW-RAY-040](backlog/kw-ray-040.md) — Layered focus-path contract [minor] — todo
 <a id="kw-sim-test-compile-graph"></a>- [KW-SIM-TEST-COMPILE-GRAPH](backlog/kw-sim-test-compile-graph.md) — Reduce simulation test build latency [patch] [perf] — todo
+<a id="kw-sol-001"></a>- [KW-SOL-001](backlog/kw-sol-001.md) — PSTD exponential instability at NY=768 observed via the Python bindings (reproduction in the Rust solver required) [patch] — todo
+<a id="kw-sol-002"></a>- [KW-SOL-002](backlog/kw-sol-002.md) — apollo-fft kernel panics on transform lengths with unsupported radix (e.g. 380 = 2²·5·19) [major] — todo
 <a id="kw-vis-105"></a>- [KW-VIS-105](backlog/kw-vis-105.md) — Visualization renderer ignores the field type, and engine tests leave four behaviours unpinned [patch] — todo
 <a id="kwavers-aeq-met-66"></a>- [KWAVERS-AEQ-MET-66](backlog/kwavers-aeq-met-66.md) — Type thermal-diffusion quantities [major] [arch] — blocked
 <a id="kwavers-aeq-met-69"></a>- [KWAVERS-AEQ-MET-69](backlog/kwavers-aeq-met-69.md) — Type B-mode scan-conversion geometry [major] [arch] — todo

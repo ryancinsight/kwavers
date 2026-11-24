@@ -1,0 +1,32 @@
+[package]
+name = "driver-qualification"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.97"
+publish = false
+autotests = false
+
+[workspace]
+
+[features]
+default = ["io"]
+io = ["kwavers-driver/default"]
+kwavers = ["kwavers-driver/kwavers"]
+
+[dependencies]
+kwavers-driver = { version = "=0.5.0", default-features = false }
+
+[dev-dependencies]
+serde_json = "1"
+tempfile = "3"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[[test]]
+name = "qualification"
+path = "tests/qualification.rs"
+
+[[bench]]
+name = "representative"
+harness = false
+required-features = ["io"]

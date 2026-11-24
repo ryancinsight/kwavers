@@ -78,7 +78,9 @@ impl StateDependentConstants {
     /// * `ambient_pressure` - Ambient pressure (Pa)
     ///
     /// # Returns
-    /// Cavitation threshold pressure amplitude (negative = tension) (Pa)
+    /// Cavitation threshold pressure amplitude (negative = tension) (Pa).
+    /// Returns `f64::NEG_INFINITY` for a non-positive nuclei radius
+    /// (no finite threshold).
     #[must_use]
     pub fn cavitation_threshold(
         &self,
@@ -86,6 +88,14 @@ impl StateDependentConstants {
         nuclei_radius: f64,
         ambient_pressure: f64,
     ) -> f64 {
+        // Guard (core cavitation-thresholds convention, adapted to this
+        // function's negative-tension sign): a non-positive nucleus radius
+        // has no finite threshold, so return NEG_INFINITY (a tension no
+        // pressure can reach) instead of the closed form's artefacts —
+        // +INFINITY at R = 0 via the √(2σ/3R) term, or NaN for R < 0.
+        if nuclei_radius <= 0.0 {
+            return f64::NEG_INFINITY;
+        }
         let p_v = self.vapor_pressure_water(temperature);
         let sigma = self.surface_tension_water(temperature);
         let p_blake = (2.0 * sigma / (3.0 * nuclei_radius)).sqrt();

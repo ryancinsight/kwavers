@@ -12,7 +12,7 @@
 //! * [`acoustic_intensity_w_per_m2`] — `I = p² / Z₀` from continuous RMS pressure (the
 //!   spatial-temporal-average intensity).
 //! * [`isppa_w_per_m2`] — **NEW**: spatial-peak pulse-average intensity from peak-negative
-//!   pressure + duty factor. FDA Track-3 regulatory metric for pulsed operation; distinct
+//!   pressure at unity duty, or train-average intensity at fractional duty; distinct
 //!   from the continuous-time `acoustic_intensity_w_per_m2`.
 //! * [`round_trip_attenuation_db`] — **NEW**: pulse-echo two-way (`2 · α · f · z`) loss;
 //!   the relevant quantity for time-gain-compensation (TGC) curves and pulse-echo imaging.
@@ -66,17 +66,10 @@ pub fn acoustic_intensity_w_per_m2(p_rms_pa: f64, z0_rayl: f64) -> f64 {
     p_rms_pa * p_rms_pa / z0_rayl
 }
 
-/// **NEW**: Spatial-peak pulse-average intensity (W/m²) — FDA Track-3 regulatory metric.
-///
-/// `I_sppa = (p_neg²) / (2 · Z₀) · duty_factor` where `p_neg` is the peak rarefactional
-/// (negative-going) pressure, `Z₀ = ρ·c` is the medium's characteristic impedance, and
-/// `duty_factor` is the pulse-active fraction of the cycle (∈ [0, 1]).
-///
-/// Distinctions from [`acoustic_intensity_w_per_m2`]:
-/// * This API takes **peak-negative** pressure (`p_neg`), not RMS — the 2 in the denominator
-///   is `√2² = 2`, the inverse of the RMS-to-peak conversion (`p_rms = p_peak / √2`).
-/// * This API multiplies by `duty_factor` — pulses spend part of the cycle quiescent, so the
-///   time-averaged intensity drops linearly.
+/// Duty-weighted sinusoidal intensity (W/m²) from peak rarefactional pressure.
+/// For the pulse-average intensity use `duty_factor = 1`. At a fractional
+/// burst duty this function reports the temporal average over the pulse train.
+/// The peak-to-RMS conversion supplies the factor of two in `p² / (2 Z₀)`.
 ///
 /// Boundary behaviour:
 /// * `z0_rayl ≤ 0` ⇒ returns `0.0` (degenerate medium).
@@ -85,10 +78,6 @@ pub fn acoustic_intensity_w_per_m2(p_rms_pa: f64, z0_rayl: f64) -> f64 {
 ///   duty factor; the function refuses to compute a meaningless figure rather than silently
 ///   extrapolate).
 ///
-/// **SSOT** (fixed in `crate::physics::acoustic::tests::ssot_distinction_isppa_vs_intensity`):
-/// ISPPA and continuous-intensity are distinct quantities and must not be substituted for each
-/// other at a call site. Both are required by the safety budget: ISPPA for short-pulse thermal
-/// dose characterisation, continuous-intensity for steady-state heating.
 #[must_use]
 pub fn isppa_w_per_m2(peak_negative_pa: f64, z0_rayl: f64, duty_factor: f64) -> f64 {
     if z0_rayl <= 0.0 {

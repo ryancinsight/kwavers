@@ -4,7 +4,7 @@
 
 [package]
 name = "kwavers-driver"
-version = "0.5.0"
+version = "0.5.1"
 publish = true
 edition = "2021"
 rust-version = "1.97"
@@ -18,11 +18,12 @@ authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
 aequitas = { workspace = true }
 eunomia = { workspace = true }
 thiserror = "1"
+serde_json = { workspace = true, optional = true }
 kwavers-transducer = { path = "../kwavers-transducer", optional = true, version = "6.0.0" }
 
 [features]
 default = ["io"]
-io = []
+io = ["dep:serde_json"]
 kwavers = ["dep:kwavers-transducer"]
 
 [lib]

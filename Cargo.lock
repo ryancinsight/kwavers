@@ -2458,11 +2458,12 @@ dependencies = [
 
 [[package]]
 name = "kwavers-driver"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "aequitas",
  "eunomia",
  "kwavers-transducer",
+ "serde_json",
  "thiserror 1.0.69",
 ]
 
@@ -2613,7 +2614,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-physics"
-version = "5.2.0"
+version = "5.2.1"
 dependencies = [
  "aequitas",
  "anyhow",

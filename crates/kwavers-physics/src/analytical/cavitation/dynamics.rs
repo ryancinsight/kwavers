@@ -148,18 +148,24 @@ pub fn minnaert_resonance_corrected_hz(
 /// * `p0_pa` – ambient pressure `Pa`
 /// * `sigma_n_m` – surface tension coefficient [N/m] (water ≈ 0.0725)
 ///
+/// Returns `f64::INFINITY` for a non-positive nucleus radius or a negative
+/// surface tension (no finite threshold); other invalid inputs return `0`
+/// per this module's convention.
+///
 /// # Reference
 /// Blake (1949) *Appendix to: Cavitation*, HMSO Report.
 #[must_use]
 #[inline]
 pub fn blake_threshold_pa(r0_m: f64, p0_pa: f64, sigma_n_m: f64) -> f64 {
-    if !(r0_m.is_finite()
-        && p0_pa.is_finite()
-        && sigma_n_m.is_finite()
-        && r0_m > 0.0
-        && p0_pa > 0.0
-        && sigma_n_m >= 0.0)
-    {
+    // Guard (core cavitation-thresholds convention): a non-positive nucleus
+    // radius or a negative surface tension has no finite Blake threshold, so
+    // return INFINITY rather than this module's usual 0.0 invalid-input
+    // sentinel — for a threshold pressure, 0.0 would falsely claim cavitation
+    // at zero acoustic amplitude. σ = 0 stays on the formula path.
+    if r0_m <= 0.0 || sigma_n_m < 0.0 {
+        return f64::INFINITY;
+    }
+    if !(r0_m.is_finite() && p0_pa.is_finite() && sigma_n_m.is_finite() && p0_pa > 0.0) {
         return 0.0;
     }
     let ratio = sigma_n_m / (r0_m * p0_pa);

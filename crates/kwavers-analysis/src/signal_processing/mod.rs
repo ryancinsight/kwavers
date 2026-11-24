@@ -187,6 +187,10 @@ pub mod image_quality;
 // Triplet-pulse envelope DAS + image contrast (Rust port step 4, KW-IMG-046).
 pub mod triplet_pulse;
 
+// Corrected Kuji 2024 / Iwasaki 2018 metrics (Build 14, KW-IMG-047):
+// coherent DAS, per-pixel linear 1P/3P reduction, ensemble statistics.
+pub mod triplet_pulse_metrics;
+
 // SWE-based clinical tissue staging (METAVIR liver fibrosis, Algorithm 11.5)
 pub mod tissue_staging;
 
