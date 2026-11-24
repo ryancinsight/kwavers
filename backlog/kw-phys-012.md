@@ -1,0 +1,9 @@
+<a id="kw-phys-012"></a>
+
+## KW-PHYS-012 — Yoshida count-changing state-change law under interleaved HIFU pulses (open) [patch] — todo
+
+priority: research; needs: none; scope: bubble formation / population physics (`kwavers-physics` bubble dynamics); milestone: none
+
+- **Outcome:** a physics law — not a fitted step — that changes the bubble *count* (or equivalently the imaged population) under interleaved HIFU-intensity pulses, closing the remaining ≈ +3.1 dB of Yoshida et al. 2023's +8 dB interleaved-pulse enhancement that the identical-response model cannot reach (model ceiling +4.9 dB).
+- **Driver:** Yoshida, Kuji, Yoshizawa & Umemura 2023 showed interleaved HIFU pulses between the triplet transmissions raise the 3P signal by +8 dB, breaking the prototype's idealisation that all three phases see the same bubble. Build 14 B4 was scoped to test population evolution as the carrier of the missing +3.1 dB but was **not run**: B2 (KW-PHYS-011) proved evolution at *imaging* pressures is inert (0 % population change over an acquisition), so the missing decibels must come from a count-changing law acting at *HIFU* intensities between transmissions — a formation-side mechanism, in the same family as the fitted-step problem of Builds 10–13 (the cycle-count step N_cut ∈ [21, 23], q ∈ [0, 0.01] that fits the formation data with no physics behind it; Build 13's four derived candidates all failed).
+- **Acceptance:** a candidate law derived from base physics (not fitted to the +8 dB), implemented as a library component with its validity regime and guards documented, that (a) is inert at imaging pressures, consistent with B2/KW-PHYS-011, (b) changes the imaged population under interleaved HIFU-intensity pulses by an amount that moves the modelled enhancement materially toward +8 dB, and (c) states what measurement would falsify it. Until then this stays open and the +3.1 dB remains unexplained — do not close it with a fitted constant.
