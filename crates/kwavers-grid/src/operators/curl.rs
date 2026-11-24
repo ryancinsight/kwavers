@@ -1,74 +1,56 @@
-//! Curl operations module
-
+//! Cartesian curl of a sampled vector field.
 use super::coefficients::FdAccuracyOrder;
-use super::stencil::{centered_first_derivative_sum, validate_vector_field_shapes};
+use super::stencil::vector::{self, Axis, VectorDerivative};
 use crate::Grid;
 use eunomia::FloatElement;
 use kwavers_core::error::KwaversResult;
 use leto::{Array3, ArrayView3};
 
-/// Compute curl of a vector field
+struct Curl;
+
+impl VectorDerivative<3> for Curl {
+    #[inline]
+    fn evaluate<T: FloatElement>(partial: impl Fn(Axis, Axis) -> T) -> [T; 3] {
+        use Axis::{X, Y, Z};
+        [
+            partial(Z, Y) - partial(Y, Z),
+            partial(X, Z) - partial(Z, X),
+            partial(Y, X) - partial(X, Y),
+        ]
+    }
+}
+
+/// Compute curl with centered finite differences and a zero output halo.
+/// Curl returns the three components in x, y, z order.
+/// For velocity in metres per second, the result is vorticity in inverse seconds.
+///
 /// # Errors
-/// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
-///
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
-pub fn curl<T>(
+/// Returns a dimension mismatch if any input shape differs from the grid.
+pub fn curl<T: FloatElement + Default>(
     vx: &ArrayView3<T>,
     vy: &ArrayView3<T>,
     vz: &ArrayView3<T>,
     grid: &Grid,
     order: FdAccuracyOrder,
-) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
-where
-    T: FloatElement + Clone + Send + Sync + Default,
-{
-    let [nx, ny, nz] = validate_vector_field_shapes(vx, vy, vz, grid)?;
+) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)> {
+    let [x, y, z] = vector::owned::<Curl, _, 3>([vx, vy, vz], grid, order)?;
+    Ok((x, y, z))
+}
 
-    let mut curl_x = Array3::<T>::zeros([nx, ny, nz]);
-    let mut curl_y = Array3::<T>::zeros([nx, ny, nz]);
-    let mut curl_z = Array3::<T>::zeros([nx, ny, nz]);
-
-    let weights = order.first_weights::<T>();
-    let coeffs = &weights[..order.radius()];
-    let stencil_radius = coeffs.len();
-
-    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx);
-    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy);
-    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz);
-
-    // Compute curl in interior points
-    for i in stencil_radius..nx.saturating_sub(stencil_radius) {
-        for j in stencil_radius..ny.saturating_sub(stencil_radius) {
-            for k in stencil_radius..nz.saturating_sub(stencil_radius) {
-                let dvz_dy = centered_first_derivative_sum(coeffs, |offset| {
-                    vz[[i, j + offset, k]] - vz[[i, j - offset, k]]
-                });
-                let dvy_dz = centered_first_derivative_sum(coeffs, |offset| {
-                    vy[[i, j, k + offset]] - vy[[i, j, k - offset]]
-                });
-                let dvx_dz = centered_first_derivative_sum(coeffs, |offset| {
-                    vx[[i, j, k + offset]] - vx[[i, j, k - offset]]
-                });
-                let dvz_dx = centered_first_derivative_sum(coeffs, |offset| {
-                    vz[[i + offset, j, k]] - vz[[i - offset, j, k]]
-                });
-                let dvy_dx = centered_first_derivative_sum(coeffs, |offset| {
-                    vy[[i + offset, j, k]] - vy[[i - offset, j, k]]
-                });
-                let dvx_dy = centered_first_derivative_sum(coeffs, |offset| {
-                    vx[[i, j + offset, k]] - vx[[i, j - offset, k]]
-                });
-
-                curl_x[[i, j, k]] = dvz_dy * dy_inv - dvy_dz * dz_inv;
-                curl_y[[i, j, k]] = dvx_dz * dz_inv - dvz_dx * dx_inv;
-                curl_z[[i, j, k]] = dvy_dx * dx_inv - dvx_dy * dy_inv;
-            }
-        }
-    }
-
-    Ok((curl_x, curl_y, curl_z))
+/// Write [curl] into caller-owned row-major storage, with z varying fastest.
+/// Every output cell is overwritten. The halo is zero on all six faces.
+///
+/// # Errors
+/// Rejects an invalid input shape or output length before writing any results.
+pub fn curl_into<T: FloatElement>(
+    vx: &ArrayView3<T>,
+    vy: &ArrayView3<T>,
+    vz: &ArrayView3<T>,
+    grid: &Grid,
+    order: FdAccuracyOrder,
+    output: [&mut [T]; 3],
+) -> KwaversResult<()> {
+    vector::into::<Curl, _, 3>([vx, vy, vz], grid, order, output)
 }
 
 #[cfg(test)]

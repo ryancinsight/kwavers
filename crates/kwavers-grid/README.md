@@ -49,6 +49,15 @@ Parallel execution
 groups complete z-rows per chunk. Run `cargo bench -p kwavers-grid --bench gradient`
 to measure the public entry points, including their three output allocations.
 
+For a sampled velocity field, `curl` gives vorticity and `divergence` gives
+volumetric strain rate, both in inverse seconds when velocity is in m/s.
+Each uses the full three-axis interior. The output halo is zero, including the
+entire volume when any axis is too short for the selected stencil.
+`curl_into` and `divergence_into` accept borrowed vector components with
+independent strides and overwrite caller-owned, z-fastest output buffers.
+Run `cargo bench -p kwavers-grid --bench vector_derivatives` to reproduce the
+timings for the allocating entry points.
+
 ## Example
 
 Construction is fallible: zero dimensions and non-positive spacing are rejected at the

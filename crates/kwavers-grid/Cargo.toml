@@ -34,3 +34,7 @@ harness = false
 [[bench]]
 name = "gradient"
 harness = false
+
+[[bench]]
+name = "vector_derivatives"
+harness = false

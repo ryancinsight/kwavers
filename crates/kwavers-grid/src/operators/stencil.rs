@@ -6,6 +6,13 @@ use eunomia::FloatElement;
 use kwavers_core::error::{GridError, KwaversError, KwaversResult};
 use leto::ArrayView3;
 
+pub(super) mod vector;
+
+/// Inverse physical cell widths in x, y, z order, rounded at field precision.
+pub(super) fn inverse_spacing<T: FloatElement>(grid: &Grid) -> [T; 3] {
+    [grid.dx, grid.dy, grid.dz].map(|h| T::from_f64(1.0) / T::from_f64(h))
+}
+
 /// Check a scalar field against the physical grid before computing derivatives.
 pub(super) fn validate_field_shape<T>(
     field: &ArrayView3<T>,

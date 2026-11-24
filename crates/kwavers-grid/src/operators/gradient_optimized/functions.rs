@@ -2,7 +2,10 @@
 
 use super::{kernel, BoundaryStrategy, GradientCache};
 use crate::{
-    operators::{stencil::validate_field_shape, FdAccuracyOrder},
+    operators::{
+        stencil::{inverse_spacing, validate_field_shape},
+        FdAccuracyOrder,
+    },
     Grid,
 };
 use eunomia::FloatElement;
@@ -86,6 +89,6 @@ pub(super) fn fill_gradient<T: FloatElement>(
             &inline[..order.radius()]
         }
     };
-    let scale = [grid.dx, grid.dy, grid.dz].map(|h| T::from_f64(1.0) / T::from_f64(h));
+    let scale = inverse_spacing(grid);
     kernel::fill(field, weights, scale, boundary, parallel_rows, outputs);
 }
