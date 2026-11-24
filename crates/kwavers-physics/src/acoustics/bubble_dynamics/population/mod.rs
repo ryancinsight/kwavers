@@ -45,14 +45,14 @@ pub mod fragmentation;
 pub mod imaging_evolution;
 
 pub use coalescence::{coalesce_group, merge_pair, neighbour_merge_probability};
-pub use imaging_evolution::{
-    evolve_under_imaging_train, epstein_plesset_step, EpsteinPlessetMedium, ImagingEvolution,
-    ImagingPulseEffect, ImagingTrain, DISSOLUTION_REMOVAL_RADIUS_M,
-    IMAGING_FRAGMENTATION_GATE_RMAX_R0,
-};
 pub use fragmentation::{
     collapse_ratio, EqualSplitKernel, FragmentationKernel, LognormalKernel,
     CHOMAS_FRAGMENTATION_DIAMETER_RATIO, P_FRAG_FITTED_LI_2021,
+};
+pub use imaging_evolution::{
+    epstein_plesset_step, evolve_under_imaging_train, EpsteinPlessetMedium, ImagingEvolution,
+    ImagingPulseEffect, ImagingTrain, DISSOLUTION_REMOVAL_RADIUS_M,
+    IMAGING_FRAGMENTATION_GATE_RMAX_R0,
 };
 
 /// A monodisperse slice of a bubble population: `count` bubbles,
