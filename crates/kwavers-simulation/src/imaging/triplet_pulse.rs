@@ -672,5 +672,10 @@ pub fn three_p_over_one_p_ratio(
     Ok(three_p / one_p)
 }
 
+/// Binned-distribution (formation-model) cloud sampling (Build 14,
+/// KW-IMG-048): size-stratified largest-remainder sampling feeding
+/// [`TripletPulseCloud`].
+pub mod binned_cloud;
+
 #[cfg(test)]
 mod tests;
