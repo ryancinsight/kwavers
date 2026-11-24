@@ -1,3 +1,5 @@
+<a id="kw-img-055"></a>
+
 ## KW-IMG-055 — PNP indexing estimator: replace max|p| (E0) with windowed true PNP (E1) [minor] — todo
 
 priority: research; needs: none; scope: triplet-pulse replica scoring / run_metric tooling; milestone: M-imaging-capability

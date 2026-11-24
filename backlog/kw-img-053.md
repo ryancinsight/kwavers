@@ -1,6 +1,6 @@
 <a id="kw-img-053"></a>
 
-## KW-IMG-053 — Iwasaki replica data requirements (four-phase acquisition; interface-free numerator) [minor] — done
+## KW-IMG-053 — Iwasaki replica data requirements (four-phase acquisition; interface-free numerator) [minor] — todo
 
 priority: research; needs: none; scope: triplet-pulse imaging replicas (Iwasaki 2018 acquisitions); milestone: M-imaging-capability
 
@@ -12,4 +12,4 @@ priority: research; needs: none; scope: triplet-pulse imaging replicas (Iwasaki 
   - Ensemble N = 10 (the paper's N), per KW-IMG-052.
 - **Acceptance:** an Iwasaki-condition dataset on file satisfying both requirements, on which I1–I4 can be scored without a NOT-TESTABLE entry or a specular-echo numerator.
 
-**Status update (Build 16, 2026-11-22): requirements MET.** The Build 16 Iwasaki acquisition (`b16/gen_iwa16.py`) saved all four phases (0/120/180/240 deg) in an interface-free diverging geometry (NY = 512), and I1-I4 were scored as an ensemble (I2 passes; I1/I3/I4 fail on physics, not data). Marked DONE. The remaining Iwasaki gap is physics - the forced cloud's residual PI > 3P > 1P ordering and the near-field numerator artefact - tracked under KW-IMG-050/052.
+- **Remainder (2026-11-24):** Build 16 reports the requirements met (`b16/gen_iwa16.py`: four phases, interface-free diverging geometry, NY = 512; I2 passes, I1/I3/I4 fail on physics), but neither the generator nor the dataset is tracked on main, so the acceptance cannot be checked from the repository. Next step: land the acquisition generator, or record the dataset locator, beside KW-IMG-052; this item deletes with that change. The residual Iwasaki gap is physics, tracked under KW-IMG-050/052.

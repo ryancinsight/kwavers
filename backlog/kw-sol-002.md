@@ -1,3 +1,5 @@
+<a id="kw-sol-002"></a>
+
 ## KW-SOL-002 — apollo-fft kernel panics on transform lengths with unsupported radix (e.g. 380 = 2²·5·19) [major] — todo
 
 priority: solver; needs: none; scope: kwavers-solver PSTD / apollo FFT backend; milestone: M-solver

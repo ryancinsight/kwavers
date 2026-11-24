@@ -1,3 +1,5 @@
+<a id="kw-img-056"></a>
+
 ## KW-IMG-056 — Tissue-model backscatter level is uncalibrated: K1 is bracketed, not adjudicated [major] — todo
 
 priority: research; needs: a literature backscatter coefficient for chicken breast at ~2.45 MHz (or a bounded estimate from the papers' own figures); scope: triplet-pulse replica tissue model (KW-IMG-050/052); milestone: M-imaging-capability

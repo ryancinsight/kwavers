@@ -1,3 +1,5 @@
+<a id="kw-med-abs-001"></a>
+
 ## KW-MED-ABS-001 - Medium absorption storage-units divergence (Rust source vs pykwavers wheel) [minor] - todo
 
 priority: research; needs: none; scope: kwavers Medium absorption field / pykwavers bindings; milestone: M-imaging-capability
