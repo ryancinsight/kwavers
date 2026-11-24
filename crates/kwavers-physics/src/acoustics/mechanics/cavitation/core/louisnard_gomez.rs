@@ -590,13 +590,17 @@ mod tests {
         let time: Vec<f64> = (0..n)
             .map(|i| i as f64 / (n - 1) as f64 / 26_500.0)
             .collect();
-        // In-regime call succeeds.
-        let ok = louisnard_gomez_growth_rate_checked(
+        // In regime the checked form is the unchecked law, bit for bit.
+        let checked = louisnard_gomez_growth_rate_checked(
             &radius, &time, 5e-6, 1.0, 200_000.0, 26_500.0, &params,
-        );
-        assert!(ok.is_ok());
-        // Burst extrapolation (1 MHz) is refused by the checked form.
-        let err = louisnard_gomez_growth_rate_checked(
+        )
+        .unwrap();
+        let plain = louisnard_gomez_growth_rate(&radius, &time, 5e-6, 1.0, &params);
+        assert_eq!(checked.to_bits(), plain.to_bits());
+        // Burst extrapolation (1 MHz) is refused by the checked form. The
+        // frequency bound is tested before the pressure bound, so it is
+        // the parameter the error names.
+        let burst = louisnard_gomez_growth_rate_checked(
             &radius,
             &time,
             5e-6,
@@ -605,7 +609,14 @@ mod tests {
             1_000_000.0,
             &params,
         );
-        assert!(err.is_err());
+        assert!(matches!(
+            burst,
+            Err(KwaversError::Physics(PhysicsError::InvalidParameter {
+                ref parameter,
+                value,
+                ..
+            })) if parameter == "frequency" && value.to_bits() == 1_000_000.0_f64.to_bits()
+        ));
     }
 
     /// Keller–Miksis RHS transcribed from the prototype's validated
