@@ -30,6 +30,8 @@ pub mod bubble_field;
 pub mod bubble_state;
 pub mod bubbly_medium; // Void-fraction → sound speed (Wood) + attenuation (Commander–Prosperetti)
 pub mod cavitation_control;
+pub mod cloud_attenuation; // Cloud attenuation from single-bubble extinction (Xia 2020) + shielding factors
+pub mod coupled_driving; // Foldy–Lax self-consistent coupled bubble driving (KW-PHYS-013)
 pub mod dissolution; // Gas-diffusion dissolution (Epstein–Plesset 1950 + shelled extension)
 pub mod encapsulated; // NEW: Encapsulated bubbles with shell dynamics (Church, Marmottant)
 pub mod energy;
@@ -43,6 +45,7 @@ pub use energy::{update_temperature_energy_balance, EnergyBalanceCalculator};
 pub mod integration; // NEW: Stable integration utilities extracted from monolithic file
 pub mod interactions;
 pub mod keller_miksis; // NEW: Extracted Keller-Miksis solver for modularity
+pub mod population; // Population operators: fragmentation + coalescence (own construction)
 pub mod rayleigh_plesset;
 pub mod symplectic_integration; // Störmer-Verlet / Yoshida symplectic ODE (relocated from solver)
 pub mod thermodynamics;
@@ -52,7 +55,11 @@ pub use adaptive_integration::{
     integrate_bubble_dynamics_adaptive, AdaptiveBubbleConfig, AdaptiveBubbleIntegrator,
     IntegrationStatistics,
 };
-pub use bjerknes_forces::{BjerknesCalculator, BjerknesConfig, BjerknesInteractionType}; // NEW: Bubble-bubble interaction forces
+pub use bjerknes_forces::{
+    bjerknes_regime, displacement_amplitude, duryea_aggregation_regime,
+    radiated_pressure_amplitude, secondary_bjerknes_force_checked, AggregationRegime,
+    BjerknesCalculator, BjerknesConfig, BjerknesInteractionType, BjerknesRegime,
+}; // Bubble-bubble interaction forces + validity-regime guards
 pub use bubble_field::{BubbleCloud, BubbleField, BubbleStateFields};
 pub use bubble_state::{BubbleParameters, BubbleState, GasSpecies};
 pub use bubbly_medium::{
@@ -61,6 +68,15 @@ pub use bubbly_medium::{
 };
 pub use cavitation_control::{
     CavitationMetrics, ControlOutput, ControlStrategy, FeedbackConfig, FeedbackController,
+};
+pub use cloud_attenuation::{
+    cloud_attenuation_coefficient, cloud_length, cycle_work, extinction_cross_section,
+    shielding_factor_coherent,
+};
+pub use coupled_driving::{
+    coupled_regime_reasons, coupling_field, pair_geometry, segment_band_power,
+    solve_coupled_cloud, CoupledBubble, CoupledCloudConfig, CoupledSolution,
+    PICARD_DAMPING_THETA,
 };
 pub use dissolution::{
     dissolution_time_numeric, integrate_dissolution, DissolutionModel, DissolutionTrajectory,
@@ -77,6 +93,10 @@ pub use imex_integration::{
 pub use integration::integrate_bubble_dynamics_stable; // NEW: Extracted integration utilities
 pub use interactions::{BjerknesForceComputer, BubbleInteractions, CollectiveEffects};
 pub use keller_miksis::{KellerHerringModel, KellerMiksisModel}; // NEW: Modular Keller-Miksis solvers
+pub use population::{
+    coalesce_group, collapse_ratio, merge_pair, neighbour_merge_probability, BubbleGroup,
+    EqualSplitKernel, FragmentationKernel, LognormalKernel, PopulationMedium,
+};
 pub use rayleigh_plesset::RayleighPlessetSolver;
 pub use symplectic_integration::{
     integrate_bubble_dynamics_symplectic, stormer_verlet_step, yoshida4_step,
