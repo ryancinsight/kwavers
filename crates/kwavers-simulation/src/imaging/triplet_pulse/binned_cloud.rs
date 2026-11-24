@@ -63,8 +63,10 @@ impl BinnedSizeDistribution {
     /// negative or non-finite, or the total count is zero.
     pub fn from_um(bin_radii_um: &[f64], bin_counts: &[f64]) -> Result<Self, String> {
         if bin_radii_um.is_empty() || bin_radii_um.len() != bin_counts.len() {
-            return Err("binned distribution: radii and counts must be non-empty and equal length"
-                .to_owned());
+            return Err(
+                "binned distribution: radii and counts must be non-empty and equal length"
+                    .to_owned(),
+            );
         }
         if bin_radii_um.iter().any(|r| !r.is_finite() || *r <= 0.0) {
             return Err("binned distribution: radii must be finite and > 0".to_owned());
