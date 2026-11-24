@@ -72,3 +72,4 @@
 <a id="kw-py-hybrid-refused"></a>- [KW-PY-HYBRID-REFUSED](backlog/kw-py-hybrid-refused.md) — Python callers offer a Hybrid solver that `Simulation.run` refuses [patch] — todo
 <a id="kw-sim-sensor-mask-doc"></a>- [KW-SIM-SENSOR-MASK-DOC](backlog/kw-sim-sensor-mask-doc.md) — The Rustdoc of `SimulationRunRequest::sensor_mask` says no sensors are requested by `None`, which is false beside `transducer_ordered_indices` [patch] — todo
 <a id="kwavers-stable-qualification"></a>- [KWAVERS-STABLE-QUALIFICATION](backlog/kwavers-stable-qualification.md) — kwavers stable-release qualification [patch] — todo
+<a id="kw-athena-damped-lsqr"></a>- [KW-ATHENA-DAMPED-LSQR](backlog/kw-athena-damped-lsqr.md) — Damped LSQR results and tests are unchecked against the athena damping-rotation fix [patch] — todo
