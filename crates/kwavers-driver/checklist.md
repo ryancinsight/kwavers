@@ -5,6 +5,11 @@ Phase: Closure
 In-flight item: [patch] CLOSED — `nsf_neuromod_phased_array` uses exact local `TC8020K6_G`
 CAD/footprint assets; generated board is LVS-clean but inspection-only until clearance cleanup.
 
+## Driver 0.5.1 qualification candidate
+
+- [x] [patch] Reproduce six downstream contract failures on registry 0.5.0. Rehearse the repairs with the standalone consumer across all four feature sets.
+- [ ] [patch] Review the exact candidate, run required CI and verify a fresh registry consumer after authorized publication.
+
 ## Driver 1.0.0 qualification
 
 - [ ] [major] Review [the proposed stable public surface](../../docs/adr/146-stable-driver-surface.md) against the published 0.5.0 Driver package and inventory external callers and file-format contracts.

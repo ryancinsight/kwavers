@@ -227,13 +227,33 @@ pub fn write_kicad_pcb(
     s
 }
 
+/// Exact KiCad millimetres for routed copper. Preserve the legacy four decimal
+/// places on the 100 nm lattice and retain all six decimal places off it.
+struct SegmentMm(i64);
+
+impl std::fmt::Display for SegmentMm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let magnitude = self.0.unsigned_abs();
+        if self.0 < 0 {
+            f.write_str("-")?;
+        }
+        let whole = magnitude / 1_000_000;
+        let fraction = magnitude % 1_000_000;
+        if fraction.is_multiple_of(100) {
+            write!(f, "{whole}.{:04}", fraction / 100)
+        } else {
+            write!(f, "{whole}.{fraction:06}")
+        }
+    }
+}
+
 fn emit_segments(s: &mut String, tracks: &[Track], nlayers: usize, uuid: &mut Uuid) {
     for t in tracks {
         wln!(
             s,
-            "  (segment (start {:.4} {:.4}) (end {:.4} {:.4}) (width {:.4}) (layer \"{}\") (net {}) (uuid \"{}\"))",
-            mm(t.start.x.0), mm(t.start.y.0), mm(t.end.x.0), mm(t.end.y.0),
-            mm(t.width.0), layer_name(t.layer.0, nlayers), t.net.0 + 1, uuid.next()
+            "  (segment (start {} {}) (end {} {}) (width {}) (layer \"{}\") (net {}) (uuid \"{}\"))",
+            SegmentMm(t.start.x.0), SegmentMm(t.start.y.0), SegmentMm(t.end.x.0), SegmentMm(t.end.y.0),
+            SegmentMm(t.width.0), layer_name(t.layer.0, nlayers), t.net.0 + 1, uuid.next()
         );
     }
 }
