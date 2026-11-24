@@ -294,7 +294,12 @@ mod tests {
     fn b2_epstein_plesset_shrink_reproduced() {
         let medium = EpsteinPlessetMedium::kuji_degassed();
         let train = ImagingTrain::kuji_2024();
-        let expected_pct = [(1.5e-6, -1.74), (2.0e-6, -1.05), (3.0e-6, -0.53), (5.0e-6, -0.24)];
+        let expected_pct = [
+            (1.5e-6, -1.74),
+            (2.0e-6, -1.05),
+            (3.0e-6, -0.53),
+            (5.0e-6, -0.24),
+        ];
         for (r0, pct) in expected_pct {
             let out = evolve_under_imaging_train(r0, &inert_pulses(4), &medium, &train);
             let got_pct = out.fractional_change * 100.0;
