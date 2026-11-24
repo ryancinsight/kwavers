@@ -3,15 +3,40 @@
 //! This module provides fundamental cavitation detection and modeling
 //! based on acoustic pressure thresholds and bubble dynamics.
 
+pub mod bader_influx;
 pub mod growth;
+pub mod kreider_convolution;
+pub mod louisnard_gomez;
 pub mod model;
 pub mod state;
 pub mod thresholds;
 
+pub use bader_influx::{
+    bader_expansion_influx, bader_expansion_influx_checked, bader_holland_dmax,
+    bader_signed_expansion_influx, compression_phase_outflux, equilibrium_gas_content,
+    equilibrium_gas_content_derivative, equilibrium_radius_for_pressure,
+    henry_surface_concentration, residual_radius_as_printed, residual_radius_equilibrium,
+    tensile_phase_duration, BaderHollandFlags, BADER_INFLUX_MAX_CYCLES,
+    BADER_INFLUX_MAX_PRESSURE_PA, BADER_INFLUX_MIN_PRESSURE_PA, CONTINUAL_GROWTH_THRESHOLD_PA,
+    MOLECULES_PER_MOLE,
+};
 pub use growth::{
     oscillation_amplitude_fraction, rectified_diffusion_rate, rectified_diffusion_rate_checked,
     rectified_diffusion_rate_with_concentrations, rectified_diffusion_terms,
     RectifiedDiffusionTerms, RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO,
+};
+pub use kreider_convolution::{
+    latent_heat_molar, saturation_vapour_pressure, vapour_rate_hertz_knudsen, wall_temperature_scl,
+    EllerFlynnHistory, KreiderCycleDiag, KreiderGainModel, KreiderGainParams,
+    KREIDER_ALPHA_ACCOMMODATION, KREIDER_A_H, KREIDER_A_M_FITTED, KREIDER_A_T, KREIDER_F_M_FITTED,
+};
+pub use louisnard_gomez::{
+    cycle_average_terms, louisnard_gomez_growth_rate, louisnard_gomez_growth_rate_checked,
+    louisnard_gomez_per_cycle_influx, louisnard_gomez_regime, van_der_waals_gas_pressure,
+    CycleAverageTerms, LouisnardGomezParams, LouisnardGomezRegime,
+    LOUISNARD_GOMEZ_MAX_FREQUENCY_HZ, LOUISNARD_GOMEZ_MAX_PRESSURE_PA,
+    LOUISNARD_GOMEZ_MAX_RADIUS_M, LOUISNARD_GOMEZ_MIN_FREQUENCY_HZ,
+    LOUISNARD_GOMEZ_MIN_PRESSURE_PA,
 };
 pub use model::{CavitationCore, CavitationModel};
 pub use state::{CavitationDose, CavitationMechanicsState};
