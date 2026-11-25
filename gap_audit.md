@@ -8,7 +8,7 @@ report a magnitude above one. The regression uses a single circular piston
 and compares centered arrays of odd and even size against coherent summation
 at exact and adjacent floating-point directions. Both tests fail on
 `2e2ef3028` and pass with the correction. See the
-[Physics 5.2.1 checklist](backlog/kw-phys-steering-magnitudes.md).
+[Physics 5.2.1 checklist](https://github.com/ryancinsight/kwavers/blob/daf3842e05e049f8f02a7fb31bb34f640e242e29/backlog/kw-phys-steering-magnitudes.md).
 
 ## Capability surveys by keyword produce false positives on name collisions
 

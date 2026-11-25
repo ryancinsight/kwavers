@@ -38,7 +38,6 @@
 <a id="kw-img-056"></a>- [KW-IMG-056](backlog/kw-img-056.md) — Tissue-model backscatter level is uncalibrated: K1 is bracketed, not adjudicated [major] — todo
 <a id="kw-phys-009"></a>- [KW-PHYS-009](backlog/kw-phys-009.md) — Known duplicates and regime gaps in the bubble-dynamics physics (consolidation backlog) [patch] — todo
 <a id="kw-phys-012"></a>- [KW-PHYS-012](backlog/kw-phys-012.md) — Yoshida count-changing state-change law under interleaved HIFU pulses (open) [patch] — todo
-<a id="kw-phys-steering-magnitudes"></a>- [KW-PHYS-STEERING-MAGNITUDES](backlog/kw-phys-steering-magnitudes.md) — Correct steering magnitudes and stabilize spatial replicas [patch] — done
 <a id="kw-integration-test-binaries"></a>- [KW-INTEGRATION-TEST-BINARIES](backlog/kw-integration-test-binaries.md) — kwavers integration tests link one binary per file: 89 targets, 81 on the push gate [patch] [perf] — todo
 <a id="kw-lint-1"></a>- [KW-LINT-1](backlog/kw-lint-1.md) — Burn down the clippy debt baseline [patch] — todo
 <a id="kw-manifest-implementation-2026-09-09"></a>- [KW-MANIFEST-IMPLEMENTATION-2026-09-09](backlog/kw-manifest-implementation-2026-09-09.md) — Reduce the implementation-bearing manifests [patch] [arch] — todo
