@@ -110,12 +110,9 @@
 //! The Laplacian ∇²p is approximated by a compact finite-difference stencil.
 //! This module supports:
 //!
-//! * **2nd-order** — standard 7-point stencil (coefficients ±1, −2).
-//! * **4th-order** — 13-point stencil (coefficients −1/12, 4/3, −5/2, …),
-//!   halving the leading truncation error for a given spatial resolution.
-//! * **6th-order** — 19-point stencil (coefficients 1/90, −3/20, 3/2,
-//!   −49/18, …), preserving exact second derivatives for quadratic fields
-//!   while reducing the leading truncation error to `O(h^6)`.
+//! * **2nd-order** — standard 7-point stencil, with truncation error `O(h²)`.
+//! * **4th-order** — 13-point stencil, with truncation error `O(h⁴)`.
+//! * **6th-order** — 19-point stencil, with truncation error `O(h⁶)`.
 //!
 //! ### Stability (CFL Condition)
 //!
@@ -171,9 +168,9 @@
 //!
 //! ## Module layout
 //!
-//! - `laplacian`: finite-difference Laplacian (O2/O4) into a pre-allocated
+//! - `laplacian`: finite-difference Laplacian (orders 2, 4, and 6) into a pre-allocated
 //!   workspace.
-//! - `nonlinear`: ∂²p²/∂t² product-rule kernel.
+//! - `update::pressure`: pointwise propagation and pressure-squared curvature.
 //! - `update`: full Westervelt time-step (linear + nonlinear + absorption +
 //!   artificial viscosity), source injection, history rotation, and
 //!   conservation-check pipeline.
@@ -207,7 +204,6 @@
 
 mod conservation;
 mod laplacian;
-mod nonlinear;
 mod update;
 
 #[cfg(test)]
@@ -239,7 +235,7 @@ pub struct WesterveltFdtdConfig {
     pub enable_absorption: bool,
     /// CFL safety factor (< 1.0)
     pub cfl_safety: f64,
-    /// Artificial viscosity coefficient for stability (dimensionless, 0.0-1.0)
+    /// Artificial kinematic viscosity (m²/s), used in ν·Δt·∇²p.
     pub artificial_viscosity: f64,
     /// Marching direction used for time-reversal replay.
     pub propagation_direction: PropagationDirection,
@@ -265,13 +261,10 @@ pub struct WesterveltFdtd {
     pub(super) pressure: Array3<f64>,
     /// Previous pressure field p^{n-1}
     pub(super) pressure_prev: Array3<f64>,
-    /// Two steps back p^{n-2} (for ∂²(p²)/∂t² product-rule nonlinear term)
-    pub(super) pressure_prev2: Option<Array3<f64>>,
     /// Workspace for Laplacian calculation
     pub(super) laplacian: Array3<f64>,
-    /// Workspace for the product-rule nonlinear term
-    pub(super) nonlinear_term: Array3<f64>,
-    /// Workspace for the next pressure field before history rotation
+    /// Holds p^{n−2} after bootstrap. Each cell is read before it is overwritten
+    /// with p^{n+1}. Rotation then makes this allocation the current field.
     pub(super) pressure_next: Array3<f64>,
     /// Conservation diagnostics tracker
     pub(super) conservation_tracker: Option<ConservationTracker>,
@@ -308,9 +301,7 @@ impl WesterveltFdtd {
             config,
             pressure: Array3::zeros(shape),
             pressure_prev: Array3::zeros(shape),
-            pressure_prev2: None,
             laplacian: Array3::zeros(shape),
-            nonlinear_term: Array3::zeros(shape),
             pressure_next: Array3::zeros(shape),
             conservation_tracker: None,
             current_step: 0,

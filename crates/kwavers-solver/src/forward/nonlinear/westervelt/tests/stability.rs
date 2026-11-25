@@ -6,44 +6,48 @@ use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 
-/// **Invariant (pressure_prev2 allocation schedule):**
-/// `pressure_prev2` is allocated lazily on the first `update()` call so that
-/// the nonlinear `∂²(p²)/∂t²` kernel has access to p^{n−2} from step 2 onward.
+/// Uniform pressure isolates the temporal recurrence. Reseeding an active
+/// simulation changes only the current level, so both older levels still contribute.
 #[test]
-fn pressure_prev2_allocated_after_first_step() {
+fn pressure_rotation_reproduces_the_three_level_recurrence() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium =
-        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+    let rho = DENSITY_WATER_NOMINAL;
+    let c = SOUND_SPEED_WATER_SIM;
+    let mut medium = HomogeneousMedium::from_minimal(rho, c, &grid);
+    medium.set_nonlinearity(6.0);
     let config = WesterveltFdtdConfig {
+        spatial_order: 2,
         enable_absorption: false,
-        ..WesterveltFdtdConfig::default()
+        artificial_viscosity: 0.0,
+        ..Default::default()
     };
     let mut solver = WesterveltFdtd::new(config, &grid, &medium);
-    solver.pressure[[4, 4, 4]] = 1.0e5;
-
-    assert!(
-        solver.pressure_prev2.is_none(),
-        "pp2 must not exist before any steps"
-    );
-
     let dt = solver.calculate_dt(&medium, &grid).unwrap();
-    solver.update(&medium, &grid, &[], 0.0, dt).unwrap();
-    let pp2 = solver
-        .pressure_prev2
-        .as_ref()
-        .expect("pp2 must exist after step 1 (lazy allocation in history rotation)");
-    assert_eq!(
-        pp2.shape(),
-        solver.pressure.shape(),
-        "the rotated history must be allocated at the field's shape"
-    );
-
-    solver.update(&medium, &grid, &[], dt, dt).unwrap();
-    let pp2 = solver
-        .pressure_prev2
-        .as_ref()
-        .expect("pp2 must remain allocated on subsequent steps");
-    assert_eq!(pp2.shape(), solver.pressure.shape());
+    let mut current: f64 = 2.0e5;
+    let mut previous: f64 = 1.5e5;
+    let mut oldest: f64 = 0.0;
+    solver.pressure.fill(current);
+    solver.pressure_prev.fill(previous);
+    for step in 0..8 {
+        if step == 3 {
+            current = -1.0e5;
+            let field = leto::Array3::from_elem([8, 8, 8], current);
+            solver.set_pressure_field(field.view());
+        }
+        // dt² cancels for the spatially uniform lossless field.
+        let curvature = 2.0 * (current - previous).powi(2)
+            + if step == 0 {
+                0.0
+            } else {
+                2.0 * current * (current - 2.0 * previous + oldest)
+            };
+        let next = 2.0 * current - previous + 4.0 * curvature / (rho * c * c);
+        solver
+            .update(&medium, &grid, &[], f64::from(step) * dt, dt)
+            .unwrap();
+        assert!(solver.pressure.iter().all(|p| (*p - next).abs() < 1e-7));
+        (oldest, previous, current) = (previous, current, next);
+    }
 }
 
 /// **Theorem (nonlinear steepening, Hamilton & Blackstock 1998 §2):**

@@ -1,243 +1,94 @@
-//! Gradient computation functions.
+//! Public gradient entry points and the shared grid/precision dispatch.
 
-use super::super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use super::cache::GradientCache;
-use super::operator::BoundaryStrategy;
-use crate::Grid;
+use super::{kernel, BoundaryStrategy, GradientCache};
+use crate::{
+    operators::{
+        stencil::{inverse_spacing, validate_field_shape},
+        FdAccuracyOrder,
+    },
+    Grid,
+};
 use eunomia::FloatElement;
 use kwavers_core::error::KwaversResult;
 use leto::{Array3, ArrayView3};
 
-/// Optimized gradient computation with caching and parallelization
+/// Compute centered derivatives, leaving zero in each component's incomplete halo.
+/// A supplied cache can be reused across grids with different spacings.
+///
 /// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
-pub fn gradient_optimized<T>(
+/// Returns a dimension mismatch when the field shape differs from the grid.
+pub fn gradient_optimized<T: FloatElement + Default>(
     field: &ArrayView3<T>,
     grid: &Grid,
     order: FdAccuracyOrder,
     cache: Option<&GradientCache<T>>,
-) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
-where
-    T: FloatElement + Clone + Send + Sync + Default,
-{
-    let shape = field.shape();
-    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-
-    if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(kwavers_core::error::KwaversError::Grid(
-            kwavers_core::error::GridError::DimensionMismatch {
-                expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
-                actual: format!("({}, {}, {})", nx, ny, nz),
-            },
-        ));
-    }
-
-    let mut grad_x = Array3::<T>::zeros([nx, ny, nz]);
-    let mut grad_y = Array3::<T>::zeros([nx, ny, nz]);
-    let mut grad_z = Array3::<T>::zeros([nx, ny, nz]);
-
-    let uncached_coeffs;
-    let coeffs: &[T] = if let Some(cache) = cache {
-        cache.get_coefficients(order)
-    } else {
-        uncached_coeffs = FDCoefficients::first_derivative::<T>(order);
-        &uncached_coeffs
-    };
-
-    let stencil_radius = coeffs.len();
-    let (dx_inv, dy_inv, dz_inv) = if let Some(cache) = cache {
-        (
-            cache.spacing_inverses.0,
-            cache.spacing_inverses.1,
-            cache.spacing_inverses.2,
-        )
-    } else {
-        (
-            T::from_f64(1.0) / T::from_f64(grid.dx),
-            T::from_f64(1.0) / T::from_f64(grid.dy),
-            T::from_f64(1.0) / T::from_f64(grid.dz),
-        )
-    };
-
-    for i in stencil_radius..nx - stencil_radius {
-        for j in 0..ny {
-            for k in 0..nz {
-                let mut grad_val = T::from_f64(0.0);
-                for (n, coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    grad_val += *coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
-                }
-                grad_x[[i, j, k]] = grad_val * dx_inv;
-            }
-        }
-    }
-
-    for i in 0..nx {
-        for j in stencil_radius..ny - stencil_radius {
-            for k in 0..nz {
-                let mut grad_val = T::from_f64(0.0);
-                for (n, coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    grad_val += *coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
-                }
-                grad_y[[i, j, k]] = grad_val * dy_inv;
-            }
-        }
-    }
-
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in stencil_radius..nz - stencil_radius {
-                let mut grad_val = T::from_f64(0.0);
-                for (n, coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    grad_val += *coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
-                }
-                grad_z[[i, j, k]] = grad_val * dz_inv;
-            }
-        }
-    }
-
-    Ok((grad_x, grad_y, grad_z))
+) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)> {
+    compute_gradient(field, grid, order, cache, None, None)
 }
 
-/// Optimized gradient computation with boundary handling
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
+/// Compute the gradient with zero-valued samples outside the grid.
 ///
-pub fn gradient_with_boundaries<T>(
+/// # Errors
+/// Returns a dimension mismatch when the field shape differs from the grid.
+pub fn gradient_with_boundaries<T: FloatElement + Default>(
     field: &ArrayView3<T>,
     grid: &Grid,
     order: FdAccuracyOrder,
-) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
-where
-    T: FloatElement + Clone + Send + Sync + Default,
-{
-    gradient_with_strategy(field, grid, order, BoundaryStrategy::ZeroPadding)
+) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)> {
+    compute_gradient(
+        field,
+        grid,
+        order,
+        None,
+        Some(BoundaryStrategy::ZeroPadding),
+        None,
+    )
 }
-/// Gradient with strategy.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
-pub(super) fn gradient_with_strategy<T>(
+
+pub(super) fn compute_gradient<T: FloatElement + Default>(
     field: &ArrayView3<T>,
     grid: &Grid,
     order: FdAccuracyOrder,
-    boundary_strategy: BoundaryStrategy,
-) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
-where
-    T: FloatElement + Clone + Send + Sync + Default,
-{
-    let shape = field.shape();
-    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+    cache: Option<&GradientCache<T>>,
+    boundary: Option<BoundaryStrategy>,
+    parallel_rows: Option<usize>,
+) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)> {
+    let shape = validate_field_shape(field, grid)?;
+    let [mut x, mut y, mut z] = std::array::from_fn(|_| Array3::zeros(shape));
+    // Owned arrays constructed above have standard contiguous layout.
+    fill_gradient(
+        field,
+        grid,
+        order,
+        cache,
+        boundary,
+        parallel_rows,
+        [
+            x.as_slice_mut().expect("contiguous gradient output"),
+            y.as_slice_mut().expect("contiguous gradient output"),
+            z.as_slice_mut().expect("contiguous gradient output"),
+        ],
+    );
+    Ok((x, y, z))
+}
 
-    if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(kwavers_core::error::KwaversError::Grid(
-            kwavers_core::error::GridError::DimensionMismatch {
-                expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
-                actual: format!("({}, {}, {})", nx, ny, nz),
-            },
-        ));
-    }
-
-    let mut grad_x = Array3::<T>::zeros([nx, ny, nz]);
-    let mut grad_y = Array3::<T>::zeros([nx, ny, nz]);
-    let mut grad_z = Array3::<T>::zeros([nx, ny, nz]);
-
-    let coeffs = FDCoefficients::first_derivative::<T>(order);
-    let _stencil_radius = coeffs.len();
-    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx);
-    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy);
-    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz);
-
-    let map_index = |idx: isize, len: usize| -> Option<usize> {
-        if (0..(len as isize)).contains(&idx) {
-            return Some(idx as usize);
-        }
-        match boundary_strategy {
-            BoundaryStrategy::ZeroPadding => None,
-            BoundaryStrategy::Mirror => {
-                if len == 0 {
-                    None
-                } else {
-                    let last = (len - 1) as isize;
-                    let mirrored = if idx < 0 {
-                        (-idx).min(last)
-                    } else {
-                        (2 * last - idx).max(0)
-                    };
-                    Some(mirrored as usize)
-                }
-            }
-            BoundaryStrategy::Periodic => {
-                if len == 0 {
-                    None
-                } else {
-                    let m = len as isize;
-                    let wrapped = ((idx % m) + m) % m;
-                    Some(wrapped as usize)
-                }
-            }
-            BoundaryStrategy::Extrapolate => {
-                if len == 0 {
-                    None
-                } else if idx < 0 {
-                    Some(0)
-                } else {
-                    Some(len - 1)
-                }
-            }
+pub(super) fn fill_gradient<T: FloatElement>(
+    field: &ArrayView3<T>,
+    grid: &Grid,
+    order: FdAccuracyOrder,
+    cache: Option<&GradientCache<T>>,
+    boundary: Option<BoundaryStrategy>,
+    parallel_rows: Option<usize>,
+    outputs: [&mut [T]; 3],
+) {
+    let inline;
+    let weights = match cache {
+        Some(cache) => cache.get_coefficients(order),
+        None => {
+            inline = order.first_weights();
+            &inline[..order.radius()]
         }
     };
-
-    let get = |ii: isize, jj: isize, kk: isize| -> T {
-        let Some(iu) = map_index(ii, nx) else {
-            return T::from_f64(0.0);
-        };
-        let Some(ju) = map_index(jj, ny) else {
-            return T::from_f64(0.0);
-        };
-        let Some(ku) = map_index(kk, nz) else {
-            return T::from_f64(0.0);
-        };
-        field[[iu, ju, ku]]
-    };
-
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 0..nz {
-                let (ii, jj, kk) = (i as isize, j as isize, k as isize);
-
-                let mut gx = T::from_f64(0.0);
-                for (n, coeff) in coeffs.iter().enumerate() {
-                    let offset = (n + 1) as isize;
-                    gx += *coeff * (get(ii + offset, jj, kk) - get(ii - offset, jj, kk));
-                }
-                grad_x[[i, j, k]] = gx * dx_inv;
-
-                let mut gy = T::from_f64(0.0);
-                for (n, coeff) in coeffs.iter().enumerate() {
-                    let offset = (n + 1) as isize;
-                    gy += *coeff * (get(ii, jj + offset, kk) - get(ii, jj - offset, kk));
-                }
-                grad_y[[i, j, k]] = gy * dy_inv;
-
-                let mut gz = T::from_f64(0.0);
-                for (n, coeff) in coeffs.iter().enumerate() {
-                    let offset = (n + 1) as isize;
-                    gz += *coeff * (get(ii, jj, kk + offset) - get(ii, jj, kk - offset));
-                }
-                grad_z[[i, j, k]] = gz * dz_inv;
-            }
-        }
-    }
-
-    Ok((grad_x, grad_y, grad_z))
+    let scale = inverse_spacing(grid);
+    kernel::fill(field, weights, scale, boundary, parallel_rows, outputs);
 }

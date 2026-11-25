@@ -31,7 +31,7 @@ pub struct PulserComparison {
     pub pcb_layers_estimate: usize,
     /// Estimated routed via count for the assembled design.
     pub routed_vias_estimate: usize,
-    /// Composite optimisation score (higher is better).
+    /// Composite optimisation score (lower is better).
     pub score: f64,
 }
 

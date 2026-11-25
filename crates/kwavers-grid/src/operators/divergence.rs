@@ -1,59 +1,52 @@
-//! Divergence operations module
-
-use super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use super::stencil::{centered_first_derivative_sum, validate_vector_field_shapes};
+//! Cartesian divergence of a sampled vector field.
+use super::coefficients::FdAccuracyOrder;
+use super::stencil::vector::{self, Axis, VectorDerivative};
 use crate::Grid;
 use eunomia::FloatElement;
 use kwavers_core::error::KwaversResult;
 use leto::{Array3, ArrayView3};
 
-/// Compute divergence of a vector field
+struct Divergence;
+
+impl VectorDerivative<1> for Divergence {
+    #[inline]
+    fn evaluate<T: FloatElement>(partial: impl Fn(Axis, Axis) -> T) -> [T; 1] {
+        use Axis::{X, Y, Z};
+        [partial(X, X) + partial(Y, Y) + partial(Z, Z)]
+    }
+}
+
+/// Compute divergence with centered finite differences and a zero output halo.
+/// Divergence sums the three diagonal spatial derivatives.
+/// For velocity in metres per second, the result is volumetric strain rate in inverse seconds.
+///
 /// # Errors
-/// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
-///
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
-pub fn divergence<T>(
+/// Returns a dimension mismatch if any input shape differs from the grid.
+pub fn divergence<T: FloatElement + Default>(
     vx: &ArrayView3<T>,
     vy: &ArrayView3<T>,
     vz: &ArrayView3<T>,
     grid: &Grid,
     order: FdAccuracyOrder,
-) -> KwaversResult<Array3<T>>
-where
-    T: FloatElement + Clone + Send + Sync + Default,
-{
-    let [nx, ny, nz] = validate_vector_field_shapes(vx, vy, vz, grid)?;
+) -> KwaversResult<Array3<T>> {
+    let [result] = vector::owned::<Divergence, _, 1>([vx, vy, vz], grid, order)?;
+    Ok(result)
+}
 
-    let mut divergence = Array3::<T>::zeros([nx, ny, nz]);
-    let coeffs = FDCoefficients::first_derivative::<T>(order);
-    let stencil_radius = coeffs.len();
-
-    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx);
-    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy);
-    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz);
-
-    // Compute divergence in interior points
-    for i in stencil_radius..nx - stencil_radius {
-        for j in stencil_radius..ny - stencil_radius {
-            for k in stencil_radius..nz - stencil_radius {
-                let div_x = centered_first_derivative_sum(&coeffs, |offset| {
-                    vx[[i + offset, j, k]] - vx[[i - offset, j, k]]
-                });
-                let div_y = centered_first_derivative_sum(&coeffs, |offset| {
-                    vy[[i, j + offset, k]] - vy[[i, j - offset, k]]
-                });
-                let div_z = centered_first_derivative_sum(&coeffs, |offset| {
-                    vz[[i, j, k + offset]] - vz[[i, j, k - offset]]
-                });
-
-                divergence[[i, j, k]] = div_x * dx_inv + div_y * dy_inv + div_z * dz_inv;
-            }
-        }
-    }
-
-    Ok(divergence)
+/// Write [divergence] into caller-owned row-major storage, with z varying fastest.
+/// Every output cell is overwritten. The halo is zero on all six faces.
+///
+/// # Errors
+/// Rejects an invalid input shape or output length before writing any results.
+pub fn divergence_into<T: FloatElement>(
+    vx: &ArrayView3<T>,
+    vy: &ArrayView3<T>,
+    vz: &ArrayView3<T>,
+    grid: &Grid,
+    order: FdAccuracyOrder,
+    output: &mut [T],
+) -> KwaversResult<()> {
+    vector::into::<Divergence, _, 1>([vx, vy, vz], grid, order, [output])
 }
 
 #[cfg(test)]

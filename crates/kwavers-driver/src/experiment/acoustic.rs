@@ -13,7 +13,7 @@
 use crate::error::Experiment as ExperimentError;
 use crate::manifest::EnergyBudgetReport;
 use crate::physics::acoustic::{
-    acoustic_intensity_w_per_m2, focal_pressure_gain, max_grating_free_steer_deg, mechanical_index,
+    focal_pressure_gain, isppa_w_per_m2, max_grating_free_steer_deg, mechanical_index,
     near_field_distance_m,
 };
 use crate::ssot::*;
@@ -80,8 +80,9 @@ impl AcousticSimulator for InCrateAcousticSim {
         if !focal_pressure_pa.is_finite() {
             return Err(ExperimentError::NonFiniteTransient { step: 0, t_s: 0.0 }.into());
         }
-        let isppa_w_cm2 = acoustic_intensity_w_per_m2(focal_pressure_pa, PHYSICS_WATER_Z0_RAYL)
-            / UNIT_W_CM2_PER_W_M2;
+        // Average over the sinusoidal pulse itself. Its on-window duty is one.
+        let isppa_w_cm2 =
+            isppa_w_per_m2(focal_pressure_pa, PHYSICS_WATER_Z0_RAYL, 1.0) / UNIT_W_CM2_PER_W_M2;
         let mi = mechanical_index(
             focal_pressure_pa / UNIT_PA_PER_MPA,
             step.frequency_hz / UNIT_MHZ_PER_HZ,

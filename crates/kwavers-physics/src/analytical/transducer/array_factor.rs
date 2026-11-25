@@ -3,6 +3,8 @@
 //! Covers: circular-piston directivity (O'Neil 1949), linear array factor,
 //! grating-lobe prediction, and apodization windows.
 
+use std::f64::consts::PI;
+
 use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::j1;
@@ -47,7 +49,11 @@ pub fn circular_piston_directivity(theta_rad: &[f64], ka: f64) -> Vec<f64> {
 /// AF(θ) = sin(N·ψ/2) / (N·sin(ψ/2))
 /// ψ = k·d·(sin θ − sin θ_steer)
 /// ```
-/// Normalised to 1.0 at the steering angle (L'Hôpital limit applied).
+/// This is the signed response of the array centered about its midpoint.
+/// At each spatial replica `ψ = 2πm` the finite sum has limit
+/// `(-1)^(m·(N-1))`, including 1 at the commanded angle. Reducing `ψ/2`
+/// to its distance from the nearest multiple of π preserves the limit
+/// when the original sine terms nearly cancel.
 ///
 /// # Arguments
 /// * `theta_rad` – observation angles `rad`
@@ -72,10 +78,20 @@ pub fn linear_array_factor(
         .map(|&theta| {
             let psi = k * d_m * (theta.sin() - steer_rad.sin());
             let half_psi = psi / 2.0;
-            if half_psi.abs() < 1e-12 {
-                1.0
+            // An integer number of pi turns changes the sign only for
+            // an even element count. Reduce before evaluating the quotient
+            // so the removable singularity has the same limit at each replica.
+            let turns = (half_psi / PI).round();
+            let reduced = (-turns).mul_add(PI, half_psi);
+            let sign = if n.is_multiple_of(2) && turns.rem_euclid(2.0) == 1.0 {
+                -1.0
             } else {
-                (n_f * half_psi).sin() / (n_f * half_psi.sin())
+                1.0
+            };
+            if reduced == 0.0 {
+                sign
+            } else {
+                sign * (n_f * reduced).sin() / (n_f * reduced.sin())
             }
         })
         .collect()

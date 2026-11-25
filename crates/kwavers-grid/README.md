@@ -24,6 +24,40 @@ geometric primitives that classify a point as inside or outside a region.
 k-space helpers (`KSpaceCalculator`, FFT shifts, optimal FFT sizes) are re-exported from
 `kwavers-math` so grid consumers need one import path.
 
+## Cartesian finite differences
+
+Centered stencil weights are ordered from the nearest pair of neighbors outward.
+The gradient has units of field per metre and the Laplacian has units of field per
+square metre when the grid spacing is in metres. Each axis uses its own spacing.
+
+`LaplacianOperator::apply_mut` writes directly into caller-owned output, including
+strided views. Second-, fourth-, sixth-, and eighth-order stencils use one to four
+neighbors on each side. Periodic grids wrap each axis. Homogeneous Neumann grids
+reflect about the endpoint nodes. Dirichlet mode writes zero to the halo in which
+the full centered stencil does not fit, including when the output buffer is reused.
+
+Run `cargo bench --locked -p kwavers-grid --bench laplacian` to time repeated
+applications on a preallocated 64³ volume for every order and boundary mode.
+
+`gradient` and `gradient_optimized` leave a component zero where that axis has
+no complete centered stencil. For boundary samples, `GradientOperatorBuilder`
+supports zero padding, periodic wrapping, even reflection, and constant endpoint
+extension. Each call uses its grid's spacing. A `GradientCache` holds dimensionless
+weights inline and can serve multiple grids at the same precision. For repeated steps,
+`GradientOperator::compute_into` writes directly into three reusable row-major buffers.
+Parallel execution
+groups complete z-rows per chunk. Run `cargo bench -p kwavers-grid --bench gradient`
+to measure the public entry points, including their three output allocations.
+
+For a sampled velocity field, `curl` gives vorticity and `divergence` gives
+volumetric strain rate, both in inverse seconds when velocity is in m/s.
+Each uses the full three-axis interior. The output halo is zero, including the
+entire volume when any axis is too short for the selected stencil.
+`curl_into` and `divergence_into` accept borrowed vector components with
+independent strides and overwrite caller-owned, z-fastest output buffers.
+Run `cargo bench -p kwavers-grid --bench vector_derivatives` to reproduce the
+timings for the allocating entry points.
+
 ## Example
 
 Construction is fallible: zero dimensions and non-positive spacing are rejected at the

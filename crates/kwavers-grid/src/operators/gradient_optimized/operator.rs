@@ -2,10 +2,11 @@
 
 use super::super::coefficients::FdAccuracyOrder;
 use super::cache::GradientCache;
-use super::functions::{gradient_optimized, gradient_with_strategy};
+use super::functions::{compute_gradient, fill_gradient};
+use crate::operators::stencil::validate_field_shape;
 use crate::Grid;
 use eunomia::FloatElement;
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{GridError, KwaversError, KwaversResult};
 use leto::{Array3, ArrayView3};
 
 /// Boundary handling strategy
@@ -13,11 +14,11 @@ use leto::{Array3, ArrayView3};
 pub enum BoundaryStrategy {
     /// Zero padding at boundaries
     ZeroPadding,
-    /// Mirror boundaries
+    /// Reflect samples about the two endpoint nodes.
     Mirror,
     /// Periodic boundaries
     Periodic,
-    /// Extrapolate from interior
+    /// Extend each endpoint value as a constant.
     Extrapolate,
 }
 
@@ -28,7 +29,7 @@ pub struct GradientOperatorBuilder {
     pub parallel: bool,
     /// Use caching
     pub caching: bool,
-    /// Chunk size for parallel processing
+    /// Number of z-rows per work chunk (zero selects one row).
     pub chunk_size: usize,
     /// Boundary handling strategy
     pub boundary_strategy: BoundaryStrategy,
@@ -66,7 +67,7 @@ impl GradientOperatorBuilder {
         self
     }
 
-    /// Set chunk size
+    /// Set the number of z-rows per work chunk.
     #[must_use]
     pub fn with_chunk_size(mut self, chunk_size: usize) -> Self {
         self.chunk_size = chunk_size;
@@ -99,7 +100,7 @@ pub struct GradientOperator {
     parallel: bool,
     /// Use caching
     caching: bool,
-    /// Chunk size for parallel processing
+    /// Number of z-rows per work chunk (zero selects one row).
     chunk_size: usize,
     /// Boundary handling strategy
     boundary_strategy: BoundaryStrategy,
@@ -120,15 +121,47 @@ impl GradientOperator {
     where
         T: FloatElement + Clone + Send + Sync + Default,
     {
-        let _chunk_size = self.chunk_size.max(1);
-        if self.parallel {
-            if self.caching && cache.is_some() {
-                gradient_optimized(field, grid, order, cache)
-            } else {
-                gradient_with_strategy(field, grid, order, self.boundary_strategy)
+        compute_gradient(
+            field,
+            grid,
+            order,
+            cache.filter(|_| self.caching),
+            Some(self.boundary_strategy),
+            self.parallel.then_some(self.chunk_size),
+        )
+    }
+    /// Write x, y and z derivatives directly into caller-owned row-major buffers.
+    /// Each buffer must have one element per grid node, with z varying fastest.
+    ///
+    /// # Errors
+    /// Field and output size mismatches are reported before any output is changed.
+    pub fn compute_into<T: FloatElement>(
+        &self,
+        field: &ArrayView3<T>,
+        grid: &Grid,
+        order: FdAccuracyOrder,
+        cache: Option<&GradientCache<T>>,
+        outputs: [&mut [T]; 3],
+    ) -> KwaversResult<()> {
+        validate_field_shape(field, grid)?;
+        let n = field.size();
+        for (axis, output) in ["x", "y", "z"].into_iter().zip(&outputs) {
+            if output.len() != n {
+                return Err(KwaversError::Grid(GridError::DimensionMismatch {
+                    expected: format!("{n} elements for gradient {axis}"),
+                    actual: output.len().to_string(),
+                }));
             }
-        } else {
-            gradient_with_strategy(field, grid, order, self.boundary_strategy)
         }
+        fill_gradient(
+            field,
+            grid,
+            order,
+            cache.filter(|_| self.caching),
+            Some(self.boundary_strategy),
+            self.parallel.then_some(self.chunk_size),
+            outputs,
+        );
+        Ok(())
     }
 }

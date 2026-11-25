@@ -695,3 +695,27 @@ fn spectral_laplacians_after_setup_do_not_allocate() {
         "the window must cover steps that advance the field"
     );
 }
+
+/// Measure bootstrap separately from steady state so a lazy history allocation
+/// on the first step cannot hide behind a warm-up.
+#[test]
+fn westervelt_pressure_history_needs_no_step_allocations() {
+    use kwavers_solver::forward::nonlinear::westervelt::WesterveltFdtd;
+    let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
+    let medium = HomogeneousMedium::water(&grid);
+    let mut solver = WesterveltFdtd::new(Default::default(), &grid, &medium);
+    let mut initial = Array3::zeros([8, 8, 8]);
+    initial[[4, 4, 4]] = 1.0e5;
+    solver.set_pressure_field(initial.view());
+    for step in 0..5 {
+        let (result, delta) =
+            measure(|| solver.update(&medium, &grid, &[], f64::from(step) * 1e-7, 1e-7));
+        result.unwrap();
+        assert_eq!(
+            (delta.allocations, delta.reallocations),
+            (0, 0),
+            "step {step}"
+        );
+    }
+    assert_ne!(solver.pressure(), &initial);
+}

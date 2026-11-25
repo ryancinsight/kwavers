@@ -1,3 +1,15 @@
+## Steering magnitude and uniform-array replicas (2026-11-22)
+
+Closed two analytical steering gaps for Physics 5.2.1. A signed circular
+piston response could disappear from the secondary-lobe search or reduce
+the command denominator to its numerical floor. The uniform finite-array
+formula could also divide near-zero sine values at a spatial replica and
+report a magnitude above one. The regression uses a single circular piston
+and compares centered arrays of odd and even size against coherent summation
+at exact and adjacent floating-point directions. Both tests fail on
+`2e2ef3028` and pass with the correction. See the
+[Physics 5.2.1 checklist](backlog/kw-phys-steering-magnitudes.md).
+
 ## Capability surveys by keyword produce false positives on name collisions
 
 Recorded 2026-08-12 from the Fullwave 2.5 parity comparison.
@@ -4385,3 +4397,7 @@ The completed [KW-PHYS-005](docs/verification/kw-phys-005.md) record includes th
 [release checklist](crates/kwavers-solver/src/forward/bubble_dynamics/gas_transfer/checklist.md#520-registry-verification)
 records the ordered registry publish and fresh consumer. A measured exposure
 and bubble history are needed for the next physical validation increment.
+
+## Driver 0.5.1 external qualification
+
+[patch] Six public contract regressions reproduce on published 0.5.0. The [external qualification record](docs/verification/driver-0.5.md) gives the repair matrix and remaining stable gates.

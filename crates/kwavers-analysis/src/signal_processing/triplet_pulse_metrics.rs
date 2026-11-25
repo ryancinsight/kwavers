@@ -80,8 +80,8 @@ use leto::{Array1, Array2, ArrayView2};
 /// steps (audit spec step 2 — the only grid comparable to Kuji
 /// Figs. 12–14).
 pub const KUJI_FC_GRID_HZ: [f64; 15] = [
-    2.3e6, 2.4e6, 2.5e6, 2.6e6, 2.7e6, 2.8e6, 2.9e6, 3.0e6, 3.1e6, 3.2e6, 3.3e6, 3.4e6, 3.5e6, 3.6e6,
-    3.7e6,
+    2.3e6, 2.4e6, 2.5e6, 2.6e6, 2.7e6, 2.8e6, 2.9e6, 3.0e6, 3.1e6, 3.2e6, 3.3e6, 3.4e6, 3.5e6,
+    3.6e6, 3.7e6,
 ];
 
 /// Kuji probe (UST-52105) receive band [Hz] (paper §2.5). Declared
@@ -697,7 +697,10 @@ mod tests {
     #[test]
     fn hp_response_matches_kuji_shape() {
         let fc = 2.5e6;
-        assert_eq!(kuji_hp_response(fc, fc, KujiFilterShape::KujiRaisedCosine), 1.0);
+        assert_eq!(
+            kuji_hp_response(fc, fc, KujiFilterShape::KujiRaisedCosine),
+            1.0
+        );
         assert_eq!(
             kuji_hp_response(0.85 * fc, fc, KujiFilterShape::KujiRaisedCosine),
             1e-3
@@ -709,7 +712,10 @@ mod tests {
         // Transition midpoint u = 0.5: 1e-3 + (1 - 1e-3) * 0.5.
         let mid = kuji_hp_response(0.925 * fc, fc, KujiFilterShape::KujiRaisedCosine);
         assert!((mid - 0.5005).abs() < 1e-12, "mid {mid}");
-        assert_eq!(kuji_hp_response(0.9 * fc, fc, KujiFilterShape::BrickWall), 0.0);
+        assert_eq!(
+            kuji_hp_response(0.9 * fc, fc, KujiFilterShape::BrickWall),
+            0.0
+        );
         assert_eq!(KUJI_FC_GRID_HZ.len(), 15);
         assert_eq!(KUJI_FC_GRID_HZ[0], 2.3e6);
         assert_eq!(KUJI_FC_GRID_HZ[14], 3.7e6);
@@ -725,15 +731,15 @@ mod tests {
         let low: Vec<f64> = (0..n)
             .map(|i| (2.0 * std::f64::consts::PI * 2.0e6 * i as f64 * dt).sin())
             .collect();
-        let out = kuji_filter_trace(&low, dt, 2.5e6, KujiFilterShape::KujiRaisedCosine, false)
-            .unwrap();
+        let out =
+            kuji_filter_trace(&low, dt, 2.5e6, KujiFilterShape::KujiRaisedCosine, false).unwrap();
         let amp = out.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
         assert!(amp < 2e-3, "2 MHz amplitude after HP: {amp}");
         let high: Vec<f64> = (0..n)
             .map(|i| (2.0 * std::f64::consts::PI * 3.0e6 * i as f64 * dt).sin())
             .collect();
-        let out = kuji_filter_trace(&high, dt, 2.5e6, KujiFilterShape::KujiRaisedCosine, false)
-            .unwrap();
+        let out =
+            kuji_filter_trace(&high, dt, 2.5e6, KujiFilterShape::KujiRaisedCosine, false).unwrap();
         let amp = out.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
         assert!((amp - 1.0).abs() < 0.02, "3 MHz amplitude after HP: {amp}");
     }
@@ -779,8 +785,9 @@ mod tests {
         let b1 = Array2::from_elem([2, 2], 2.0);
         let a3 = Array2::from_elem([2, 2], 0.25);
         let a1 = Array2::from_elem([2, 2], 0.5);
-        let r = kuji_contrast_from_images(b1.view(), b3.view(), a1.view(), a3.view(), &xs, &ys, &roi)
-            .unwrap();
+        let r =
+            kuji_contrast_from_images(b1.view(), b3.view(), a1.view(), a3.view(), &xs, &ys, &roi)
+                .unwrap();
         assert_eq!(r.red_tissue, 4.0);
         assert_eq!(r.red_cavitation, 2.0);
         assert!((r.contrast_db - 20.0 * 2.0_f64.log10()).abs() < 1e-12);
@@ -788,10 +795,7 @@ mod tests {
 
     #[test]
     fn ensemble_averages_reductions_before_contrast() {
-        let results = [
-            KujiReductions::new(4.0, 2.0),
-            KujiReductions::new(2.0, 2.0),
-        ];
+        let results = [KujiReductions::new(4.0, 2.0), KujiReductions::new(2.0, 2.0)];
         let ens = kuji_ensemble(&results).unwrap();
         assert_eq!(ens.mean_red_tissue, 3.0);
         assert_eq!(ens.mean_red_cavitation, 2.0);
@@ -839,7 +843,10 @@ mod tests {
             IwasakiBackgroundAveraging::Linear,
         )
         .unwrap();
-        assert!(c2 > c, "spatiotemporal max must raise contrast: {c2} vs {c}");
+        assert!(
+            c2 > c,
+            "spatiotemporal max must raise contrast: {c2} vs {c}"
+        );
     }
 
     #[test]
