@@ -1,6 +1,6 @@
 # Milestone ladder ([ADR 138](../docs/adr/138-release-scope-4-0.md))
 <a id="M-solvers-core"></a> **M-solvers-core** (3.1.0) needs: (none) — solver and GPU PSTD core on admitted provider floors.
-- exit: pass solver tests (`cargo test -p kwavers-solver --locked --all-features` passes).
+- exit: pass solver tests (`cargo test -p kwavers-solver --locked --all-features` passes). [Spectral Westervelt allocation and timing results](../crates/kwavers-solver/README.md#spectral-westervelt-pressure-update).
 - exit: pass GPU host tests (`cargo test -p kwavers-gpu --locked --all-features` passes).
 - standing: no open correctness item.
 <a id="M-imaging-capability"></a> **M-imaging-capability** (3.2.0) needs: M-solvers-core — aperture, imaging, and medium capability.

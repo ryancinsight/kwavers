@@ -719,3 +719,67 @@ fn westervelt_pressure_history_needs_no_step_allocations() {
     }
     assert_ne!(solver.pressure(), &initial);
 }
+
+/// Check a nonzero oblique Fourier mode through the public wave update. For a
+/// lossless linear medium the leapfrog amplitude obeys a scalar recurrence.
+#[test]
+fn spectral_westervelt_warm_steps_reuse_storage_and_propagate_a_mode() {
+    use kwavers_physics::traits::AcousticWaveModel;
+    use kwavers_solver::forward::nonlinear::westervelt_spectral::WesterveltWave;
+    use kwavers_source::NullSource;
+    use leto::Array4;
+    use std::f64::consts::TAU;
+
+    for [nx, ny, nz] in [[8, 6, 10], [9, 6, 7]] {
+        let (dx, dy, dz) = (1.0e-3, 1.5e-3, 2.0e-3);
+        let grid = Grid::new(nx, ny, nz, dx, dy, dz).unwrap();
+        let c = 1500.0;
+        let dt = 1.0e-7;
+        let medium = HomogeneousMedium::from_minimal(1000.0, c, &grid);
+        let source = NullSource::new();
+        let mut wave = WesterveltWave::new(&grid);
+        wave.set_nonlinearity_scaling(0.0);
+        wave.set_damping_scaling(0.0);
+        let mode = Array3::from_shape_fn([nx, ny, nz], |[i, j, k]| {
+            (TAU * (i as f64 / nx as f64 + j as f64 / ny as f64 + k as f64 / nz as f64)).cos()
+        });
+        let k_squared = [nx as f64 * dx, ny as f64 * dy, nz as f64 * dz]
+            .iter()
+            .map(|length| (TAU / length).powi(2))
+            .sum::<f64>();
+        let mut fields = Array4::zeros([1, nx, ny, nz]);
+        fields.index_axis_mut(0, 0).unwrap().assign(&mode);
+        let previous = Array3::zeros([nx, ny, nz]);
+        let (mut last, mut current) = (1.0, 1.0);
+        for step in 0..5 {
+            let (result, delta) = measure(|| {
+                wave.update_wave(
+                    &mut fields,
+                    &previous,
+                    &source,
+                    &grid,
+                    &medium,
+                    dt,
+                    f64::from(step) * dt,
+                )
+            });
+            result.unwrap();
+            if step > 0 {
+                assert_eq!(
+                    (delta.allocations, delta.reallocations),
+                    (0, 0),
+                    "shape {nx}x{ny}x{nz}, step {step}, {delta:?}"
+                );
+            }
+            let next = (2.0 - (c * dt).powi(2) * k_squared) * current - last;
+            let bound = 32.0 * f64::EPSILON * (nx * ny * nz) as f64;
+            for (&value, &initial) in fields.iter().zip(mode.iter()) {
+                assert!(
+                    (value - next * initial).abs() <= bound,
+                    "shape {nx}x{ny}x{nz}, step {step}"
+                );
+            }
+            (last, current) = (current, next);
+        }
+    }
+}

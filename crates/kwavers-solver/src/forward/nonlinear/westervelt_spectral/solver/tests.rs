@@ -40,69 +40,6 @@ fn pressure_buffer_permutation_returns_disjoint_step_roles() {
     }
 }
 
-/// **Theorem (∇²[const] = 0 for FD Laplacian)**:
-///
-/// The 2nd-order centered stencil:
-/// ```text
-/// ∂²f/∂x² ≈ (f[i+1] - 2f`i` + f[i-1]) / Δx²
-/// ```
-/// maps a constant field to zero exactly (no truncation error).
-#[test]
-fn fd_laplacian_of_constant_is_exactly_zero() {
-    let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let field = leto::Array3::from_elem([8, 8, 8], 42.0_f64);
-    let lap = compute_laplacian_fd(&field, &grid);
-    // Interior points must be exactly 0.0; boundary stencil is not computed (left 0)
-    for i in 1..7usize {
-        for j in 1..7usize {
-            for k in 1..7usize {
-                assert_eq!(
-                    lap[[i, j, k]],
-                    0.0,
-                    "FD Laplacian of constant must be exactly 0 at interior [{i},{j},{k}]"
-                );
-            }
-        }
-    }
-}
-
-/// **Theorem (FD Laplacian of quadratic = analytical)**:
-///
-/// For `f(x,y,z) = x²` (discrete: `f[i,j,k] = (i·Δx)²`),
-/// the 2nd-order FD stencil gives:
-/// ```text
-/// ∂²f/∂x² = ((i+1)Δx)² - 2(iΔx)² + ((i-1)Δx)² / Δx² = 2
-/// ```
-/// exactly, with no Δx² truncation error (the polynomial is of degree 2,
-/// within the stencil's null space). ∂²f/∂y² = ∂²f/∂z² = 0, so ∇²f = 2.
-#[test]
-fn fd_laplacian_of_x_squared_equals_two_interior() {
-    let n = 8usize;
-    let dx = 1.0e-3_f64;
-    let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
-    let mut field = leto::Array3::<f64>::zeros((n, n, n));
-    for i in 0..n {
-        for j in 0..n {
-            for k in 0..n {
-                field[[i, j, k]] = (i as f64 * dx).powi(2);
-            }
-        }
-    }
-    let lap = compute_laplacian_fd(&field, &grid);
-    // Interior: ∇²(x²) = 2 exactly (FD stencil is exact for degree-2 polynomials)
-    for i in 1..n - 1 {
-        for j in 1..n - 1 {
-            for k in 1..n - 1 {
-                assert!(
-                    (lap[[i, j, k]] - 2.0).abs() < 1e-10,
-                    "FD Laplacian of x² at [{i},{j},{k}]: got {} expected 2.0",
-                    lap[[i, j, k]]
-                );
-            }
-        }
-    }
-}
-
 /// **Theorem (WesterveltWave CFL stability criterion)**:
 ///
 /// `check_stability` implements:
@@ -368,7 +305,8 @@ fn lossy_westervelt_absorption_rate_matches_stokes_end_to_end() {
     let k_fd2 = (2.0 - 2.0 * (k0 * dx).cos()) / (dx * dx);
     let gamma_analytic = delta * k_fd2 / 2.0;
 
-    let (k_squared, _, _, _) = super::super::spectral::initialize_kspace_grids(&grid);
+    let mut operator = PeriodicLaplacian::new(&grid);
+    let mut lap = grid.array_zeros();
     let mut p = Array3::<f64>::zeros((nx, ny, nz));
     for i in 0..nx {
         let v = (k0 * i as f64 * dx).cos();
@@ -389,7 +327,7 @@ fn lossy_westervelt_absorption_rate_matches_stokes_end_to_end() {
     let mut max_late = 0.0_f64;
     let dt2 = dt * dt;
     for step in 0..n_steps {
-        let lap = super::super::spectral::compute_laplacian_spectral(&p, &k_squared);
+        operator.compute_laplacian_workspace(&p, &mut lap);
         super::super::nonlinear::compute_viscoelastic_term_into(
             &mut damp, &p, &p_prev, &medium, &grid, dt,
         );

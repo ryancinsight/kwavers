@@ -5,7 +5,18 @@
 //! from incorrect field indexing.
 
 pub use crate::UnifiedFieldType;
-use leto::{Array4, ArrayView3, ArrayViewMut3};
+use leto::{Array4, ArrayView3, ArrayViewMut3, SliceArg};
+
+/// Fix the field axis and retain the three spatial axes, including their strides.
+fn field_slice(field: UnifiedFieldType) -> [SliceArg; 4] {
+    let index = isize::try_from(field.index()).expect("field discriminants fit isize");
+    [
+        SliceArg::Index(index),
+        SliceArg::All,
+        SliceArg::All,
+        SliceArg::All,
+    ]
+}
 
 /// Type-safe field accessor to prevent index confusion
 #[derive(Debug)]
@@ -30,7 +41,7 @@ impl<'a> FieldAccessor<'a> {
     #[must_use]
     pub fn get(&self, field_type: UnifiedFieldType) -> ArrayView3<'a, f64> {
         self.fields
-            .index_axis::<3>(0, field_type.index())
+            .slice_with(&field_slice(field_type))
             .expect("field index is always valid for a correctly shaped fields array")
     }
 
@@ -75,7 +86,7 @@ impl<'a> FieldAccessorMut<'a> {
     /// every [`UnifiedFieldType`] slot.
     pub fn get_mut(&mut self, field_type: UnifiedFieldType) -> ArrayViewMut3<'_, f64> {
         self.fields
-            .index_axis_mut::<3>(0, field_type.index())
+            .slice_with_mut(&field_slice(field_type))
             .expect("field index is always valid for a correctly shaped fields array")
     }
 
@@ -100,6 +111,32 @@ impl<'a> FieldAccessorMut<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Field channels may be interleaved at each voxel in an owned array.
+    #[test]
+    fn accessors_select_the_same_channel_on_interleaved_storage() {
+        use leto::{Layout, VecStorage};
+        let count = UnifiedFieldType::COUNT;
+        let channels = isize::try_from(count).unwrap();
+        let layout = Layout::try_new(
+            [count, 2, 1, 3],
+            [1, 3 * channels, 3 * channels, channels],
+            0,
+        )
+        .unwrap();
+        let mut fields = Array4::new(layout, VecStorage::fill(count * 6, 0.0)).unwrap();
+        for (n, field) in UnifiedFieldType::all().iter().copied().enumerate() {
+            let value = f64::from(u16::try_from(n + 1).unwrap());
+            FieldAccessorMut::new(&mut fields).get_mut(field)[[1, 0, 2]] = value;
+            assert_eq!(fields[[field.index(), 1, 0, 2]], value);
+        }
+        let accessor = FieldAccessor::new(&fields);
+        for (n, field) in UnifiedFieldType::all().iter().copied().enumerate() {
+            let view = accessor.get(field);
+            assert_eq!(view[[1, 0, 2]], f64::from(u16::try_from(n + 1).unwrap()));
+            assert_eq!(view[[0, 0, 2]], 0.0);
+        }
+    }
 
     #[test]
     fn test_field_indices_are_unique() {
