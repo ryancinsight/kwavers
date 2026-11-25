@@ -1,5 +1,5 @@
 use kwavers_core::error::KwaversResult;
-use kwavers_field::mapping::UnifiedFieldType;
+use kwavers_field::mapping::FieldAccessorMut;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::traits::AcousticWaveModel;
@@ -9,8 +9,7 @@ use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::time::Instant;
 
 use super::super::nonlinear::{compute_nonlinear_term_into, compute_viscoelastic_term_into};
-use super::super::spectral::{compute_laplacian_spectral, compute_laplacian_spectral_into};
-use super::{compute_laplacian_fd, WesterveltWave};
+use super::WesterveltWave;
 
 /// Advance the spectral Westervelt model with borrowed pressure history.
 ///
@@ -39,24 +38,17 @@ impl AcousticWaveModel for WesterveltWave {
             return Ok(());
         }
 
-        // Seed the leapfrog history on the first step: previous = current = p(t=0)
-        // (zero initial velocity, the standard IVP start). Without this the
-        // previous buffer is zero on step 0, injecting a spurious velocity kick.
+        let mut accessor = FieldAccessorMut::new(fields);
+        let mut pressure_field = accessor.pressure_mut();
+        self.pressure_buffers[self.buffer_indices[1]].assign(&pressure_field.as_view());
+        // Zero initial velocity requires both history levels to start at p(t=0).
         if self.current_step == 0 {
-            let initial_pressure = fields
-                .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
-                .expect("invariant: pressure field index within field stack");
-            self.initialize_buffers(initial_pressure);
+            self.pressure_buffers[self.buffer_indices[2]].assign(&pressure_field.as_view());
         }
 
         if !Self::check_stability(dt, grid, medium) {
             log::debug!("WesterveltWave: Potential instability at t={}", t);
         }
-
-        let pressure_field = fields
-            .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
-            .expect("invariant: pressure field index within field stack");
-        self.pressure_buffers[self.buffer_indices[1]].assign(&pressure_field);
 
         let (next_idx, curr_idx, prev_idx) = (
             self.buffer_indices[0],
@@ -79,24 +71,8 @@ impl AcousticWaveModel for WesterveltWave {
 
         // Compute Laplacian via spectral method with pre-allocated scratch buffers.
         let start = Instant::now();
-        let has_spectral_scratch = self.k_squared.is_some()
-            && self.fft_scratch.is_some()
-            && self.laplacian_scratch.is_some();
-        if has_spectral_scratch {
-            let k_sq = self.k_squared.as_ref().unwrap();
-            let fft_s = self.fft_scratch.as_mut().unwrap();
-            let lap_s = self.laplacian_scratch.as_mut().unwrap();
-            compute_laplacian_spectral_into(pressure_current, k_sq, fft_s, lap_s);
-        }
-        let laplacian_owned: Option<Array3<f64>> = if !has_spectral_scratch {
-            if let Some(k_sq) = &self.k_squared {
-                Some(compute_laplacian_spectral(pressure_current, k_sq))
-            } else {
-                Some(compute_laplacian_fd(pressure_current, grid))
-            }
-        } else {
-            None
-        };
+        self.laplacian
+            .compute_laplacian_workspace(pressure_current, &mut self.laplacian_scratch);
         {
             let mut metrics = self.metrics.lock().unwrap();
             metrics.record_kspace(start.elapsed());
@@ -155,19 +131,10 @@ impl AcousticWaveModel for WesterveltWave {
         // Leapfrog update via Moirai parallel iteration.
         // Disjoint field borrows: laplacian_scratch vs pressure_buffers[next_idx].
         let start = Instant::now();
-        let laplacian_slice: &[f64] = if has_spectral_scratch {
-            self.laplacian_scratch
-                .as_ref()
-                .unwrap()
-                .as_slice()
-                .expect("laplacian_scratch must be contiguous")
-        } else {
-            laplacian_owned
-                .as_ref()
-                .unwrap()
-                .as_slice()
-                .expect("laplacian_owned must be contiguous")
-        };
+        let laplacian_slice = self
+            .laplacian_scratch
+            .as_slice()
+            .expect("solver allocates a contiguous Laplacian");
         let (pressure_next, pressure_current, pressure_previous_buffer) =
             WesterveltWave::pressure_buffers_for_step(
                 &mut self.pressure_buffers,
@@ -213,10 +180,7 @@ impl AcousticWaveModel for WesterveltWave {
             *p_next = 2.0f64.mul_add(p_curr, -p_prev) + update;
         });
 
-        fields
-            .index_axis_mut::<3>(0, UnifiedFieldType::Pressure.index())
-            .expect("invariant: pressure field index within field stack")
-            .assign(pressure_next);
+        pressure_field.assign(pressure_next);
         {
             let mut metrics = self.metrics.lock().unwrap();
             metrics.record_combination(start.elapsed());

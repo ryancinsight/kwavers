@@ -21,17 +21,17 @@
 //! ```text
 //!   ∇²p = IFFT(−|k|² · FFT(p))
 //! ```
-//! where `|k|² = kx² + ky² + kz²` is the squared wavenumber magnitude stored
-//! in `k_squared`. This gives spectral accuracy (exponential convergence) for all
-//! smooth solutions, outperforming 2nd-order FD which converges as O(Δx²).
+//! The operator stores the three wavenumber axes and evaluates
+//! `|k|² = kx² + ky² + kz²` on the Hermitian half spectrum. Each resolved
+//! Fourier mode has Laplacian eigenvalue `−|k|²`.
 //!
 //! ## Time-Stepping (Leapfrog)
 //!
 //! A 3-level leapfrog scheme is used for the second-order time derivative:
 //! ```text
 //!   p^{n+1} = 2p^n − p^{n−1} + (c₀Δt)² · ∇²p^n
-//!           + (δΔt/c₀⁴) · (p^n − p^{n−1}) / Δt      [thermoviscous]
-//!           + (βΔt²/ρ₀c₀⁴) · ∂²(p²)/∂t²              [nonlinear]
+//!           + Δt² δ ∇²_FD[(p^n − p^{n−1})/Δt]        [thermoviscous]
+//!           + (βΔt²/ρ₀c₀²) · ∂²(p²)/∂t²              [nonlinear]
 //! ```
 //! Stability requires the acoustic CFL condition: `c₀ · Δt · |k|_max ≤ 2`.
 //!
@@ -42,16 +42,14 @@
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker, ViolationSeverity,
 };
+use crate::forward::nonlinear::spectral::PeriodicLaplacian;
 use kwavers_grid::Grid;
-use kwavers_math::fft::Complex64;
 use kwavers_medium::Medium;
-use leto::Array3 as LetoArray3;
-use leto::{Array3, ArrayView3};
+use leto::Array3;
 use log::warn;
 use std::sync::{Arc, Mutex};
 
 use super::metrics::WesterveltStepMetrics;
-use super::spectral::initialize_kspace_grids;
 
 mod conservation;
 mod wave_model;
@@ -66,27 +64,25 @@ pub(super) struct MediumProperties {
 /// Westervelt equation solver with proper second-order time derivatives
 #[derive(Debug)]
 pub struct WesterveltWave {
-    pub(super) k_squared: Option<Array3<f64>>,
+    laplacian: PeriodicLaplacian,
     pub(super) nonlinearity_scaling: f64,
-    /// Scales the viscoelastic damping term `c²δ∇²(∂p/∂t)`. Default 1.0; set to
+    /// Scales the viscoelastic damping term `δ∇²(∂p/∂t)`. Default 1.0; set to
     /// 0.0 for a lossless linear run. NOTE: the explicit FD discretization of this
     /// term is only conditionally stable (its high-wavenumber amplification grows
-    /// as `dt·c²δ·k²`); lossy runs require a damping-CFL-safe `dt` or a k-space
+    /// as `dt·δ·k²`); lossy runs require a damping-CFL-safe `dt` or a k-space
     /// treatment. See ADR/spawn task on Westervelt absorption stability.
     pub(super) damping_scaling: f64,
     /// Pressure history using buffer rotation for zero-allocation updates.
     pub(super) pressure_buffers: [Array3<f64>; 3],
     pub(super) buffer_indices: [usize; 3], // [next, current, previous]
-    /// Pre-allocated complex scratch for spectral Laplacian FFT.
-    pub(super) fft_scratch: Option<LetoArray3<Complex64>>,
-    /// Pre-allocated real scratch for spectral Laplacian IFFT.
-    pub(super) laplacian_scratch: Option<Array3<f64>>,
+    /// Real Laplacian read by the leapfrog update.
+    laplacian_scratch: Array3<f64>,
     /// Pre-allocated nonlinear-term workspace.
     pub(super) nonlinear_scratch: Array3<f64>,
     /// Pre-allocated viscoelastic damping workspace.
     pub(super) damping_scratch: Array3<f64>,
     /// Pre-allocated source-mask workspace.
-    pub(super) source_mask_scratch: LetoArray3<f64>,
+    pub(super) source_mask_scratch: Array3<f64>,
     pub(super) metrics: Arc<Mutex<WesterveltStepMetrics>>,
     pub(super) conservation_tracker: Option<ConservationTracker>,
     pub(super) current_step: usize,
@@ -98,17 +94,10 @@ pub struct WesterveltWave {
 impl WesterveltWave {
     /// Create a new Westervelt solver.
     pub fn new(grid: &Grid) -> Self {
-        let (k_squared, _kx, _ky, _kz) = initialize_kspace_grids(grid);
         let shape = (grid.nx, grid.ny, grid.nz);
 
-        let fft_scratch = Some(LetoArray3::<Complex64>::from_elem(
-            [grid.nx, grid.ny, grid.nz],
-            Complex64::default(),
-        ));
-        let laplacian_scratch = Some(Array3::<f64>::zeros(shape));
-
         Self {
-            k_squared: Some(k_squared),
+            laplacian: PeriodicLaplacian::new(grid),
             nonlinearity_scaling: 1.0,
             damping_scaling: 1.0,
             pressure_buffers: [
@@ -117,8 +106,7 @@ impl WesterveltWave {
                 Array3::zeros(shape),
             ],
             buffer_indices: [0, 1, 2],
-            fft_scratch,
-            laplacian_scratch,
+            laplacian_scratch: Array3::zeros(shape),
             nonlinear_scratch: Array3::zeros(shape),
             damping_scratch: Array3::zeros(shape),
             source_mask_scratch: grid.array_zeros(),
@@ -185,11 +173,6 @@ impl WesterveltWave {
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
         let cfl = max_c * dt / min_dx;
         cfl < 0.5
-    }
-
-    pub(super) fn initialize_buffers(&mut self, initial_pressure: ArrayView3<'_, f64>) {
-        self.pressure_buffers[self.buffer_indices[1]].assign(&initial_pressure);
-        self.pressure_buffers[self.buffer_indices[2]].assign(&initial_pressure);
     }
 
     /// Return disjoint pressure-history buffers for one leapfrog update.
@@ -304,38 +287,6 @@ impl WesterveltWave {
             }
         }
     }
-}
-
-/// Compute Laplacian using second-order finite differences (fallback).
-pub(super) fn compute_laplacian_fd(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
-    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-    let mut laplacian = Array3::zeros((nx, ny, nz));
-
-    let dx2_inv = 1.0 / (grid.dx * grid.dx);
-    let dy2_inv = 1.0 / (grid.dy * grid.dy);
-    let dz2_inv = 1.0 / (grid.dz * grid.dz);
-
-    for k in 1..nz - 1 {
-        for j in 1..ny - 1 {
-            for i in 1..nx - 1 {
-                laplacian[[i, j, k]] = (2.0f64.mul_add(-field[[i, j, k]], field[[i, j, k + 1]])
-                    + field[[i, j, k - 1]])
-                .mul_add(
-                    dz2_inv,
-                    (2.0f64.mul_add(-field[[i, j, k]], field[[i + 1, j, k]])
-                        + field[[i - 1, j, k]])
-                    .mul_add(
-                        dx2_inv,
-                        (2.0f64.mul_add(-field[[i, j, k]], field[[i, j + 1, k]])
-                            + field[[i, j - 1, k]])
-                            * dy2_inv,
-                    ),
-                );
-            }
-        }
-    }
-
-    laplacian
 }
 
 #[cfg(test)]
