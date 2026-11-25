@@ -20,6 +20,7 @@
 
 pub mod cache;
 pub mod functions;
+mod kernel;
 pub mod operator;
 
 pub use cache::GradientCache;

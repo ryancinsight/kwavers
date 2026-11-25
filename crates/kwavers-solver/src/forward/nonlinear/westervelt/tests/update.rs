@@ -7,7 +7,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 
 #[test]
-fn westervelt_update_reuses_pressure_and_nonlinear_workspaces() {
+fn westervelt_update_reuses_pressure_and_laplacian_workspaces() {
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
     let medium =
         HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
@@ -20,26 +20,17 @@ fn westervelt_update_reuses_pressure_and_nonlinear_workspaces() {
     let mut solver = WesterveltFdtd::new(config, &grid, &medium);
     solver.pressure[[4, 4, 4]] = 1.0e5;
 
-    let mut pressure_buffers_before = [
-        solver.pressure.as_ptr() as usize,
-        solver.pressure_prev.as_ptr() as usize,
-        solver.pressure_next.as_ptr() as usize,
-    ];
-    pressure_buffers_before.sort_unstable();
-    let nonlinear_before = solver.nonlinear_term.as_ptr();
-
+    let current = solver.pressure.as_ptr();
+    let previous = solver.pressure_prev.as_ptr();
+    let output = solver.pressure_next.as_ptr();
+    let laplacian = solver.laplacian.as_ptr();
     let dt = solver.calculate_dt(&medium, &grid).unwrap();
     solver.update(&medium, &grid, &[], 0.0, dt).unwrap();
 
-    let mut pressure_buffers_after = [
-        solver.pressure.as_ptr() as usize,
-        solver.pressure_prev.as_ptr() as usize,
-        solver.pressure_next.as_ptr() as usize,
-    ];
-    pressure_buffers_after.sort_unstable();
-
-    assert_eq!(pressure_buffers_after, pressure_buffers_before);
-    assert_eq!(solver.nonlinear_term.as_ptr(), nonlinear_before);
+    assert_eq!(solver.pressure.as_ptr(), output);
+    assert_eq!(solver.pressure_prev.as_ptr(), current);
+    assert_eq!(solver.pressure_next.as_ptr(), previous);
+    assert_eq!(solver.laplacian.as_ptr(), laplacian);
 }
 
 #[test]
@@ -97,4 +88,39 @@ fn test_conservation_diagnostics_integration() {
 
     solver.disable_conservation_diagnostics();
     assert!(solver.conservation_tracker.is_none());
+}
+
+#[test]
+fn mismatched_grid_leaves_an_active_step_retryable() {
+    use kwavers_core::error::{GridError, KwaversError};
+    let grid = Grid::new(8, 9, 10, 1e-3, 1e-3, 1e-3).unwrap();
+    let transposed = Grid::new(10, 9, 8, grid.dx, grid.dy, grid.dz).unwrap();
+    let medium = HomogeneousMedium::water(&grid);
+    let build = || {
+        let mut solver = WesterveltFdtd::new(Default::default(), &grid, &medium);
+        solver.pressure[[4, 4, 4]] = 1.0e5;
+        solver.update(&medium, &grid, &[], 0.0, 1e-7).unwrap();
+        solver
+    };
+    let mut actual = build();
+    let mut expected = build();
+    let result = actual.update(&medium, &transposed, &[], 1e-7, 1e-7);
+    assert!(matches!(
+        result,
+        Err(KwaversError::Grid(GridError::DimensionMismatch { .. }))
+    ));
+    assert_eq!(actual.current_step, expected.current_step);
+    assert_eq!(actual.current_time, expected.current_time);
+    for _ in 0..2 {
+        assert_eq!(actual.pressure, expected.pressure);
+        assert_eq!(actual.pressure_prev, expected.pressure_prev);
+        assert_eq!(actual.pressure_next, expected.pressure_next);
+        assert_eq!(actual.laplacian, expected.laplacian);
+        actual
+            .update(&medium, &grid, &[], actual.current_time, 1e-7)
+            .unwrap();
+        expected
+            .update(&medium, &grid, &[], expected.current_time, 1e-7)
+            .unwrap();
+    }
 }

@@ -115,7 +115,7 @@ fn build_uniform_arm(delta_m: f64, tau: f64, dt: f64) -> Arm {
 
 /// Time-domain memory-variable viscoacoustic solver (1-D/2-D/3-D, pseudospectral).
 ///
-/// Construct from a [`GeneralizedMaxwellModel`] (the relaxation spectrum) or from
+/// Construct from a [`GeneralizedMaxwellModel`](kwavers_medium::viscoelastic::GeneralizedMaxwellModel) (the relaxation spectrum) or from
 /// raw moduli, then call [`Self::step`] to advance the velocity–pressure state.
 #[derive(Clone)]
 pub struct ViscoacousticMemorySolver {

@@ -11,12 +11,13 @@ pub mod divergence;
 pub mod gradient;
 pub mod gradient_optimized;
 pub mod laplacian;
+mod neighbors;
 mod stencil;
 
 // Re-export main types
 pub use coefficients::{FDCoefficients, FdAccuracyOrder};
-pub use curl::curl;
-pub use divergence::divergence;
+pub use curl::{curl, curl_into};
+pub use divergence::{divergence, divergence_into};
 pub use gradient::gradient;
 pub use gradient_optimized::{GradientCache, GradientOperator, GradientOperatorBuilder};
 pub use laplacian::laplacian;

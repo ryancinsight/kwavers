@@ -82,11 +82,16 @@ name = "elastic_shear_fwi_lesion"
 required-features = ["clinical-imaging"]
 
 [dev-dependencies]
+criterion = "0.4"
 # Rejection assertions shared across the workspace's test modules.
 kwavers-core = { path = "../kwavers-core", features = ["test-util"] }
 mnemosyne = { workspace = true }
 proteus = { workspace = true }
 tracing-subscriber.workspace = true
+
+[[bench]]
+name = "westervelt_step"
+harness = false
 
 [[test]]
 name = "allocation_contracts"
