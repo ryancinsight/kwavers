@@ -2,7 +2,7 @@
 
 ## KW-IMG-053 — Iwasaki replica data requirements (four-phase acquisition; interface-free numerator) [minor] — todo
 
-priority: research; needs: none; scope: triplet-pulse imaging replicas (Iwasaki 2018 acquisitions); milestone: M-imaging-capability
+priority: feature; needs: none; basis: eb91da65678bcd26cba72e67ae42b1b80e732132; scope: triplet-pulse imaging replicas (Iwasaki 2018 acquisitions); milestone: M-imaging-capability
 
 - **Outcome:** future Iwasaki-condition acquisitions (1.74 MHz) save everything the corrected Iwasaki statistic (KW-IMG-049) needs, so criteria I1–I4 of the representation benchmark (KW-IMG-052) are adjudicable as an ensemble rather than blocked or artefact-driven.
 - **Driver:** Build 15 WS-I (`B15_IWASAKI.md`) re-ran the Iwasaki analysis on the saved D5 ensemble and found two data-level blockers. (1) **The 180° phase was never saved for tissue:** the D5 ensemble holds tissue PSTD RF at 0°/120°/240° only, so PI = (0°+180°)/2 cannot be formed — I2 is NOT TESTABLE as an ensemble, and synthesising a bubble-only 180° to pair with a non-existent tissue 180° would fabricate the tissue half of the PI sum. (2) **The prototype's 1P numerator is not the cloud:** the 1P full-image spatiotemporal maximum is captured by the slab-top specular echo (2802 Pa vs the cloud disk's 166 Pa, seed S2) — a phase-invariant interface echo that the phase sums then cancel, which is the identified reason the corrected statistic gives a REVERSED ordering (1P > PI > 3P) on this data. The experiment (sector probe, chicken breast, focus 95 mm) has no such flat interface in its field of view.

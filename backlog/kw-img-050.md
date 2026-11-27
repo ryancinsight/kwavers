@@ -2,7 +2,7 @@
 
 ## KW-IMG-050 — Absolute-magnitude gap in the corrected Kuji metric (simulated reductions ≈ 2.4–2.7 vs the paper's large experimental reductions) [minor] — todo
 
-priority: research; needs: none; scope: triplet-pulse imaging model (medium, cloud, noise floor); milestone: M-imaging-capability
+priority: feature; needs: none; basis: eb91da65678bcd26cba72e67ae42b1b80e732132; scope: triplet-pulse imaging model (medium, cloud, noise floor); milestone: M-imaging-capability
 
 - **Outcome:** the corrected Kuji metric (KW-IMG-047) applied to simulated RF produces tissue/cavitation reductions of the same order as the experiment, so that contrast *shape* claims (including the 0.26 MPa peak question) can be adjudicated on a quantity whose absolute scale is physical.
 - **Driver:** Build 14 B1 ran the corrected metric as an ensemble (n = 5, coherent DAS, declared probe band): the simulated contrast is ≈ 0 dB at every PNP and cutoff because both reductions sit at ≈ 2.4–2.7 linear, while Kuji's experimental reductions are large (contrast at the ~10–40 dB scale). B3's coupled runs, under the prototype's numerical floor, showed the complementary failure (reductions in the thousands, floor-set). Either way the absolute magnitude is not the paper's, and the 0.26 MPa peak question is downstream of this gap: a few-dB peak cannot be confirmed or refuted on a floor-dominated or magnitude-mismatched quantity.

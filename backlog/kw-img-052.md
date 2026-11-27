@@ -2,7 +2,7 @@
 
 ## KW-IMG-052 — Representation benchmark for the triplet-pulse replicas (Kuji K1–K6, Iwasaki I1–I4) [minor] — todo
 
-priority: research; needs: none; scope: triplet-pulse imaging replicas (Kuji 2024, Iwasaki 2018); milestone: M-imaging-capability
+priority: feature; needs: none; scope: triplet-pulse imaging replicas (Kuji 2024, Iwasaki 2018); milestone: M-imaging-capability
 
 - **Outcome:** a standing acceptance test, defined from the papers' own reported numbers, that any future replica configuration must pass before its physics verdicts are cited as more than provisional: *"We can't say our physics approaches are reasonable until we can approximately represent the experiments through simulation"* (Ryan, 2026-11-22).
 - **Driver:** Build 15 (`B15_RESULTS.md` §1) defined the benchmark and scored the current pipeline against it: **0 of 10 criteria pass**. Every prior mechanism verdict in the programme (Stages 0–8, Builds 1–14) is provisional until a configuration passes — within-pipeline results on a base that does not yet approximately represent either experiment. Tolerances are set from the papers' own spread: Kuji five-experiment averages with Fig. 14 error bars of order ±1.5–2 dB (digitisation adds ±0.4–0.7 dB, WS-C); Iwasaki SDs ±1.93 / ±3.53 / ±3.74 dB. All quantities are in the corrected metrics (KW-IMG-047 for Kuji, KW-IMG-049 for Iwasaki).

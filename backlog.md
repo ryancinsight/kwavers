@@ -32,10 +32,10 @@
 <a id="kw-img-051"></a>- [KW-IMG-051](backlog/kw-img-051.md) — Coherent DAS fails on smooth volume-scattering tissue models (medium caveat for the corrected metrics) [minor] — todo
 <a id="kw-img-052"></a>- [KW-IMG-052](backlog/kw-img-052.md) — Representation benchmark for the triplet-pulse replicas (Kuji K1–K6, Iwasaki I1–I4) [minor] — todo
 <a id="kw-img-053"></a>- [KW-IMG-053](backlog/kw-img-053.md) — Iwasaki replica data requirements (four-phase acquisition; interface-free numerator) [minor] — todo
-<a id="kw-img-054"></a>- [KW-IMG-054](backlog/kw-img-054.md) — Transmit-time models (TxModel) for the corrected metrics' DAS [minor] — todo
-<a id="kw-med-abs-001"></a>- [KW-MED-ABS-001](backlog/kw-med-abs-001.md) — Medium absorption storage-units divergence (Rust source vs pykwavers wheel) [minor] — todo
-<a id="kw-img-055"></a>- [KW-IMG-055](backlog/kw-img-055.md) — PNP indexing estimator: replace max|p| (E0) with windowed true PNP (E1) [minor] — todo
-<a id="kw-img-056"></a>- [KW-IMG-056](backlog/kw-img-056.md) — Tissue-model backscatter level is uncalibrated: K1 is bracketed, not adjudicated [major] — todo
+<a id="kw-img-054"></a>- [KW-IMG-054](backlog/kw-img-054.md) — Transmit-time models (TxModel) for the corrected metrics' DAS [minor] — blocked
+<a id="kw-med-abs-001"></a>- [KW-MED-ABS-001](backlog/kw-med-abs-001.md) — Medium absorption storage-units divergence (Rust source vs pykwavers wheel) [minor] — blocked
+<a id="kw-img-055"></a>- [KW-IMG-055](backlog/kw-img-055.md) — PNP indexing estimator: replace max|p| (E0) with windowed true PNP (E1) [minor] — blocked
+<a id="kw-img-056"></a>- [KW-IMG-056](backlog/kw-img-056.md) — Tissue-model backscatter level is uncalibrated: K1 is bracketed, not adjudicated [major] — blocked
 <a id="kw-phys-009"></a>- [KW-PHYS-009](backlog/kw-phys-009.md) — Known duplicates and regime gaps in the bubble-dynamics physics (consolidation backlog) [patch] — todo
 <a id="kw-phys-012"></a>- [KW-PHYS-012](backlog/kw-phys-012.md) — Yoshida count-changing state-change law under interleaved HIFU pulses (open) [patch] — todo
 <a id="kw-integration-test-binaries"></a>- [KW-INTEGRATION-TEST-BINARIES](backlog/kw-integration-test-binaries.md) — kwavers integration tests link one binary per file: 89 targets, 81 on the push gate [patch] [perf] — todo
@@ -72,4 +72,4 @@
 <a id="kw-py-hybrid-refused"></a>- [KW-PY-HYBRID-REFUSED](backlog/kw-py-hybrid-refused.md) — Python callers offer a Hybrid solver that `Simulation.run` refuses [patch] — todo
 <a id="kw-sim-sensor-mask-doc"></a>- [KW-SIM-SENSOR-MASK-DOC](backlog/kw-sim-sensor-mask-doc.md) — The Rustdoc of `SimulationRunRequest::sensor_mask` says no sensors are requested by `None`, which is false beside `transducer_ordered_indices` [patch] — todo
 <a id="kwavers-stable-qualification"></a>- [KWAVERS-STABLE-QUALIFICATION](backlog/kwavers-stable-qualification.md) — kwavers stable-release qualification [patch] — todo
-<a id="kw-athena-damped-lsqr"></a>- [KW-ATHENA-DAMPED-LSQR](backlog/kw-athena-damped-lsqr.md) — Damped LSQR results and tests are unchecked against the athena damping-rotation fix [patch] — todo
+<a id="kw-athena-damped-lsqr"></a>- [KW-ATHENA-DAMPED-LSQR](backlog/kw-athena-damped-lsqr.md) — Damped LSQR results and tests are unchecked against the athena damping-rotation fix [patch] — blocked
