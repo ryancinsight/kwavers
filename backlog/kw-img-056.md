@@ -1,8 +1,12 @@
-## KW-IMG-056 — Tissue-model backscatter level is uncalibrated: K1 is bracketed, not adjudicated [major] — todo
+<a id="kw-img-056"></a>
 
-priority: research; needs: a literature backscatter coefficient for chicken breast at ~2.45 MHz (or a bounded estimate from the papers' own figures); scope: triplet-pulse replica tissue model (KW-IMG-050/052); milestone: M-imaging-capability
+## KW-IMG-056 — Tissue-model backscatter level is uncalibrated: K1 is bracketed, not adjudicated [major] — blocked
+
+priority: feature; needs: none; scope: triplet-pulse replica tissue model (KW-IMG-050/052); milestone: M-imaging-capability
 
 - **Finding (Build 17, `B17_RESULTS.md`):** the Kuji tissue reduction (K1) is controlled by the tissue model's LINEAR echo level. Smooth ±4% speckle: fc-3.0 ROI echo 0.007 Pa (numerical floor; ~1 mm correlation length forward-scatters) → red_tissue 1.3 dB at Γ≈0.21. Discrete scatterers (5/mm², |δZ/Z|=0.25): echo ~141 Pa → 39.1 dB floored at both scored bins. The paper's 31.4/31.5 dB is bracketed by the two media. The triplet-cancellation algebra is exact (linear control cancels to 140 dB, Build 17 S6); Γ alone does not determine the reduction (matched-pair test, B17_SCAN.md); neither absorption bracket endpoint (Lever 2) nor the PNP estimator (Lever 4) closes the gap.
 - **The open quantity is a medium property, not a metric or solver property:** the absolute backscatter level of the tissue model per unit incident pressure. Kuji 2024 reports no absolute echo level and no backscatter coefficient, so the papers' own numbers do not fix it.
 - **Ask:** (1) survey the ultrasound literature for a chicken-breast backscatter coefficient / absolute echo calibration near 2.45 MHz (the attenuation survey pattern of B16_ATT.md); (2) set the discrete-scatterer strength (density × contrast) from that value — a DERIVED calibration against an independent physical quantity, never fitted to Kuji's reductions; (3) re-run the replica tissue side at both scored bins and re-score K1 (then K1–K4) in the replica frame.
 - **Acceptance:** a replica configuration whose scatterer strength is fixed by the literature backscatter value lands K1 within ±3 dB at both 0.12 and 0.26 MPa bins, with the calibration chain (source value → scatterer parameters → measured simulated echo level) documented; or a documented finding that no usable literature value exists, in which case K1 stays bracketed and the bracket is the reported result.
+- **Blocker:** outcome not stated; the acceptance cannot run from tracked files: the replica tissue model and harness it re-runs (`b16/`, `B17_RESULTS.md`, `B17_SCAN.md`) are untracked, and the literature backscatter value the Ask needs is not recorded.
+- **Re-open trigger:** the replica harness `b16/` and the result files `B15_RESULTS.md` to `B17_RESULTS.md` becoming tracked in this repository, or a respecification item for the replica programme landing on the board.
