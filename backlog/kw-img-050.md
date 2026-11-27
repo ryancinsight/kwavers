@@ -1,6 +1,6 @@
 <a id="kw-img-050"></a>
 
-## KW-IMG-050 — Absolute-magnitude gap in the corrected Kuji metric (simulated reductions ≈ 2.4–2.7 vs the paper's large experimental reductions) [minor] — todo
+## KW-IMG-050 — Absolute-magnitude gap in the corrected Kuji metric (simulated reductions ≈ 2.4–2.7 vs the paper's large experimental reductions) [minor] — blocked
 
 priority: feature; needs: none; basis: eb91da65678bcd26cba72e67ae42b1b80e732132; scope: triplet-pulse imaging model (medium, cloud, noise floor); milestone: M-imaging-capability
 
@@ -11,3 +11,5 @@ priority: feature; needs: none; basis: eb91da65678bcd26cba72e67ae42b1b80e732132;
 
 - **Current state (Build 17, 2026-11-23, `B17_RESULTS.md`):** the floor is a declared SNR-parameterised model (`DeclaredNoiseFloor`, default none). Floor-free residuals: the tissue slope is wrong in both geometries (B1 slope −28.8 dB vs the paper's −6.5 dB; the long plane-wave path collapses with the Gol'dberg number Γ); cavitation over-cancels in the short geometry (86 lin vs the paper's 8.4 @0.26 MPa) and sits within +1.0 dB of target in the long one; coupled driving (KW-PHYS-013) explains ≈ 8 % of the gap. The K1 failure is attributed to the tissue model's uncalibrated absolute backscatter level (smooth 1.3 < paper 31.4 < discrete 39.1 dB, floored, 0.26 MPa bin; KW-IMG-056); absorption is excluded at both literature endpoints in the smooth medium. Status stays open.
 - **Next step:** calibrate the tissue backscatter level (KW-IMG-056) and re-score against KW-IMG-052; remaining levers: across-fibre absorption bracket (alpha0 = 2.57), discrete-scatterer tissue at the long geometry, a focal-volume PNP estimator, ensemble seeds for near-target configurations (Build 15 geometry numbers are seed 21 only).
+- **Blocker:** the acceptance cannot run from tracked files: it re-runs the replica pipeline (tissue model, cloud, noise-floor harness), which exists only as the untracked `b16/` harness scored in the untracked `B15_RESULTS.md` to `B17_RESULTS.md`; the tracked metric and `DeclaredNoiseFloor` are only its scoring half.
+- **Re-open trigger:** the replica harness `b16/` and the result files `B15_RESULTS.md` to `B17_RESULTS.md` becoming tracked in this repository, or a respecification item for the replica programme landing on the board.

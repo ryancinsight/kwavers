@@ -28,10 +28,10 @@
 <a id="kw-gpu-teardown"></a>- [KW-GPU-TEARDOWN](backlog/kw-gpu-teardown.md) — Dissolve the remaining internal `kwavers/src` into the layered crates [arch] — todo
 <a id="kw-img-045"></a>- [KW-IMG-045](backlog/kw-img-045.md) — Frame-resolved physical I/Q ensemble [minor] — todo
 <a id="kw-img-046"></a>- [KW-IMG-046](backlog/kw-img-046.md) — Triplet-pulse cavitation-bubble imaging [minor] — todo
-<a id="kw-img-050"></a>- [KW-IMG-050](backlog/kw-img-050.md) — Absolute-magnitude gap in the corrected Kuji metric (simulated reductions ≈ 2.4–2.7 vs the paper's large experimental reductions) [minor] — todo
-<a id="kw-img-051"></a>- [KW-IMG-051](backlog/kw-img-051.md) — Coherent DAS fails on smooth volume-scattering tissue models (medium caveat for the corrected metrics) [minor] — todo
-<a id="kw-img-052"></a>- [KW-IMG-052](backlog/kw-img-052.md) — Representation benchmark for the triplet-pulse replicas (Kuji K1–K6, Iwasaki I1–I4) [minor] — todo
-<a id="kw-img-053"></a>- [KW-IMG-053](backlog/kw-img-053.md) — Iwasaki replica data requirements (four-phase acquisition; interface-free numerator) [minor] — todo
+<a id="kw-img-050"></a>- [KW-IMG-050](backlog/kw-img-050.md) — Absolute-magnitude gap in the corrected Kuji metric (simulated reductions ≈ 2.4–2.7 vs the paper's large experimental reductions) [minor] — blocked
+<a id="kw-img-051"></a>- [KW-IMG-051](backlog/kw-img-051.md) — Coherent DAS fails on smooth volume-scattering tissue models (medium caveat for the corrected metrics) [minor] — blocked
+<a id="kw-img-052"></a>- [KW-IMG-052](backlog/kw-img-052.md) — Representation benchmark for the triplet-pulse replicas (Kuji K1–K6, Iwasaki I1–I4) [minor] — blocked
+<a id="kw-img-053"></a>- [KW-IMG-053](backlog/kw-img-053.md) — Iwasaki replica data requirements (four-phase acquisition; interface-free numerator) [minor] — blocked
 <a id="kw-img-054"></a>- [KW-IMG-054](backlog/kw-img-054.md) — Transmit-time models (TxModel) for the corrected metrics' DAS [minor] — blocked
 <a id="kw-med-abs-001"></a>- [KW-MED-ABS-001](backlog/kw-med-abs-001.md) — Medium absorption storage-units divergence (Rust source vs pykwavers wheel) [minor] — blocked
 <a id="kw-img-055"></a>- [KW-IMG-055](backlog/kw-img-055.md) — PNP indexing estimator: replace max|p| (E0) with windowed true PNP (E1) [minor] — blocked
