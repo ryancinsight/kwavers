@@ -565,14 +565,32 @@ mod tests {
     #[test]
     fn test_checked_influx_regime() {
         let c_inf = 0.9 * C0_BADER_MOL * AVOGADRO;
-        let ok = bader_expansion_influx_checked(46e-6, 0.5e-6, D_BADER, c_inf, 18.3e6, 3);
-        assert!(ok.is_ok());
-        // Below-threshold burst pressure: refused.
-        assert!(bader_expansion_influx_checked(46e-6, 0.5e-6, D_BADER, c_inf, 5.39e6, 3).is_err());
-        // Per-cycle application to a long burst: refused.
-        assert!(
-            bader_expansion_influx_checked(46e-6, 0.5e-6, D_BADER, c_inf, 18.3e6, 44_000).is_err()
-        );
+        // In regime the checked form is the unchecked law, bit for bit.
+        let checked =
+            bader_expansion_influx_checked(46e-6, 0.5e-6, D_BADER, c_inf, 18.3e6, 3).unwrap();
+        let plain = bader_expansion_influx(46e-6, 0.5e-6, D_BADER, c_inf);
+        assert_eq!(checked.to_bits(), plain.to_bits());
+        // Below-threshold burst pressure: refused, naming the pressure.
+        let below = bader_expansion_influx_checked(46e-6, 0.5e-6, D_BADER, c_inf, 5.39e6, 3);
+        assert!(matches!(
+            below,
+            Err(KwaversError::Physics(PhysicsError::InvalidParameter {
+                ref parameter,
+                value,
+                ..
+            })) if parameter == "peak_negative_pressure" && value.to_bits() == 5.39e6_f64.to_bits()
+        ));
+        // Per-cycle application to a long burst: refused, naming the cycles.
+        let long_burst =
+            bader_expansion_influx_checked(46e-6, 0.5e-6, D_BADER, c_inf, 18.3e6, 44_000);
+        assert!(matches!(
+            long_burst,
+            Err(KwaversError::Physics(PhysicsError::InvalidParameter {
+                ref parameter,
+                value,
+                ..
+            })) if parameter == "cycles" && value.to_bits() == 44_000.0_f64.to_bits()
+        ));
     }
 
     #[test]

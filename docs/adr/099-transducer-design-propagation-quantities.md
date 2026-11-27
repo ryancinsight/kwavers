@@ -46,4 +46,5 @@ warning-denied Clippy, formatting, diff, public-raw-signature, and complex
 boundary scans pass. The repository-owned hosted matrix remains the merge
 gate for the final branch head.
 
-Refs: `KWAVERS-AEQ-MET-60` in `gap_audit.md`.
+Refs: Kwavers PR #338, merged as
+`7ec566b694598f11d4ceb7bb8721e70384f40689`.

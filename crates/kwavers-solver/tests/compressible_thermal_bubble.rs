@@ -6,7 +6,8 @@ use kwavers_physics::acoustics::bubble_dynamics::{
     gas_transfer::SphericalGasDiffusion, rayleigh_plesset::PolytropicParameters,
 };
 use kwavers_solver::forward::bubble_dynamics::gas_transfer::{
-    BubbleForcing, DiffusiveBubble, DiffusiveBubbleModels, GasHeatTransfer, RadialMechanics,
+    BubbleForcing, DiffusiveBubble, DiffusiveBubbleError, DiffusiveBubbleModels, GasHeatTransfer,
+    RadialMechanics,
 };
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 use tracing::info_span;
@@ -364,8 +365,16 @@ fn rejected_step_preserves_compressible_thermal_history() {
             )
         });
         info_span!("assert").in_scope(|| {
-            assert!(failed.is_err());
-            assert!(missing_rate.is_err());
+            assert_eq!(
+                failed.err(),
+                Some(DiffusiveBubbleError::InvalidState("wall Mach number"))
+            );
+            assert_eq!(
+                missing_rate.err(),
+                Some(DiffusiveBubbleError::InvalidState(
+                    "Keller–Miksis requires pressure rate"
+                ))
+            );
             assert_eq!(before, after);
             let a = actual.advance_with_forcing(dt, forcing).unwrap();
             let b = control.advance_with_forcing(dt, forcing).unwrap();
