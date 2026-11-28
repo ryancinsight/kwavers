@@ -148,7 +148,7 @@ struct SplitMix64 {
 }
 
 impl SplitMix64 {
-    fn next_u64(&mut self) -> u64 {
+    fn next_word(&mut self) -> u64 {
         self.state = self.state.wrapping_add(0x9E37_79B9_7F4A_7C15);
         let mut z = self.state;
         z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
@@ -158,7 +158,7 @@ impl SplitMix64 {
 
     /// Uniform double in [0, 1).
     fn next_unit(&mut self) -> f64 {
-        (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64
+        (self.next_word() >> 11) as f64 / (1u64 << 53) as f64
     }
 }
 
@@ -185,7 +185,7 @@ pub fn sample_binned_cloud(
     // shuffled order (no spatial size segregation in the source
     // model).
     for i in (1..radii.len()).rev() {
-        let j = (rng.next_u64() % (i as u64 + 1)) as usize;
+        let j = (rng.next_word() % (i as u64 + 1)) as usize;
         radii.swap(i, j);
     }
     radii

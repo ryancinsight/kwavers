@@ -243,7 +243,7 @@ struct NoiseStream {
 }
 
 impl NoiseStream {
-    fn next_u64(&mut self) -> u64 {
+    fn next_word(&mut self) -> u64 {
         self.state = self.state.wrapping_add(0x9E37_79B9_7F4A_7C15);
         let mut z = self.state;
         z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
@@ -253,7 +253,7 @@ impl NoiseStream {
 
     fn next_unit(&mut self) -> f64 {
         // 53-bit uniform on (0, 1].
-        let v = (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64;
+        let v = (self.next_word() >> 11) as f64 / (1u64 << 53) as f64;
         1.0 - v
     }
 
