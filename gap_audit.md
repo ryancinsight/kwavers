@@ -4355,3 +4355,7 @@ and bubble history are needed for the next physical validation increment.
 ## Driver 0.5.1 external qualification
 
 [patch] Six public contract regressions reproduce on published 0.5.0. The [external qualification record](docs/verification/driver-0.5.md) gives the repair matrix and remaining stable gates.
+
+## KW-PHYS-009 item 6: the fitted influx cutoff is not a library law
+
+The cycle-number cutoff that reconciles the Kuji and Iwasaki protocols (`N_cut` in [21, 23] cycles, residual fraction `q` in [0, 0.01]) exists only as a fit; Build 10 exhausted the derivable mechanisms. It must not enter the physics layer as a law. Re-open when a derivation appears in the literature; a formation model that needs it implements it in the model, named as fitted with this window stated.
