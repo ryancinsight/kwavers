@@ -73,3 +73,6 @@
 <a id="kw-sim-sensor-mask-doc"></a>- [KW-SIM-SENSOR-MASK-DOC](backlog/kw-sim-sensor-mask-doc.md) — The Rustdoc of `SimulationRunRequest::sensor_mask` says no sensors are requested by `None`, which is false beside `transducer_ordered_indices` [patch] — todo
 <a id="kwavers-stable-qualification"></a>- [KWAVERS-STABLE-QUALIFICATION](backlog/kwavers-stable-qualification.md) — kwavers stable-release qualification [patch] — todo
 <a id="kw-athena-damped-lsqr"></a>- [KW-ATHENA-DAMPED-LSQR](backlog/kw-athena-damped-lsqr.md) — Damped LSQR results and tests are unchecked against the athena damping-rotation fix [patch] — blocked
+<a id="kw-board-gap-audit-budget"></a>- [KW-BOARD-GAP-AUDIT-BUDGET](backlog/kw-board-gap-audit-budget.md) — gap_audit.md holds 4,391 lines against a 1,000-line board budget [patch] — todo
+<a id="kw-board-schema-residuals"></a>- [KW-BOARD-SCHEMA-RESIDUALS](backlog/kw-board-schema-residuals.md) — Two items carry an off-set priority and no milestone; one item needs an id no board holds [patch] — todo
+<a id="kw-verif-rescued-remainder"></a>- [KW-VERIF-RESCUED-REMAINDER](backlog/kw-verif-rescued-remainder.md) — Three unlanded changes of a rescued baseline lane port to the default branch [patch] — todo

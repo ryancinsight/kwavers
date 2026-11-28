@@ -1,0 +1,12 @@
+<a id="kw-board-schema-residuals"></a>
+
+## KW-BOARD-SCHEMA-RESIDUALS — Two items carry an off-set priority and no milestone; one item needs an id no board holds [patch] — todo
+
+priority: verification; needs: none; basis: 34fa3f47ae07e28d433b10a22c746f2c982e042e; scope: `backlog/kw-phys-012.md`, `backlog/kw-sol-001.md`, `backlog/kw-hook-nextest-config-ungated.md`; milestone: M-solvers-core
+
+- **Outcome:** the board schema lint passes on the default branch and every `needs:` id resolves on a board, with the three items' content kept.
+- **Finding at basis:** `python -I scripts/atlas-board-lint.py --file backlog.md` exits 1 with two violations: `KW-PHYS-012` and `KW-SOL-001` carry `priority: research`, outside the closed set, and `milestone: none` (conformance `board_items_without_milestone` 2, baseline row 4). `backlog/kw-hook-nextest-config-ungated.md:5` and `:10` name `ATLAS-HOOK-FLEET-BLOB-DRIFT`, which atlas `origin/main` holds in no board file (`ATLAS-HOOK-NEXTEST-CONFIG-OWNER` is at its `backlog.md:92`).
+- **Expected values, from each item's own Acceptance:** `KW-SOL-001` asks for a Rust-side reproduction test, so `priority: verification`, `milestone: M-solvers-core`; `KW-PHYS-012` asks for a new physics law, so `priority: feature`, `milestone: M-imaging-capability`. The hook item either names an Atlas item that exists or drops the need and rewrites its `Owners` and `Ready when` lines to match.
+- **Acceptance:** (a) the lint command above exits 0 (basis: exit 1); (b) `git grep -n -E "^priority: research|milestone: none" -- backlog` prints nothing (basis: line 5 of both files) while `git grep -c -E "^- \*\*(Outcome|Acceptance):" -- backlog/kw-phys-012.md backlog/kw-sol-001.md` still prints 2 for each file; (c) `git grep -n "ATLAS-HOOK-FLEET-BLOB-DRIFT" -- backlog` prints nothing, or `git -C <atlas checkout> grep -c "ATLAS-HOOK-FLEET-BLOB-DRIFT" origin/main -- backlog.md` prints at least 1 (basis: both fail).
+- **Wrong fixes against it:** deleting `KW-PHYS-012` or `KW-SOL-001` passes (a) and fails (b); setting `needs: none` on the hook item while its `Owners` and `Ready when` lines still name the id fails (c); an arbitrary closed-set priority passes every command and is caught by reading against the expected values above.
+- **Next step:** edit the two priority and milestone lines, then settle the hook item (file the Atlas item upstream, or drop the need), and rerun (a) to (c).
