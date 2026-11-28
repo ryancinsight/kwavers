@@ -8,7 +8,6 @@ use crate::acoustics::bubble_dynamics::{
 use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_core::test_support::assert_rejects;
 
 #[test]
 fn test_keller_miksis_creation() {
@@ -141,22 +140,55 @@ fn test_keller_miksis_acoustic_forcing() {
 
 #[test]
 fn test_keller_miksis_mach_limit() {
-    let params = BubbleParameters::default();
+    // Degraded guard contract (KW-PHYS-009 item 5): the model no longer
+    // errors above Mach 0.95. The (1 − Ṙ/c) coefficient is regularised
+    // away from its Ṙ = +c singularity, the acceleration stays finite,
+    // and the state records the Mach number so the regime is flagged
+    // rather than rejected. (The true inertial-collapse trajectory of
+    // the equation as written crosses Mach 1 every cycle — LSODA
+    // reference Mach ≈ 4.08 at the L&G Fig. 4 (5 µm, 5 bar) anchor —
+    // so the old erroring guard made any library history there
+    // impossible.)
+    let params = BubbleParameters {
+        use_thermal_effects: false,
+        ..Default::default()
+    };
     let model = KellerMiksisModel::new(params.clone());
     let mut state = BubbleState::new(&params);
 
+    // Just inside the old guard bound, expanding toward the singularity.
     state.wall_velocity = 0.96 * params.c_liquid;
-
-    let result = model.calculate_acceleration(
-        &mut state,
-        InstantaneousPressure::ZERO,
-        PressureRate::from_base(0.0),
-        0.0,
+    let accel = model
+        .calculate_acceleration(
+            &mut state,
+            InstantaneousPressure::ZERO,
+            PressureRate::from_base(0.0),
+            0.0,
+        )
+        .expect("Mach 0.96 must evaluate under the degraded guard");
+    assert!(accel.is_finite(), "acceleration must stay finite");
+    assert!(
+        (state.mach_number - 0.96).abs() < 1e-12,
+        "state must record the Mach number; got {}",
+        state.mach_number
     );
 
-    // The Keller-Miksis equation is singular as Ṙ → c; the guard fires at
-    // mach > 0.95 and reports the offending ratio as the CFL limit.
-    assert_rejects(result, "exceeds CFL limit 0.96");
+    // Collapse-side state at the true Fig. 4 collapse Mach number.
+    state.wall_velocity = -4.08 * params.c_liquid;
+    let accel = model
+        .calculate_acceleration(
+            &mut state,
+            InstantaneousPressure::ZERO,
+            PressureRate::from_base(0.0),
+            0.0,
+        )
+        .expect("Mach 4.08 collapse state must evaluate under the degraded guard");
+    assert!(accel.is_finite(), "acceleration must stay finite");
+    assert!(
+        (state.mach_number - 4.08).abs() < 1e-12,
+        "state must record the Mach number; got {}",
+        state.mach_number
+    );
 }
 
 #[test]

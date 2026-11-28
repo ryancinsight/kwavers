@@ -189,7 +189,14 @@ pub fn louisnard_gomez_regime(
         pressure_outside_validated: !(LOUISNARD_GOMEZ_MIN_PRESSURE_PA
             ..=LOUISNARD_GOMEZ_MAX_PRESSURE_PA)
             .contains(&acoustic_pressure),
-        radius_outside_validated: radius >= LOUISNARD_GOMEZ_MAX_RADIUS_M,
+        // Explicit NaN disjunct, matching the NaN-tightness of the
+        // `.contains()`-based flags above and the Bader checked
+        // variant: a plain `radius >= MAX` test is false for NaN and
+        // would wave a NaN radius through as in-regime. For every
+        // non-NaN input the flag is unchanged. (Positivity of the
+        // radius is the checked variant's separate reject, not this
+        // flag's.)
+        radius_outside_validated: radius >= LOUISNARD_GOMEZ_MAX_RADIUS_M || radius.is_nan(),
         saturation_outside_validated: !(saturation_ratio > 0.0 && saturation_ratio <= 1.0),
     }
 }
@@ -415,11 +422,47 @@ pub fn louisnard_gomez_growth_rate_checked(
             reason,
         })
     };
-    if equilibrium_radius <= 0.0 {
+    // Each reject carries an explicit NaN disjunct: a bare
+    // `x <= 0.0` test is false for NaN and would wave it through —
+    // the NaN-tightness convention of the regime flags and the
+    // Bader checked variant.
+    if equilibrium_radius <= 0.0 || equilibrium_radius.is_nan() {
         return Err(reject(
             "equilibrium_radius",
             equilibrium_radius,
             "Equilibrium radius must be positive".to_owned(),
+        ));
+    }
+    // Medium-parameter rejects, per this function's documented
+    // contract: the unchecked law silently returns 0.0 for degenerate
+    // D / C0 / T / p0, which a checked variant must not wave through
+    // as Ok(0.0). NaN-tight for the same reason as above.
+    if params.diffusivity <= 0.0 || params.diffusivity.is_nan() {
+        return Err(reject(
+            "diffusivity",
+            params.diffusivity,
+            "Diffusivity must be positive".to_owned(),
+        ));
+    }
+    if params.saturation_concentration <= 0.0 || params.saturation_concentration.is_nan() {
+        return Err(reject(
+            "saturation_concentration",
+            params.saturation_concentration,
+            "Saturation concentration must be positive".to_owned(),
+        ));
+    }
+    if params.temperature <= 0.0 || params.temperature.is_nan() {
+        return Err(reject(
+            "temperature",
+            params.temperature,
+            "Temperature must be positive".to_owned(),
+        ));
+    }
+    if params.ambient_pressure <= 0.0 || params.ambient_pressure.is_nan() {
+        return Err(reject(
+            "ambient_pressure",
+            params.ambient_pressure,
+            "Ambient pressure must be positive".to_owned(),
         ));
     }
     if radius.len() < 2 || radius.len() != time.len() {
@@ -475,6 +518,11 @@ pub fn louisnard_gomez_growth_rate_checked(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::acoustics::bubble_dynamics::{
+        AdaptiveBubbleConfig, BubbleParameters, BubbleState, GasSpecies, ImplicitBubbleIntegrator,
+        InstantaneousPressure, KellerMiksisModel,
+    };
+    use aequitas::systems::si::quantities::PressureRate;
     use eunomia::assert_relative_eq;
     use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 
@@ -608,199 +656,196 @@ mod tests {
         assert!(err.is_err());
     }
 
-    /// Keller–Miksis RHS transcribed from the prototype's validated
-    /// implementation (formation/b6a_law.py `km_rhs`): isothermal gas
-    /// (κ = 1), vapour neglected, no elasticity (G = 0).
-    ///
-    /// A test-local integrator is used because the library's native
-    /// KM cannot currently produce histories in this regime: its
-    /// acceleration returns an error above wall Mach 0.95 and its
-    /// adaptive integrator's stability monitor rejects |Ṙ| > 0.1·c,
-    /// while the Fig. 4 collapses pass both bounds (the prototype's
-    /// LSODA integration, rtol 1e-9, handles them; the F–S law
-    /// suppresses the collapse phase by R⁴ weighting, so the law's
-    /// outputs are insensitive to collapse detail). Filed as
-    /// KW-PHYS-009.
-    fn km_rhs_test(t: f64, r: f64, v: f64, r0: f64, p_ac: f64, f: f64) -> (f64, f64) {
-        const RHO: f64 = 1000.0;
-        const C_SND: f64 = 1481.0; // Louisnard & Gomez value
-        const SIGMA: f64 = 0.073;
-        const MU: f64 = 0.001;
-        const KAPPA: f64 = 1.0;
-        let r = r.max(r0 * 1e-3);
-        let om = 2.0 * std::f64::consts::PI * f;
-        let p_ac_t = -p_ac * (om * t).sin();
-        let p_ac_dot = -p_ac * om * (om * t).cos();
-        let pg = (P0 + 2.0 * SIGMA / r0) * (r0 / r).powf(3.0 * KAPPA);
-        let pw = pg - 2.0 * SIGMA / r - 4.0 * MU * v / r;
-        let p_inf = P0 + p_ac_t;
-        let a = pw - p_inf;
-        let d_a =
-            -3.0 * KAPPA * pg * v / r + 2.0 * SIGMA * v / (r * r) + 4.0 * MU * v * v / (r * r)
-                - p_ac_dot;
-        let coef = (1.0 - v / C_SND) * r + 4.0 * MU / (RHO * C_SND);
-        let rhs = (1.0 + v / C_SND) * a / RHO + (r / (RHO * C_SND)) * d_a
-            - 1.5 * (1.0 - v / (3.0 * C_SND)) * v * v;
-        (v, rhs / coef)
+    #[test]
+    fn test_checked_rejects_nan_and_degenerate_params() {
+        // Guard soundness (physics review 2026-11-27): a checked
+        // variant must refuse NaN and degenerate medium parameters,
+        // not return Ok(0.0) / Ok(NaN) — the unchecked law's silent
+        // 0.0 is exactly what the checked form exists to prevent.
+        let params = paper_params();
+        let n = 100;
+        let radius = vec![5e-6; n];
+        let time: Vec<f64> = (0..n)
+            .map(|i| i as f64 / (n - 1) as f64 / 26_500.0)
+            .collect();
+        let call = |r0: f64, params: &LouisnardGomezParams| {
+            louisnard_gomez_growth_rate_checked(&radius, &time, r0, 1.0, 200_000.0, 26_500.0, params)
+        };
+        assert!(call(f64::NAN, &params).is_err());
+        let mut q = params.clone();
+        q.diffusivity = 0.0;
+        assert!(call(5e-6, &q).is_err());
+        q = params.clone();
+        q.diffusivity = f64::NAN;
+        assert!(call(5e-6, &q).is_err());
+        q = params.clone();
+        q.saturation_concentration = 0.0;
+        assert!(call(5e-6, &q).is_err());
+        q = params.clone();
+        q.temperature = -1.0;
+        assert!(call(5e-6, &q).is_err());
+        q = params.clone();
+        q.ambient_pressure = 0.0;
+        assert!(call(5e-6, &q).is_err());
+        // The regime classifier flags a NaN radius as outside.
+        assert!(
+            louisnard_gomez_regime(f64::NAN, 200_000.0, 26_500.0, 1.0).radius_outside_validated
+        );
     }
 
-    fn rk4_step_test(t: f64, r: f64, v: f64, h: f64, r0: f64, p_ac: f64, f: f64) -> (f64, f64) {
-        let (k1r, k1v) = km_rhs_test(t, r, v, r0, p_ac, f);
-        let (k2r, k2v) = km_rhs_test(
-            t + 0.5 * h,
-            r + 0.5 * h * k1r,
-            v + 0.5 * h * k1v,
+    /// Keller–Miksis parameters at the Louisnard & Gomez Fig. 4
+    /// closure (the prototype's validated implementation,
+    /// formation/b6a_law.py): isothermal gas (κ = 1), vapour
+    /// neglected, ρ = 1000 kg/m³, c = 1481 m/s (the paper's value),
+    /// σ = 0.073 N/m, μ = 0.001 Pa·s.
+    fn fig4_params(r0: f64) -> BubbleParameters {
+        BubbleParameters {
             r0,
-            p_ac,
-            f,
-        );
-        let (k3r, k3v) = km_rhs_test(
-            t + 0.5 * h,
-            r + 0.5 * h * k2r,
-            v + 0.5 * h * k2v,
-            r0,
-            p_ac,
-            f,
-        );
-        let (k4r, k4v) = km_rhs_test(t + h, r + h * k3r, v + h * k3v, r0, p_ac, f);
-        (
-            r + h / 6.0 * (k1r + 2.0 * k2r + 2.0 * k3r + k4r),
-            v + h / 6.0 * (k1v + 2.0 * k2v + 2.0 * k3v + k4v),
-        )
+            p0: P0,
+            rho_liquid: 1000.0,
+            c_liquid: 1481.0,
+            mu_liquid: 0.001,
+            sigma: 0.073,
+            pv: 0.0,
+            gas_species: GasSpecies::Custom {
+                gamma: 1.0,
+                molecular_weight: 0.029,
+            },
+            use_thermal_effects: false,
+            use_mass_transfer: false,
+            driving_frequency: 26_500.0,
+            ..Default::default()
+        }
     }
 
-    /// Integrate the test-local Keller–Miksis at the Louisnard &
-    /// Gomez Fig. 4 conditions and return the post-discard
-    /// history window (cycles 5–60, uniform 400-points-per-cycle
-    /// grid), matching the prototype's evaluation protocol.
-    /// Controller (each element earned by a failure mode
-    /// against the prototype's LSODA ground truth): step-doubling
-    /// RK4 at rtol 1e-10, atol (1e-14, 1e-8) (10× tighter than
-    /// the prototype's LSODA tolerances — the explicit scheme
-    /// needs them at the strongest anchor); the half-step result accepted as-is (the
-    /// Richardson extrapolation injects energy in the stiff
-    /// rebound); growth capped at 1.5× (a 5× cap jumps over the
-    /// collapse onset); a relative-change rejection |ΔR| ≤ R/2
-    /// (an unbounded accepted step overshoots past Rmin into
-    /// unrecoverable R⁻³ stiffness); and a bounded ride-through
-    /// at the step floor for the stiff instant itself — the
-    /// explicit analogue of LSODA switching to BDF there (an
-    /// unbounded floor-accept is poison: it once let a rebound
-    /// step through that exploded the bubble to metres).
+    /// Integrator configuration for the Fig. 4 histories: tolerances
+    /// an order tighter than the library defaults (the law reads the
+    /// expansion phase of a stiff trajectory; the prototype's LSODA
+    /// ground truth ran at rtol 1e-9), a step floor far below the
+    /// collapse spike's timescale (LSODA itself needed steps to
+    /// 1.6×10⁻¹⁷ s; a step starting at the turnaround needs ~10⁻¹⁹ s
+    /// at these tolerances, so the floor must not bind), and a
+    /// substep budget sized for sub-cycling through two collapses
+    /// per main step at the strongest anchor.
+    fn fig4_config(period: f64) -> AdaptiveBubbleConfig {
+        AdaptiveBubbleConfig {
+            dt_max: period,
+            dt_min: 1e-20,
+            rtol: 1e-8,
+            atol: 1e-12,
+            max_substeps: 100_000,
+            ..AdaptiveBubbleConfig::default()
+        }
+    }
+
+    /// Advance the library Keller–Miksis model by one output-grid
+    /// step (T/400) under the Fig. 4 tone, following the integrator's
+    /// zero-order-hold drive contract: instantaneous pressure
+    /// p(t) = −p_ac·sin(ωt) and dp/dt = −p_ac·ω·cos(ωt) sampled at
+    /// the step start.
+    fn fig4_grid_step(
+        integrator: &mut ImplicitBubbleIntegrator<'_, KellerMiksisModel>,
+        state: &mut BubbleState,
+        p_ac: f64,
+        omega: f64,
+        grid_dt: f64,
+        t: f64,
+    ) {
+        let p = InstantaneousPressure::from_pascals(-p_ac * (omega * t).sin());
+        let dp_dt = PressureRate::from_base(-p_ac * omega * (omega * t).cos());
+        integrator
+            .integrate_adaptive(state, p, dp_dt, grid_dt, t)
+            .expect("library KM + implicit SDIRK2 must traverse the Fig. 4 cycles");
+    }
+
+    /// Integrate the library Keller–Miksis model at the Louisnard &
+    /// Gomez Fig. 4 conditions and return the post-discard history
+    /// window (cycles 5–60, uniform 400-points-per-cycle grid),
+    /// matching the prototype's evaluation protocol (b6a_law.km_solve:
+    /// 60 cycles, first 5 discarded, the law evaluated over the whole
+    /// post-discard window — a last-cycle evaluation is poisoned at
+    /// the strongest anchor by individual afterbounce-heavy cycles).
     ///
-    /// The two strongest anchors are excluded from the sweep
-    /// below: (3 µm, 2 bar), Rmax* = 33, stalls this driver in
-    /// the stiff rebound, and at (5 µm, 5 bar) the driver's
-    /// history is converged in tolerance yet departs
-    /// qualitatively from LSODA's (window rate ~10⁷ µm/s vs
-    /// 275 µm/s — the explicit scheme settles into a
-    /// non-collapsing mode the implicit scheme does not).
-    /// Both anchors' validation stands on the prototype's LSODA
-    /// numbers (222.9 and 275.3 µm/s vs the paper's ~200 and
-    /// ~300 µm/s reads). This is the same gap as KW-PHYS-009
-    /// item 5 for the library's own integrator.
+    /// Histories come from the library's own KM model driven by the
+    /// implicit SDIRK2 integrator (KW-PHYS-009 item 5): the previous
+    /// test-local explicit RK4 transcription is gone. The explicit
+    /// step-doubling family cannot traverse the collapse spike
+    /// without injecting energy (at (5 µm, 5 bar) it returned a
+    /// window rate of ~10⁷ µm/s against the paper's ~300 µm/s, and
+    /// it stalled outright at (3 µm, 2 bar)); the L-stable implicit
+    /// path damps the unresolved spike instead, and the law's R⁴
+    /// weighting reads the expansion phase it resolves.
     fn km_history(r0: f64, p_ac: f64, frequency: f64) -> (Vec<f64>, Vec<f64>) {
-        // Prototype protocol (b6a_law.km_solve): 60 cycles, the
-        // first 5 discarded, and the law evaluated over the whole
-        // post-discard window — NOT the last cycle alone. A
-        // last-cycle evaluation is poisoned at the strongest
-        // anchor (5 µm, 5 bar) by individual non-collapsing /
-        // afterbounce-heavy cycles; the window average is what
-        // the paper's Fig. 4 reports.
         let n_cycles = 60;
         let discard = 5;
         let pts_per_cycle = 400;
         let period = 1.0 / frequency;
-        let t_end = n_cycles as f64 * period;
         let grid_dt = period / pts_per_cycle as f64;
         let total_pts = n_cycles * pts_per_cycle;
+
+        let params = fig4_params(r0);
+        let model = KellerMiksisModel::new(params.clone());
+        let mut state = BubbleState::new(&params);
+        let mut integrator = ImplicitBubbleIntegrator::new(&model, fig4_config(period));
+        let omega = 2.0 * std::f64::consts::PI * frequency;
+
         let mut grid_r = Vec::with_capacity(total_pts + 1);
-        let (mut r, mut v) = (r0, 0.0);
+        grid_r.push(state.radius);
         let mut t = 0.0;
-        grid_r.push(r);
-        let mut h = grid_dt / 10.0;
-        let mut next_grid = grid_dt;
-        while t < t_end - 1e-15 {
-            // Advance to the next grid point with step-doubling.
-            let target = next_grid.min(t_end);
-            let mut iterations = 0_u64;
-            while t < target - 1e-15 {
-                iterations += 1;
-                assert!(
-                    iterations < 20_000_000,
-                    "KM test integrator stuck at t = {t:e}, h = {h:e}, R = {r:e}, V = {v:e}"
-                );
-                let hh = h.min(target - t);
-                let (rf, vf) = rk4_step_test(t, r, v, hh, r0, p_ac, frequency);
-                let (rh, vh) = rk4_step_test(t, r, v, hh / 2.0, r0, p_ac, frequency);
-                let (rh, vh) = rk4_step_test(t + hh / 2.0, rh, vh, hh / 2.0, r0, p_ac, frequency);
-                // A substage can go non-finite when the collapse
-                // drives the wall through the Keller–Miksis
-                // singularity (|Ṙ| → c makes the LHS coefficient
-                // vanish). Reject and shrink — never let a NaN
-                // reach the step-size factor (NaN comparisons are
-                // false, which would otherwise grow h and loop
-                // forever on the same interval).
-                if !rh.is_finite() || !vh.is_finite() {
-                    h = hh * 0.25;
-                    continue;
-                }
-                // Step-doubling error estimate (un-divided
-                // difference — the conservative acceptance test).
-                // The half-step result is accepted as-is: the
-                // Richardson-extrapolated value injects energy in
-                // the stiff collapse rebound and runs the state
-                // away (|Ṙ| → 10⁴ m/s at R → 50 nm).
-                let err = ((rf - rh).abs() / (1e-14 + 1e-10 * rh.abs()))
-                    .max((vf - vh).abs() / (1e-8 + 1e-10 * vh.abs()));
-                if !err.is_finite() {
-                    h = hh * 0.25;
-                    continue;
-                }
-                // Relative-change rejection: no accepted step may
-                // move R by more than half itself. Without it a
-                // step entering the collapse overshoots past the
-                // true Rmin (~1 µm) to tens of nm, after which the
-                // R⁻³ gas law is unrecoverable stiffness.
-                let change_ok = (rh - r).abs() <= 0.5 * r;
-                if err <= 1.0 && change_ok {
-                    r = rh;
-                    v = vh;
-                    t += hh;
-                } else if hh <= 1e-13 && change_ok {
-                    // Bounded ride-through at the step floor: the
-                    // stiff instant (deepest collapse) cannot be
-                    // resolved by any explicit step, but a floor
-                    // step whose displacement is itself bounded
-                    // moves the state negligibly — accept it and
-                    // stay small, the explicit analogue of LSODA
-                    // switching to BDF there. An UNBOUNDED
-                    // floor-accept is poison (it let a rebound
-                    // step through that exploded the bubble), so
-                    // the change bound is the gate.
-                    r = rh;
-                    v = vh;
-                    t += hh;
-                    h = hh;
-                    continue;
-                }
-                // Growth capped at 1.5×: a 5× cap lets h jump
-                // over the collapse onset between checks.
-                let factor = if err > 0.0 {
-                    (0.9 * err.powf(-0.2)).clamp(0.2, 1.5)
-                } else {
-                    1.5
-                };
-                h = (hh * factor).max(1e-13);
-            }
-            grid_r.push(r);
-            next_grid += grid_dt;
+        for _ in 0..total_pts {
+            fig4_grid_step(&mut integrator, &mut state, p_ac, omega, grid_dt, t);
+            t += grid_dt;
+            grid_r.push(state.radius);
         }
         let start = discard * pts_per_cycle;
         let window_pts = total_pts - start;
         let radius = grid_r[start..=total_pts].to_vec();
         let time: Vec<f64> = (0..=window_pts).map(|i| i as f64 * grid_dt).collect();
         (radius, time)
+    }
+
+    /// Trajectory extremes (min radius, max |Ṙ|) over cycles
+    /// 2..=n_cycles at the Fig. 4 conditions, from a fresh implicit
+    /// integrator per cycle so the start-up cycle's extremes do not
+    /// pollute the window. The output grid undersamples the ~ns
+    /// collapse spike by construction, so the extremes come from the
+    /// integrator's accepted sub-steps. LSODA reference,
+    /// spike-resolved (solver internal nodes and fs-scale
+    /// dense-output windows around the turnaround; two tolerance
+    /// levels in exact agreement — physics review 2026-11-27): at
+    /// (5 µm, 5 bar) Rmin = 0.016 µm, max |Ṙ| = 54,157 m/s; at
+    /// (5 µm, 2 bar) Rmin = 0.0297 µm, max |Ṙ| = 20,842 m/s; at
+    /// (3 µm, 2 bar) Rmin = 0.0149 µm, max |Ṙ| = 29,479 m/s.
+    /// (Earlier reference readings — the B22 Part 3 diagnosis's
+    /// 0.023 µm / 6044 m/s and the Part 3 build's 0.018 µm /
+    /// ≈1.5×10⁴ m/s at the 2-bar anchors — were uniform-grid
+    /// samplings that missed the ~ps-wide spike apex; their Rmax
+    /// values were exact.)
+    fn km_trajectory_extremes(r0: f64, p_ac: f64, frequency: f64, n_cycles: usize) -> (f64, f64) {
+        let period = 1.0 / frequency;
+        let pts_per_cycle = 400;
+        let grid_dt = period / pts_per_cycle as f64;
+
+        let params = fig4_params(r0);
+        let model = KellerMiksisModel::new(params.clone());
+        let mut state = BubbleState::new(&params);
+        let omega = 2.0 * std::f64::consts::PI * frequency;
+
+        let mut t = 0.0;
+        let mut min_r = f64::INFINITY;
+        let mut max_v: f64 = 0.0;
+        for cycle in 0..n_cycles {
+            let mut integrator = ImplicitBubbleIntegrator::new(&model, fig4_config(period));
+            for _ in 0..pts_per_cycle {
+                fig4_grid_step(&mut integrator, &mut state, p_ac, omega, grid_dt, t);
+                t += grid_dt;
+            }
+            if cycle >= 1 {
+                min_r = min_r.min(integrator.min_radius_seen());
+                max_v = max_v.max(integrator.max_wall_speed_seen());
+            }
+        }
+        (min_r, max_v)
     }
 
     #[test]
@@ -810,11 +855,10 @@ mod tests {
         // ~100 µm/s. The paper's anchors are order-of-magnitude
         // reads (factor ~2 per the prototype's validation notes);
         // the prototype's LSODA gave 94.6 µm/s for this anchor.
-        // Assert the factor-of-2 band. The four-anchor sweep is
-        // the ignored benchmark below (KM histories are too
-        // expensive for the always-on suite in debug builds);
-        // two anchors are excluded from it — see km_history's
-        // docs.
+        // Assert the factor-of-2 band. The history is produced by
+        // the library's own KM + implicit SDIRK2 integrator
+        // (KW-PHYS-009 item 5); the six-anchor sweep is the ignored
+        // benchmark below.
         let params = paper_params();
         let (radius, time) = km_history(5e-6, 200_000.0, 26_500.0);
         let rate_um_s = louisnard_gomez_growth_rate(&radius, &time, 5e-6, 1.0, &params) * 1e6;
@@ -825,24 +869,24 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "expensive benchmark: four Keller-Miksis histories; run with -- --ignored"]
+    #[ignore = "expensive benchmark: six Keller-Miksis histories; run with -- --ignored"]
     fn test_louisnard_gomez_fig4_benchmark() {
         // Louisnard & Gomez (2003) Fig. 4 growth rates at 26.5 kHz,
-        // saturated water. Assert a factor-of-2 band around each
-        // anchor and the correct ordering in R0 and p. Four of the
-        // paper's six anchors; the two strongest are excluded
-        // because their histories defeat the explicit test driver
-        // (see km_history's docs): (3 µm, 2 bar) stalls it, and at
-        // (5 µm, 5 bar) its converged history departs
-        // qualitatively from LSODA's. Both are covered by the
-        // prototype's LSODA integration (222.9 and 275.3 µm/s vs
-        // the paper's ~200 and ~300 µm/s).
+        // saturated water — all six of the paper's anchors, with the
+        // histories generated by the library's own KM model and the
+        // implicit SDIRK2 integrator (KW-PHYS-009 item 5). Assert a
+        // factor-of-2 band around each anchor and the correct
+        // ordering in R0 and p. Prototype LSODA references:
+        // (3, 2) 222.9, (5, 2) 94.6, (5, 5) 275.3 µm/s against the
+        // paper's ~200 / ~100 / ~300 µm/s reads.
         let params = paper_params();
-        let anchors: [(f64, f64, f64); 4] = [
+        let anchors: [(f64, f64, f64); 6] = [
+            (3e-6, 200_000.0, 200.0),
             (5e-6, 200_000.0, 100.0),
             (10e-6, 200_000.0, 30.0),
             (20e-6, 200_000.0, 10.0),
             (5e-6, 130_000.0, 30.0),
+            (5e-6, 500_000.0, 300.0),
         ];
         let mut rates = Vec::new();
         for (r0, p_ac, anchor_um_s) in anchors {
@@ -855,8 +899,28 @@ mod tests {
             );
         }
         // Ordering: at 2 bar the rate falls with R0; at R0 = 5 µm
-        // the 2 bar rate exceeds the 1.3 bar rate.
-        assert!(rates[0] > rates[1] && rates[1] > rates[2]);
-        assert!(rates[0] > rates[3]);
+        // the rate rises with p (1.3 bar < 2 bar < 5 bar).
+        assert!(rates[0] > rates[1] && rates[1] > rates[2] && rates[2] > rates[3]);
+        assert!(rates[4] < rates[1] && rates[1] < rates[5]);
+
+        // Trajectory check at the strongest anchor: the accepted
+        // sub-steps must resolve the collapse spike to the
+        // spike-resolved LSODA reference's scale (Rmin = 0.016 µm,
+        // max |Ṙ| = 54,157 m/s), within a factor 2.5 either way —
+        // an integrator that skips or damps the collapse entirely,
+        // or one whose rebound runs away, fails here even if a
+        // growth-rate band elsewhere hid it. (Library measurement,
+        // physics review 2026-11-27: Rmin = 0.0160 µm,
+        // max |Ṙ| = 54,157 m/s — the LSODA value to printed
+        // precision, after the +4μ/(ρc) LHS term was restored.)
+        let (min_r, max_v) = km_trajectory_extremes(5e-6, 500_000.0, 26_500.0, 3);
+        assert!(
+            min_r > 0.0064e-6 && min_r < 0.040e-6,
+            "Fig. 4 (5 µm, 5 bar) trajectory: min radius {min_r} m must sit at the LSODA spike scale (0.016 µm, factor 2.5)"
+        );
+        assert!(
+            max_v > 21_663.0 && max_v < 135_393.0,
+            "Fig. 4 (5 µm, 5 bar) trajectory: max |Ṙ| {max_v} m/s must sit at the LSODA spike scale (54,157 m/s, factor 2.5)"
+        );
     }
 }

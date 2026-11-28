@@ -99,9 +99,13 @@
 //!
 //! ## Implementation Notes
 //!
-//! * The denominator `(1 - Ṙ/c_L) R` can approach zero near bubble collapse;
-//!   the solver clamps Ṙ/c_L < 0.99 and R > R_min to prevent division by
-//!   zero.
+//! * The denominator `(1 - Ṙ/c_L) R` is singular only at Ṙ = +c_L exactly;
+//!   the solver regularises the `(1 - Ṙ/c_L)` factor away from zero
+//!   (KW-PHYS-009 item 5) instead of erroring above Mach 0.95, and flags
+//!   Mach ≳ 1 states via `BubbleState::mach_number`. Inertial-collapse
+//!   trajectories cross Mach 1 every cycle (peak wall Mach ≈ 37 at the
+//!   (5 µm, 5 bar) Louisnard & Gomez Fig. 4 anchor) and are integrated
+//!   with the implicit SDIRK2 path in `adaptive_integration`.
 //! * `ThermodynamicsCalculator` drives vapor pressure in the mass-transfer
 //!   update via `model.thermo_calc.vapor_pressure(state.temperature)`.
 //!   Full conduction coupling (heat conduction into the liquid shell,
@@ -132,9 +136,6 @@
 //!    University Press.
 
 pub mod equation;
-mod radial;
-
-pub(super) use radial::pressure_driven_acceleration;
 pub mod shape_instability;
 pub mod thermodynamics;
 #[cfg(test)]

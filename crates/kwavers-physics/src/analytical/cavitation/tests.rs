@@ -105,10 +105,10 @@ fn closed_form_cavitation_estimators_reject_invalid_domains() {
         minnaert_radius_for_frequency_m(1.0e6, 1.4, f64::NAN, DENSITY_WATER_NOMINAL),
         0.0
     );
-    assert_eq!(
-        blake_threshold_pa(10e-6, ATMOSPHERIC_PRESSURE, f64::NAN),
-        0.0
-    );
+    // `blake_threshold_pa` is deliberately NOT in this 0.0-sentinel
+    // blanket: as a threshold pressure, its non-physical inputs
+    // (including NaN) return INFINITY — see
+    // `blake_threshold_pa_infinite_for_nonphysical_inputs`.
     assert_eq!(
         rayleigh_collapse_time_s(100e-6, -ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL),
         0.0
@@ -481,12 +481,17 @@ fn bubble_spectrum_length() {
 /// surface tension has no finite threshold — INFINITY, not this module's
 /// 0.0 invalid-input sentinel (0.0 Pa would claim cavitation at zero
 /// acoustic amplitude). σ = 0 stays on the formula path, where the closed
-/// form reduces to √2·P₀.
+/// form reduces to √2·P₀. NaN inputs take the same INFINITY path
+/// (physics review 2026-11-27): their comparisons are all false, so the
+/// pre-review guard waved them through to the 0.0 finiteness fallback.
 #[test]
 fn blake_threshold_pa_infinite_for_nonphysical_inputs() {
     assert!(blake_threshold_pa(0.0, ATMOSPHERIC_PRESSURE, 0.0728).is_infinite());
     assert!(blake_threshold_pa(-5e-6, ATMOSPHERIC_PRESSURE, 0.0728).is_infinite());
     assert!(blake_threshold_pa(5e-6, ATMOSPHERIC_PRESSURE, -0.0728).is_infinite());
+    assert!(blake_threshold_pa(f64::NAN, ATMOSPHERIC_PRESSURE, 0.0728).is_infinite());
+    assert!(blake_threshold_pa(5e-6, ATMOSPHERIC_PRESSURE, f64::NAN).is_infinite());
+    assert!(blake_threshold_pa(5e-6, f64::NAN, 0.0728).is_infinite());
     let sigma_zero = blake_threshold_pa(5e-6, ATMOSPHERIC_PRESSURE, 0.0);
     assert!(
         (sigma_zero - ATMOSPHERIC_PRESSURE * std::f64::consts::SQRT_2).abs() < 1.0,

@@ -1,11 +1,38 @@
-use super::{pressure_driven_acceleration, KellerMiksisModel};
+use super::KellerMiksisModel;
 use crate::acoustics::bubble_dynamics::{
     acoustic_pressure::InstantaneousPressure, bubble_state::BubbleState,
 };
-use aequitas::systems::si::quantities::{
-    DynamicViscosity, Length, MassDensity, Pressure, PressureRate, Velocity,
-};
+use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::error::KwaversResult;
+
+/// Floor on |(1 − Ṙ/c)| in the Keller–Miksis left-hand coefficient.
+///
+/// The coefficient (1 − Ṙ/c) is singular only at Ṙ = +c exactly. It is
+/// regularised to this floor (sign preserved) so the acceleration stays
+/// defined in a neighbourhood of the singularity instead of the model
+/// erroring out: the true inertial-collapse trajectory of the equation
+/// as written crosses Mach 1 every cycle (LSODA reference at the
+/// Louisnard & Gomez Fig. 4 conditions reaches Mach ≈ 4.08 in
+/// collapse; see KW-PHYS-009 item 5). Keller–Miksis is a
+/// first-order-in-Mach theory, so states with Mach ≳ 1 are outside its
+/// asymptotic validity — they are *flagged* via `state.mach_number`,
+/// not errored, and the integrator's error control judges the steps.
+const MACH_COEFFICIENT_FLOOR: f64 = 0.05;
+
+/// Regularised (1 − Ṙ/c): clamped away from zero at
+/// [`MACH_COEFFICIENT_FLOOR`], sign preserved.
+fn regularised_one_minus_mach(v_c: f64) -> f64 {
+    let x = 1.0 - v_c;
+    if x.abs() < MACH_COEFFICIENT_FLOOR {
+        if x < 0.0 {
+            -MACH_COEFFICIENT_FLOOR
+        } else {
+            MACH_COEFFICIENT_FLOOR
+        }
+    } else {
+        x
+    }
+}
 
 /// Calculate bubble wall acceleration using Keller-Miksis equation.
 ///
@@ -33,6 +60,17 @@ use kwavers_core::error::KwaversResult;
 /// `2f0` term and no `f0` at all. The `t` argument is retained for
 /// interface compatibility; the drive is fully specified by
 /// (`p_acoustic`, `dp_dt`).
+///
+/// # Mach contract
+///
+/// This function does **not** error at high wall Mach number
+/// (KW-PHYS-009 item 5): the (1 − Ṙ/c) coefficient is regularised
+/// away from its Ṙ = +c singularity and the state records
+/// `mach_number` so the regime is visible to callers. Integrate
+/// inertial-collapse trajectories with the implicit SDIRK2 path
+/// ([`ImplicitBubbleIntegrator`](crate::acoustics::bubble_dynamics::ImplicitBubbleIntegrator));
+/// the explicit RK4 path cannot traverse the collapse spike without
+/// injecting energy.
 /// # Errors
 /// - Propagates any `KwaversError` returned by called functions.
 ///
@@ -57,15 +95,15 @@ pub(crate) fn calculate_acceleration(
     let mach = v.abs() / c;
     state.mach_number = mach;
 
-    // Check for numerical stability (wall velocity approaching sound speed)
-    // K-M equation becomes singular when Ṙ → c
-    if mach > 0.95 {
-        return Err(kwavers_core::error::PhysicsError::NumericalInstability {
-            timestep: 0.0,
-            cfl_limit: mach,
-        }
-        .into());
-    }
+    // No Mach error (KW-PHYS-009 item 5): the equation as written is
+    // singular only at Ṙ = +c exactly, and its true collapse
+    // trajectory crosses Mach 1 every cycle, so erroring above
+    // Mach 0.95 made the library unable to produce any history in
+    // the inertial-collapse regime. The (1 − Ṙ/c) coefficient below
+    // is regularised away from the singularity instead
+    // ([`regularised_one_minus_mach`]); Mach ≳ 1 states are outside
+    // the first-order theory's validity and are flagged via
+    // `state.mach_number` for the caller / integrator to judge.
 
     // Far-field pressure p_∞(t) = p0 + p_acoustic(t); see the contract on
     // this function. The `t` argument is unused by the RHS: the drive is
@@ -101,9 +139,26 @@ pub(crate) fn calculate_acceleration(
     // This accounts for compressibility through the R/ρc × dp_B/dt term
     let dp_wall_dt = estimate_wall_pressure_derivative(model, state, p_gas, r, v, gamma, dp_dt)?;
 
-    let lhs_coeff = r * (1.0 - v / c);
+    // Keller-Miksis equation components
+    let v_c = v / c;
+    let pressure_term = (1.0 + v_c) * (p_wall - p_inf) / model.params.rho_liquid;
+    let radiation_term = r / (model.params.rho_liquid * c) * dp_wall_dt;
+    let nonlinear_term = 1.5 * (1.0 - v_c / 3.0) * v * v;
 
-    // Check for division by zero (should not occur if mach < 0.95)
+    // Solve for R̈ from the K-M equation. The (1 − Ṙ/c) factor is
+    // regularised away from its Ṙ = +c singularity (see
+    // [`MACH_COEFFICIENT_FLOOR`]), so the coefficient can vanish
+    // only through r itself. The +4μ/(ρc) term collects the R̈ part
+    // of d/dt[4μṘ/R] onto the LHS (see
+    // [`estimate_wall_pressure_derivative`]): with it, the
+    // coefficient is the standard form (1 − Ṙ/c)·R + 4μ/(ρc)
+    // carried by the validated prototype RHS (formation/b6a_law.py,
+    // `km_rhs`: "The viscous term -4 mu Rdd/R inside d(p_w)/dt is
+    // collected onto the LHS coefficient of Rdd (standard form)").
+    let lhs_coeff = r * regularised_one_minus_mach(v_c)
+        + 4.0 * model.params.mu_liquid / (model.params.rho_liquid * c);
+
+    // Check for division by zero (structural: a non-positive radius)
     if lhs_coeff.abs() < 1e-12 {
         return Err(kwavers_core::error::PhysicsError::NumericalInstability {
             timestep: 0.0,
@@ -112,17 +167,7 @@ pub(crate) fn calculate_acceleration(
         .into());
     }
 
-    let acceleration = pressure_driven_acceleration(
-        Length::from_base(r),
-        Velocity::from_base(v),
-        MassDensity::from_base(model.params.rho_liquid),
-        Velocity::from_base(c),
-        Pressure::from_base(p_wall - p_inf),
-        PressureRate::from_base(dp_wall_dt),
-        // This legacy closure supplies its complete approximate derivative.
-        DynamicViscosity::from_base(0.0),
-    )
-    .into_base();
+    let acceleration = (pressure_term + radiation_term - nonlinear_term) / lhs_coeff;
 
     // Update state
     state.wall_acceleration = acceleration;
@@ -147,9 +192,16 @@ pub(crate) fn calculate_acceleration(
 /// ```text
 /// d/dt[p_B − p_∞] = dp_gas/dt − d/dt[2σ/R] − d/dt[4μṘ/R] − dp_acoustic/dt
 ///
-/// dp_gas/dt   = −3γ · p_gas · Ṙ / R   (polytropic)
+/// dp_gas/dt   = −3γ · (p_gas − p_v) · Ṙ / R   (polytropic part only:
+///                 the vapour partial pressure p_v is isothermal —
+///                 constant — so it carries no time derivative; the
+///                 same split the Gilmore helper applies)
 /// d/dt[2σ/R]  = −2σ · Ṙ / R²
-/// d/dt[4μṘ/R] ≈ −4μ · Ṙ² / R²         (neglect R̈ term; first-order)
+/// d/dt[4μṘ/R] = 4μ · R̈ / R − 4μ · Ṙ² / R²   (this helper keeps the
+///                 Ṙ² part; the R̈ part is collected onto the LHS
+///                 coefficient of R̈ in [`calculate_acceleration`] as
+///                 +4μ/(ρc) — the standard form, identical to the
+///                 validated prototype RHS — so no term is dropped)
 /// dp_acoustic/dt supplied externally as a [`PressureRate`] — the time
 /// derivative of the INSTANTANEOUS far-field acoustic pressure (see the
 /// contract on [`calculate_acceleration`]); it is used as-is, never
@@ -176,13 +228,27 @@ fn estimate_wall_pressure_derivative(
     // Formula boundary: the rate arrives typed; the derivative below
     // works in Pa/s.
     let dp_acoustic_dt = *dp_acoustic_dt.as_base();
-    // Rate of change of internal gas pressure: dp_gas/dt = −3γ p_gas Ṙ/R
-    let dp_gas_dt = -3.0 * gamma * p_gas * v / r;
+    // Rate of change of internal gas pressure: dp_gas/dt =
+    // −3γ (p_gas − p_v) Ṙ/R in the non-thermal closure, where
+    // p_gas = p_eq·(r0/r)^{3γ} + p_v and only the non-condensable
+    // part is polytropic (Brennen 1995, §2.4 — the closure stated on
+    // `calculate_acceleration`). In the thermal branch p_gas is the
+    // vdW mixture pressure, which has no additive p_v split, so the
+    // full pressure is used (the polytropic form is an estimate
+    // there in any case).
+    let p_polytropic = if model.params.use_thermal_effects {
+        p_gas
+    } else {
+        p_gas - model.params.pv
+    };
+    let dp_gas_dt = -3.0 * gamma * p_polytropic * v / r;
 
     // Rate of change of surface tension: d/dt(2σ/R) = −2σ Ṙ/R²
     let d_surface_dt = -2.0 * model.params.sigma * v / (r * r);
 
-    // Rate of change of viscous stress: d/dt(4μṘ/R) ≈ −4μ Ṙ²/R² (first-order)
+    // Rate of change of viscous stress, Ṙ² part: d/dt(4μṘ/R) =
+    // 4μR̈/R − 4μṘ²/R². The R̈ part is not dropped — it is collected
+    // onto the LHS coefficient in `calculate_acceleration`.
     let d_viscous_dt = -4.0 * model.params.mu_liquid * v * v / (r * r);
 
     // Net pressure derivative for radiation-damping term: d/dt[p_B − p_∞]
