@@ -1,0 +1,11 @@
+<a id="kw-conf-default-tip-above-baseline"></a>
+
+## KW-CONF-DEFAULT-TIP-ABOVE-BASELINE — Five conformance classes sit above the atlas baseline at the default tip, so the pre-push gate refuses every push [patch] — todo
+
+priority: verification; needs: none; basis: 34fa3f47ae07e28d433b10a22c746f2c982e042e; scope: `crates/`; milestone: M-solvers-core
+
+- **Outcome:** the default branch passes the hook-form conformance check against the atlas baseline row, by removing the counted debt, never by regenerating the baseline, so a push of any revision no longer refuses on pre-existing rows.
+- **Finding at basis:** `ATLAS_STACK_ROOT=D:/atlas python <atlas a850dbc26a scripts>/atlas-conformance.py check --baseline-rev a850dbc26a31846e729514e5b4e9d5c13515bd6d --repo kwavers --member-path <checkout> --member-revision 34fa3f47ae07e28d433b10a22c746f2c982e042e` exits 1 with 8 `RATCHET VIOLATION` rows: `oversized_files` 103 to 108, `manifest_implementation` 273 to 275, `allow_sites` 297 to 305, `reexport_shims` 6 to 7, `scattered_containers` 45 to 55, and three that `KW-VERIF-RESCUED-REMAINDER` cures (`existence_only_assertions` 0 to 7, `type_suffixed_fns` 5 to 7, `pm_lines_over_budget` 3366 to 3391). The pre-push hook refused a board-only revision on exactly these rows. Only `oversized_files` has an owner (`KW-EXAMPLES-OVERSIZED-923`).
+- **Acceptance:** the Finding command with `--baseline-rev` pinned to `a850dbc26a31846e729514e5b4e9d5c13515bd6d` and `--member-revision` the fix head exits 0 apart from host-state rows, prints no `RATCHET VIOLATION` line, and the five rows read at most 103, 273, 297, 6 and 45 (basis: exit 1, 8 lines). The pinned baseline revision is why a regenerated baseline cannot satisfy it.
+- **Wrong fixes against it:** regenerating the baseline in atlas changes a later revision and leaves the pinned one; moving a counted site to a path the detector skips passes the rows and is caught by reading the diff, which must show each reduction removing a counted site.
+- **Next step:** attribute each row to the commits that raised it (`git log` over the counted paths and a per-revision `atlas-conformance.py report`); land the cures as dependency-ordered commits on one branch, since the hook judges only the pushed tip and refuses a branch that clears fewer than all five rows.
