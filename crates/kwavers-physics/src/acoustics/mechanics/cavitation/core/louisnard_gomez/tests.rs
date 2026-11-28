@@ -6,6 +6,7 @@ use crate::acoustics::bubble_dynamics::{
 use aequitas::systems::si::quantities::PressureRate;
 use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
+use kwavers_core::error::{KwaversError, PhysicsError};
 
 const P0: f64 = ATMOSPHERIC_PRESSURE;
 
@@ -164,19 +165,19 @@ fn test_checked_rejects_nan_and_degenerate_params() {
         louisnard_gomez_growth_rate_checked(&radius, &time, r0, 1.0, 200_000.0, 26_500.0, params)
     };
     assert!(call(f64::NAN, &params).is_err());
-    let mut q = params.clone();
+    let mut q = params;
     q.diffusivity = 0.0;
     assert!(call(5e-6, &q).is_err());
-    q = params.clone();
+    q = params;
     q.diffusivity = f64::NAN;
     assert!(call(5e-6, &q).is_err());
-    q = params.clone();
+    q = params;
     q.saturation_concentration = 0.0;
     assert!(call(5e-6, &q).is_err());
-    q = params.clone();
+    q = params;
     q.temperature = -1.0;
     assert!(call(5e-6, &q).is_err());
-    q = params.clone();
+    q = params;
     q.ambient_pressure = 0.0;
     assert!(call(5e-6, &q).is_err());
     // The regime classifier flags a NaN radius as outside.
