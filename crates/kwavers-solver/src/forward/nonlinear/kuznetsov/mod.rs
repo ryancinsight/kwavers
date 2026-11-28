@@ -106,7 +106,6 @@ pub mod nonlinear;
 pub mod numerical;
 pub mod operator_splitting;
 pub mod solver;
-pub mod spectral;
 pub mod workspace;
 
 // Re-export main types

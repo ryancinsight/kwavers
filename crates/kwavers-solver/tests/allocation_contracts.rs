@@ -642,7 +642,7 @@ fn fdtd_spectral_steps_after_setup_do_not_allocate() {
 /// spectrum and allocate nothing on the calling thread.
 #[test]
 fn spectral_laplacians_after_setup_do_not_allocate() {
-    use kwavers_solver::forward::nonlinear::kuznetsov::spectral::KuznetsovSpectralOperator;
+    use kwavers_solver::forward::nonlinear::spectral::PeriodicLaplacian;
     use kwavers_solver::forward::pstd::dg::spectral_solver::RegionPSTDSolver;
     use std::sync::Arc;
 
@@ -652,7 +652,7 @@ fn spectral_laplacians_after_setup_do_not_allocate() {
         (i as f64 + 0.25 * j as f64 - 0.5 * k as f64).sin()
     });
 
-    let mut kuznetsov = KuznetsovSpectralOperator::new(&grid);
+    let mut kuznetsov = PeriodicLaplacian::new(&grid);
     let mut laplacian = Array3::zeros([N, N, N]);
     for _ in 0..2 {
         kuznetsov.compute_laplacian_workspace(&field, &mut laplacian);

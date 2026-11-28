@@ -4,7 +4,7 @@ pub mod hybrid_angular_spectrum_plugin;
 pub mod kuznetsov;
 pub mod kuznetsov_solver_plugin;
 pub mod kzk;
-mod spectral;
+pub mod spectral;
 pub mod westervelt;
 pub mod westervelt_fdtd_plugin;
 pub mod westervelt_solver_plugin;
