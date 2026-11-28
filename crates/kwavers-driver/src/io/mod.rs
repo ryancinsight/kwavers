@@ -78,7 +78,7 @@ pub(super) struct Uuid(pub(super) u64);
 impl Uuid {
     pub(super) fn next(&mut self) -> String {
         self.0 += 1;
-        format!("00000000-0000-0000-0000-{:012x}", self.0)
+        electra_board::kicad::sequence_uuid(self.0)
     }
 }
 
@@ -115,68 +115,11 @@ pub(super) fn mm(p: i64) -> f64 {
 // separate `crate::geom` import.
 pub use crate::geom::{mechanical_features, MechFeature, MechKind};
 
-/// Return duplicate UUID values from a KiCad PCB text, sorted lexicographically.
-///
-/// KiCad identifies board objects by UUID. Reusing a UUID across footprints, pads, tracks, or vias can
-/// make the ratsnest and DRC diagnostics refer to the wrong object, so generated boards are not
-/// trustworthy until this returns an empty vector.
-#[must_use]
-pub fn duplicate_pcb_uuids(pcb_text: &str) -> Vec<String> {
-    let mut counts = std::collections::BTreeMap::<String, usize>::new();
-    let needle = "(uuid";
-    let mut rest = pcb_text;
-    while let Some(idx) = rest.find(needle) {
-        rest = &rest[idx + needle.len()..];
-        let trimmed = rest.trim_start();
-        let Some(after_quote) = trimmed.strip_prefix('"') else {
-            rest = trimmed;
-            continue;
-        };
-        let mut escaped = false;
-        let mut end = None;
-        for (i, c) in after_quote.char_indices() {
-            if escaped {
-                escaped = false;
-                continue;
-            }
-            if c == '\\' {
-                escaped = true;
-                continue;
-            }
-            if c == '"' {
-                end = Some(i);
-                break;
-            }
-        }
-        let Some(end) = end else {
-            break;
-        };
-        let value = &after_quote[..end];
-        if is_uuid_shape(value) {
-            *counts.entry(value.to_string()).or_default() += 1;
-        }
-        rest = &after_quote[end + 1..];
-    }
-
-    counts
-        .into_iter()
-        .filter_map(|(uuid, count)| (count > 1).then_some(uuid))
-        .collect()
-}
-
-fn is_uuid_shape(value: &str) -> bool {
-    let bytes = value.as_bytes();
-    if bytes.len() != 36 {
-        return false;
-    }
-    bytes.iter().enumerate().all(|(i, b)| match i {
-        8 | 13 | 18 | 23 => *b == b'-',
-        _ => b.is_ascii_hexdigit(),
-    })
-} // Facade-level tests live in `src/io/tests.rs` (the single slice-wide test surface).
-  // Dropping per-`mod.rs` fixtures eliminates the previously-duplicated coverage
-  // (`duplicate_pcb_uuids_reports_only_repeated_values` ↔
-  //  `tests.rs::duplicate_pcb_uuids_reports_only_repeated_uuid_values`).
+pub use electra_board::kicad::duplicate_pcb_uuids;
+// Facade-level tests live in `src/io/tests.rs` (the single slice-wide test surface).
+// Dropping per-`mod.rs` fixtures eliminates the previously-duplicated coverage
+// (`duplicate_pcb_uuids_reports_only_repeated_values` ↔
+//  `tests.rs::duplicate_pcb_uuids_reports_only_repeated_uuid_values`).
 #[cfg(test)]
 mod facade_tests {}
 

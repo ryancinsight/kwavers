@@ -2,32 +2,12 @@
 //!
 //! All items are `pub(crate)`. Only detectors and the `audit()` orchestrator call these.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
-use crate::board::{Board, LayerId, NetClassKind, NetId, Track};
-use crate::geom::{point_in_polygon, Nm, Point};
+use crate::board::{Board, NetClassKind, NetId, Track};
+use crate::geom::{point_in_polygon, Point};
 
-/// Midpoint of a track segment.
-pub(crate) fn track_midpoint(track: &Track) -> Point {
-    Point::new(
-        Nm((track.start.x.0 + track.end.x.0) / 2),
-        Nm((track.start.y.0 + track.end.y.0) / 2),
-    )
-}
-
-/// Cumulative routed length per layer for a set of tracks.
-pub(crate) fn diff_pair_layer_segment_lengths(
-    tracks: &[&Track],
-) -> BTreeMap<LayerId, (f64, Option<Point>)> {
-    let mut lengths = BTreeMap::new();
-    for track in tracks {
-        let entry = lengths
-            .entry(track.layer)
-            .or_insert_with(|| (0.0, Some(track_midpoint(track))));
-        entry.0 += track.start.euclid(track.end);
-    }
-    lengths
-}
+pub(crate) use electra_board::route::{diff_pair_layer_segment_lengths, track_midpoint};
 
 /// Iterator over series capacitors connected to a net (used to locate diff-pair coupling caps).
 pub(crate) fn diff_pair_coupling_caps(
