@@ -23,12 +23,18 @@
 //! `F = -(ρ₀/(4πd²)) ⟨V̇₁ V̇₂⟩`:
 //!
 //! ```text
-//! F_secondary = (ρ₀ ω² / (8π)) · ΔV₁ · ΔV₂ · cos(φ) / d²
+//! F_secondary = -(ρ₀ ω² / (8π)) · ΔV₁ · ΔV₂ · cos(φ) / d²
 //! ```
 //! where ΔV₁, ΔV₂ are the bubbles' volume-oscillation amplitudes, φ is
-//! the phase difference and d the separation. (The instantaneous Crum
-//! 1975 form `F_B(t) = -ρ₀ V̇₁ V̇₂ / (4πd²)` lives separately in
-//! `crate::acoustics::bubble_dynamics::interactions`; see KW-PHYS-009.)
+//! the phase difference and d the separation. The scalar is the
+//! line-of-centres component of the force on one bubble due to the
+//! other, positive away from the other bubble — so in-phase pairs
+//! (cos φ > 0) give a negative (attractive) force. The instantaneous
+//! Crum 1975 form `F_B(t) = -ρ₀ V̇₁ V̇₂ / (4πd²)` is the canonical
+//! kernel [`secondary_bjerknes_force_instantaneous`] in the same
+//! submodule; `crate::acoustics::bubble_dynamics::interactions`
+//! delegates to it (KW-PHYS-009 item 1, consolidated 2026-11-27 —
+//! the two implementations previously carried opposite signs).
 //!
 //! ## Validity regime
 //!
@@ -59,6 +65,8 @@ pub mod types;
 mod tests;
 
 pub use calculator::BjerknesCalculator;
+pub use primary::primary_bjerknes_force;
+pub use secondary::{secondary_bjerknes_force_instantaneous, secondary_bjerknes_force_mean};
 pub use regime::{
     bjerknes_regime, displacement_amplitude, duryea_aggregation_regime,
     radiated_pressure_amplitude, secondary_bjerknes_force_checked, AggregationRegime,

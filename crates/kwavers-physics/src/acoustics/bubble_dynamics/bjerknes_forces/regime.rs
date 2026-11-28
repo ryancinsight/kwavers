@@ -6,13 +6,15 @@
 //! The secondary Bjerknes force implemented in this module
 //! ([`BjerknesCalculator::secondary_bjerknes_force`]) is the
 //! time-averaged **linear** form derived from Crum (1975,
-//! *J. Acoust. Soc. Am.* 57, 1363):
+//! *J. Acoust. Soc. Am.* 57, 536–538):
 //! `⟨F⟩ = −(ρ/(4πd²))·⟨V̇₁V̇₂⟩`, which for harmonic oscillation
-//! reduces to `(ρω²/(8π))·V₁V₂·cos(φ)/d²` with `Vᵢ` the peak volume
-//! oscillation amplitudes. (The instantaneous Crum form itself is
-//! implemented in
-//! [`interactions`](crate::acoustics::bubble_dynamics::interactions);
-//! time-averaging it over a harmonic cycle gives the form here.)
+//! reduces to `−(ρω²/(8π))·V₁V₂·cos(φ)/d²` with `Vᵢ` the peak volume
+//! oscillation amplitudes — the line-of-centres component, positive
+//! away from the other bubble, so in-phase pairs attract (`⟨F⟩ < 0`).
+//! (The instantaneous Crum form is the canonical kernel
+//! [`secondary_bjerknes_force_instantaneous`](super::secondary_bjerknes_force_instantaneous);
+//! time-averaging it over a harmonic cycle gives the form here.
+//! KW-PHYS-009 item 1, consolidated 2026-11-27.)
 //!
 //! Linear theory requires **small oscillation amplitude**,
 //! `ξ/R0 ≪ 1` (ξ = wall displacement amplitude), and **weak
