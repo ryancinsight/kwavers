@@ -74,3 +74,4 @@
 <a id="kwavers-stable-qualification"></a>- [KWAVERS-STABLE-QUALIFICATION](backlog/kwavers-stable-qualification.md) — kwavers stable-release qualification [patch] — todo
 <a id="kw-athena-damped-lsqr"></a>- [KW-ATHENA-DAMPED-LSQR](backlog/kw-athena-damped-lsqr.md) — Damped LSQR results and tests are unchecked against the athena damping-rotation fix [patch] — blocked
 <a id="kw-verif-rescued-remainder"></a>- [KW-VERIF-RESCUED-REMAINDER](backlog/kw-verif-rescued-remainder.md) — Three unlanded changes of a rescued baseline lane port to the default branch [patch] — todo
+<a id="kw-board-schema-residuals"></a>- [KW-BOARD-SCHEMA-RESIDUALS](backlog/kw-board-schema-residuals.md) — Three items fail the board schema, one needs an id no board holds, one exceeds the item budget [patch] — todo
