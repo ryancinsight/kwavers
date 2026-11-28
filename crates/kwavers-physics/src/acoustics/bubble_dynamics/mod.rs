@@ -52,8 +52,8 @@ pub mod thermodynamics;
 
 pub use acoustic_pressure::{InstantaneousPressure, PressureAmplitude};
 pub use adaptive_integration::{
-    integrate_bubble_dynamics_adaptive, AdaptiveBubbleConfig, AdaptiveBubbleIntegrator,
-    IntegrationStatistics,
+    integrate_bubble_dynamics_adaptive, integrate_bubble_dynamics_implicit, AdaptiveBubbleConfig,
+    AdaptiveBubbleIntegrator, ImplicitBubbleIntegrator, IntegrationStatistics,
 };
 pub use bjerknes_forces::{
     bjerknes_regime, displacement_amplitude, duryea_aggregation_regime,
