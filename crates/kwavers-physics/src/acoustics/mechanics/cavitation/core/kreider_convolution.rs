@@ -340,7 +340,6 @@ pub fn wall_temperature_scl(
 /// the Eq. (16) trapping cap on condensation. Zero when either
 /// temperature reaches `T_c` (Kreider §II.B.2, following
 /// Akhatov et al.).
-#[allow(clippy::too_many_arguments)]
 pub fn vapour_rate_hertz_knudsen(
     r: f64,
     r_dot: f64,

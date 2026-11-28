@@ -284,7 +284,6 @@ impl NoiseStream {
 /// # Errors
 /// [`KwaversError::InvalidInput`] on empty RF or a non-positive
 /// tissue-echo level; propagates filter errors.
-#[allow(clippy::too_many_arguments)]
 pub fn add_declared_noise_to_rf(
     rf: ArrayView2<'_, f64>,
     dt_s: f64,
@@ -378,7 +377,6 @@ impl RectRoi {
 /// # Errors
 /// [`KwaversError::InvalidInput`] on shape/geometry mismatch, empty
 /// grid, or non-finite input.
-#[allow(clippy::too_many_arguments)]
 pub fn coherent_das_envelope(
     rf: ArrayView2<'_, f64>,
     geometry: &TripletPulseGeometry,
@@ -431,25 +429,48 @@ pub fn coherent_das_envelope(
     Ok(image)
 }
 
+/// Channel RF of the three transmit phases of one acquisition.
+pub struct PhaseRf<'a> {
+    /// RF of the 0° phase, one row per element.
+    pub ph0: ArrayView2<'a, f64>,
+    /// RF of the 120° phase, same shape as `ph0`.
+    pub ph120: ArrayView2<'a, f64>,
+    /// RF of the 240° phase, same shape as `ph0`.
+    pub ph240: ArrayView2<'a, f64>,
+}
+
+/// Declared Kuji high-pass applied to every channel before
+/// beamforming (spec step 2).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct KujiFilter {
+    /// Passband edge `fc` [Hz].
+    pub fc_hz: f64,
+    /// Realisation of the high-pass.
+    pub shape: KujiFilterShape,
+    /// Whether the declared probe receive band is also applied.
+    pub probe_band: bool,
+}
+
 /// 1P and 3P envelope images from the three phase RF records at one
 /// cutoff: combine per channel, Kuji-filter each channel, coherent
 /// DAS (spec steps 1–3).
 ///
 /// # Errors
 /// Propagates shape/filter/DAS validation errors.
-#[allow(clippy::too_many_arguments)]
 pub fn kuji_images(
-    ph0: ArrayView2<'_, f64>,
-    ph120: ArrayView2<'_, f64>,
-    ph240: ArrayView2<'_, f64>,
+    phases: PhaseRf<'_>,
     geometry: &TripletPulseGeometry,
     xs_m: &[f64],
     ys_m: &[f64],
-    fc_hz: f64,
-    shape: KujiFilterShape,
-    probe_band: bool,
+    filter: KujiFilter,
     half_win: usize,
 ) -> KwaversResult<(Array2<f64>, Array2<f64>)> {
+    let PhaseRf { ph0, ph120, ph240 } = phases;
+    let KujiFilter {
+        fc_hz,
+        shape,
+        probe_band,
+    } = filter;
     let shape0 = ph0.shape();
     if ph120.shape() != shape0 || ph240.shape() != shape0 {
         return Err(KwaversError::InvalidInput(
@@ -540,7 +561,6 @@ impl KujiReductions {
 ///
 /// # Errors
 /// Propagates [`roi_mean_reduction`] errors.
-#[allow(clippy::too_many_arguments)]
 pub fn kuji_contrast_from_images(
     before_1p: ArrayView2<'_, f64>,
     before_3p: ArrayView2<'_, f64>,
@@ -896,15 +916,19 @@ mod tests {
         let xs: Vec<f64> = (0..9).map(|i| 15.0e-3 + i as f64 * 1.0e-3).collect();
         let ys: Vec<f64> = (0..9).map(|i| 16.0e-3 + i as f64 * 1.0e-3).collect();
         let (img1, img3) = kuji_images(
-            ph0.view(),
-            ph120.view(),
-            ph240.view(),
+            PhaseRf {
+                ph0: ph0.view(),
+                ph120: ph120.view(),
+                ph240: ph240.view(),
+            },
             &g,
             &xs,
             &ys,
-            3.0e6,
-            KujiFilterShape::KujiRaisedCosine,
-            true,
+            KujiFilter {
+                fc_hz: 3.0e6,
+                shape: KujiFilterShape::KujiRaisedCosine,
+                probe_band: true,
+            },
             8,
         )
         .unwrap();

@@ -185,7 +185,6 @@ pub fn radiated_pressure_amplitude(
 ///   [`BJERKNES_LINEAR_MAX_DISPLACEMENT_RATIO`].
 /// - Otherwise whatever the underlying calculator returns (its own
 ///   input validation: non-positive radii/distance).
-#[allow(clippy::too_many_arguments)]
 pub fn secondary_bjerknes_force_checked(
     calculator: &BjerknesCalculator,
     bubble1_radius: f64,
