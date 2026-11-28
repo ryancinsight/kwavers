@@ -16,9 +16,9 @@ pub use bader_influx::{
     bader_signed_expansion_influx, compression_phase_outflux, equilibrium_gas_content,
     equilibrium_gas_content_derivative, equilibrium_radius_for_pressure,
     henry_surface_concentration, residual_radius_as_printed, residual_radius_equilibrium,
-    tensile_phase_duration, BaderHollandFlags, BADER_INFLUX_MAX_CYCLES,
-    BADER_INFLUX_MAX_PRESSURE_PA, BADER_INFLUX_MIN_PRESSURE_PA, CONTINUAL_GROWTH_THRESHOLD_PA,
-    MOLECULES_PER_MOLE,
+    tensile_phase_duration, BaderHollandFlags, CompressionSamples, OutfluxMedium,
+    BADER_INFLUX_MAX_CYCLES, BADER_INFLUX_MAX_PRESSURE_PA, BADER_INFLUX_MIN_PRESSURE_PA,
+    CONTINUAL_GROWTH_THRESHOLD_PA, MOLECULES_PER_MOLE,
 };
 pub use growth::{
     oscillation_amplitude_fraction, rectified_diffusion_rate, rectified_diffusion_rate_checked,
