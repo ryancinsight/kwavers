@@ -49,7 +49,10 @@ fn in_phase_pair_attracts_on_every_path() {
     let in_phase: BjerknesForceData = calc
         .secondary_bjerknes_force(5e-6, 5e-6, 1e-15, 1e-15, 0.0, 10e-6)
         .unwrap();
-    assert_eq!(in_phase.interaction_type, BjerknesInteractionType::Attractive);
+    assert_eq!(
+        in_phase.interaction_type,
+        BjerknesInteractionType::Attractive
+    );
     assert!(
         in_phase.secondary < 0.0,
         "in-phase pair must attract: secondary < 0, got {}",
@@ -77,9 +80,12 @@ fn in_phase_pair_attracts_on_every_path() {
     // the same sign and value as the direct calculator call.
     let r0 = 5e-6;
     let dv_small = 4.0 * std::f64::consts::PI * r0 * r0 * (0.05 * r0);
-    let checked = secondary_bjerknes_force_checked(&calc, r0, r0, dv_small, dv_small, 0.0, 50e-6)
-        .unwrap();
-    assert!(checked.secondary < 0.0, "checked path must attract in phase");
+    let checked =
+        secondary_bjerknes_force_checked(&calc, r0, r0, dv_small, dv_small, 0.0, 50e-6).unwrap();
+    assert!(
+        checked.secondary < 0.0,
+        "checked path must attract in phase"
+    );
     let direct = calc
         .secondary_bjerknes_force(r0, r0, dv_small, dv_small, 0.0, 50e-6)
         .unwrap();

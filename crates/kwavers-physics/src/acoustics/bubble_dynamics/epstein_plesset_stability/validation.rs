@@ -9,7 +9,9 @@ impl EpsteinPlessetStabilitySolver {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn validate_implementation(&self) -> KwaversResult<EpsteinPlessetStabilityValidationResults> {
+    pub fn validate_implementation(
+        &self,
+    ) -> KwaversResult<EpsteinPlessetStabilityValidationResults> {
         let analysis = self.analyze_stability();
 
         let expected_freq = self.compute_resonance_frequency();

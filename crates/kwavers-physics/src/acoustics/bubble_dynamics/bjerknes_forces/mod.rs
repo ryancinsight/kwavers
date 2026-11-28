@@ -66,11 +66,11 @@ mod tests;
 
 pub use calculator::BjerknesCalculator;
 pub use primary::primary_bjerknes_force;
-pub use secondary::{secondary_bjerknes_force_instantaneous, secondary_bjerknes_force_mean};
 pub use regime::{
     bjerknes_regime, displacement_amplitude, duryea_aggregation_regime,
     radiated_pressure_amplitude, secondary_bjerknes_force_checked, AggregationRegime,
     BjerknesRegime, BJERKNES_LINEAR_MAX_DISPLACEMENT_RATIO, DURYEA_AGGREGATION_MI_MAX,
     DURYEA_AGGREGATION_MI_MIN,
 };
+pub use secondary::{secondary_bjerknes_force_instantaneous, secondary_bjerknes_force_mean};
 pub use types::{BjerknesConfig, BjerknesForceData, BjerknesInteractionType};
