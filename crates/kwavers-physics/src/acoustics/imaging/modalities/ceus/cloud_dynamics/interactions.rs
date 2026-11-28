@@ -120,6 +120,18 @@ impl CloudDynamics {
 
     /// Time-averaged primary Bjerknes radiation force on a bubble.
     ///
+    /// **Deliberate variant (KW-PHYS-009 item 2, retained 2026-11-27):**
+    /// this is the CEUS travelling-wave time-averaged *magnitude*
+    /// specialisation of the primary Bjerknes force — it is **not**
+    /// the canonical primary Bjerknes law `F = −V·∇p`, which lives in
+    /// `bubble_dynamics::bjerknes_forces::primary_bjerknes_force`.
+    /// Its ε is the *radial* amplitude `ΔR/R₀`, where the Leighton
+    /// Eq. 3.59 form it cites takes the *volume* amplitude
+    /// `ΔV/V₀ ≈ 3ΔR/R₀` — so ε here is ~3× smaller than the cited
+    /// form's. That deviation is deliberate and retained to match the
+    /// legacy caller contract (see the inline note at `volume_amp`);
+    /// do not "correct" it without migrating the caller.
+    ///
     /// ## Formula (Leighton 1994, §3.4)
     ///
     /// For a plane wave `p(x,t) = p_amp cos(ωt − kx)` driving a bubble whose

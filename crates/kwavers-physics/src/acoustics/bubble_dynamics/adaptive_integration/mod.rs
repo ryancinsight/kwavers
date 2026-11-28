@@ -3,6 +3,13 @@
 //! This module provides adaptive integration methods specifically designed
 //! for the stiff ODEs in bubble dynamics, particularly during violent collapse.
 //!
+//! Two paths share the [`AdaptiveBubbleModel`] contract and the
+//! step-doubling controller shape: the explicit RK4
+//! [`AdaptiveBubbleIntegrator`] for weakly driven regimes, and the
+//! implicit SDIRK2 [`ImplicitBubbleIntegrator`] for inertial-collapse
+//! trajectories, whose collapse spike the explicit path cannot
+//! traverse without injecting energy (KW-PHYS-009 item 5).
+//!
 //! ## Literature References
 //!
 //! 1. **Hairer & Wanner (1996)**. "Solving Ordinary Differential Equations II:
@@ -16,6 +23,7 @@
 //!    - Numerical challenges in bubble dynamics
 
 mod config;
+mod implicit;
 mod integrator;
 mod statistics;
 
@@ -23,6 +31,7 @@ mod statistics;
 mod tests;
 
 pub use config::AdaptiveBubbleConfig;
+pub use implicit::ImplicitBubbleIntegrator;
 pub use integrator::AdaptiveBubbleIntegrator;
 pub use statistics::IntegrationStatistics;
 
@@ -166,5 +175,29 @@ where
 {
     let config = AdaptiveBubbleConfig::default();
     let mut integrator = AdaptiveBubbleIntegrator::new(solver, config);
+    integrator.integrate_adaptive(state, p_acoustic, dp_dt, dt, t)
+}
+
+/// Integrate one main step with the implicit SDIRK2 path
+/// ([`ImplicitBubbleIntegrator`]) — the stiff-capable counterpart of
+/// [`integrate_bubble_dynamics_adaptive`], for trajectories that
+/// collapse inertially (KW-PHYS-009 item 5). Same zero-order-hold
+/// drive contract as the explicit path.
+/// # Errors
+/// - Returns [`Err`] if an internal constraint is violated.
+///
+pub fn integrate_bubble_dynamics_implicit<Model>(
+    solver: &Model,
+    state: &mut BubbleState,
+    p_acoustic: InstantaneousPressure,
+    dp_dt: PressureRate,
+    dt: f64,
+    t: f64,
+) -> KwaversResult<()>
+where
+    Model: AdaptiveBubbleModel,
+{
+    let config = AdaptiveBubbleConfig::default();
+    let mut integrator = ImplicitBubbleIntegrator::new(solver, config);
     integrator.integrate_adaptive(state, p_acoustic, dp_dt, dt, t)
 }

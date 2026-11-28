@@ -6,9 +6,51 @@ use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::cavitation::{MAX_RADIUS, MIN_RADIUS};
 use kwavers_core::constants::numerical::{
     ERROR_CONTROL_EXPONENT, HALF_STEP_FACTOR, INITIAL_TIME_STEP_FRACTION, MAX_RADIUS_SAFETY_FACTOR,
-    MAX_TEMPERATURE, MAX_VELOCITY_FRACTION, MIN_RADIUS_SAFETY_FACTOR, MIN_TEMPERATURE,
+    MAX_TEMPERATURE, MIN_RADIUS_SAFETY_FACTOR, MIN_TEMPERATURE,
 };
 use kwavers_core::error::{KwaversResult, PhysicsError};
+
+/// Shared stability predicate for accepted bubble states, used by both
+/// the explicit RK4 integrator and the implicit SDIRK2 integrator.
+///
+/// A state is stable when its radius and wall velocity are finite, its
+/// radius is inside the physical bounds, and its temperature is inside
+/// the thermodynamic bounds. Wall-velocity *magnitude* is deliberately
+/// **not** a criterion (KW-PHYS-009 item 5): the previous bound
+/// (|Ṙ| > 0.1·c rejected) sits ~366× below the velocities the true
+/// inertial-collapse trajectory must cross (spike-resolved LSODA
+/// reference max |Ṙ| = 54,157 m/s ≈ Mach 36.6 at the Louisnard &
+/// Gomez Fig. 4 (5 µm, 5 bar) conditions; the 6044 m/s / Mach 4.08
+/// figure cited earlier was an under-sampled reading of the same
+/// spike), so it rejected the solution itself and deadlocked the
+/// integrator at the first collapse. Step quality in that regime
+/// is judged by the step-doubling error norm, not by an absolute
+/// velocity fraction.
+#[must_use]
+pub(super) fn bubble_state_is_stable(config: &AdaptiveBubbleConfig, state: &BubbleState) -> bool {
+    if !config.monitor_stability {
+        return true;
+    }
+
+    // Check for NaN or Inf
+    if !state.radius.is_finite() || !state.wall_velocity.is_finite() {
+        return false;
+    }
+
+    // Check physical bounds (but don't clamp!)
+    if state.radius < MIN_RADIUS * MIN_RADIUS_SAFETY_FACTOR
+        || state.radius > MAX_RADIUS * MAX_RADIUS_SAFETY_FACTOR
+    {
+        return false;
+    }
+
+    // Check temperature bounds
+    if state.temperature < MIN_TEMPERATURE || state.temperature > MAX_TEMPERATURE {
+        return false;
+    }
+
+    true
+}
 
 /// Adaptive integrator for bubble dynamics with sub-cycling
 #[derive(Debug)]
@@ -289,35 +331,13 @@ where
     }
 
     /// Check if the state is physically stable
+    ///
+    /// Delegates to [`bubble_state_is_stable`], the predicate shared
+    /// with the implicit SDIRK2 integrator (no absolute
+    /// wall-velocity bound — see its docs, KW-PHYS-009 item 5).
     #[must_use]
     pub fn check_stability(&self, state: &BubbleState) -> bool {
-        if !self.config.monitor_stability {
-            return true;
-        }
-
-        // Check for NaN or Inf
-        if !state.radius.is_finite() || !state.wall_velocity.is_finite() {
-            return false;
-        }
-
-        // Check physical bounds (but don't clamp!)
-        if state.radius < MIN_RADIUS * MIN_RADIUS_SAFETY_FACTOR
-            || state.radius > MAX_RADIUS * MAX_RADIUS_SAFETY_FACTOR
-        {
-            return false;
-        }
-
-        // Check for extreme velocities (approaching speed of sound)
-        if state.wall_velocity.abs() > self.solver.params().c_liquid * MAX_VELOCITY_FRACTION {
-            return false;
-        }
-
-        // Check temperature bounds
-        if state.temperature < MIN_TEMPERATURE || state.temperature > MAX_TEMPERATURE {
-            return false;
-        }
-
-        true
+        bubble_state_is_stable(&self.config, state)
     }
 
     /// Get integration statistics

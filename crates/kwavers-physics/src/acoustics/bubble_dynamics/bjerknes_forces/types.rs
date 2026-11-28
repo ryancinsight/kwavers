@@ -39,11 +39,19 @@ impl Default for BjerknesConfig {
 /// Results from Bjerknes force calculation
 #[derive(Debug, Clone, Copy)]
 pub struct BjerknesForceData {
-    /// Primary Bjerknes force (N) - radiation pressure force
+    /// Primary Bjerknes force (N) — component along the
+    /// pressure-gradient axis, `−V·∇p`.
     pub primary: f64,
-    /// Secondary Bjerknes force (N) - bubble-bubble interaction
+    /// Secondary Bjerknes force (N) — bubble-bubble interaction:
+    /// line-of-centres component of the force on one bubble due to
+    /// the other, positive away from the other bubble (negative =
+    /// attraction; see the `secondary` submodule docs for the
+    /// canonical convention).
     pub secondary: f64,
-    /// Total force (N)
+    /// Total force (N) — `primary + secondary` as historically
+    /// defined; the two components act along different axes (the
+    /// gradient axis and the line of centres), so interpreting the
+    /// sum as a single-axis force is the caller's responsibility.
     pub total: f64,
     /// Phase difference between bubbles (radians)
     pub phase_difference: f64,

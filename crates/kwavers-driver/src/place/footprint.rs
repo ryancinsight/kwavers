@@ -78,20 +78,7 @@ pub enum PackageFormFactor {
     ThroughHole,
 }
 
-/// Placement role — drives where a part *wants* to sit in the placement energy.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Role {
-    /// An active IC (HV7355 pulser, isolator) — pulled to the board core.
-    ActiveIc,
-    /// A board-edge interface (transducer / control / power connector) — pulled to the periphery.
-    Connector,
-    /// A decoupling/bypass capacitor — pinned next to its IC's power pin.
-    Decoupling,
-    /// A power-conversion part (buck, bulk cap).
-    Power,
-    /// A generic passive (series R, ferrite) — placed by wirelength only.
-    Passive,
-}
+pub use electra_board::place::Role;
 
 /// LV↔HV isolation domain of a footprint/component. Drives the placement
 /// [`crate::place::energy::EnergyTerms::isolation_drift`] term so the annealer lifts HV

@@ -73,7 +73,7 @@ pub enum AmplitudeEvolution {
 
 /// Validation results for Epstein-Plesset implementation
 #[derive(Debug, Clone, PartialEq)]
-pub struct EpsteinPlessetValidationResults {
+pub struct EpsteinPlessetStabilityValidationResults {
     /// Relative error in resonance frequency calculation
     pub resonance_frequency_error: f64,
     /// Quality factor is in reasonable range

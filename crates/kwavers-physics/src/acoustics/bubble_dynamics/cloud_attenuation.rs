@@ -147,16 +147,24 @@ pub fn cloud_length(cycles: f64, formation_cycles: f64, frequency: f64, sound_sp
 ///
 /// `S → 1` as `αL → 0` and `S → 1/(mαL)` for a thick cloud — the
 /// `1/n` tail behind the Build 9 negative result in the module docs.
+///
+/// Evaluated as `−expm1(−x)/x`: `expm1` computes `e^{−x} − 1` to
+/// full relative precision at small `x`, where the direct
+/// `(1 − exp(−x))/x` loses up to ~1.6e-11 absolute to cancellation
+/// (at `x ≈ 1e-6`; the error decays as ~1e-16/x). The previous
+/// form's Taylor branch (`1 − x/2` below `x = 1e-6`) additionally
+/// undershot the closed form by `x²/6 ≈ 1.7e-13` at the seam,
+/// making `S` non-monotone there. The single `expm1` form has no
+/// seam, matches the closed form to ≤1 ulp at every `x > 0`, is
+/// monotone decreasing, and preserves `0 < S ≤ 1` (physics review
+/// 2026-11-27).
 #[must_use]
 pub fn shielding_factor_coherent(alpha: f64, length: f64, influx_exponent: f64) -> f64 {
     let x = influx_exponent * alpha * length;
     if x <= 0.0 {
         return 1.0;
     }
-    if x < 1e-6 {
-        return 1.0 - x / 2.0;
-    }
-    (1.0 - (-x).exp()) / x
+    -(-x).exp_m1() / x
 }
 
 #[cfg(test)]
@@ -208,6 +216,29 @@ mod tests {
         assert_relative_eq!(l, 21.5 * 1.5e-3 / 3.0, epsilon = 1e-12);
         // Before formation: zero.
         assert_eq!(cloud_length(2.0, 3.5, 1.0e6, 1500.0), 0.0);
+    }
+
+    #[test]
+    fn test_shielding_factor_seam_monotone() {
+        // The expm1 evaluation has no seam at x = 1e-6: S is
+        // non-increasing across it (to rounding) and matches the
+        // series 1 − x/2 + x²/6 there (physics review 2026-11-27;
+        // the previous Taylor branch jumped up by ~x²/6 at the seam
+        // and the direct closed form carried ~1e-11 cancellation
+        // noise around it).
+        let mut prev = shielding_factor_coherent(9.9e-7, 1.0, 1.0);
+        for i in 1..=1000 {
+            let x = 9.9e-7 + i as f64 * 2e-13;
+            let v = shielding_factor_coherent(x, 1.0, 1.0);
+            assert!(v <= prev + 1e-15, "S must be non-increasing: S({x}) = {v} > {prev}");
+            prev = v;
+        }
+        let s_seam = shielding_factor_coherent(1e-6, 1.0, 1.0);
+        let series = 1.0 - 1e-6 / 2.0 + 1e-12 / 6.0;
+        assert!(
+            (s_seam - series).abs() < 1e-15,
+            "S(1e-6) = {s_seam}, series {series}"
+        );
     }
 
     #[test]

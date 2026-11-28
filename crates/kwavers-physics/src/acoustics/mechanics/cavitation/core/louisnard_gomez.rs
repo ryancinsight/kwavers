@@ -189,7 +189,14 @@ pub fn louisnard_gomez_regime(
         pressure_outside_validated: !(LOUISNARD_GOMEZ_MIN_PRESSURE_PA
             ..=LOUISNARD_GOMEZ_MAX_PRESSURE_PA)
             .contains(&acoustic_pressure),
-        radius_outside_validated: radius >= LOUISNARD_GOMEZ_MAX_RADIUS_M,
+        // Explicit NaN disjunct, matching the NaN-tightness of the
+        // `.contains()`-based flags above and the Bader checked
+        // variant: a plain `radius >= MAX` test is false for NaN and
+        // would wave a NaN radius through as in-regime. For every
+        // non-NaN input the flag is unchanged. (Positivity of the
+        // radius is the checked variant's separate reject, not this
+        // flag's.)
+        radius_outside_validated: radius >= LOUISNARD_GOMEZ_MAX_RADIUS_M || radius.is_nan(),
         saturation_outside_validated: !(saturation_ratio > 0.0 && saturation_ratio <= 1.0),
     }
 }
@@ -415,11 +422,47 @@ pub fn louisnard_gomez_growth_rate_checked(
             reason,
         })
     };
-    if equilibrium_radius <= 0.0 {
+    // Each reject carries an explicit NaN disjunct: a bare
+    // `x <= 0.0` test is false for NaN and would wave it through —
+    // the NaN-tightness convention of the regime flags and the
+    // Bader checked variant.
+    if equilibrium_radius <= 0.0 || equilibrium_radius.is_nan() {
         return Err(reject(
             "equilibrium_radius",
             equilibrium_radius,
             "Equilibrium radius must be positive".to_owned(),
+        ));
+    }
+    // Medium-parameter rejects, per this function's documented
+    // contract: the unchecked law silently returns 0.0 for degenerate
+    // D / C0 / T / p0, which a checked variant must not wave through
+    // as Ok(0.0). NaN-tight for the same reason as above.
+    if params.diffusivity <= 0.0 || params.diffusivity.is_nan() {
+        return Err(reject(
+            "diffusivity",
+            params.diffusivity,
+            "Diffusivity must be positive".to_owned(),
+        ));
+    }
+    if params.saturation_concentration <= 0.0 || params.saturation_concentration.is_nan() {
+        return Err(reject(
+            "saturation_concentration",
+            params.saturation_concentration,
+            "Saturation concentration must be positive".to_owned(),
+        ));
+    }
+    if params.temperature <= 0.0 || params.temperature.is_nan() {
+        return Err(reject(
+            "temperature",
+            params.temperature,
+            "Temperature must be positive".to_owned(),
+        ));
+    }
+    if params.ambient_pressure <= 0.0 || params.ambient_pressure.is_nan() {
+        return Err(reject(
+            "ambient_pressure",
+            params.ambient_pressure,
+            "Ambient pressure must be positive".to_owned(),
         ));
     }
     if radius.len() < 2 || radius.len() != time.len() {

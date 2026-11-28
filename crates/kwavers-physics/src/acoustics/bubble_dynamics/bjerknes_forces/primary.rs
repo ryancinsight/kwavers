@@ -4,6 +4,23 @@ use super::calculator::BjerknesCalculator;
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
+/// Canonical primary Bjerknes force: `F = −V · ∇p`, the component
+/// along the pressure-gradient axis of the force on a bubble of
+/// volume `V` in a pressure gradient `∇p` (Leighton 1994, §3.4;
+/// Blake 1986). This is the single implementation of the law
+/// (KW-PHYS-009 item 2, consolidated 2026-11-27):
+/// [`BjerknesCalculator::primary_bjerknes_force`] evaluates it at
+/// `V = (4π/3)R³`, and `interactions::BjerknesForceComputer::primary`
+/// delegates to it directly.
+///
+/// The CEUS travelling-wave time-averaged magnitude
+/// `|⟨F⟩| = ½V₀εkp_amp` (`cloud_dynamics::calculate_radiation_force`)
+/// is a distinct specialisation, not this law; see its docs.
+#[must_use]
+pub fn primary_bjerknes_force(volume: f64, pressure_gradient: f64) -> f64 {
+    -volume * pressure_gradient
+}
+
 impl BjerknesCalculator {
     /// Calculate primary Bjerknes force on a bubble in acoustic field.
     ///
@@ -45,9 +62,9 @@ impl BjerknesCalculator {
             ));
         }
 
-        // F_B1 = −(4π/3)R³ · ∂p/∂z
+        // F_B1 = −(4π/3)R³ · ∂p/∂z, via the canonical law.
         let volume = (FOUR_PI / 3.0) * bubble_radius.powi(3);
-        Ok(-volume * pressure_gradient)
+        Ok(primary_bjerknes_force(volume, pressure_gradient))
     }
 }
 
