@@ -49,6 +49,16 @@ pub const CHOMAS_FRAGMENTATION_DIAMETER_RATIO: f64 = 10.0;
 /// (2021) in the prototype's Stage 7 kernel-B construction. This is
 /// a calibration, not a literature value and not a prediction; it is
 /// exported only so the fitted value has one documented home.
+///
+/// A Build 22 derivation of the neighbour-asymmetry seed at the
+/// model's cloud configuration (Poisson field, β(R_M) = 4.2%,
+/// d_NN = 100 µm) gives σ_a ≈ 250 nm — 74× (raw) / 5.8× (floored)
+/// the seed 0.02 requires — implying per-collapse p ≈ 0.7–1.0 at
+/// both burst points. The neighbour seed therefore does not
+/// legitimise 0.02; it overshoots it as decisively as the thermal
+/// seed undershoots it at Iwasaki. 0.02 remains an empirical
+/// single-burst effective value (Li et al. 2021 conditions), not
+/// derivable from either parameter-free seed.
 pub const P_FRAG_FITTED_LI_2021: f64 = 0.02;
 
 /// Collapse ratio `X = R_max / R_min` of a bubble cycle. Compare

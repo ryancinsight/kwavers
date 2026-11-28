@@ -2,8 +2,10 @@
 //!
 //! Calculates forces between bubbles (Bjerknes forces, etc.)
 
+use super::bjerknes_forces::{
+    primary_bjerknes_force, secondary_bjerknes_force_instantaneous, BjerknesInteractionType,
+};
 use super::bubble_state::BubbleState;
-use eunomia::FloatElement;
 use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
@@ -107,16 +109,21 @@ impl BubbleInteractions {
 pub struct BjerknesForceComputer;
 
 impl BjerknesForceComputer {
-    /// Primary Bjerknes force (bubble in pressure gradient)
+    /// Primary Bjerknes force (bubble in pressure gradient).
+    ///
+    /// Delegates to the canonical law
+    /// [`primary_bjerknes_force`] (`F = −V·∇p`; KW-PHYS-009 item 2,
+    /// consolidated 2026-11-27).
     #[must_use]
     pub fn primary(bubble_volume: f64, pressure_gradient: f64) -> f64 {
-        -bubble_volume * pressure_gradient
+        primary_bjerknes_force(bubble_volume, pressure_gradient)
     }
 
     /// Secondary Bjerknes force (bubble-bubble interaction).
     ///
-    /// Canonical instantaneous form (Crum 1975; Leighton 1994 §4.5.2;
-    /// Brennen 1995 Eq. 4.49):
+    /// Delegates to the canonical instantaneous kernel
+    /// [`secondary_bjerknes_force_instantaneous`] (Crum 1975;
+    /// Leighton 1994 §3.4; Brennen 1995 Eq. 4.49):
     ///
     /// ```text
     /// F_B(t) = - ρ₀ V̇₁(t) V̇₂(t) / (4π d²)
@@ -125,7 +132,10 @@ impl BjerknesForceComputer {
     /// where V̇_i = 4π R_i² Ṙ_i is the volumetric oscillation rate. The
     /// inverse-square distance dependence is required by the integrability
     /// of the radial Bernoulli pressure field around a pulsating monopole;
-    /// any other power produces an incorrect far-field decay.
+    /// any other power produces an incorrect far-field decay. The scalar
+    /// is the line-of-centres component, positive away from the other
+    /// bubble: same-sense wall motion (in phase) gives F < 0 —
+    /// attraction (KW-PHYS-009 item 1, consolidated 2026-11-27).
     ///
     /// Dimensional check: \[kg/m³ · (m³/s)² / m²\] = \[kg·m/s²\] = N ✓.
     #[must_use]
@@ -135,36 +145,27 @@ impl BjerknesForceComputer {
         distance: f64,
         liquid_density: f64,
     ) -> f64 {
-        if distance <= 0.0 {
-            return 0.0;
-        }
-
         let v1_dot = FOUR_PI * bubble1.radius.powi(2) * bubble1.wall_velocity;
         let v2_dot = FOUR_PI * bubble2.radius.powi(2) * bubble2.wall_velocity;
 
-        -liquid_density * v1_dot * v2_dot / (FOUR_PI * distance.powi(2))
+        secondary_bjerknes_force_instantaneous(v1_dot, v2_dot, distance, liquid_density)
     }
 
-    /// Check if bubbles attract or repel
+    /// Check if bubbles attract or repel. Returns the canonical
+    /// [`BjerknesInteractionType`] (this module's former duplicate
+    /// `BubbleInteractionType` enum was removed in the KW-PHYS-009
+    /// item 1 consolidation, 2026-11-27).
     #[must_use]
-    pub fn interaction_type(bubble1: &BubbleState, bubble2: &BubbleState) -> BubbleInteractionType {
+    pub fn interaction_type(bubble1: &BubbleState, bubble2: &BubbleState) -> BjerknesInteractionType {
         // In phase: both expanding or both contracting -> attraction
         // Out of phase: one expanding, one contracting -> repulsion
 
         if bubble1.wall_velocity * bubble2.wall_velocity > 0.0 {
-            BubbleInteractionType::Attraction
+            BjerknesInteractionType::Attractive
         } else {
-            BubbleInteractionType::Repulsion
+            BjerknesInteractionType::Repulsive
         }
     }
-}
-
-/// Type of bubble-bubble interaction
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum BubbleInteractionType {
-    Attraction,
-    Repulsion,
-    Neutral,
 }
 
 /// Collective effects in bubble clouds
@@ -172,23 +173,13 @@ pub enum BubbleInteractionType {
 pub struct CollectiveEffects;
 
 impl CollectiveEffects {
-    /// Calculate effective sound speed in bubbly liquid
-    #[must_use]
-    pub fn wood_sound_speed(
-        void_fraction: f64,
-        liquid_density: f64,
-        liquid_sound_speed: f64,
-        gas_density: f64,
-        gas_sound_speed: f64,
-    ) -> f64 {
-        // Wood's equation for sound speed in bubbly liquid
-        let mixture_density =
-            (1.0 - void_fraction).mul_add(liquid_density, void_fraction * gas_density);
-        let compressibility = (1.0 - void_fraction) / (liquid_density * liquid_sound_speed.powi(2))
-            + void_fraction / (gas_density * gas_sound_speed.powi(2));
-
-        (mixture_density * compressibility).rsqrt()
-    }
+    // NOTE (KW-PHYS-009 item 3, consolidated 2026-11-27): the
+    // duplicate unguarded `wood_sound_speed` that lived here was
+    // removed. The canonical, guarded implementation is
+    // `super::bubbly_medium::wood_sound_speed` — note its argument
+    // order (void_fraction, c_liquid, rho_liquid, c_gas, rho_gas)
+    // differs from the removed copy's (density/speed interleaved),
+    // which was a call-site transposition hazard.
 
     /// Calculate void fraction from bubble field
     #[must_use]
@@ -226,10 +217,7 @@ impl CollectiveEffects {
 mod tests {
     use super::*;
     use crate::bubble_dynamics::bubble_state::BubbleParameters;
-    use kwavers_core::constants::fundamental::{
-        DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM,
-    };
-    use kwavers_core::constants::tissue_acoustics::DENSITY_AIR;
+    use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 
     #[test]
     fn test_bjerknes_interaction_type() {
@@ -242,7 +230,7 @@ mod tests {
         bubble2.wall_velocity = 5.0;
         assert_eq!(
             BjerknesForceComputer::interaction_type(&bubble1, &bubble2),
-            BubbleInteractionType::Attraction
+            BjerknesInteractionType::Attractive
         );
 
         // Opposite phase
@@ -250,7 +238,7 @@ mod tests {
         bubble2.wall_velocity = -5.0;
         assert_eq!(
             BjerknesForceComputer::interaction_type(&bubble1, &bubble2),
-            BubbleInteractionType::Repulsion
+            BjerknesInteractionType::Repulsive
         );
     }
 
@@ -323,18 +311,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_wood_sound_speed() {
-        let c_mixture = CollectiveEffects::wood_sound_speed(
-            0.01,                  // 1% void fraction
-            DENSITY_WATER_NOMINAL, // water density — SSOT: fundamental::DENSITY_WATER_NOMINAL
-            SOUND_SPEED_WATER_SIM, // water sound speed
-            DENSITY_AIR,           // air density — SSOT: tissue_acoustics::DENSITY_AIR
-            SOUND_SPEED_AIR,       // air sound speed — SSOT: fundamental::SOUND_SPEED_AIR
-        );
-
-        // Sound speed should be significantly reduced
-        assert!(c_mixture < SOUND_SPEED_WATER_SIM);
-        assert!(c_mixture > 100.0); // But still reasonable
-    }
+    // The former `test_wood_sound_speed` tested the duplicate
+    // `CollectiveEffects::wood_sound_speed`, removed in the
+    // KW-PHYS-009 item 3 consolidation (2026-11-27); the canonical
+    // `bubbly_medium::wood_sound_speed` carries its own test suite.
 }

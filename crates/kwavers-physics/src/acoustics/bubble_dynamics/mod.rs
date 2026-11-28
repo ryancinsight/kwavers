@@ -35,7 +35,7 @@ pub mod coupled_driving; // Foldy–Lax self-consistent coupled bubble driving (
 pub mod dissolution; // Gas-diffusion dissolution (Epstein–Plesset 1950 + shelled extension)
 pub mod encapsulated; // NEW: Encapsulated bubbles with shell dynamics (Church, Marmottant)
 pub mod energy;
-pub mod epstein_plesset; // Epstein-Plesset oscillation-STABILITY theorem (distinct from dissolution)
+pub mod epstein_plesset_stability; // Epstein–Plesset oscillation-STABILITY analysis (renamed from `epstein_plesset`, KW-PHYS-009 item 4: the plain name belongs to the dissolution law in `dissolution`)
 pub mod gas_transfer;
 pub mod gilmore; // Gilmore equation for violent collapse // NEW: Comprehensive energy balance model
 pub mod heterogeneous_nucleation;
@@ -56,8 +56,9 @@ pub use adaptive_integration::{
     AdaptiveBubbleIntegrator, ImplicitBubbleIntegrator, IntegrationStatistics,
 };
 pub use bjerknes_forces::{
-    bjerknes_regime, displacement_amplitude, duryea_aggregation_regime,
-    radiated_pressure_amplitude, secondary_bjerknes_force_checked, AggregationRegime,
+    bjerknes_regime, displacement_amplitude, duryea_aggregation_regime, primary_bjerknes_force,
+    radiated_pressure_amplitude, secondary_bjerknes_force_checked,
+    secondary_bjerknes_force_instantaneous, secondary_bjerknes_force_mean, AggregationRegime,
     BjerknesCalculator, BjerknesConfig, BjerknesInteractionType, BjerknesRegime,
 }; // Bubble-bubble interaction forces + validity-regime guards
 pub use bubble_field::{BubbleCloud, BubbleField, BubbleStateFields};
@@ -74,15 +75,16 @@ pub use cloud_attenuation::{
     shielding_factor_coherent,
 };
 pub use coupled_driving::{
-    coupled_regime_reasons, coupling_field, pair_geometry, segment_band_power, solve_coupled_cloud,
-    CoupledBubble, CoupledCloudConfig, CoupledSolution, PICARD_DAMPING_THETA,
+    coupled_regime_reasons, coupling_field, pair_geometry, segment_band_power,
+    solve_coupled_cloud, CoupledBubble, CoupledCloudConfig, CoupledSolution,
+    PICARD_DAMPING_THETA,
 };
 pub use dissolution::{
     dissolution_time_numeric, integrate_dissolution, DissolutionModel, DissolutionTrajectory,
     EpsteinPlessetDissolution, GasDiffusionParams, ShellPermeationDissolution,
 };
 pub use encapsulated::{ChurchModel, MarmottantModel, ShellProperties}; // NEW: Encapsulated bubble models
-pub use epstein_plesset::EpsteinPlessetStabilitySolver; // NEW: Epstein-Plesset stability analysis
+pub use epstein_plesset_stability::EpsteinPlessetStabilitySolver; // Epstein–Plesset oscillation-stability analysis
 pub use heterogeneous_nucleation::{
     ClassicalHeterogeneousNucleation, HeterogeneousNucleationModel,
 };

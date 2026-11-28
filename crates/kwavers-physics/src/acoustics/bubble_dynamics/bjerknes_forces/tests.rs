@@ -41,6 +41,13 @@ fn test_secondary_bjerknes_attractive() {
         .unwrap();
 
     assert_eq!(force.interaction_type, BjerknesInteractionType::Attractive);
+    // Canonical convention (KW-PHYS-009 item 1): attraction is a
+    // negative line-of-centres component.
+    assert!(
+        force.secondary < 0.0,
+        "in-phase pair must attract (secondary < 0), got {}",
+        force.secondary
+    );
     assert!(!force.coalescing); // Distance > coalescence distance
 }
 
@@ -61,6 +68,11 @@ fn test_secondary_bjerknes_repulsive() {
         .unwrap();
 
     assert_eq!(force.interaction_type, BjerknesInteractionType::Repulsive);
+    assert!(
+        force.secondary > 0.0,
+        "antiphase pair must repel (secondary > 0), got {}",
+        force.secondary
+    );
 }
 
 #[test]
