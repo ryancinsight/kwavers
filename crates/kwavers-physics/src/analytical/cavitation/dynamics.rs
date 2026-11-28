@@ -149,7 +149,9 @@ pub fn minnaert_resonance_corrected_hz(
 /// * `sigma_n_m` – surface tension coefficient [N/m] (water ≈ 0.0725)
 ///
 /// Returns `f64::INFINITY` for a non-positive nucleus radius or a negative
-/// surface tension (no finite threshold); other invalid inputs return `0`
+/// surface tension (no finite threshold), and likewise for NaN inputs (a
+/// NaN threshold must not collapse to the 0.0 sentinel); other invalid
+/// inputs (infinite values, non-positive ambient pressure) return `0`
 /// per this module's convention.
 ///
 /// # Reference
@@ -161,8 +163,11 @@ pub fn blake_threshold_pa(r0_m: f64, p0_pa: f64, sigma_n_m: f64) -> f64 {
     // radius or a negative surface tension has no finite Blake threshold, so
     // return INFINITY rather than this module's usual 0.0 invalid-input
     // sentinel — for a threshold pressure, 0.0 would falsely claim cavitation
-    // at zero acoustic amplitude. σ = 0 stays on the formula path.
-    if r0_m <= 0.0 || sigma_n_m < 0.0 {
+    // at zero acoustic amplitude. σ = 0 stays on the formula path. The tests
+    // carry explicit NaN tests so NaN radius / surface tension take the same
+    // INFINITY path instead of falling through to the 0.0 fallback below
+    // (physics review 2026-11-27).
+    if r0_m <= 0.0 || r0_m.is_nan() || sigma_n_m < 0.0 || sigma_n_m.is_nan() || p0_pa.is_nan() {
         return f64::INFINITY;
     }
     if !(r0_m.is_finite() && p0_pa.is_finite() && sigma_n_m.is_finite() && p0_pa > 0.0) {

@@ -72,7 +72,13 @@ pub enum ThresholdModel {
 ///
 /// Returns `f64::INFINITY` for a non-positive nucleus radius or a negative
 /// surface tension (no finite threshold), following the guard convention of
-/// [`blake_critical_radius`]; σ = 0 stays on the formula path.
+/// [`blake_critical_radius`]; σ = 0 stays on the formula path. The tests are
+/// carry explicit NaN disjuncts so they also return `INFINITY` for NaN radius or
+/// surface tension: a plain `<= 0.0` test is false for NaN, which then
+/// propagated through the formula and was masked by the trailing
+/// `.max(0.0)` into a returned 0.0 — a threshold of zero, falsely claiming
+/// cavitation at zero acoustic amplitude (physics review 2026-11-27; the
+/// R₀ = 0 instance of the same mask was the libR19 fix).
 #[must_use]
 pub fn blake_threshold(
     surface_tension: f64,  // [N/m]
@@ -80,7 +86,11 @@ pub fn blake_threshold(
     ambient_pressure: f64, // [Pa]
     vapor_pressure: f64,   // [Pa]
 ) -> f64 {
-    if initial_radius <= 0.0 || surface_tension < 0.0 {
+    if initial_radius <= 0.0
+        || initial_radius.is_nan()
+        || surface_tension < 0.0
+        || surface_tension.is_nan()
+    {
         return f64::INFINITY;
     }
 
@@ -298,12 +308,17 @@ mod tests {
     /// Blake threshold guard: a non-positive nucleus radius has no finite
     /// threshold (the R_0 → 0 limit is ∞, not 0), and a negative surface
     /// tension is non-physical. σ = 0 stays on the formula path, where the
-    /// threshold reduces to P_0 − P_v.
+    /// threshold reduces to P_0 − P_v. NaN radius / surface tension also
+    /// return ∞: their comparisons are all false, so a `<= 0.0`-form guard
+    /// waved them through to the formula, whose NaN result the trailing
+    /// `.max(0.0)` masked into a returned 0.0 (physics review 2026-11-27).
     #[test]
     fn blake_threshold_infinite_for_nonphysical_inputs() {
         assert!(blake_threshold(SIGMA, 0.0, P0, PV).is_infinite());
         assert!(blake_threshold(SIGMA, -R0, P0, PV).is_infinite());
         assert!(blake_threshold(-SIGMA, R0, P0, PV).is_infinite());
+        assert!(blake_threshold(SIGMA, f64::NAN, P0, PV).is_infinite());
+        assert!(blake_threshold(f64::NAN, R0, P0, PV).is_infinite());
         let sigma_zero = blake_threshold(0.0, R0, P0, PV);
         assert!(
             (sigma_zero - (P0 - PV)).abs() < 1.0,

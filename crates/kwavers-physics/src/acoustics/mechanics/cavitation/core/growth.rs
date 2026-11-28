@@ -448,11 +448,14 @@ pub fn oscillation_amplitude_fraction(
 /// of silently returning an extrapolation artifact.
 ///
 /// # Errors
-/// - Returns [`KwaversError::Physics`] when `ambient_pressure <= 0` (the
-///   pressure ratio is undefined) or when `acoustic_pressure /
-///   ambient_pressure` exceeds [`RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO`]
-///   (small-amplitude regime violated; the bubble is in inertial collapse
-///   and the flux has no meaning).
+/// - Returns [`KwaversError::Physics`] when `ambient_pressure` is not
+///   positive (the pressure ratio is undefined) or when
+///   `acoustic_pressure / ambient_pressure` is not at most
+///   [`RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO`] (small-amplitude regime
+///   violated; the bubble is in inertial collapse and the flux has no
+///   meaning). Both tests carry explicit NaN disjuncts so they also
+///   reject NaN, whose comparisons are all false — the convention of
+///   the Bader checked variant.
 pub fn rectified_diffusion_rate_checked(
     radius: f64,            // [m]
     ambient_pressure: f64,  // [Pa]
@@ -461,7 +464,7 @@ pub fn rectified_diffusion_rate_checked(
     diffusivity: f64,       // [m²/s]
     concentration: f64,     // [mol/m³]
 ) -> KwaversResult<f64> {
-    if ambient_pressure <= 0.0 {
+    if ambient_pressure <= 0.0 || ambient_pressure.is_nan() {
         return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
             parameter: "ambient_pressure".to_owned(),
             value: ambient_pressure,
@@ -470,7 +473,7 @@ pub fn rectified_diffusion_rate_checked(
         }));
     }
     let pressure_ratio = acoustic_pressure / ambient_pressure;
-    if pressure_ratio > RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO {
+    if pressure_ratio > RECTIFIED_DIFFUSION_MAX_PRESSURE_RATIO || pressure_ratio.is_nan() {
         return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
             parameter: "acoustic_pressure / ambient_pressure".to_owned(),
             value: pressure_ratio,
