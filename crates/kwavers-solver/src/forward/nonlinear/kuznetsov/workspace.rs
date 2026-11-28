@@ -3,7 +3,7 @@
 //! This module provides pre-allocated workspace arrays to eliminate
 //! heap allocations in the main simulation loop.
 
-use super::spectral::KuznetsovSpectralOperator;
+use crate::forward::nonlinear::spectral::PeriodicLaplacian;
 use crate::workspace::ScratchArena;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
@@ -32,7 +32,7 @@ use leto::Array3;
 #[derive(Debug)]
 pub struct KuznetsovWorkspace {
     /// Spectral operator for FFT-based derivatives
-    pub spectral_op: KuznetsovSpectralOperator,
+    pub spectral_op: PeriodicLaplacian,
 
     /// Pressure field at previous time steps (for finite differences)
     pub pressure_prev: Array3<f64>,
@@ -83,7 +83,7 @@ impl KuznetsovWorkspace {
         let shape = (grid.nx, grid.ny, grid.nz);
 
         Ok(Self {
-            spectral_op: KuznetsovSpectralOperator::new(grid),
+            spectral_op: PeriodicLaplacian::new(grid),
 
             // Time history buffers
             pressure_prev: Array3::zeros(shape),
@@ -125,7 +125,7 @@ impl KuznetsovWorkspace {
 
     /// Zero all 18 scratch buffers without reallocating.
     ///
-    /// The `KuznetsovSpectralOperator` is excluded from this reset: it holds
+    /// The `PeriodicLaplacian` is excluded from this reset: it holds
     /// grid-derived wavenumber constants and a half-spectrum buffer that every
     /// evaluation overwrites before reading.
     /// The four medium-property cache arrays (`cache_*`) are included because
@@ -155,7 +155,7 @@ impl KuznetsovWorkspace {
 
 impl ScratchArena for KuznetsovWorkspace {
     /// Returns the byte footprint of the 18 pre-allocated `Array3<f64>` scratch
-    /// buffers.  The `KuznetsovSpectralOperator` (wavenumber tables and its
+    /// buffers.  The `PeriodicLaplacian` (wavenumber tables and its
     /// half-spectrum transform buffer) belongs to the operator and is excluded.
     ///
     /// Footprint = 18 × N × 8  where N = nx × ny × nz.

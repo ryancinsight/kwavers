@@ -3,10 +3,11 @@
 #[cfg(test)]
 use super::*;
 #[cfg(test)]
+use crate::forward::nonlinear::spectral::PeriodicLaplacian;
+#[cfg(test)]
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 #[cfg(test)]
 use kwavers_core::constants::numerical::TWO_PI;
-#[cfg(test)]
 use kwavers_grid::Grid;
 
 /// **Invariant**: Creating a KuznetsovWave on a 32³ grid allocates exactly
@@ -147,7 +148,7 @@ fn workspace_laplacian_of_fourier_mode_matches_analytical() {
         let field = leto::Array3::from_shape_fn([nx, ny, nz], |[i, j, l]| {
             (k[0] * i as f64 * dx + k[1] * j as f64 * dy + k[2] * l as f64 * dz).cos()
         });
-        let mut operator = spectral::KuznetsovSpectralOperator::new(&grid);
+        let mut operator = PeriodicLaplacian::new(&grid);
         let mut laplacian = leto::Array3::zeros([nx, ny, nz]);
         operator.compute_laplacian_workspace(&field, &mut laplacian);
 
