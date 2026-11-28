@@ -8,6 +8,8 @@ mod dynamics;
 mod histotripsy;
 mod passive_dose;
 mod power_spectrum;
+#[cfg(test)]
+mod shelled_tests;
 mod shielding;
 mod sonication;
 mod swept_frequency;
