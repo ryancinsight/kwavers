@@ -42,77 +42,19 @@
 
 pub mod coalescence;
 pub mod fragmentation;
+mod group;
 pub mod imaging_evolution;
+mod medium;
 
 pub use coalescence::{coalesce_group, merge_pair, neighbour_merge_probability};
 pub use fragmentation::{
     collapse_ratio, EqualSplitKernel, FragmentationKernel, LognormalKernel,
     CHOMAS_FRAGMENTATION_DIAMETER_RATIO, P_FRAG_FITTED_LI_2021,
 };
+pub use group::BubbleGroup;
 pub use imaging_evolution::{
     epstein_plesset_step, evolve_under_imaging_train, EpsteinPlessetMedium, ImagingEvolution,
     ImagingPulseEffect, ImagingTrain, DISSOLUTION_REMOVAL_RADIUS_M,
     IMAGING_FRAGMENTATION_GATE_RMAX_R0,
 };
-
-/// A monodisperse slice of a bubble population: `count` bubbles,
-/// each of equilibrium radius `radius` [m] holding
-/// `gas_per_bubble` molecules.
-///
-/// Counts are real-valued (ensemble weights), not integers — the
-/// operators are ensemble bookkeeping.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct BubbleGroup {
-    /// Equilibrium radius of each bubble [m].
-    pub radius: f64,
-    /// Number of bubbles in the group (ensemble weight).
-    pub count: f64,
-    /// Gas content of each bubble [molecules].
-    pub gas_per_bubble: f64,
-}
-
-impl BubbleGroup {
-    /// Total gas held by the group [molecules].
-    #[must_use]
-    pub fn total_gas(&self) -> f64 {
-        self.count * self.gas_per_bubble
-    }
-}
-
-/// Medium properties the population operators need to tie radii to
-/// gas content through the equilibrium map.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct PopulationMedium {
-    /// Ambient pressure `p0` [Pa].
-    pub ambient_pressure: f64,
-    /// Surface tension `σ` [N/m].
-    pub surface_tension: f64,
-    /// Temperature `T` [K].
-    pub temperature: f64,
-}
-
-impl PopulationMedium {
-    /// Gas content [molecules] of an equilibrium bubble of the
-    /// given radius in this medium.
-    #[must_use]
-    pub fn gas_at_radius(&self, radius: f64) -> f64 {
-        crate::acoustics::mechanics::cavitation::core::bader_influx::equilibrium_gas_content(
-            radius,
-            self.ambient_pressure,
-            self.surface_tension,
-            self.temperature,
-        )
-    }
-
-    /// Equilibrium radius [m] of a bubble holding `gas_molecules`
-    /// in this medium.
-    #[must_use]
-    pub fn radius_at_gas(&self, gas_molecules: f64) -> f64 {
-        crate::acoustics::mechanics::cavitation::core::bader_influx::residual_radius_equilibrium(
-            gas_molecules,
-            self.ambient_pressure,
-            self.surface_tension,
-            self.temperature,
-        )
-    }
-}
+pub use medium::PopulationMedium;
