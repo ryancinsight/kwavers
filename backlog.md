@@ -75,5 +75,5 @@
 <a id="kw-athena-damped-lsqr"></a>- [KW-ATHENA-DAMPED-LSQR](backlog/kw-athena-damped-lsqr.md) — Damped LSQR results and tests are unchecked against the athena damping-rotation fix [patch] — blocked
 <a id="kw-board-gap-audit-budget"></a>- [KW-BOARD-GAP-AUDIT-BUDGET](backlog/kw-board-gap-audit-budget.md) — gap_audit.md holds 4,391 lines against a 1,000-line board budget [patch] — todo
 <a id="kw-board-schema-residuals"></a>- [KW-BOARD-SCHEMA-RESIDUALS](backlog/kw-board-schema-residuals.md) — Two items carry an off-set priority and no milestone; one item needs an id no board holds [patch] — todo
-<a id="kw-conf-default-tip-above-baseline"></a>- [KW-CONF-DEFAULT-TIP-ABOVE-BASELINE](backlog/kw-conf-default-tip-above-baseline.md) — Five conformance classes sit above the atlas baseline at the default tip, so the pre-push gate refuses every push [patch] — todo
 <a id="kw-verif-rescued-remainder"></a>- [KW-VERIF-RESCUED-REMAINDER](backlog/kw-verif-rescued-remainder.md) — Three unlanded changes of a rescued baseline lane port to the default branch [patch] — todo
+<a id="kw-conf-rows-above-baseline"></a>- [KW-CONF-ROWS-ABOVE-BASELINE](backlog/kw-conf-rows-above-baseline.md) — Four conformance rows rose above the atlas baseline since its recorded kwavers revision [patch] — todo
