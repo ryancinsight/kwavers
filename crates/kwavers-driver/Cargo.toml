@@ -15,6 +15,7 @@ exclude = ["/docs/datasheets/", "/docs/renders/"]
 authors = ["Ryan Clanton <ryanclanton@outlook.com>"]
 
 [dependencies]
+electra-board = { git = "https://github.com/ryancinsight/electra.git", rev = "7a5d4c652f4bc70eefda9d06c5a0e0a6ae566105", version = "0.6.1" }
 aequitas = { workspace = true }
 eunomia = { workspace = true }
 thiserror = "1"
