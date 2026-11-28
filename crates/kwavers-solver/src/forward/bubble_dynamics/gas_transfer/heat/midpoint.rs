@@ -1,4 +1,4 @@
-use super::{density_fraction, GasHeat, HeatGeometry, HeatPressure};
+use super::state::{density_fraction, GasHeat, HeatGeometry, HeatPressure};
 use crate::forward::bubble_dynamics::gas_transfer::DiffusiveBubbleError;
 use eunomia::RealField;
 
