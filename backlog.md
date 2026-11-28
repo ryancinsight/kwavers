@@ -36,7 +36,6 @@
 <a id="kw-med-abs-001"></a>- [KW-MED-ABS-001](backlog/kw-med-abs-001.md) — Medium absorption storage-units divergence (Rust source vs pykwavers wheel) [minor] — blocked
 <a id="kw-img-055"></a>- [KW-IMG-055](backlog/kw-img-055.md) — PNP indexing estimator: replace max|p| (E0) with windowed true PNP (E1) [minor] — blocked
 <a id="kw-img-056"></a>- [KW-IMG-056](backlog/kw-img-056.md) — Tissue-model backscatter level is uncalibrated: K1 is bracketed, not adjudicated [major] — blocked
-<a id="kw-phys-009"></a>- [KW-PHYS-009](backlog/kw-phys-009.md) — Known duplicates and regime gaps in the bubble-dynamics physics (consolidation backlog) [patch] — todo
 <a id="kw-phys-012"></a>- [KW-PHYS-012](backlog/kw-phys-012.md) — Yoshida count-changing state-change law under interleaved HIFU pulses (open) [patch] — todo
 <a id="kw-integration-test-binaries"></a>- [KW-INTEGRATION-TEST-BINARIES](backlog/kw-integration-test-binaries.md) — kwavers integration tests link one binary per file: 89 targets, 81 on the push gate [patch] [perf] — todo
 <a id="kw-lint-1"></a>- [KW-LINT-1](backlog/kw-lint-1.md) — Burn down the clippy debt baseline [patch] — todo

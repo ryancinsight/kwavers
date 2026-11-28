@@ -136,6 +136,9 @@
 //!    University Press.
 
 pub mod equation;
+mod radial;
+
+pub(super) use radial::pressure_driven_acceleration;
 pub mod shape_instability;
 pub mod thermodynamics;
 #[cfg(test)]

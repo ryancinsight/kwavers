@@ -230,7 +230,10 @@ mod tests {
         for i in 1..=1000 {
             let x = 9.9e-7 + i as f64 * 2e-13;
             let v = shielding_factor_coherent(x, 1.0, 1.0);
-            assert!(v <= prev + 1e-15, "S must be non-increasing: S({x}) = {v} > {prev}");
+            assert!(
+                v <= prev + 1e-15,
+                "S must be non-increasing: S({x}) = {v} > {prev}"
+            );
             prev = v;
         }
         let s_seam = shielding_factor_coherent(1e-6, 1.0, 1.0);

@@ -156,7 +156,10 @@ impl BjerknesForceComputer {
     /// `BubbleInteractionType` enum was removed in the KW-PHYS-009
     /// item 1 consolidation, 2026-11-27).
     #[must_use]
-    pub fn interaction_type(bubble1: &BubbleState, bubble2: &BubbleState) -> BjerknesInteractionType {
+    pub fn interaction_type(
+        bubble1: &BubbleState,
+        bubble2: &BubbleState,
+    ) -> BjerknesInteractionType {
         // In phase: both expanding or both contracting -> attraction
         // Out of phase: one expanding, one contracting -> repulsion
 

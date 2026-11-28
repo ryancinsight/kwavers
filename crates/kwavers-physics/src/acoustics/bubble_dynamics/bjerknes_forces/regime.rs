@@ -187,7 +187,6 @@ pub fn radiated_pressure_amplitude(
 ///   [`BJERKNES_LINEAR_MAX_DISPLACEMENT_RATIO`].
 /// - Otherwise whatever the underlying calculator returns (its own
 ///   input validation: non-positive radii/distance).
-#[allow(clippy::too_many_arguments)]
 pub fn secondary_bjerknes_force_checked(
     calculator: &BjerknesCalculator,
     bubble1_radius: f64,
@@ -280,13 +279,36 @@ mod tests {
         assert!(!regime.linear_regime());
 
         let calc = BjerknesCalculator::new(BjerknesConfig::default());
-        let err = secondary_bjerknes_force_checked(&calc, r0, r0, dv, dv, 0.0, 100e-6);
-        assert!(err.is_err());
-        // Small-amplitude pair passes the guard (calculator may still
-        // return its own result).
+        // The refusal names the first bubble's ratio and carries its value.
+        let refused = secondary_bjerknes_force_checked(&calc, r0, r0, dv, dv, 0.0, 100e-6);
+        assert!(matches!(
+            refused,
+            Err(KwaversError::Physics(PhysicsError::InvalidParameter {
+                ref parameter,
+                value,
+                ..
+            })) if parameter == "volume_amplitude1 / radius1"
+                && value.to_bits() == regime.displacement_ratio_1.to_bits()
+        ));
+        // A small-amplitude pair passes the guard: the checked form
+        // returns the calculator's own result, field for field.
         let dv_small = 4.0 * PI * r0 * r0 * (0.05 * r0);
-        let ok = secondary_bjerknes_force_checked(&calc, r0, r0, dv_small, dv_small, 0.0, 50e-6);
-        assert!(ok.is_ok());
+        let checked =
+            secondary_bjerknes_force_checked(&calc, r0, r0, dv_small, dv_small, 0.0, 50e-6)
+                .unwrap();
+        let plain = calc
+            .secondary_bjerknes_force(r0, r0, dv_small, dv_small, 0.0, 50e-6)
+            .unwrap();
+        assert_eq!(checked.primary.to_bits(), plain.primary.to_bits());
+        assert_eq!(checked.secondary.to_bits(), plain.secondary.to_bits());
+        assert_eq!(checked.total.to_bits(), plain.total.to_bits());
+        assert_eq!(
+            checked.phase_difference.to_bits(),
+            plain.phase_difference.to_bits()
+        );
+        assert_eq!(checked.interaction_type, plain.interaction_type);
+        assert_eq!(checked.distance.to_bits(), plain.distance.to_bits());
+        assert_eq!(checked.coalescing, plain.coalescing);
     }
 
     #[test]

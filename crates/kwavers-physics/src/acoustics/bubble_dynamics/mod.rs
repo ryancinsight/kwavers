@@ -74,11 +74,9 @@ pub use cloud_attenuation::{
     cloud_attenuation_coefficient, cloud_length, cycle_work, extinction_cross_section,
     shielding_factor_coherent,
 };
-pub use coupled_driving::{
-    coupled_regime_reasons, coupling_field, pair_geometry, segment_band_power,
-    solve_coupled_cloud, CoupledBubble, CoupledCloudConfig, CoupledSolution,
-    PICARD_DAMPING_THETA,
-};
+pub use coupled_driving::{coupled_regime_reasons, segment_band_power, solve_coupled_cloud};
+pub use coupled_driving::{coupling_field, pair_geometry, CoupledBubble, CoupledCloudConfig};
+pub use coupled_driving::{CoupledSolution, PICARD_DAMPING_THETA};
 pub use dissolution::{
     dissolution_time_numeric, integrate_dissolution, DissolutionModel, DissolutionTrajectory,
     EpsteinPlessetDissolution, GasDiffusionParams, ShellPermeationDissolution,

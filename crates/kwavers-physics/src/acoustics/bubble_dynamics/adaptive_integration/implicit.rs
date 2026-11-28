@@ -75,31 +75,14 @@ use crate::acoustics::bubble_dynamics::{acoustic_pressure::InstantaneousPressure
 use aequitas::systems::si::quantities::PressureRate;
 use kwavers_core::constants::numerical::{HALF_STEP_FACTOR, INITIAL_TIME_STEP_FRACTION};
 use kwavers_core::error::{KwaversResult, PhysicsError};
+use stage::StageProblem;
+
+mod stage;
 
 /// SDIRK2 diagonal coefficient γ = 1 − 1/√2 (Alexander 1977): the
 /// value that makes the two-stage SDIRK method second-order and
 /// L-stable.
 const SDIRK_GAMMA: f64 = 1.0 - std::f64::consts::FRAC_1_SQRT_2;
-
-/// Newton iteration cap per implicit stage solve. Through the
-/// collapse spike the stage equations are severely stiff; the cap is
-/// generous because a failed solve is a soft step rejection (the
-/// controller retries at smaller h, where the implicit system is
-/// better conditioned), never a silently accepted state.
-const MAX_NEWTON_ITERATIONS: usize = 50;
-
-/// Newton convergence threshold on the scaled increment norm (scales
-/// from the config tolerances, as in the step error norm). Kept far
-/// below the step controller's unit threshold so the step-doubling
-/// error estimate stays truncation-dominated rather than
-/// solver-noise-dominated: at the collapse turnaround the stiff
-/// coupling ∂R̈/∂R ≈ −6×10²⁵ m⁻¹s⁻² amplifies any residual radius
-/// increment of a stage solve into the velocity component. Newton
-/// contracts quadratically in smooth phases, so the tight bound
-/// costs about one extra iteration per stage there; the f64
-/// rounding floor of the scaled increment is ≲10⁻⁴ even at the
-/// spike, so 10⁻³ remains reachable.
-const NEWTON_TOLERANCE: f64 = 1e-3;
 
 /// Step-doubling error-control exponent for a second-order method,
 /// 1/(p + 1) with p = 2. (The explicit path's
@@ -378,16 +361,16 @@ where
             (h * SDIRK_GAMMA).mul_add(f_y.0, y.radius),
             (h * SDIRK_GAMMA).mul_add(f_y.1, y.wall_velocity),
         );
-        let z1 = self.implicit_stage_solve(
-            &y,
-            y.radius,
-            y.wall_velocity,
+        let z1 = self.implicit_stage_solve(StageProblem {
+            template: &y,
+            w_r: y.radius,
+            w_v: y.wall_velocity,
             h,
-            t + SDIRK_GAMMA * h,
+            t_stage: t + SDIRK_GAMMA * h,
             p_acoustic,
             dp_dt,
-            guess1,
-        )?;
+            guess: guess1,
+        })?;
         let f_z1 = self.accel(&y, z1.0, z1.1, p_acoustic, dp_dt, t + SDIRK_GAMMA * h)?;
 
         // Stage 2: implicit solve about w = y + h(1−γ)·f(z₁).
@@ -399,7 +382,16 @@ where
             (h * SDIRK_GAMMA).mul_add(f_z1.0, w.0),
             (h * SDIRK_GAMMA).mul_add(f_z1.1, w.1),
         );
-        let z2 = self.implicit_stage_solve(&y, w.0, w.1, h, t + h, p_acoustic, dp_dt, guess2)?;
+        let z2 = self.implicit_stage_solve(StageProblem {
+            template: &y,
+            w_r: w.0,
+            w_v: w.1,
+            h,
+            t_stage: t + h,
+            p_acoustic,
+            dp_dt,
+            guess: guess2,
+        })?;
 
         // Commit the stiffly accurate stage-2 state, then refresh the
         // derived quantities (wall acceleration, pressures, Mach) at
@@ -416,123 +408,6 @@ where
         self.solver.update_mass_transfer(state, h)?;
 
         Ok(())
-    }
-
-    /// Solve one SDIRK stage equation z = w + hγ·f(t_stage, z) by
-    /// Newton iteration with a finite-difference Jacobian on the
-    /// 2×2 (R, Ṙ) system.
-    ///
-    /// `template` supplies the state's non-mechanical fields
-    /// (temperature, gas content, species) held fixed across the
-    /// step, exactly as the explicit path's stage states do.
-    /// # Errors
-    /// - [`PhysicsError::ConvergenceFailure`] when Newton does not
-    ///   converge in [`MAX_NEWTON_ITERATIONS`] iterations (a soft
-    ///   failure: callers reject the step and retry smaller).
-    ///
-    #[allow(clippy::too_many_arguments)]
-    fn implicit_stage_solve(
-        &self,
-        template: &BubbleState,
-        w_r: f64,
-        w_v: f64,
-        h: f64,
-        t_stage: f64,
-        p_acoustic: InstantaneousPressure,
-        dp_dt: PressureRate,
-        guess: (f64, f64),
-    ) -> KwaversResult<(f64, f64)> {
-        let hg = h * SDIRK_GAMMA;
-        let (mut zr, mut zv) = guess;
-        if !zr.is_finite() || !zv.is_finite() {
-            (zr, zv) = (w_r, w_v);
-        }
-        let mut prev_norm = f64::INFINITY;
-
-        for iteration in 0..MAX_NEWTON_ITERATIONS {
-            let f = self.accel(template, zr, zv, p_acoustic, dp_dt, t_stage)?;
-            let g_r = hg.mul_add(-f.0, zr) - w_r;
-            let g_v = hg.mul_add(-f.1, zv) - w_v;
-
-            // Finite-difference Jacobian of f wrt (R, Ṙ).
-            let dr = 1e-6 * zr.abs().max(1e-12);
-            let dv = 1e-6 * zv.abs().max(1.0);
-            let f_r = self.accel(template, zr + dr, zv, p_acoustic, dp_dt, t_stage)?;
-            let f_v = self.accel(template, zr, zv + dv, p_acoustic, dp_dt, t_stage)?;
-
-            // J = I − hγ·∂f/∂z, with ∂f/∂z = [[∂Ṙ/∂R, ∂Ṙ/∂Ṙ], [∂a/∂R, ∂a/∂Ṙ]]
-            // (the ∂Ṙ/∂R = 0, ∂Ṙ/∂Ṙ = 1 row comes out of the differences
-            // like everything else — no analytic structure is assumed).
-            let j00 = 1.0 - hg * (f_r.0 - f.0) / dr;
-            let j01 = -hg * (f_v.0 - f.0) / dv;
-            let j10 = -hg * (f_r.1 - f.1) / dr;
-            let j11 = 1.0 - hg * (f_v.1 - f.1) / dv;
-            let det = j00.mul_add(j11, -(j01 * j10));
-            if !det.is_finite() || det == 0.0 {
-                break;
-            }
-
-            // Solve J·Δ = −G by Cramer's rule:
-            // Δ_r = (j01·G_v − j11·G_r)/det, Δ_v = (j10·G_r − j00·G_v)/det.
-            let d_r = j01.mul_add(g_v, -(j11 * g_r)) / det;
-            let d_v = j10.mul_add(g_r, -(j00 * g_v)) / det;
-            zr += d_r;
-            zv += d_v;
-            if !zr.is_finite() || !zv.is_finite() {
-                break;
-            }
-
-            let norm = self.scaled_increment_norm(d_r, d_v, zr, zv);
-            if norm < NEWTON_TOLERANCE {
-                return Ok((zr, zv));
-            }
-            // Divergence guard: a growing increment after the first
-            // iterations means the guess is outside Newton's basin at
-            // this h — fail soft and let the controller shrink h.
-            if iteration > 3 && norm > prev_norm {
-                break;
-            }
-            prev_norm = norm;
-        }
-
-        Err(PhysicsError::ConvergenceFailure {
-            solver: "ImplicitBubbleIntegrator::implicit_stage_solve".to_owned(),
-            iterations: MAX_NEWTON_ITERATIONS,
-            residual: prev_norm,
-        }
-        .into())
-    }
-
-    /// Evaluate the ODE right-hand side (Ṙ, R̈) at an arbitrary
-    /// (R, Ṙ) on a copy of `template` (whose non-mechanical fields
-    /// are held fixed), returning (Ṙ, R̈).
-    /// # Errors
-    /// - Propagates any `KwaversError` returned by called functions.
-    ///
-    fn accel(
-        &self,
-        template: &BubbleState,
-        r: f64,
-        v: f64,
-        p_acoustic: InstantaneousPressure,
-        dp_dt: PressureRate,
-        t: f64,
-    ) -> KwaversResult<(f64, f64)> {
-        let mut scratch = *template;
-        scratch.radius = r;
-        scratch.wall_velocity = v;
-        let a = self
-            .solver
-            .calculate_acceleration(&mut scratch, p_acoustic, dp_dt, t)?;
-        Ok((v, a))
-    }
-
-    /// Scaled norm of a Newton increment, using the config tolerance
-    /// scales (same scales as the step-doubling error norm).
-    fn scaled_increment_norm(&self, d_r: f64, d_v: f64, r: f64, v: f64) -> f64 {
-        let scale_r = self.config.rtol.mul_add(r.abs(), self.config.atol);
-        let scale_v = self.config.rtol.mul_add(v.abs(), self.config.atol);
-        (d_r / scale_r).hypot(d_v / scale_v)
     }
 
     /// Smallest radius over accepted sub-steps since construction
